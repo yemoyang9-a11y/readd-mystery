@@ -197,7 +197,7 @@ export default function BookCarousel3D({
           >
             <i
               className={`block h-1.5 rounded-full transition-all duration-300 group-focus-visible:ring-2 group-focus-visible:ring-brief-accent group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-black motion-reduce:transition-none ${
-                i === index ? 'w-[18px] bg-[#f5f5f7]' : 'w-1.5 bg-[#48484a]'
+                i === index ? 'w-[18px] bg-brief-mark' : 'w-1.5 bg-[#48484a]'
               }`}
             />
           </button>

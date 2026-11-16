@@ -17,7 +17,7 @@ function toHex(channels: string): string {
     .join('')}`;
 }
 
-export function colorVars(selector: ':root' | '[data-night]'): Record<string, string> {
+export function colorVars(selector: ':root' | '[data-night]' | '[data-mobile]'): Record<string, string> {
   const vars: Record<string, string> = {};
   for (const [, name, value] of block(selector).matchAll(/--([\w-]+):\s*([\d\s]+);/g)) {
     vars[name] = toHex(value);

@@ -11,7 +11,7 @@ import MobileSsabiSheet from '../components/MobileSsabiSheet';
 import TocList from '../components/TocList';
 import MobileErrorState from '../components/MobileErrorState';
 import { useVisualViewport } from '../useVisualViewport';
-import { useReaderPrefs } from '../../hooks/useReaderPrefs';
+import { useReaderPrefs, type ReaderTheme } from '../../hooks/useReaderPrefs';
 import ReaderPrefsSheet from '../../components/Reader/ReaderPrefsSheet';
 import MobileJumpBar from '../components/MobileJumpBar';
 import TocJumpDialog from '../../components/Reader/TocJumpDialog';
@@ -22,6 +22,12 @@ const FOCUS_TOGGLE_CLASS =
   'sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-1/2 focus-visible:top-[calc(var(--safe-top)+6px)] focus-visible:z-[60] focus-visible:-translate-x-1/2 focus-visible:inline-flex focus-visible:min-h-11 focus-visible:items-center focus-visible:whitespace-nowrap focus-visible:rounded-full focus-visible:border focus-visible:border-brief-ink focus-visible:bg-white focus-visible:px-4 focus-visible:font-dashSans focus-visible:text-[13px] focus-visible:font-bold focus-visible:text-brief-ink focus-visible:shadow-brief-soft-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brief-accent focus-visible:ring-offset-2 focus-visible:aria-pressed:bg-brief-accent-soft focus-visible:aria-pressed:text-brief-accent';
 
 const HEADER_HEIGHT = 56;
+
+const BAR_THEME_CLASS: Record<ReaderTheme, string> = {
+  paper: 'bg-[#fdfdfa] text-[#272623] border-[#272623]/15',
+  sepia: 'bg-[#f4ecd8] text-[#3b3024] border-[#3b3024]/15',
+  dark: 'bg-[#1c1b19] text-[#d9d6cf] border-[#d9d6cf]/20',
+};
 
 export default function MobileReader() {
   const { bookId = '' } = useParams();
@@ -85,6 +91,7 @@ function MobileReadingSession() {
   return (
     <div
       data-testid="mobile-reader"
+      data-mobile="true"
       className="relative h-[100dvh] overflow-hidden bg-brief-page"
     >
       {/* FR-PRG-001 */}
@@ -101,16 +108,20 @@ function MobileReadingSession() {
       <div className="absolute inset-0">{body}</div>
       <div
         {...chromeProps(chromeHidden)}
-        className={`absolute inset-x-0 top-0 z-[5] bg-brief-paper ${CHROME_FADE} ${chromeHidden ? 'invisible opacity-0' : ''}`}
+        data-reader-theme={prefsApi.prefs.theme}
+        className={`absolute inset-x-0 top-0 z-[5] ${BAR_THEME_CLASS[prefsApi.prefs.theme]} ${CHROME_FADE} ${chromeHidden ? 'invisible opacity-0' : ''}`}
         style={{ paddingTop: 'var(--safe-top)' }}
       >
-        <header className="flex h-14 shrink-0 items-center border-b border-brief-rule bg-brief-paper px-2">
+        <header
+          data-testid="reader-topbar"
+          className="flex h-14 shrink-0 items-center border-b border-inherit px-2"
+        >
           <button
             type="button"
             // FR-BRW-003
             onClick={backToBook}
             aria-label="뒤로 가기"
-            className="flex size-11 items-center justify-center rounded-full border border-brief-rule bg-white text-brief-ink transition-shadow hover:shadow-brief-soft-sm"
+            className="flex size-11 items-center justify-center rounded-full border border-inherit bg-transparent transition-shadow hover:shadow-brief-soft-sm"
           >
             <svg
               aria-hidden="true"
@@ -133,7 +144,7 @@ function MobileReadingSession() {
             aria-label="보기 설정"
             aria-haspopup="dialog"
             aria-expanded={prefsOpen}
-            className="flex size-11 items-center justify-center rounded-full border border-brief-rule bg-white font-dashSerif text-[15px] font-bold text-brief-ink transition-shadow hover:shadow-brief-soft-sm"
+            className="flex size-11 items-center justify-center rounded-full border border-inherit bg-transparent font-dashSerif text-[15px] font-bold transition-shadow hover:shadow-brief-soft-sm"
           >
             <span aria-hidden="true">가</span>
           </button>

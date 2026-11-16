@@ -211,7 +211,7 @@ export default function MobileReaderView({
         >
           {chapterStart ? (
             <header className="mb-8 whitespace-normal">
-              <p className="mb-1.5 font-dashSans text-[12px] font-semibold uppercase tracking-[0.12em] text-[#5c6b47]" style={darkInk}>
+              <p className="mb-1.5 font-dashSans text-[12px] font-semibold uppercase tracking-[0.12em] text-brief-accent" style={darkInk}>
                 제 {chapterStart.chapter_no}장
               </p>
               <h2 className="font-dashSerif text-[19px] font-bold text-brief-ink" style={darkInk}>{chapterStart.title}</h2>

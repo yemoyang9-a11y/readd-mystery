@@ -16,6 +16,10 @@ export const APP_ROUTES = {
   book: '/books/:bookId',
 } as const;
 
+export function briefingPath(bookId: string): string {
+  return BOOK_ROUTES.briefing.replace(':bookId', bookId);
+}
+
 export function bookPath(bookId: string): string {
   return APP_ROUTES.book.replace(':bookId', bookId);
 }

@@ -24,3 +24,9 @@
 - 증상: `http://192.168.x.x:5191`로 열면 작품 페이지가 실패했다. 서버 요청이 하나도 나가지 않았고 localhost에서는 정상이었다.
 - 원인: 기기 ID를 `crypto.randomUUID()`로 만들었는데, 이 함수는 https나 localhost 같은 보안 컨텍스트에서만 있다. http LAN 주소에서는 `TypeError: crypto.randomUUID is not a function`이 요청 인터셉터에서 나서 모든 API 호출이 실패했다.
 - 해결: `randomUUID`가 없으면 `crypto.getRandomValues`로 v4 UUID를 만든다(`frontend/src/services/api.ts`). 재현 테스트 `ensureDeviceId.test.ts`가 수정 전 실패·수정 후 통과했고, 와이파이 주소로 작품 페이지가 열리는 것을 브라우저로 확인했다.
+
+## 2026-11-16 — 새로 넣은 Tailwind 색 토큰 클래스가 실행 중인 Vite에서 투명으로 나옴
+
+- 증상: `tailwind.config.js`에 `brief.mark` 색을 추가하고 `bg-brief-mark`를 썼는데 브라우저 computed 배경이 `rgba(0, 0, 0, 0)`이었다.
+- 원인: 이미 떠 있던 Vite 개발 서버가 옛 Tailwind 설정을 캐시한 채였다(CSS 변수는 정상).
+- 해결: Vite를 재시작하자 `rgb(196, 71, 95)`로 적용됐다. 설정 파일을 바꾼 뒤에는 개발 서버를 다시 띄워 확인한다.

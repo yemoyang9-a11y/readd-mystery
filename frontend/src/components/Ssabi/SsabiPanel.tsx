@@ -9,7 +9,7 @@ import type {
 } from '../../types';
 import { resolveSsabiTab } from '../../utils/ssabiTab';
 import { resolveCharacterMode } from '../../utils/characterMode';
-import ssabiFace from '../../assets/images/ssabi-face.png';
+import AmoSherlock from '../common/AmoSherlock';
 import NotesTab from './NotesTab';
 import RelationshipTab from './RelationshipTab';
 import ChatbotTab from './ChatbotTab';
@@ -194,7 +194,7 @@ export default function SsabiPanel({
             드러내고 싶다고 함). 챗봇 탭 답변 아바타·여닫기 버튼과 같은 이미지를 써서
             패널 전체에서 "아모"가 하나의 캐릭터로 일관되게 보이게 한다. */}
         <div className="flex items-center gap-2 mobile:shrink-0">
-          <img src={ssabiFace} alt="" aria-hidden="true" className="h-7 w-auto object-contain" />
+          <AmoSherlock className="h-9 w-auto shrink-0" />
           <h2 className="whitespace-nowrap font-dashSerif text-base font-extrabold text-brief-ink">아모의 가이드북</h2>
         </div>
       </div>

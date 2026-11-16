@@ -5,6 +5,7 @@ import { useBookPosition } from '../../hooks/useBookPosition';
 import { useBriefingSession } from '../../hooks/useBriefingSession';
 import MobileBriefingView from '../components/MobileBriefingView';
 import MobileErrorState from '../components/MobileErrorState';
+import { useBackToHome } from '../useBackToHome';
 
 // FR-BRF-001 FR-SPL-005 🚦
 export default function MobileBriefing() {
@@ -12,6 +13,7 @@ export default function MobileBriefing() {
   const session = useBriefingSession(bookId);
   const navigate = useNavigate();
   const position = useBookPosition(bookId, true);
+  const backToHome = useBackToHome();
 
   if (!session.briefing) {
     if (session.briefingError) {
@@ -36,7 +38,7 @@ export default function MobileBriefing() {
       coverUrl={session.coverUrl}
       onContinue={session.continueReading}
       onRequestFallback={session.requestFallback}
-      onBack={session.goBack}
+      onBack={backToHome}
       streamedRecap={session.streamedRecap}
       recapFailed={session.recapFailed}
       recapStreaming={session.recapStreaming}

@@ -61,6 +61,26 @@ describe('모바일 읽기 화면 윗줄', () => {
     expect(screen.queryByRole('progressbar')).toBeNull();
   });
 
+  test('FR-PRG-001: 색 테마를 바꾸면 본문을 누르지 않아도 윗줄과 구분선이 바로 바뀐다', async () => {
+    const user = userEvent.setup();
+    renderReader();
+    await openedAt(21);
+    const chrome = () => screen.getByRole('button', { name: '뒤로 가기' }).closest('[data-reader-chrome]')!;
+    const divider = () => screen.getByTestId('reader-topbar');
+    expect(chrome()).toHaveClass('bg-[#fdfdfa]');
+
+    await user.click(screen.getByRole('button', { name: '보기 설정' }));
+    await user.click(screen.getByRole('radio', { name: /어두운/ }));
+    expect(chrome()).toHaveClass('bg-[#1c1b19]', 'text-[#d9d6cf]', 'border-[#d9d6cf]/20');
+    expect(chrome()).not.toHaveClass('bg-[#fdfdfa]');
+    expect(divider()).toHaveClass('border-b', 'border-inherit');
+    expect(chrome().getAttribute('data-reader-theme')).toBe('dark');
+
+    await user.click(screen.getByRole('radio', { name: /세피아/ }));
+    expect(chrome()).toHaveClass('bg-[#f4ecd8]', 'text-[#3b3024]');
+    expect(chrome()).not.toHaveClass('bg-[#1c1b19]');
+  });
+
   test('FR-PRG-004: 장 시작 쪽에서는 본문 위 장 표시가 그대로 보이고 장 중간 쪽에서는 없다', async () => {
     const user = userEvent.setup();
     renderReader();
