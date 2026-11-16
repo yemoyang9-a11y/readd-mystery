@@ -2,9 +2,9 @@ import { useRef, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useModalLayer } from '../../hooks/useModalLayer';
 
-const CARD = 'rounded-dash-card border border-dash-line bg-white p-4';
+const CARD = 'rounded-dash-card border border-dash-line bg-dash-card p-4';
 const OUTLINE_BUTTON =
-  'inline-flex min-h-11 items-center justify-center rounded-full border border-dash-ink bg-white px-[18px] text-[14px] font-bold text-dash-ink disabled:opacity-40';
+  'inline-flex min-h-11 items-center justify-center rounded-full border border-dash-ink bg-dash-card px-[18px] text-[14px] font-bold text-dash-ink disabled:opacity-40';
 
 function WithdrawDialog({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: () => Promise<void> }) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -38,7 +38,7 @@ function WithdrawDialog({ onCancel, onConfirm }: { onCancel: () => void; onConfi
         aria-labelledby="withdraw-title"
         aria-describedby="withdraw-desc"
         tabIndex={-1}
-        className="w-full max-w-[400px] rounded-dash-panel bg-white p-6 font-dashSans text-dash-ink outline-none"
+        className="w-full max-w-[400px] rounded-dash-panel bg-dash-card p-6 font-dashSans text-dash-ink outline-none"
       >
         <h2 id="withdraw-title" className="font-dashSerif text-[18px] font-bold">
           탈퇴

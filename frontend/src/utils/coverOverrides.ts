@@ -1,3 +1,5 @@
+import { isMobileDevice } from '../mobile/device';
+
 /**
  * 표지 override — 실제 API의 cover_url이 비어 있을 때만 화면에서 대신 채운다.
  * 서버 응답을 고치는 게 아니라 표시만 바꾸는 것이라 지어낸 데이터는 아니다.
@@ -16,10 +18,15 @@ const COVER_OVERRIDES: Record<string, string> = {
   'test-book-2': '/covers/sherlock-holmes.webp',
 };
 
+const MOBILE_COVER_OVERRIDES: Record<string, string> = {
+  'bk-95898cdf13': '/covers/gasangbeomin.webp',
+};
+
 export function resolveCoverUrl(
   bookId: string,
   coverUrl: string | null | undefined
 ): string | null {
+  if (!coverUrl && isMobileDevice(window.screen) && MOBILE_COVER_OVERRIDES[bookId]) return MOBILE_COVER_OVERRIDES[bookId];
   if (!coverUrl && COVER_OVERRIDES[bookId]) return COVER_OVERRIDES[bookId];
   return coverUrl ?? null;
 }

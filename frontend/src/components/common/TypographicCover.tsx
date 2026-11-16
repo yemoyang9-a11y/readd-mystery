@@ -55,7 +55,7 @@ export default function TypographicCover({
   const titleSize = size === 'row' || isCompact ? 'text-xs' : size === 'hero' || size === 'brief' ? 'text-xl' : 'text-2xl';
   const authorFont = isDash || isBrief ? 'font-dashSans' : 'font-sans';
   const borderColor = isBrief ? '' : isDash ? 'border-dash-line' : 'border-line';
-  const bgColor = isBrief ? 'bg-white' : isDash ? 'bg-dash-paper' : 'bg-canvas';
+  const bgColor = isBrief ? 'bg-white night:bg-brief-card' : isDash ? 'bg-dash-paper' : 'bg-canvas';
   const paddingX = isCompact ? 'px-2' : 'px-6';
 
   if (coverUrl) {
@@ -74,11 +74,11 @@ export default function TypographicCover({
       data-testid="typographic-cover"
       aria-hidden="true"
     >
-      <span className={`${titleFont} ${titleSize} max-w-full font-bold leading-snug text-ink [overflow-wrap:anywhere]`}>
+      <span className={`${titleFont} ${titleSize} max-w-full font-bold leading-snug text-ink night:text-brief-ink [overflow-wrap:anywhere]`}>
         {title}
       </span>
-      <span className="h-px w-8 bg-line" />
-      <span className={`${authorFont} break-keep text-xs text-muted`}>{author}</span>
+      <span className="h-px w-8 bg-line night:bg-brief-rule" />
+      <span className={`${authorFont} break-keep text-xs text-muted night:text-brief-muted`}>{author}</span>
     </div>
   );
 }

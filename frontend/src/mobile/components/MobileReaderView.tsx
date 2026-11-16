@@ -31,6 +31,7 @@ export default function MobileReaderView({
   chapterStart,
   swipeDisabled,
   onQuote,
+  onNote,
   prefs = DEFAULT_READER_PREFS,
   insetTop,
   chromeHidden = false,
@@ -47,6 +48,7 @@ export default function MobileReaderView({
   chapterStart: ChapterSummary | null;
   swipeDisabled: boolean;
   onQuote: (text: string) => void;
+  onNote: (text: string) => void;
   prefs?: ReaderPrefs;
   insetTop: string;
   chromeHidden?: boolean;
@@ -172,6 +174,12 @@ export default function MobileReaderView({
           limitBottom={navRef.current?.getBoundingClientRect().top ?? window.innerHeight}
           onAsk={() => {
             onQuote(liveSelectionRef.current || popover.text);
+            liveSelectionRef.current = '';
+            document.getSelection()?.removeAllRanges();
+            clearPopover();
+          }}
+          onNote={() => {
+            onNote(liveSelectionRef.current || popover.text);
             liveSelectionRef.current = '';
             document.getSelection()?.removeAllRanges();
             clearPopover();

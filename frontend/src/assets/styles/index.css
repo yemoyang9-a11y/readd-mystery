@@ -13,6 +13,40 @@
   :root {
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --dash-ink: 31 31 31;
+    --dash-muted: 119 119 119;
+    --dash-line: 222 222 222;
+    --dash-paper: 251 249 247;
+    --dash-card: 255 255 255;
+    --brief-paper: 253 253 250;
+    --brief-page: 253 253 250;
+    --brief-ink: 39 38 35;
+    --brief-muted: 134 132 124;
+    --brief-line: 235 232 225;
+    --brief-rule: 228 224 213;
+    --brief-accent: 79 112 82;
+    --brief-accent-soft: 232 236 221;
+    --brief-card: 255 255 255;
+    --brief-on-accent: 255 255 255;
+  }
+
+  [data-night] {
+    --dash-ink: 245 245 247;
+    --dash-muted: 152 152 157;
+    --dash-line: 44 44 48;
+    --dash-paper: 10 10 11;
+    --dash-card: 26 26 29;
+    --brief-paper: 10 10 11;
+    --brief-page: 10 10 11;
+    --brief-ink: 242 242 244;
+    --brief-muted: 154 154 160;
+    --brief-line: 44 44 48;
+    --brief-rule: 51 51 56;
+    --brief-accent: 156 199 162;
+    --brief-accent-soft: 28 42 31;
+    --brief-card: 26 26 29;
+    --brief-on-accent: 10 26 14;
+    color-scheme: dark;
   }
 
   body {

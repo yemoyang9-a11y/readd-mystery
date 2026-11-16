@@ -62,6 +62,8 @@ export default function SsabiPanel({
   onSelectChatConversation,
   onDeleteChatConversation,
   onQuoteDismissed,
+  pendingNoteQuote = null,
+  onNoteQuoteHandled,
   compactHeader = false,
   requireTextToSend = false,
 }: {
@@ -116,6 +118,8 @@ export default function SsabiPanel({
   /** "선택한 문장" 카드가 지워질 때마다 호출된다(2026-08-25, 사용자 요청) — Reader.tsx가
    *  본문 하이라이트를 같이 지운다. */
   onQuoteDismissed?: () => void;
+  pendingNoteQuote?: { text: string; token: number } | null;
+  onNoteQuoteHandled?: () => void;
   compactHeader?: boolean;
   requireTextToSend?: boolean;
 }) {
@@ -169,6 +173,10 @@ export default function SsabiPanel({
   useEffect(() => {
     if (pendingQuote) setLastTab('chatbot');
   }, [pendingQuote?.token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (pendingNoteQuote) setLastTab('notes');
+  }, [pendingNoteQuote?.token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <section className="flex h-full flex-col border-l border-brief-rule bg-brief-paper">
@@ -235,6 +243,8 @@ export default function SsabiPanel({
             onEdit={onEditNote}
             onRemove={onRemoveNote}
             onJump={onJumpToNote}
+            quoteDraft={pendingNoteQuote}
+            onQuoteDraftHandled={onNoteQuoteHandled}
           />
         ) : null}
         {tab === 'relationship' ? (

@@ -11,6 +11,7 @@ export default function AppShell({ isMobile, nav }: { isMobile: boolean; nav?: b
     return (
       <div
         data-mobile="true"
+        data-night
         className="min-h-[100dvh] bg-dash-paper font-dashSans text-dash-ink"
         style={{ paddingTop: 'var(--safe-top)' }}
       >

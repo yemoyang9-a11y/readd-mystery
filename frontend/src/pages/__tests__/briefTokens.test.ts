@@ -1,20 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import config from '../../../tailwind.config.js';
+import { colorVars } from './rootColors';
 
 describe('브리핑 재설계 — 신규 토큰', () => {
   it('brief 색 토큰 — "황토색 느낌" 피드백(2026-08-24)으로 시안 실측값보다 밝고 채도 낮게 조정됐다', () => {
-    const brief = (config.theme!.extend!.colors as Record<string, unknown>).brief as Record<
-      string,
-      string
-    >;
-    expect(brief.paper).toBe('#fdfdfa');
-    expect(brief.ink).toBe('#272623');
-    expect(brief.muted).toBe('#86847c');
-    expect(brief.line).toBe('#ebe8e1');
-    expect(brief.rule).toBe('#e4e0d5');
+    const vars = colorVars(':root');
+    expect(vars['brief-paper']).toBe('#fdfdfa');
+    expect(vars['brief-ink']).toBe('#272623');
+    expect(vars['brief-muted']).toBe('#86847c');
+    expect(vars['brief-line']).toBe('#ebe8e1');
+    expect(vars['brief-rule']).toBe('#e4e0d5');
     // 2026-08-25, 사용자 요청 — 보라/남색 액센트를 세이지그린으로 교체
-    expect(brief.accent).toBe('#4f7052');
-    expect(brief['accent-soft']).toBe('#e8ecdd');
+    expect(vars['brief-accent']).toBe('#4f7052');
+    expect(vars['brief-accent-soft']).toBe('#e8ecdd');
   });
 
   it('brief 라운드·그림자·표지 크기 토큰이 있다', () => {

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalLayer } from '../../hooks/useModalLayer';
 import type { NoteDraft, NoteKind, ReadingNote } from '../../types';
@@ -170,6 +170,8 @@ export default function NotesTab({
   onEdit,
   onRemove,
   onJump,
+  quoteDraft = null,
+  onQuoteDraftHandled,
 }: {
   notes: ReadingNote[];
   failed: boolean;
@@ -179,10 +181,19 @@ export default function NotesTab({
   onEdit: (noteId: string, draft: Partial<NoteDraft>) => Promise<boolean>;
   onRemove: (noteId: string) => Promise<boolean>;
   onJump: (page: number) => void;
+  quoteDraft?: { text: string; token: number } | null;
+  onQuoteDraftHandled?: () => void;
 }) {
-  const [editing, setEditing] = useState<ReadingNote | 'new' | null>(null);
+  const [editing, setEditing] = useState<ReadingNote | 'new' | null>(quoteDraft ? 'new' : null);
+  const [prefill, setPrefill] = useState(quoteDraft?.text ?? '');
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const maxPage = totalPages && totalPages > 0 ? totalPages : null;
+
+  useEffect(() => {
+    if (!quoteDraft) return;
+    setPrefill(quoteDraft.text);
+    setEditing('new');
+  }, [quoteDraft?.token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="flex min-h-full flex-col">
@@ -279,14 +290,18 @@ export default function NotesTab({
         <NoteEditor
           initial={
             editing === 'new'
-              ? { page_no: currentPage ?? 1, kind: 'clue', body: '' }
+              ? { page_no: currentPage ?? 1, kind: 'clue', body: prefill }
               : { page_no: editing.page_no, kind: editing.kind, body: editing.body }
           }
           maxPage={maxPage}
           onSave={(draft) =>
             editing === 'new' ? onAdd(draft) : onEdit(editing.note_id, draft)
           }
-          onClose={() => setEditing(null)}
+          onClose={() => {
+            setEditing(null);
+            setPrefill('');
+            onQuoteDraftHandled?.();
+          }}
         />
       ) : null}
     </div>

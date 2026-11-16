@@ -1,12 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MobileBriefingView from './MobileBriefingView';
-import type { BriefingResponse, ChapterSummary } from '../../types';
-
-const chapters: ChapterSummary[] = [
-  { chapter_no: 1, title: '인간기념물', start_page: 1, end_page: 10 },
-  { chapter_no: 2, title: '생활 제일과', start_page: 11, end_page: 20 },
-];
+import type { BriefingResponse } from '../../types';
 
 function briefing(overrides: Partial<BriefingResponse> = {}): BriefingResponse {
   return {
@@ -19,14 +14,12 @@ function briefing(overrides: Partial<BriefingResponse> = {}): BriefingResponse {
 }
 
 const baseProps = {
-  chapters,
   title: '탁류',
   author: '채만식',
   coverUrl: null,
   onContinue: () => {},
   onRequestFallback: () => {},
   onBack: () => {},
-  onSelectChapter: () => {},
   streamedRecap: '',
   recapFailed: false,
   recapStreaming: false,
@@ -120,4 +113,14 @@ test('브리핑에 내 추리 노트 목록이 쪽수와 함께 나오고, 없�
   expect(region).toHaveTextContent('범인은 왼손잡이');
   expect(region).toHaveTextContent('7쪽');
   expect(region).toHaveTextContent('가설');
+});
+
+test("2026-11-16 시안: 브리핑에는 장·진도 카드와 목차가 없고 그동안 이야기와 내 추리 노트만 있다", () => {
+  render(<MobileBriefingView {...baseProps} briefing={briefing()} />);
+  expect(screen.queryByRole('region', { name: '진도' })).toBeNull();
+  expect(screen.queryByText(/제2장/)).toBeNull();
+  expect(screen.queryByText('75%')).toBeNull();
+  expect(screen.queryByRole('heading', { name: '목차' })).toBeNull();
+  expect(screen.getByRole('heading', { name: '그동안 이런 이야기였어요' })).toBeInTheDocument();
+  expect(screen.getByRole('region', { name: '내 추리 노트' })).toBeInTheDocument();
 });

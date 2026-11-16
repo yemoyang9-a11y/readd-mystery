@@ -1,16 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import config from '../../../tailwind.config.js';
+import { colorVars } from './rootColors';
 
 describe('대시보드 재설계 — 신규 토큰', () => {
   it('dash 색 토큰 4종이 시안 실측값과 일치한다', () => {
-    const dash = (config.theme!.extend!.colors as Record<string, unknown>).dash as Record<
-      string,
-      string
-    >;
-    expect(dash.ink).toBe('#1f1f1f');
-    expect(dash.muted).toBe('#777777');
-    expect(dash.line).toBe('#dedede');
-    expect(dash.paper).toBe('#fbf9f7');
+    const vars = colorVars(':root');
+    expect(vars['dash-ink']).toBe('#1f1f1f');
+    expect(vars['dash-muted']).toBe('#777777');
+    expect(vars['dash-line']).toBe('#dedede');
+    expect(vars['dash-paper']).toBe('#fbf9f7');
   });
 
   it('dash 서체 토큰 3종이 있다', () => {

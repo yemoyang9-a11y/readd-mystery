@@ -31,10 +31,11 @@ export default {
         dash: {
           // 대시보드 재설계 전용(2026-08-23 시안 확정). 기존 ink/muted/line과 값이
           // 미세하게 다르고 브리핑·읽기·싸비는 여전히 옛 값을 쓰므로 섞지 않는다.
-          ink: '#1f1f1f',
-          muted: '#777777',
-          line: '#dedede',
-          paper: '#fbf9f7',
+          ink: 'rgb(var(--dash-ink) / <alpha-value>)',
+          muted: 'rgb(var(--dash-muted) / <alpha-value>)',
+          line: 'rgb(var(--dash-line) / <alpha-value>)',
+          paper: 'rgb(var(--dash-paper) / <alpha-value>)',
+          card: 'rgb(var(--dash-card) / <alpha-value>)',
         },
         brief: {
           // 브리핑 재설계 전용(2026-08-23 시안 확정). 대시보드(dash-*, 무채색)와 달리
@@ -45,22 +46,24 @@ export default {
           // 사용자 피드백으로 조정했다(2026-08-24). 1차로 밝기만 올렸다가("더 밝게"만
           // 처리, #fdfcf9) 그래도 노랗다는 재피드백을 받고, R·B 채널 격차 자체를
           // 줄여 채도(누런 기운)를 낮췄다 — 밝기만으로는 안 풀리는 문제였다.
-          paper: '#fdfdfa',
+          paper: 'rgb(var(--brief-paper) / <alpha-value>)',
           // 시안 실측값은 #f6f1e4(본문 영역만 더 누런 톤)이었으나, 실제로 켜보니
           // topbar/패널(paper)과 본문(page)이 두 톤으로 갈라져 보인다는 사용자 피드백으로
           // paper와 동일하게 통일했다(2026-08-24).
-          page: '#fdfdfa',
-          ink: '#272623',
-          muted: '#86847c',
-          line: '#ebe8e1',
+          page: 'rgb(var(--brief-page) / <alpha-value>)',
+          ink: 'rgb(var(--brief-ink) / <alpha-value>)',
+          muted: 'rgb(var(--brief-muted) / <alpha-value>)',
+          line: 'rgb(var(--brief-line) / <alpha-value>)',
           // 시안 실측값은 #d3c6a8 — 테두리·구분선뿐 아니라 .brief-scroll 스크롤바 색으로도
           // 쓰이는데, 스크롤바는 면적이 넓어 특히 "황토색"으로 튀어 보인다는 피드백(2026-08-24)
           // 으로 더 옅게, 이어서 더 중립적인 톤으로 조정했다.
-          rule: '#e4e0d5',
+          rule: 'rgb(var(--brief-rule) / <alpha-value>)',
           // 보라/남색 액센트를 세이지 그린으로 교체(2026-08-25, 사용자 요청 — 배경·글자색은
           // 그대로 두고 액센트 색만 바꿔 달라고 함). 배경(paper/page)은 원래 값으로 되돌렸다.
-          accent: '#4f7052',
-          'accent-soft': '#e8ecdd',
+          accent: 'rgb(var(--brief-accent) / <alpha-value>)',
+          'accent-soft': 'rgb(var(--brief-accent-soft) / <alpha-value>)',
+          card: 'rgb(var(--brief-card) / <alpha-value>)',
+          'on-accent': 'rgb(var(--brief-on-accent) / <alpha-value>)',
         },
       },
       fontFamily: {
@@ -68,6 +71,7 @@ export default {
         sans: ['"Gothic A1"', 'system-ui', 'sans-serif'],
         dashSerif: ['"Noto Serif KR"', 'serif'],
         dashSans: ['Pretendard', 'system-ui', 'sans-serif'],
+        hand: ['"Nanum Pen Script"', 'cursive'],
         dashMono: ['"DM Mono"', 'monospace'],
       },
       borderRadius: {
@@ -152,6 +156,9 @@ export default {
   },
   plugins: [
     // NFR-USE
-    ({ addVariant }) => addVariant('mobile', '[data-mobile] &'),
+    ({ addVariant }) => {
+      addVariant('mobile', '[data-mobile] &');
+      addVariant('night', '[data-night] &');
+    },
   ],
 };
