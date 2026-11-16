@@ -22,6 +22,7 @@ export default function ContinueStrip({
         <Link
           to={bookPath(book.book_id)}
           aria-label={book.title}
+          data-track="book-card"
           className="flex min-w-0 flex-1 items-center gap-3"
         >
           <BookCover book={book} size="thumb" />
@@ -32,6 +33,7 @@ export default function ContinueStrip({
         </Link>
         <button
           type="button"
+          data-track="이어 읽기"
           onClick={onResume}
           disabled={busy}
           className="min-h-11 flex-none rounded-full border border-dash-ink bg-transparent px-[14px] text-xs font-bold text-dash-ink transition-colors hover:bg-dash-ink/5 active:bg-dash-ink/10 disabled:opacity-40 disabled:hover:bg-transparent"

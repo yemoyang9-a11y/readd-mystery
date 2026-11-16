@@ -206,6 +206,7 @@ export default function SsabiPanel({
             key={it}
             role="tab"
             type="button"
+            data-track={`ssabi-tab-${TAB_LABELS[it]}`}
             aria-selected={tab === it}
             onClick={() => setLastTab(it)}
             className={

@@ -158,6 +158,7 @@ export default function BriefingView({
         <div className="mt-4 flex justify-end">
           <button
             type="button"
+            data-track="마저 읽기"
             onClick={onContinue}
             className="rounded-full border border-brief-ink bg-transparent px-3.5 py-2 font-dashSans text-xs font-bold text-brief-ink transition-colors hover:bg-[rgba(31,31,31,0.05)] active:bg-[rgba(31,31,31,0.1)]"
           >

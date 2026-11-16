@@ -49,7 +49,7 @@ export default function QuotePopover({
   const right = Math.max(8, window.innerWidth - popover.right);
 
   return createPortal(
-    <button
+    <button data-no-track
       type="button"
       style={showBelow ? { top: popover.bottom + GAP, right } : { top: popover.top - GAP, right }}
       className={`fixed z-20 animate-pop-in whitespace-nowrap rounded-2xl border border-brief-accent bg-brief-accent-soft px-3.5 py-2 text-[11px] font-bold text-brief-accent shadow-brief-soft-sm ${

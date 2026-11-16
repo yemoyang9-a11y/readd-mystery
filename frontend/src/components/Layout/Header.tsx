@@ -57,12 +57,12 @@ export default function Header({ nav = true }: { nav?: boolean }) {
             <nav aria-label="주 메뉴">
               <ul className="flex items-center gap-6">
                 <li>
-                  <NavLink to={APP_ROUTES.home} end className={headerLinkClass}>
+                  <NavLink to={APP_ROUTES.home} end data-track="nav-홈" className={headerLinkClass}>
                     홈
                   </NavLink>
                 </li>
                 <li>
-                  <NavLink to={APP_ROUTES.shelf} className={headerLinkClass}>
+                  <NavLink to={APP_ROUTES.shelf} data-track="nav-서재" className={headerLinkClass}>
                     서재
                   </NavLink>
                 </li>

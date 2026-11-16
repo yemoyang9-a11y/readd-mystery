@@ -120,7 +120,7 @@ export default function Shelf() {
             >
               {visible.map((book) => (
                 <li key={book.book_id} className="min-w-0">
-                  <Link to={bookPath(book.book_id)} aria-label={book.title} className="block">
+                  <Link to={bookPath(book.book_id)} aria-label={book.title} data-track="book-card" className="block">
                     <BookCover book={book} size="grid" />
                     <p className="m-0 mt-2 line-clamp-2 break-words text-sm font-semibold text-dash-ink">
                       {book.title}

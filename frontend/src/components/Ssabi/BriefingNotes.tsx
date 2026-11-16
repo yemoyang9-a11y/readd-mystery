@@ -14,7 +14,7 @@ export default function BriefingNotes({ notes }: { notes: ReadingNote[] }) {
       {notes.length === 0 ? (
         <p className="m-0 font-dashSans text-sm text-brief-muted">아직 적은 게 없어요.</p>
       ) : (
-        <ul className="m-0 flex list-none flex-col gap-2 p-0">
+        <ul data-no-track className="m-0 flex list-none flex-col gap-2 p-0">
           {notes.map((note) => (
             <li
               key={note.note_id}

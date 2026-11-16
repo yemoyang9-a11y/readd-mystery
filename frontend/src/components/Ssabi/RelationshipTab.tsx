@@ -355,7 +355,7 @@ export default function RelationshipTab({
             </div>
 
             {resultsOpen && normalizedQuery ? (
-              <ul
+              <ul data-no-track
                 role="listbox"
                 aria-label="인물 검색 결과"
                 className="absolute right-0 top-full z-10 mt-1 max-h-48 w-44 overflow-y-auto rounded-xl border border-brief-rule bg-white py-1 shadow-brief-soft-sm"
@@ -391,7 +391,7 @@ export default function RelationshipTab({
           <p className="text-[11px] text-brief-muted">아직 등장한 인물이 없습니다.</p>
         ) : null}
 
-        <ul className="space-y-3">
+        <ul data-no-track className="space-y-3">
           {displayed.nodes.map((node) => {
             const isOpen = node.id === activeSelected;
             return (
