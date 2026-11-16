@@ -23,7 +23,7 @@ describe('근거 부재 토큰의 청크 분할 (FR-QNA-004 🚦)', () => {
   const BOOK_ID = 'takryu-vol1';
   const DEVICE_ID = 'device-123';
   const K = 80;
-  const QUERY = '결말이 어떻게 되나';
+  const QUERY = '오늘 날씨 어때?';
 
   beforeEach(() => {
     process.env.MOCK_MODE = 'false';

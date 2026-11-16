@@ -1,6 +1,13 @@
-import { SYSTEM_RULES, COMPLETION_STANCE, buildQuoteSection } from './response-policy';
+import {
+  SYSTEM_RULES,
+  COMPLETION_STANCE,
+  buildQuoteSection,
+  HARNESS_GUIDANCE,
+  HARNESS_RETRY_NOTICE,
+} from './response-policy';
 import type { ChatbotQueryLog } from '../../shared/types';
 import { assembleContext, buildStableContextParts } from './context-assembly';
+import { buildNotesSection } from './harness/notes-section';
 import { vectorSearch } from './vector-search';
 import { selectModel, logModelSelection, recordSelection, CHATBOT_TASK } from './difficulty-router';
 import { stream as llmStream } from '../llm-gateway/gateway';
@@ -9,10 +16,20 @@ import { recordTurns, getConversationContext } from './conversation-service';
 import { questionFocus } from './question-focus';
 import { resolveConversationContext } from './conversation-context';
 import { formatConversationInput } from './conversation-input';
+import { emptyNotesReader, type NotesReader } from './notes-reader';
+import { classifyQuestion, type QuestionIntent } from './harness/question-intent';
+import { guardAnswer, type GuardViolation } from './harness/output-guard';
+import { HARNESS_FIXED_ANSWER, HARNESS_PREDICTION_ANSWER } from './harness/messages';
 
 const MOCK_MODE = process.env.MOCK_MODE === 'true';
 
 export { CHATBOT_TASK };
+
+const UNGUARDED_INTENTS: ReadonlySet<QuestionIntent> = new Set(['outside']);
+
+export interface ChatbotDeps {
+  notesReader?: NotesReader;
+}
 
 const NO_EVIDENCE_TOKEN = '[NO_EVIDENCE]';
 
@@ -53,8 +70,11 @@ export async function* handleQuery(
   conversationId?: number,
   quote?: string,
   currentPageText?: { pageNo: number; content: string },
-  isComplete = false
+  isComplete = false,
+  deps: ChatbotDeps = {}
 ): AsyncGenerator<string> {
+  const notesReader = deps.notesReader ?? emptyNotesReader;
+  const intent = classifyQuestion(query);
   // This payload is loaded by the server route; still enforce K at the final boundary.
   currentPageText =
     currentPageText &&
@@ -96,6 +116,41 @@ export async function* handleQuery(
       tokens: { input: 0, output: AMO_INTRO_MESSAGE.length },
     });
     yield AMO_INTRO_MESSAGE;
+    return;
+  }
+
+  // NFR-AI-005
+  if (intent === 'prediction') {
+    if (conversationId != null) {
+      if (quote) await recordTurns(conversationId, query, HARNESS_PREDICTION_ANSWER, K, quote);
+      else await recordTurns(conversationId, query, HARNESS_PREDICTION_ANSWER, K);
+    }
+    await logQuery({
+      timestamp: new Date(),
+      device_id: deviceId,
+      book_id: bookId,
+      cutoff_page: K,
+      query,
+      quote,
+      input_records: {
+        chapter_summaries: [],
+        current_chapter_pages: [],
+        characters: [],
+        relationships: [],
+        character_notes: [],
+        terms: [],
+        events: [],
+        background: 'none',
+      },
+      search_selected_pages: [],
+      no_evidence: false,
+      is_complete: isComplete,
+      model: 'canned:harness-prediction',
+      harness: { intent, violations: [], regenerated: false, fixed_answer: true },
+      output_ref: `chatbot-prediction-${Date.now()}`,
+      tokens: { input: 0, output: HARNESS_PREDICTION_ANSWER.length },
+    });
+    yield HARNESS_PREDICTION_ANSWER;
     return;
   }
 
@@ -170,6 +225,14 @@ export async function* handleQuery(
     if (subjectFacts.length) {
       fullPrompt += `\n\n## 현재 질문 대상의 인물 근거 (현재 읽기 범위의 서버 자료)\n\n${JSON.stringify({ subject_facts: subjectFacts })}`;
     }
+    let notes: Awaited<ReturnType<NotesReader['listNotes']>> = [];
+    try {
+      notes = await notesReader.listNotes(deviceId, bookId);
+    } catch (error) {
+      console.error('[Chatbot] notes lookup failed', { bookId, error });
+    }
+    fullPrompt += buildNotesSection(notes, K);
+    fullPrompt += HARNESS_GUIDANCE[intent] ?? '';
     fullPrompt += `\n\n# 사용자 질문\n\n${query}`;
     fullPrompt = fullPrompt.replace(/^\n+/, '');
 
@@ -178,43 +241,89 @@ export async function* handleQuery(
     recordSelection(modelSelection.model);
 
     const task = CHATBOT_TASK;
-    const controller = new AbortController();
-    generationController = controller;
-    // One generation request, including SDK transport retries, shares this deadline.
-    generationDeadline = setTimeout(() => controller.abort(), 60_000);
-    const streamSource = MOCK_MODE
-      ? getMockLLMResponse(query)
-      : llmStream(task, fullPrompt, {
-          system: SYSTEM_RULES,
-          context: stableContext,
-          history: dialogue.history,
-          signal: controller.signal,
-        });
-    let responseText = '';
-    let pending = '';
+    async function* generateChunks(promptText: string): AsyncGenerator<string> {
+      if (generationDeadline) clearTimeout(generationDeadline);
+      generationController?.abort();
+      const controller = new AbortController();
+      generationController = controller;
+      // One generation request, including SDK transport retries, shares this deadline.
+      generationDeadline = setTimeout(() => controller.abort(), 60_000);
+      const streamSource = MOCK_MODE
+        ? getMockLLMResponse(query)
+        : llmStream(task, promptText, {
+            system: SYSTEM_RULES,
+            context: stableContext,
+            history: dialogue.history,
+            signal: controller.signal,
+          });
+      let pending = '';
 
-    // Stream immediately. Only a possible split internal control token is held locally.
-    // FR-SPL-005: control tokens are errors, never canned answers or extra LLM calls.
-    for await (const chunk of streamSource) {
-      controller.signal.throwIfAborted();
-      pending += chunk;
-      if (pending.includes(NO_EVIDENCE_TOKEN)) throw new Error('CHATBOT_INTERNAL_TOKEN');
-      let held = Math.min(pending.length, NO_EVIDENCE_TOKEN.length - 1);
-      while (held > 0 && !pending.endsWith(NO_EVIDENCE_TOKEN.slice(0, held))) held--;
-      const ready = pending.slice(0, pending.length - held);
-      pending = pending.slice(pending.length - held);
-      if (ready) {
-        responseText += ready;
-        yield ready;
+      // Stream immediately. Only a possible split internal control token is held locally.
+      // FR-SPL-005: control tokens are errors, never canned answers or extra LLM calls.
+      for await (const chunk of streamSource) {
+        controller.signal.throwIfAborted();
+        pending += chunk;
+        if (pending.includes(NO_EVIDENCE_TOKEN)) throw new Error('CHATBOT_INTERNAL_TOKEN');
+        let held = Math.min(pending.length, NO_EVIDENCE_TOKEN.length - 1);
+        while (held > 0 && !pending.endsWith(NO_EVIDENCE_TOKEN.slice(0, held))) held--;
+        const ready = pending.slice(0, pending.length - held);
+        pending = pending.slice(pending.length - held);
+        if (ready) yield ready;
       }
+      controller.signal.throwIfAborted();
+      if (pending) yield pending;
+      clearTimeout(generationDeadline);
     }
-    controller.signal.throwIfAborted();
-    if (pending) {
-      responseText += pending;
-      yield pending;
+
+    const allowedPages: Array<{ page_no: number; content: string }> = searchResults.map((r) => ({
+      page_no: r.page_no,
+      content: r.content,
+    }));
+    if (currentPageText)
+      allowedPages.push({ page_no: currentPageText.pageNo, content: currentPageText.content });
+    const guardAgainst = (text: string): GuardViolation[] =>
+      guardAnswer(text, {
+        cutoff: K,
+        pages: allowedPages,
+        intent,
+        echoedUserText: quote ? [query, quote] : [query],
+      }).violations;
+
+    let responseText = '';
+    let modelCalls = 1;
+    const attemptViolations: GuardViolation[][] = [];
+    let fixedAnswer = false;
+
+    if (!UNGUARDED_INTENTS.has(intent)) {
+      // FR-QNA-004 🚦 NFR-AI-005
+      let attemptPrompt = fullPrompt;
+      for (let attempt = 0; ; attempt++) {
+        let text = '';
+        for await (const chunk of generateChunks(attemptPrompt)) text += chunk;
+        if (!text.trim()) throw new Error('CHATBOT_EMPTY_RESPONSE');
+        const violations = guardAgainst(text);
+        attemptViolations.push(violations);
+        if (violations.length === 0) {
+          responseText = text;
+          break;
+        }
+        if (attempt === 1) {
+          responseText = HARNESS_FIXED_ANSWER;
+          fixedAnswer = true;
+          break;
+        }
+        modelCalls++;
+        attemptPrompt = fullPrompt + HARNESS_RETRY_NOTICE;
+      }
+      yield responseText;
+    } else {
+      for await (const chunk of generateChunks(fullPrompt)) {
+        responseText += chunk;
+        yield chunk;
+      }
+      if (!responseText.trim()) throw new Error('CHATBOT_EMPTY_RESPONSE');
+      attemptViolations.push(guardAgainst(responseText));
     }
-    if (!responseText.trim()) throw new Error('CHATBOT_EMPTY_RESPONSE');
-    clearTimeout(generationDeadline);
 
     if (conversationId != null) {
       if (quote) await recordTurns(conversationId, query, responseText, K, quote);
@@ -245,7 +354,13 @@ export async function* handleQuery(
       no_evidence: false,
       is_complete: isComplete,
       model: modelSelection.modelId,
-      logical_model_calls: MOCK_MODE ? 0 : 1,
+      logical_model_calls: MOCK_MODE ? 0 : modelCalls,
+      harness: {
+        intent,
+        violations: attemptViolations,
+        regenerated: modelCalls > 1,
+        fixed_answer: fixedAnswer,
+      },
       output_ref: `chatbot-${Date.now()}`,
       tokens: {
         input: 0, // TODO: 실제 토큰 수
@@ -279,6 +394,7 @@ async function logQuery(log: ChatbotQueryLog): Promise<void> {
       is_complete: log.is_complete ?? false,
       model: log.model,
       logical_model_calls: log.logical_model_calls ?? 0,
+      harness: log.harness,
       output_ref: log.output_ref,
       tokens: log.tokens,
     })
