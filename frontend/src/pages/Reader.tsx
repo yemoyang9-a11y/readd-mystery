@@ -13,6 +13,7 @@ import { useReadingSession } from '../hooks/useReadingSession';
 import { useReaderPrefs } from '../hooks/useReaderPrefs';
 import ReaderPrefsSheet from '../components/Reader/ReaderPrefsSheet';
 import JumpReturnBar from '../components/Reader/JumpReturnBar';
+import TocJumpDialog from '../components/Reader/TocJumpDialog';
 import { useBackToBook } from '../hooks/useBackToBook';
 
 /**
@@ -63,6 +64,10 @@ function ReadingSession() {
     returnToOrigin,
     dismissJumpOrigin,
     moveTo,
+    requestTocJump,
+    tocJumpConfirm,
+    confirmTocJump,
+    cancelTocJump,
     panelOpen,
     togglePanel,
     highlightedQuote,
@@ -140,10 +145,10 @@ function ReadingSession() {
    *  값을 그대로 쓴다(절대 규칙 2번). 페이지 입력창의 임의 이동과 같은 카테고리다. */
   const handleSelectChapter = useCallback(
     (startPage: number) => {
-      moveTo(startPage);
+      requestTocJump(startPage);
       setTocOpen(false);
     },
-    [moveTo]
+    [requestTocJump]
   );
 
   const shownPage = page && page.page_no === currentPage ? page : null;
@@ -253,6 +258,7 @@ function ReadingSession() {
       </div>
 
       <JumpReturnBar origin={jumpOrigin} onReturn={returnToOrigin} onDismiss={dismissJumpOrigin} />
+      {tocJumpConfirm !== null ? <TocJumpDialog onConfirm={confirmTocJump} onCancel={cancelTocJump} /> : null}
       {prefsOpen ? (
         <ReaderPrefsSheet
           variant="popover"

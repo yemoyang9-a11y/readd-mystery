@@ -120,11 +120,14 @@ export function mockEntry(bookId: string = MOCK_BOOK_ID): EntryResponse {
 }
 
 // FR-PRG-003
+const maxPages: Record<string, number | undefined> = {};
+
 export function mockRecordProgress(bookId: string, page: number): number {
   if (bookId === MOCK_BOOK_ID) currentPage = page;
   else otherPages[bookId] = page;
+  maxPages[bookId] = Math.max(maxPages[bookId] ?? 0, page);
   lastReadAt[bookId] = new Date().toISOString();
-  return deriveCutoff(page);
+  return deriveCutoff(maxPages[bookId]!);
 }
 
 // FR-BRF-005

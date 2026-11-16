@@ -1,0 +1,81 @@
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import MobileReader from './MobileReader';
+import { clearPendingJump } from '../../utils/pendingJump';
+
+const { enterBookMock, sendProgressMock } = vi.hoisted(() => ({
+  enterBookMock: vi.fn(),
+  sendProgressMock: vi.fn(),
+}));
+
+vi.mock('../../services/progressService', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../services/progressService')>();
+  return { ...actual, enterBook: enterBookMock, sendProgress: sendProgressMock };
+});
+
+vi.mock('../../hooks/useHeartbeat', () => ({ useHeartbeat: vi.fn() }));
+
+function renderReader() {
+  return render(
+    <MemoryRouter initialEntries={['/books/takryu/read']}>
+      <Routes>
+        <Route path="/books/:bookId/read" element={<MobileReader />} />
+      </Routes>
+    </MemoryRouter>
+  );
+}
+
+async function openToc() {
+  const input = await screen.findByLabelText<HTMLInputElement>('페이지로 이동');
+  await waitFor(() => expect(input.value).toBe('5'));
+  await waitFor(() => expect(sendProgressMock).toHaveBeenCalled());
+  fireEvent.click(screen.getByRole('button', { name: '목차 열기' }));
+  return () => screen.getByLabelText<HTMLInputElement>('페이지로 이동');
+}
+
+describe('FR-PRG-003: 모바일 목차 점프 확인 창', () => {
+  beforeEach(() => {
+    clearPendingJump();
+    localStorage.clear();
+    enterBookMock
+      .mockReset()
+      .mockResolvedValue({ route: 'reader', page: 5, is_new_session: false, session_epoch: 1 });
+    sendProgressMock.mockReset().mockResolvedValue(15);
+  });
+
+  test('기준 쪽수보다 뒤 장을 고르면 확인 창이 뜨고, 취소하면 이동하지 않는다', async () => {
+    renderReader();
+    const pageInput = await openToc();
+
+    fireEvent.click(await screen.findByRole('button', { name: /신판 흥부전/ }));
+
+    expect(screen.getByRole('dialog')).toHaveTextContent(
+      '여기로 이동하면 관계도와 챗봇이 이 쪽까지의 내용을 다룹니다'
+    );
+    fireEvent.click(screen.getByRole('button', { name: '취소' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(pageInput().value).toBe('5');
+    expect(sendProgressMock).toHaveBeenCalledTimes(1);
+  });
+
+  test('확인 창에서 이동을 누르면 그 장으로 옮긴다', async () => {
+    renderReader();
+    const pageInput = await openToc();
+
+    fireEvent.click(await screen.findByRole('button', { name: /신판 흥부전/ }));
+    fireEvent.click(screen.getByRole('button', { name: '이동' }));
+
+    await waitFor(() => expect(pageInput().value).toBe('21'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  test('기준 쪽수 이내 장은 확인 창 없이 바로 옮긴다', async () => {
+    renderReader();
+    const pageInput = await openToc();
+
+    fireEvent.click(await screen.findByRole('button', { name: /생활 제일과/ }));
+
+    await waitFor(() => expect(pageInput().value).toBe('11'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});

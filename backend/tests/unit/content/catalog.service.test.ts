@@ -39,7 +39,7 @@ const CATALOG = [
 ];
 
 const LAST_READ_AT = '2026-11-09T12:34:56.000Z';
-const STORED = { current_page: 80, event_seq: 3, updated_at: LAST_READ_AT };
+const STORED = { current_page: 80, max_page: 80, event_seq: 3, updated_at: LAST_READ_AT };
 
 const SNAPSHOT: CutoffSnapshot = {
   current_page: 80,

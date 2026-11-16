@@ -8,13 +8,14 @@
  *
  * 조항: FR-PRG-003 🚦 (기준점 규칙) · FR-BRF-005 🚦 (파생값 단일 원천)
  *
- * ┌ 저장값 (유일) ────────────────────────────────────────────────┐
- * │  reading_position.current_page   ← 마지막으로 열어본 페이지      │
+ * ┌ 저장값 (둘) ──────────────────────────────────────────────────┐
+ * │  reading_position.current_page   ← 지금 펼친 페이지 (이어 읽기)  │
+ * │  reading_position.max_page       ← 가장 멀리 읽은 페이지         │
  * └───────────────────────────────────────────────────────────────┘
- *      cutoff      = 진도 레코드 없음 ? 0 : current_page   (FR-PRG-003 🚦)
- *      percent     = current_page / total_pages     (R2 불변식, MVP 1장)
- *      is_complete = 진도 레코드 있음 && current_page >= total_pages  (D14, FR-QNA-004 🚦)
- *      chapter     = current_page가 속한 장           (장 경계 테이블)
+ *      cutoff      = 진도 레코드 없음 ? 0 : max_page   (FR-PRG-003 🚦)
+ *      percent     = max_page / total_pages     (R2 불변식, MVP 1장)
+ *      is_complete = 진도 레코드 있음 && max_page >= total_pages  (D14, FR-QNA-004 🚦)
+ *      chapter     = max_page가 속한 장           (장 경계 테이블)
  *
  * ⚠️ **이 파일 밖에서 cutoff나 `%`를 계산하는 코드는 존재해서는 안 된다** (프론트 포함).
  *    FR-BRF-005의 "불일치 0건"은 검증이 아니라 계산 지점 단일화로 달성한다.
@@ -79,8 +80,8 @@ export function createCutoffService(deps: CutoffServiceDeps): CutoffService & Re
     async getCutoffSnapshot(deviceId: string, bookId: string): Promise<CutoffSnapshot> {
       const stored = await positions.findPosition(deviceId, bookId);
 
-      // 저장값 — 유일한 원천 (3.3절)
       const currentPage = stored?.current_page ?? FIRST_ENTRY_PAGE;
+      const maxPage = stored?.max_page ?? FIRST_ENTRY_PAGE;
 
       const totalPages = await books.findTotalPages(bookId);
       if (totalPages === null || totalPages <= 0) {
@@ -89,32 +90,24 @@ export function createCutoffService(deps: CutoffServiceDeps): CutoffService & Re
         );
       }
 
-      const chapter = await books.findChapterContaining(bookId, currentPage);
+      const chapter = await books.findChapterContaining(bookId, maxPage);
       if (chapter === null) {
         // 장 범위 합집합 = [1, 마지막 페이지] 완전 커버는 파이프라인이 검증한다
         // (FR-DAT-001 🚦). 여기 도달했다면 데이터 결함이므로 조용히 삼키지 않는다.
         throw new Error(
-          `[cutoff] page=${currentPage}가 속한 장을 찾을 수 없어 스냅샷을 만들지 않는다: bookId=${bookId}`
+          `[cutoff] page=${maxPage}가 속한 장을 찾을 수 없어 스냅샷을 만들지 않는다: bookId=${bookId}`
         );
       }
 
       // ── 파생 계산: 이 블록이 시스템 전체의 유일한 계산 지점이다 ──────────────
-      // 한 번이라도 페이지를 연 독자는 그 페이지까지가 상한이다 — 펼친 페이지는 이미
-      // 화면에 떠 있으므로 새로운 노출이 아니다(R3). 1페이지도 예외가 아니다.
-      // 0이 되는 건 진도 레코드가 아예 없을 때뿐이다. 책을 한 번도 열지 않은 사람의
-      // 브리핑 화면이 1페이지 줄거리를 미리 흘리지 않게 하기 위한 것으로, 이 상태는
-      // current_page(표시용 1)로는 "1페이지를 펼쳐 읽는 중"과 구별되지 않으므로
-      // **레코드 유무**로 가른다.
-      const cutoff = stored === null ? 0 : currentPage;
+      // FR-PRG-003 🚦
+      const cutoff = stored === null ? 0 : maxPage;
       const percent = round(
-        (currentPage / totalPages) * 100, // FR-BRF-005 🚦 — 단일 원천
+        (maxPage / totalPages) * 100, // FR-BRF-005 🚦
         PERCENT_DECIMALS
       );
-      // 완독 여부도 파생값이다 — 이 블록이 유일한 계산 지점이다(FR-BRF-005 🚦, 절대
-      // 규칙 2번). 진도 레코드가 있고 마지막 페이지 이상에 도달했을 때만 참이다. 레코드
-      // 없음(cutoff=0)은 완독이 아니다. 완독은 허용 범위만 뜻하며, 검색이 모든 사실을
-      // 회수했다거나 특정 정보가 작품에 없다는 증거가 되지 않는다(2026-10-21 정책).
-      const isComplete = stored !== null && currentPage >= totalPages;
+      // FR-BRF-005 🚦, FR-QNA-004 🚦
+      const isComplete = stored !== null && maxPage >= totalPages;
       // ───────────────────────────────────────────────────────────────────────
 
       return {

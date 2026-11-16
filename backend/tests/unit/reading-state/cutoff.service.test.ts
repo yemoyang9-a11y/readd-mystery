@@ -49,20 +49,18 @@ describe('기준점 결정기 — getCutoffSnapshot', () => {
     expect(snapshot.cutoff).toBe(0);
   });
 
-  test('FR-PRG-003: 역방향 이동에도 cutoff가 따라 내려간다 (앞뒤 모두)', async () => {
+  test('FR-PRG-003: 역방향 이동에도 cutoff는 내려가지 않고 current_page만 따라간다', async () => {
     const { positions, books } = makeSeededFakes();
     const service = createCutoffService({ positions, books });
 
-    // 정방향 — p.25까지 읽었다
-    positions.set(SEED_DEVICE_ID, SEED_BOOK_ID, { current_page: 25, event_seq: 10 });
+    await positions.savePosition(SEED_DEVICE_ID, SEED_BOOK_ID, { current_page: 25, event_seq: 10 });
     const forward = await service.getCutoffSnapshot(SEED_DEVICE_ID, SEED_BOOK_ID);
     expect(forward.cutoff).toBe(25);
 
-    // 역방향 — 목차로 p.5로 되돌아갔다. watermark는 존재하지 않는다 (R2 불변식)
-    positions.set(SEED_DEVICE_ID, SEED_BOOK_ID, { current_page: 5, event_seq: 11 });
+    await positions.savePosition(SEED_DEVICE_ID, SEED_BOOK_ID, { current_page: 5, event_seq: 11 });
     const backward = await service.getCutoffSnapshot(SEED_DEVICE_ID, SEED_BOOK_ID);
-    expect(backward.cutoff).toBe(5);
-    expect(backward.cutoff).toBeLessThan(forward.cutoff);
+    expect(backward.current_page).toBe(5);
+    expect(backward.cutoff).toBe(25);
   });
 
   test('FR-BRF-005 🚦: percent가 스냅샷 단일 원천에서 나온다 (current_page / total_pages)', async () => {
