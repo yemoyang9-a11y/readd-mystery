@@ -18,3 +18,9 @@
 - 증상: `VITE_API_URL=http://127.0.0.1:3101`로 띄운 Vite인데 브라우저 요청이 `http://localhost:3000/admin/jobs`로 가서 `ERR_CONNECTION_REFUSED`.
 - 원인: 같은 5191 포트에 예전에 띄운 Vite(`--host 127.0.0.1`, 환경변수 없음)가 살아 있었다. 새 Vite는 `::1`에만 붙어서, `127.0.0.1:5191`로 접속하면 옛 서버가 응답했다.
 - 해결: `Get-NetTCPConnection -LocalPort <포트> -State Listen`으로 포트 소유 프로세스와 명령줄을 확인하고 옛 서버를 종료한 뒤 다시 접속했다. 업로드가 실제 서버로 들어가는 것을 확인했다. 개발 서버를 띄우기 전에 포트를 먼저 확인한다.
+
+## 2026-11-16 — 휴대폰(와이파이 주소 http)에서 "작품 정보를 불러오지 못했습니다"
+
+- 증상: `http://192.168.x.x:5191`로 열면 작품 페이지가 실패했다. 서버 요청이 하나도 나가지 않았고 localhost에서는 정상이었다.
+- 원인: 기기 ID를 `crypto.randomUUID()`로 만들었는데, 이 함수는 https나 localhost 같은 보안 컨텍스트에서만 있다. http LAN 주소에서는 `TypeError: crypto.randomUUID is not a function`이 요청 인터셉터에서 나서 모든 API 호출이 실패했다.
+- 해결: `randomUUID`가 없으면 `crypto.getRandomValues`로 v4 UUID를 만든다(`frontend/src/services/api.ts`). 재현 테스트 `ensureDeviceId.test.ts`가 수정 전 실패·수정 후 통과했고, 와이파이 주소로 작품 페이지가 열리는 것을 브라우저로 확인했다.

@@ -24,6 +24,17 @@ describe('ensureDeviceId', () => {
     expect(ensureDeviceId()).toBe(first);
   });
 
+  it('FR-PRG-003: http 주소처럼 crypto.randomUUID 가 없는 환경에서도 v4 UUID 를 만든다', () => {
+    vi.stubGlobal('crypto', { getRandomValues: globalThis.crypto.getRandomValues.bind(globalThis.crypto) });
+    try {
+      const id = ensureDeviceId();
+      expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+      expect(getDeviceId()).toBe(id);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('FR-PRG-003: 저장된 기기 ID 가 있으면 그 값을 그대로 쓴다', () => {
     setDeviceId('stored-device');
 

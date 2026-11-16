@@ -13,13 +13,21 @@ import axios from 'axios';
 import { API_BASE_URL } from '../utils/constants';
 import { authHeaders, clearAuthToken, getDeviceId, setDeviceId } from '../utils/storage';
 
+function uuidV4FromRandomValues(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 /**
  * 디바이스 식별자를 확보한다. 최초 실행 시 UUID 를 생성한다 (8/20 팀 결정, team-sync §4.8).
  */
 export function ensureDeviceId(): string {
   const existing = getDeviceId();
   if (existing) return existing;
-  const generated = crypto.randomUUID();
+  const generated = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : uuidV4FromRandomValues();
   setDeviceId(generated);
   return generated;
 }
