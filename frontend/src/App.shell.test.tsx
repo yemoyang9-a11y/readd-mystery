@@ -28,11 +28,10 @@ describe.each([
   });
 });
 
-test('모바일 작품 페이지에는 주 메뉴가 없다', () => {
-  const { container } = renderAt('/books/takryu', true);
-  expect(screen.getByRole('button', { name: '뒤로 가기' })).toBeInTheDocument();
+test('FR-BRF-001: 모바일에서 작품 페이지 주소를 직접 열면 브리핑 화면 주소로 바뀐다', () => {
+  renderAt('/books/takryu', true);
+  expect(window.location.pathname).toBe('/books/takryu/briefing');
   expect(screen.queryByRole('navigation', { name: '주 메뉴' })).not.toBeInTheDocument();
-  expect(container.firstElementChild).toHaveAttribute('data-mobile', 'true');
 });
 
 test('PC 작품 페이지에는 위 줄 메뉴가 있다', () => {

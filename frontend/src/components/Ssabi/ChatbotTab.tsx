@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import type { ChatbotConversationSummary, ChatbotConversationTurn } from '../../types';
-import ssabiFace from '../../assets/images/ssabi-face.png';
+import AmoSherlock from '../common/AmoSherlock';
 import { formatConversationTimestamp } from './formatConversationTime';
 
 /**
@@ -465,12 +465,7 @@ export default function ChatbotTab({
 
             {bubbles.length === 0 ? (
               <div className="flex items-end gap-2">
-                <img
-                  src={ssabiFace}
-                  alt=""
-                  aria-hidden="true"
-                  className="h-9 w-auto shrink-0 translate-y-3 object-contain"
-                />
+                <AmoSherlock className="h-11 w-auto shrink-0 translate-y-3" />
                 <p className="w-fit max-w-[76%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink">
                   {DEFAULT_GREETING}
                 </p>
@@ -486,12 +481,7 @@ export default function ChatbotTab({
                   </p>
                 ) : (
                   <div key={i} className="flex items-end gap-2">
-                    <img
-                      src={ssabiFace}
-                      alt=""
-                      aria-hidden="true"
-                      className="h-9 w-auto shrink-0 translate-y-3 object-contain"
-                    />
+                    <AmoSherlock className="h-11 w-auto shrink-0 translate-y-3" />
                     <div className="w-fit max-w-[76%] rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink">
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm, remarkBreaks]}
@@ -512,7 +502,8 @@ export default function ChatbotTab({
             ) : null}
 
             {streaming ? (
-              <span aria-live="polite" className="block text-[11px] text-brief-muted">
+              <span aria-live="polite" className="flex items-center gap-1.5 text-[11px] text-brief-muted">
+                <AmoSherlock expression="think" className="h-7 w-auto shrink-0" />
                 답하는 중
               </span>
             ) : null}

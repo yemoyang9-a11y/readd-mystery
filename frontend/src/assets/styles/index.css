@@ -28,24 +28,45 @@
     --brief-accent-soft: 232 236 221;
     --brief-card: 255 255 255;
     --brief-on-accent: 255 255 255;
+    --brief-mark: 79 112 82;
+  }
+
+  [data-mobile] {
+    --dash-ink: 26 20 21;
+    --dash-muted: 95 86 83;
+    --dash-line: 221 216 213;
+    --dash-paper: 251 250 249;
+    --dash-card: 255 255 255;
+    --brief-paper: 251 250 249;
+    --brief-page: 251 250 249;
+    --brief-ink: 26 20 21;
+    --brief-muted: 95 86 83;
+    --brief-line: 239 236 234;
+    --brief-rule: 221 216 213;
+    --brief-accent: 143 29 53;
+    --brief-accent-soft: 243 227 231;
+    --brief-card: 255 255 255;
+    --brief-on-accent: 255 255 255;
+    --brief-mark: 143 29 53;
   }
 
   [data-night] {
-    --dash-ink: 245 245 247;
-    --dash-muted: 152 152 157;
-    --dash-line: 44 44 48;
-    --dash-paper: 10 10 11;
-    --dash-card: 26 26 29;
-    --brief-paper: 10 10 11;
-    --brief-page: 10 10 11;
-    --brief-ink: 242 242 244;
-    --brief-muted: 154 154 160;
-    --brief-line: 44 44 48;
-    --brief-rule: 51 51 56;
-    --brief-accent: 156 199 162;
-    --brief-accent-soft: 28 42 31;
-    --brief-card: 26 26 29;
-    --brief-on-accent: 10 26 14;
+    --dash-ink: 236 230 224;
+    --dash-muted: 168 158 154;
+    --dash-line: 53 41 44;
+    --dash-paper: 13 10 11;
+    --dash-card: 30 22 24;
+    --brief-paper: 13 10 11;
+    --brief-page: 13 10 11;
+    --brief-ink: 236 230 224;
+    --brief-muted: 168 158 154;
+    --brief-line: 53 41 44;
+    --brief-rule: 53 41 44;
+    --brief-accent: 229 138 155;
+    --brief-accent-soft: 45 22 29;
+    --brief-card: 30 22 24;
+    --brief-on-accent: 13 10 11;
+    --brief-mark: 196 71 95;
     color-scheme: dark;
   }
 

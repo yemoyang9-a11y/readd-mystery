@@ -64,6 +64,7 @@ export default {
           'accent-soft': 'rgb(var(--brief-accent-soft) / <alpha-value>)',
           card: 'rgb(var(--brief-card) / <alpha-value>)',
           'on-accent': 'rgb(var(--brief-on-accent) / <alpha-value>)',
+          mark: 'rgb(var(--brief-mark) / <alpha-value>)',
         },
       },
       fontFamily: {

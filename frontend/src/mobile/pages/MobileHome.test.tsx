@@ -34,11 +34,11 @@ function swipe(dx: number) {
 const hook = () => screen.getByTestId('home-hook');
 
 describe('모바일 홈 3D 책 캐러셀', () => {
-  test('첫 책은 가상범인이고 작품 보기가 작품 페이지로 이어진다', () => {
+  test('첫 책은 가상범인이고 작품 보기가 브리핑 화면으로 이어진다', () => {
     renderHome();
     expect(screen.getByRole('heading', { name: '홈' })).toBeInTheDocument();
     expect(hook()).toHaveTextContent('경성의 극장, 해왕좌.');
-    expect(screen.getByRole('link', { name: '작품 보기' })).toHaveAttribute('href', '/books/bk-95898cdf13');
+    expect(screen.getByRole('link', { name: '작품 보기' })).toHaveAttribute('href', '/books/bk-95898cdf13/briefing');
   });
 
   test('다음 책·이전 책 버튼으로 넘기면 손글씨 문구가 즉시 바뀌고 세 권이 돌아간다', async () => {
@@ -87,11 +87,19 @@ describe('모바일 홈 3D 책 캐러셀', () => {
     expect(hook()).toHaveTextContent('가면 아래, 죄악이 시작된다.');
   });
 
-  test('가운데 공개 책을 누르면 작품 페이지로 간다', async () => {
+  test('가운데 공개 책을 누르면 브리핑 화면으로 간다', async () => {
     const user = userEvent.setup();
     renderHome();
     await user.click(screen.getByRole('button', { name: '가상범인 작품 보기' }));
-    expect(screen.getByTestId('where')).toHaveTextContent('/books/bk-95898cdf13');
+    expect(screen.getByTestId('where')).toHaveTextContent('/books/bk-95898cdf13/briefing');
+  });
+
+  test('작품 보기 버튼은 손글씨 문구 아래 남는 공간을 밀어내고 화면 아래쪽에 붙는다', () => {
+    renderHome();
+    const cta = screen.getByTestId('home-cta');
+    expect(cta).toHaveClass('mt-auto');
+    expect(cta.contains(screen.getByRole('link', { name: '작품 보기' }))).toBe(true);
+    expect(hook().compareDocumentPosition(cta) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   test('키보드 화살표로 넘기고 활성 책을 읽어 주는 영역이 갱신된다', async () => {

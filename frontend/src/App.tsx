@@ -13,6 +13,7 @@ import MobileHome from './mobile/pages/MobileHome';
 import MobileFeedback from './mobile/pages/MobileFeedback';
 import MobileReader from './mobile/pages/MobileReader';
 import MobileBriefing from './mobile/pages/MobileBriefing';
+import MobileBookRedirect from './mobile/pages/MobileBookRedirect';
 import MobileNotFound from './mobile/pages/MobileNotFound';
 import { isMobileDevice } from './mobile/device';
 import ErrorBoundary from './components/common/ErrorBoundary';
@@ -43,10 +44,12 @@ export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
         { path: APP_ROUTES.feedback, element: isMobile ? <MobileFeedback /> : <NotFound /> },
       ],
     },
-    {
-      element: <AppShell isMobile={isMobile} nav={!isMobile} />,
-      children: [{ path: APP_ROUTES.book, element: <BookDetail /> }],
-    },
+    isMobile
+      ? { path: APP_ROUTES.book, element: <MobileBookRedirect /> }
+      : {
+          element: <AppShell isMobile={false} />,
+          children: [{ path: APP_ROUTES.book, element: <BookDetail /> }],
+        },
     {
       path: BOOK_ROUTES.briefing,
       element: <RouteFade>{isMobile ? <MobileBriefing /> : <Briefing />}</RouteFade>,

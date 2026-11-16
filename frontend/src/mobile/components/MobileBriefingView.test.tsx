@@ -49,7 +49,7 @@ test('FR-SPL-005: 줄거리가 없어도(recap null) 이어서 읽기 버튼이 
     />
   );
 
-  await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
+  await userEvent.click(screen.getByRole('button', { name: '읽기 시작' }));
   expect(onContinue).toHaveBeenCalledTimes(1);
 });
 

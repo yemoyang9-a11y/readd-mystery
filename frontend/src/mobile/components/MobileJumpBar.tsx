@@ -19,7 +19,7 @@ export default function MobileJumpBar({
     <div
       {...chromeProps(hidden)}
       role="status"
-      className={`absolute inset-x-4 z-[6] flex items-center justify-between gap-2 rounded-2xl bg-brief-ink py-1 pl-4 pr-1 font-dashSans text-[14px] text-brief-paper shadow-brief-soft ${CHROME_FADE} ${hidden ? 'invisible opacity-0' : ''}`}
+      className={`absolute inset-x-4 z-[6] flex items-center justify-between gap-2 rounded-2xl bg-brief-accent py-1 pl-4 pr-1 font-dashSans text-[14px] text-brief-on-accent shadow-brief-soft ${CHROME_FADE} ${hidden ? 'invisible opacity-0' : ''}`}
       style={{ bottom: 'calc(49px + max(4px, var(--safe-bottom)) + 12px)' }}
     >
       <span className="min-w-0 truncate">{currentPage}쪽을 보는 중</span>

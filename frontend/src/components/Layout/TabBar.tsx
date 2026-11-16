@@ -76,8 +76,10 @@ export default function TabBar() {
               end={tab.end}
               data-track={`tab-${tab.label}`}
               className={({ isActive }) =>
-                `flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 font-dashSans text-[11px] ${
-                  isActive ? 'font-bold text-dash-ink' : 'text-dash-muted'
+                `relative flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 font-dashSans text-[11px] ${
+                  isActive
+                    ? 'font-bold text-dash-ink before:absolute before:inset-x-6 before:top-0 before:h-0.5 before:rounded-full before:bg-brief-mark'
+                    : 'text-dash-muted'
                 }`
               }
             >

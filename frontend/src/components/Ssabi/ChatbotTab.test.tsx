@@ -32,9 +32,7 @@ describe('ChatbotTab', () => {
     // <p>로 한 겹 더 감싸였다 — 테두리 클래스는 이제 바로 위 부모가 아니라
     // 말풍선 컨테이너(closest)에 있다.
     expect(screen.getByText(/정 주사에 대해/).closest('.border-progress')).not.toBeNull();
-    // Vite가 빌드마다 파일명에 해시를 붙이므로(캐시 버스팅, 2026-08-25) 정확한 경로 대신
-    // 파일명만 확인한다.
-    expect(container.querySelector('img')?.getAttribute('src')).toMatch(/ssabi-face/);
+    expect(container.querySelector('svg[data-amo="default"]')).not.toBeNull();
   });
 
   it('2026-08-25: 싸비 답변의 "**굵게**"를 실제로 굵게(b) 렌더한다 — 별표가 글자로 남지 않는다', () => {
