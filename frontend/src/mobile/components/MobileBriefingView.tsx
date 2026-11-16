@@ -22,6 +22,7 @@ export default function MobileBriefingView({
   recapStreaming,
   characterNames,
   notes = [],
+  onOpenCommunity,
 }: {
   briefing: BriefingResponse;
   title: string;
@@ -35,6 +36,7 @@ export default function MobileBriefingView({
   recapStreaming: boolean;
   characterNames: string[];
   notes?: ReadingNote[];
+  onOpenCommunity?: () => void;
 }) {
   const view = resolveBriefingView(briefing);
   const requested = useRef(false);
@@ -98,6 +100,18 @@ export default function MobileBriefingView({
             </p>
           </div>
         </div>
+
+        {onOpenCommunity ? (
+          <button
+            type="button"
+            data-track="community-open"
+            onClick={onOpenCommunity}
+            className="my-6 flex min-h-12 w-full items-center justify-between rounded-brief-panel border border-[#c4475f] bg-[#1e1618] px-5 text-left text-[15px] font-bold text-[#e58a9b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c4475f]"
+          >
+            <span>커뮤니티</span>
+            <span className="text-[13px] font-normal text-[#a89e9a]">다른 독자들과 이야기하기</span>
+          </button>
+        ) : null}
 
         <h3 className="mb-3 font-dashSerif text-lg font-semibold tracking-[-.02em] text-brief-ink">
           그동안 이런 이야기였어요

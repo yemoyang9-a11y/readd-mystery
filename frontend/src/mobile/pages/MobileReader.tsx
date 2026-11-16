@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import Loading from '../../components/common/Loading';
 import { useReadingSession } from '../../hooks/useReadingSession';
 import SsabiPanel from '../../components/Ssabi/SsabiPanel';
@@ -16,6 +16,7 @@ import ReaderPrefsSheet from '../../components/Reader/ReaderPrefsSheet';
 import MobileJumpBar from '../components/MobileJumpBar';
 import TocJumpDialog from '../../components/Reader/TocJumpDialog';
 import { useBackToBook } from '../../hooks/useBackToBook';
+import { BOOK_ROUTES } from '../../utils/routes';
 
 const FOCUS_TOGGLE_CLASS =
   'sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-1/2 focus-visible:top-[calc(var(--safe-top)+6px)] focus-visible:z-[60] focus-visible:-translate-x-1/2 focus-visible:inline-flex focus-visible:min-h-11 focus-visible:items-center focus-visible:whitespace-nowrap focus-visible:rounded-full focus-visible:border focus-visible:border-brief-ink focus-visible:bg-white focus-visible:px-4 focus-visible:font-dashSans focus-visible:text-[13px] focus-visible:font-bold focus-visible:text-brief-ink focus-visible:shadow-brief-soft-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brief-accent focus-visible:ring-offset-2 focus-visible:aria-pressed:bg-brief-accent-soft focus-visible:aria-pressed:text-brief-accent';
@@ -33,6 +34,7 @@ function MobileReadingSession() {
   const { entryError, retryEntry, page, pageError, retryPage, currentPage, totalPages, chapters, jumpOrigin, returnToOrigin, dismissJumpOrigin, moveTo, requestTocJump, tocJumpConfirm, confirmTocJump, cancelTocJump, highlightedQuote, panelOpen, togglePanel, ssabiPanelProps, quote } =
     useReadingSession(bookId);
   const backToBook = useBackToBook(bookId);
+  const navigate = useNavigate();
   const prefsApi = useReaderPrefs();
   const [prefsOpen, setPrefsOpen] = useState(false);
   const prefsButtonRef = useRef<HTMLButtonElement>(null);
@@ -70,6 +72,8 @@ function MobileReadingSession() {
         chromeHidden={chromeHidden}
         canToggleChrome={!panelOpen && !tocOpen && !prefsOpen}
         onToggleChrome={() => setChromeHidden((hidden) => !hidden)}
+        onOpenCommunity={() => navigate(BOOK_ROUTES.community.replace(':bookId', bookId))}
+        onBack={backToBook}
       />
     );
   } else if (pageError) {

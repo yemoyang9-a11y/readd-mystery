@@ -7,6 +7,8 @@ import { adminAuth } from './admin-auth';
 import { IngestJob, JobRepository } from './job-repository';
 import { JobRunner } from './runner';
 import { ReviewError, ReviewService } from './review-service';
+import { createCommunityAdminRouter } from '../community/admin-router';
+import type { CommunityAdminRepository } from '../community/repository';
 import { MAX_RANGE_DAYS, rangeDays, type ReportService } from '../analytics/report-service';
 
 const UPLOAD_LIMIT = '5mb';
@@ -43,6 +45,7 @@ export function createAdminRouter(deps: {
   review: ReviewService;
   uploadDir: string;
   analytics?: ReportService;
+  community?: CommunityAdminRepository;
   getToken?: () => string | undefined;
 }): Router {
   const { jobs, runner, review, uploadDir } = deps;
@@ -188,6 +191,8 @@ export function createAdminRouter(deps: {
       return res.json(await deps.analytics.summarize(from, to));
     })
   );
+
+  if (deps.community) router.use('/community', createCommunityAdminRouter(deps.community));
 
   const onError: ErrorRequestHandler = (err, _req, res, next) => {
     if (res.headersSent) return next(err);

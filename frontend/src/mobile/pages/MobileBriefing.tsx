@@ -1,5 +1,7 @@
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { BOOK_ROUTES } from '../../utils/routes';
 import Loading from '../../components/common/Loading';
+import { useBookPosition } from '../../hooks/useBookPosition';
 import { useBriefingSession } from '../../hooks/useBriefingSession';
 import MobileBriefingView from '../components/MobileBriefingView';
 import MobileErrorState from '../components/MobileErrorState';
@@ -8,6 +10,8 @@ import MobileErrorState from '../components/MobileErrorState';
 export default function MobileBriefing() {
   const { bookId = '' } = useParams();
   const session = useBriefingSession(bookId);
+  const navigate = useNavigate();
+  const position = useBookPosition(bookId, true);
 
   if (!session.briefing) {
     if (session.briefingError) {
@@ -38,6 +42,9 @@ export default function MobileBriefing() {
       recapStreaming={session.recapStreaming}
       characterNames={session.characterNames}
       notes={session.notes}
+      onOpenCommunity={
+        position?.is_complete ? () => navigate(BOOK_ROUTES.community.replace(':bookId', bookId)) : undefined
+      }
     />
   );
 }
