@@ -250,6 +250,7 @@ export default function MobileBriefingView({
       >
         <button
           type="button"
+          data-track="마저 읽기"
           onClick={onContinue}
           className="h-12 w-full rounded-full border border-brief-ink bg-transparent text-[15px] font-bold text-brief-ink transition-colors hover:bg-[rgba(31,31,31,0.05)] active:bg-[rgba(31,31,31,0.1)]"
         >

@@ -73,6 +73,7 @@ export default function Search() {
               <Link
                 to={bookPath(book.book_id)}
                 aria-label={`${book.title}, ${book.author}`}
+                data-track="book-card"
                 className="flex min-h-11 items-center gap-3 border-b border-dash-line py-3"
               >
                 <BookCover book={book} size="row" />

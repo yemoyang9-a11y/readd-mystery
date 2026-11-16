@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import Home from './pages/Home';
 import Search from './pages/Search';
@@ -17,6 +17,11 @@ import ErrorBoundary from './components/common/ErrorBoundary';
 import AppShell from './components/Layout/AppShell';
 import RouteFade from './components/Layout/RouteFade';
 import { APP_ROUTES, BOOK_ROUTES } from './utils/routes';
+import AdminLayout from './admin/AdminLayout';
+import AnalyticsPage from './admin/AnalyticsPage';
+import BooksPage from './admin/BooksPage';
+import ReviewPage from './admin/ReviewPage';
+import { initAnalytics } from './services/analytics';
 
 /**
  * 라우팅.
@@ -48,6 +53,16 @@ export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
       element: <RouteFade>{isMobile ? <MobileReader /> : <Reader />}</RouteFade>,
     },
     { path: '/auth/callback', element: <AuthCallback /> },
+    // FR-ADM-006 🚦
+    {
+      path: '/admin',
+      element: <AdminLayout />,
+      children: [
+        { index: true, element: <AnalyticsPage /> },
+        { path: 'books', element: <BooksPage /> },
+        { path: 'books/:bookId/review', element: <ReviewPage /> },
+      ],
+    },
     { path: '*', element: <RouteFade>{isMobile ? <MobileNotFound /> : <NotFound />}</RouteFade> },
   ]);
 }
@@ -71,6 +86,9 @@ export default function App() {
    * 주소에서 새로 시작한다.
    */
   const [router] = useState(createAppRouter);
+
+  // FR-ADM-005
+  useEffect(() => initAnalytics(router), [router]);
 
   return (
     <ErrorBoundary>

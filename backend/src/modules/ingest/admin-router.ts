@@ -7,6 +7,7 @@ import { adminAuth } from './admin-auth';
 import { IngestJob, JobRepository } from './job-repository';
 import { JobRunner } from './runner';
 import { ReviewError, ReviewService } from './review-service';
+import { MAX_RANGE_DAYS, rangeDays, type ReportService } from '../analytics/report-service';
 
 const UPLOAD_LIMIT = '5mb';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -41,6 +42,7 @@ export function createAdminRouter(deps: {
   runner: Pick<JobRunner, 'startJob' | 'retryJob'>;
   review: ReviewService;
   uploadDir: string;
+  analytics?: ReportService;
   getToken?: () => string | undefined;
 }): Router {
   const { jobs, runner, review, uploadDir } = deps;
@@ -162,6 +164,28 @@ export function createAdminRouter(deps: {
         case 'incomplete':
           return res.status(409).json({ error: 'REVIEW_INCOMPLETE', missing: result.missing });
       }
+    })
+  );
+
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+  const defaultDate = (daysAgo: number) =>
+    new Date(Date.now() + KST_OFFSET_MS - daysAgo * 86_400_000).toISOString().slice(0, 10);
+
+  // FR-ADM-005
+  router.get(
+    '/analytics/summary',
+    handle(async (req, res) => {
+      if (!deps.analytics)
+        return res.status(503).json({ error: 'ANALYTICS_DISABLED', message: 'Analytics not configured' });
+      const from = typeof req.query.from === 'string' ? req.query.from : defaultDate(13);
+      const to = typeof req.query.to === 'string' ? req.query.to : defaultDate(0);
+      const valid = (d: string) => DATE_RE.test(d) && !Number.isNaN(Date.parse(`${d}T00:00:00Z`));
+      if (!valid(from) || !valid(to) || from > to)
+        return badRequest(res, 'from and to must be YYYY-MM-DD with from <= to');
+      if (rangeDays(from, to) > MAX_RANGE_DAYS)
+        return badRequest(res, `range must be at most ${MAX_RANGE_DAYS} days`);
+      return res.json(await deps.analytics.summarize(from, to));
     })
   );
 

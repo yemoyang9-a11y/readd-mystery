@@ -87,6 +87,7 @@ export default function TabBar() {
             <NavLink
               to={tab.to}
               end={tab.end}
+              data-track={`tab-${tab.label}`}
               className={({ isActive }) =>
                 `flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 font-dashSans text-[11px] ${
                   isActive ? 'font-bold text-dash-ink' : 'text-dash-muted'

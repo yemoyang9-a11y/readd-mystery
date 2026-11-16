@@ -184,7 +184,7 @@ export default function MobileReaderView({
         style={{ touchAction: 'pan-y' }}
         {...surfaceBind}
       >
-        <article
+        <article data-no-track
           ref={setArticleRef}
           role="article"
           className="mx-auto w-full whitespace-pre-wrap px-6 font-dashSerif text-brief-ink"

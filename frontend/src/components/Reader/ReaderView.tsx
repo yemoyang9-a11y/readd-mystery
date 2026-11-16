@@ -127,7 +127,7 @@ export default function ReaderView({
        * article에 그대로 둬서 가독성엔 영향이 없다.
        */}
       <div className="brief-scroll flex-1 overflow-y-auto">
-        <article
+        <article data-no-track
           ref={articleRef}
           role="article"
           className="mx-auto w-full max-w-[560px] whitespace-pre-wrap px-8 pb-10 pt-[60px] font-dashSerif text-brief-ink"

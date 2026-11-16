@@ -195,7 +195,7 @@ export default function NotesTab({
         {!failed && notes.length === 0 ? (
           <p className="m-0 text-sm text-brief-muted">아직 적은 게 없어요.</p>
         ) : null}
-        <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
+        <ul data-no-track className="m-0 flex list-none flex-col gap-2.5 p-0">
           {notes.map((note) => (
             <li
               key={note.note_id}
@@ -266,6 +266,7 @@ export default function NotesTab({
       <div className="sticky bottom-0 -mx-6 -mb-6 mt-4 border-t border-brief-rule bg-brief-paper px-6 pb-6 pt-3">
         <button
           type="button"
+          data-track="단서·가설 적기"
           onClick={() => setEditing('new')}
           disabled={currentPage === null}
           className="h-12 w-full rounded-full border border-brief-ink bg-transparent font-dashSans text-[15px] font-bold text-brief-ink transition-colors hover:bg-[rgba(31,31,31,0.05)] active:bg-[rgba(31,31,31,0.1)] disabled:opacity-40"

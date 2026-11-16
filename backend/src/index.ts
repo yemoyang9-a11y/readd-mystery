@@ -14,6 +14,8 @@ import routes from './api/routes';
 import { pool } from './config/database';
 import { createNotesRoutes } from './modules/notes/composition';
 import { adminRouter, resumeIngestJobs } from './modules/ingest/composition';
+import { createAnalyticsIngestRouter } from './modules/analytics/ingest-router';
+import { createPgEventStore } from './modules/analytics/event-store';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -71,6 +73,9 @@ app.use((req, res, next) => {
 
 // FR-ADM-006 🚦
 app.use('/admin', adminRouter);
+
+// FR-ADM-005
+app.use('/', createAnalyticsIngestRouter({ store: createPgEventStore(pool) }));
 
 // 라우트
 app.use('/', createNotesRoutes(pool));

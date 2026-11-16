@@ -362,7 +362,7 @@ export default function ChatbotTab({
       ) : null}
 
       {historyOpen ? (
-        <div className="brief-scroll flex-1 overflow-y-auto">
+        <div data-no-track className="brief-scroll flex-1 overflow-y-auto">
           {conversations && conversations.length > 0 ? (
             <ul className="space-y-2">
               {conversations.map((c) => {
@@ -428,7 +428,7 @@ export default function ChatbotTab({
         </div>
       ) : (
         <>
-          <div ref={messagesRef} className="brief-scroll flex-1 space-y-3 overflow-y-auto">
+          <div data-no-track ref={messagesRef} className="brief-scroll flex-1 space-y-3 overflow-y-auto">
             {pinnedQuote ? (
               <div
                 key={pinnedQuote}
