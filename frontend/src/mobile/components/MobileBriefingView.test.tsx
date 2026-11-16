@@ -124,3 +124,15 @@ test("2026-11-16 시안: 브리핑에는 장·진도 카드와 목차가 없고 
   expect(screen.getByRole('heading', { name: '그동안 이런 이야기였어요' })).toBeInTheDocument();
   expect(screen.getByRole('region', { name: '내 추리 노트' })).toBeInTheDocument();
 });
+
+test('COMMUNITY: 서버가 완독으로 알려 준 경우에만 커뮤니티 진입 버튼이 보인다', async () => {
+  const { rerender } = render(<MobileBriefingView {...baseProps} briefing={briefing()} />);
+  expect(screen.queryByRole('button', { name: /커뮤니티/ })).toBeNull();
+
+  const onOpen = vi.fn();
+  rerender(<MobileBriefingView {...baseProps} briefing={briefing()} onOpenCommunity={onOpen} />);
+  const button = screen.getByRole('button', { name: /커뮤니티/ });
+  expect(button).toHaveAttribute('data-track', 'community-open');
+  await userEvent.click(button);
+  expect(onOpen).toHaveBeenCalledTimes(1);
+});

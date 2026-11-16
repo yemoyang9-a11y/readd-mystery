@@ -7,6 +7,7 @@ import { createReviewService } from './review-service';
 import { invalidateFailedOutput } from './integrity';
 import { createPipelineSteps } from './steps';
 import { createPgEventStore } from '../analytics/event-store';
+import { createPgCommunityAdminRepository } from '../community/pg-repository';
 import { createReportService } from '../analytics/report-service';
 
 const UPLOAD_DIR = path.join(__dirname, '../../../data/uploads');
@@ -25,6 +26,7 @@ export const adminRouter = createAdminRouter({
   review: createReviewService({ db: pool, jobs }),
   uploadDir: UPLOAD_DIR,
   analytics: createReportService(createPgEventStore(pool)),
+  community: createPgCommunityAdminRepository({ query: (sql, params) => pool.query(sql, params) }),
 });
 
 export function resumeIngestJobs(): Promise<void> {

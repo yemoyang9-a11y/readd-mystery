@@ -4,6 +4,7 @@ import type { EntryResponse } from '../types';
 export const BOOK_ROUTES = {
   briefing: '/books/:bookId/briefing',
   reader: '/books/:bookId/read',
+  community: '/books/:bookId/community',
 } as const;
 
 export const APP_ROUTES = {

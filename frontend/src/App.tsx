@@ -13,6 +13,7 @@ import MobileHome from './mobile/pages/MobileHome';
 import MobileFeedback from './mobile/pages/MobileFeedback';
 import MobileReader from './mobile/pages/MobileReader';
 import MobileBriefing from './mobile/pages/MobileBriefing';
+import MobileCommunity from './mobile/pages/MobileCommunity';
 import MobileNotFound from './mobile/pages/MobileNotFound';
 import { isMobileDevice } from './mobile/device';
 import ErrorBoundary from './components/common/ErrorBoundary';
@@ -54,6 +55,10 @@ export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
     {
       path: BOOK_ROUTES.reader,
       element: <RouteFade>{isMobile ? <MobileReader /> : <Reader />}</RouteFade>,
+    },
+    {
+      path: BOOK_ROUTES.community,
+      element: <RouteFade>{isMobile ? <MobileCommunity /> : <NotFound />}</RouteFade>,
     },
     { path: '/auth/callback', element: <AuthCallback /> },
     // FR-ADM-006 🚦

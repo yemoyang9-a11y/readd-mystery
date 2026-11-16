@@ -37,6 +37,8 @@ export default function MobileReaderView({
   chromeHidden = false,
   canToggleChrome = false,
   onToggleChrome,
+  onOpenCommunity,
+  onBack,
 }: {
   content: string;
   currentPage: number;
@@ -54,6 +56,8 @@ export default function MobileReaderView({
   chromeHidden?: boolean;
   canToggleChrome?: boolean;
   onToggleChrome?: () => void;
+  onOpenCommunity?: () => void;
+  onBack?: () => void;
 }) {
   const theme = READER_THEMES[prefs.theme];
   const darkInk = prefs.theme === 'dark' ? { color: theme.color } : undefined;
@@ -214,6 +218,38 @@ export default function MobileReaderView({
             </header>
           ) : null}
           {highlightContent(content, highlightedQuote)}
+          {nextPage === null && onOpenCommunity ? (
+            <section
+              aria-label="완독"
+              data-testid="completion-block"
+              className="mt-12 whitespace-normal border-t border-brief-rule pt-8 text-center font-dashSans"
+            >
+              <p className="m-0 font-dashSerif text-[20px] font-bold" style={darkInk}>
+                완독했어요
+              </p>
+              <p className="m-0 mt-2 break-keep text-[14px] text-brief-muted" style={darkInk}>
+                끝까지 읽은 독자들의 추리와 감상을 만나 보세요.
+              </p>
+              <button
+                type="button"
+                data-track="community-open"
+                onClick={onOpenCommunity}
+                className="mt-5 min-h-12 w-full rounded-full bg-[#8f1d35] px-6 text-[15px] font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8f1d35] focus-visible:ring-offset-2"
+              >
+                다른 독자들과 이야기하기
+              </button>
+              {onBack ? (
+                <button
+                  type="button"
+                  onClick={onBack}
+                  className="mt-2 min-h-11 w-full rounded-full text-[14px] font-bold text-brief-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8f1d35]"
+                  style={darkInk}
+                >
+                  책으로 돌아가기
+                </button>
+              ) : null}
+            </section>
+          ) : null}
         </article>
       </div>
 
