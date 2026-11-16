@@ -17,6 +17,7 @@ import {
   parseConversationId,
 } from '../modules/chatbot/conversation-service';
 import { pool } from '../config/database';
+import { createPgNotesRepository } from '../modules/notes/pg-repository';
 import { createReadingStateServices } from '../modules/reading-state/composition';
 import { BookNotReadyError } from '../modules/reading-state/session.service';
 import { createContentServices } from '../modules/content/composition';
@@ -34,6 +35,8 @@ import { pageIsIncludedInCutoff } from './cutoff-inclusion';
 import { mockGetCutoffSnapshot } from '../modules/chatbot/__mocks__/mock-data';
 
 const router = express.Router();
+// FR-QNA-004 🚦
+const chatNotesReader = createPgNotesRepository(pool);
 const MOCK_MODE = process.env.MOCK_MODE === 'true';
 
 // R2 서비스 조립 — Postgres 어댑터를 통해 진도·세션·리캡을 다룬다 (composition.ts)
@@ -274,7 +277,8 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
         conversationId,
         quoteText,
         currentPageText,
-        isComplete
+        isComplete,
+        { notesReader: chatNotesReader }
       )) {
         // SSE 프레임 통일 (R4 요청 - delta/done/error)
         // 부분 근거에 맞춘 답변도 생성되는 대로 일반 delta로 전달한다.
