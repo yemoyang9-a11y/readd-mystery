@@ -1,0 +1,17 @@
+{
+  "book_id": "<book id>",
+  "facts": [
+    {
+      "id": "culprit",
+      "kind": "culprit_verdict",
+      "match": ["<culprit name>"],
+      "first_page": 1
+    },
+    {
+      "id": "ending-fact",
+      "kind": "fact",
+      "match": ["<phrase that only appears after the reveal>"],
+      "first_page": 60
+    }
+  ]
+}

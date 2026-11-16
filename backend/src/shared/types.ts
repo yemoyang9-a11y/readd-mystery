@@ -472,6 +472,14 @@ export interface ChatbotQueryLog {
   /** Number of logical model requests used to produce this answer. */
   logical_model_calls?: number;
 
+  // FR-QNA-004, NFR-AI-005
+  harness?: {
+    intent: string;
+    violations: string[][];
+    regenerated: boolean;
+    fixed_answer: boolean;
+  };
+
   /** 출력 참조 */
   output_ref: string;
 

@@ -17,7 +17,7 @@ jest.mock('../conversation-service', () => ({
 }));
 
 describe('single generation with immediate chatbot streaming', () => {
-  const ask = () => handleQuery('book', '이 장면을 설명해줘', 40, 'device', 7);
+  const ask = () => handleQuery('book', '오늘 날씨 어때?', 40, 'device', 7);
   beforeEach(() => {
     jest.resetAllMocks();
     jest.spyOn(console, 'log').mockImplementation();
@@ -61,7 +61,7 @@ describe('single generation with immediate chatbot streaming', () => {
       await expect(iterator.next()).resolves.toEqual({ done: true, value: undefined });
       expect(recordTurns).toHaveBeenCalledWith(
         7,
-        '이 장면을 설명해줘',
+        '오늘 날씨 어때?',
         '먼저 나온 문장. 다음 문장.',
         40
       );

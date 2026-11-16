@@ -51,9 +51,9 @@ describe('conversation subject survives retrieval and single streaming generatio
       pageNo: 304,
       content: '정주사가 전봇대와 대화한다.',
     });
-    expect(await iterator.next()).toEqual({ value: '첫', done: false });
-    expect(await iterator.next()).toEqual({ value: ' 응답', done: false });
-    expect(await iterator.next()).toEqual({ value: undefined, done: true });
+    let streamed = '';
+    for await (const chunk of iterator) streamed += chunk;
+    expect(streamed).toBe('첫 응답');
     expect(stream).toHaveBeenCalledTimes(1);
     const state = prompt.split('\n').find((line) => line.startsWith('{"status":'));
     return state ? JSON.parse(state) : null;

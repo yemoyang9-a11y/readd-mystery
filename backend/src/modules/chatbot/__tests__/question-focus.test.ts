@@ -50,9 +50,9 @@ describe('question focus reaches the single generation without becoming factual 
       undefined,
       page
     );
-    expect(await iterator.next()).toEqual({ value: '첫 출력', done: false });
-    expect(await iterator.next()).toEqual({ value: '과 뒷부분', done: false });
-    await iterator.next();
+    let streamed = '';
+    for await (const chunk of iterator) streamed += chunk;
+    expect(streamed).toBe('첫 출력과 뒷부분');
     expect(stream).toHaveBeenCalledTimes(1);
     expect(call).not.toHaveBeenCalled();
     expect(prompt).toContain(page.content);
