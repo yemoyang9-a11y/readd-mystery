@@ -52,7 +52,14 @@ import {
   assertResolvedGrounding,
   sealChapterCache,
 } from './grounding';
-import { DEFAULT_BOOK_ID, bookArgsFromCli, parseBookArgs, requireBookMeta } from './run-args';
+import {
+  BookArgs,
+  DEFAULT_BOOK_ID,
+  bookArgsFromCli,
+  parseBookArgs,
+  requireBookMeta,
+} from './run-args';
+import { ResolvedBookData } from './check-integrity';
 
 // 출력 상한은 reasoning 토큰을 포함한다 — 기본 4096이면 장 하나의 인물·별칭·노트 JSON이 잘린다(화분 1장 incomplete)
 const GENERATE_MAX_TOKENS = 16000;
@@ -349,8 +356,8 @@ function mergeChapterRelationships(
   mergeRelationships(state, resolved);
 }
 
-async function main(): Promise<void> {
-  const args = bookArgsFromCli('run-generate-full');
+// FR-ADM-005 🚦
+export async function generateFullBook(args: BookArgs): Promise<ResolvedBookData> {
   const BOOK_ID = args.bookId;
   const OUT_DIR = args.fullDir;
   const { title, author } = requireBookMeta(args);
@@ -442,10 +449,11 @@ async function main(): Promise<void> {
   console.log(
     '사람 검토 필요(V4/S7) — 장 요약의 미래 사건 언급, 관계 이력 라벨, 별칭 통합을 직접 확인할 것.'
   );
+  return combined as unknown as ResolvedBookData;
 }
 
 if (require.main === module)
-  main().catch((err) => {
+  generateFullBook(bookArgsFromCli('run-generate-full')).catch((err) => {
     console.error('[FAIL]', err);
     process.exit(1);
   });

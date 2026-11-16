@@ -26,9 +26,11 @@ export function createPgContentRepository(db: QueryClient): ContentRepository {
     async findCatalog(): Promise<BookCatalogRow[]> {
       // 미완비 도서도 내려보낸다 — 대시보드가 표지만 띄우고 클릭을 잠근다 (S2, FR-BRW-002 🚦).
       // 진입 차단은 UI가 아니라 book-ready.guard.ts와 R2의 POST /entry가 한다.
+      // R12 🚦
       const { rows } = await db.query(
         `SELECT book_id, title, author, cover_url, intro_summary, ssabi_ready, genre, registered_at
            FROM books
+          WHERE publish_status = 'published'
           ORDER BY title ASC`
       );
       return rows.map((row) => ({ ...row, registered_at: row.registered_at.toISOString() }));
@@ -37,7 +39,11 @@ export function createPgContentRepository(db: QueryClient): ContentRepository {
     async findReadiness(bookId: string): Promise<boolean | null> {
       // FR-BRW-002 🚦 — R2의 POST /entry와 같은 컬럼(ssabi_ready)을 본다.
       // 서로 다른 컬럼을 보면 대시보드는 잠겨 있는데 직접 진입은 되는 구멍이 생긴다 (R12, team-sync §4.7)
-      const { rows } = await db.query(`SELECT ssabi_ready FROM books WHERE book_id = $1`, [bookId]);
+      // R12 🚦
+      const { rows } = await db.query(
+        `SELECT ssabi_ready FROM books WHERE book_id = $1 AND publish_status = 'published'`,
+        [bookId]
+      );
       if (rows.length === 0) return null;
       return rows[0].ssabi_ready;
     },

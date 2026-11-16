@@ -12,11 +12,14 @@ dotenv.config();
 import * as fs from 'fs';
 import { pool } from '../../config/database';
 import { splitBook, validateSplit } from './split';
-import { registerBook } from './register';
-import { bookArgsFromCli, requireBookMeta } from './run-args';
+import { registerBook, QueryClient } from './register';
+import { BookArgs, bookArgsFromCli, requireBookMeta } from './run-args';
 
-async function main(): Promise<void> {
-  const args = bookArgsFromCli('run-register');
+// FR-ADM-005 🚦
+export async function registerSource(
+  db: QueryClient,
+  args: BookArgs
+): Promise<{ chapters: number; pages: number }> {
   const BOOK_ID = args.bookId;
   const { title, author } = requireBookMeta(args);
   const rawText = fs.readFileSync(args.filePath, 'utf-8');
@@ -28,12 +31,11 @@ async function main(): Promise<void> {
     report.crossChapterViolations > 0 ||
     report.midSentenceViolations > 0
   ) {
-    console.error('[FAIL] 게이트 위반이 있어 등록을 진행하지 않는다', report);
-    process.exit(1);
+    throw new Error(`분할 게이트 위반 — ${JSON.stringify(report)}`);
   }
 
   await registerBook(
-    pool,
+    db,
     {
       book_id: BOOK_ID,
       title,
@@ -45,11 +47,18 @@ async function main(): Promise<void> {
     pages
   );
 
-  console.log(`[OK] ${BOOK_ID} 등록 완료 — 장 ${chapters.length}개, 페이지 ${pages.length}개`);
+  return { chapters: chapters.length, pages: pages.length };
+}
+
+async function main(): Promise<void> {
+  const args = bookArgsFromCli('run-register');
+  const result = await registerSource(pool, args);
+  console.log(`[OK] ${args.bookId} 등록 완료 — 장 ${result.chapters}개, 페이지 ${result.pages}개`);
   await pool.end();
 }
 
-main().catch((err) => {
-  console.error('[FAIL] 원문 등록 실패', err);
-  process.exit(1);
-});
+if (require.main === module)
+  main().catch((err) => {
+    console.error('[FAIL] 원문 등록 실패', err);
+    process.exit(1);
+  });

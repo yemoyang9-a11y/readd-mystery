@@ -22,6 +22,8 @@ const CHAPTER_HEADER_RE = /^([0-9]{1,2}) (.+)$/;
 // 문장 종결 — 마침표/느낌표/물음표/줄임표 연속 + 닫는 인용부호 + 뒤따르는 공백까지 소비
 const SENTENCE_END_RE = /[.!?…]+[”’」』]*[ \t]*/g;
 
+const PARAGRAPH_END_SENTENCE_RE = /[.!?…]+[”’」』]*[ \t]*$/;
+
 export interface ParsedChapter {
   chapterNo: number;
   title: string;
@@ -101,7 +103,10 @@ export function findCandidates(paragraphs: string[]): Candidate[] {
     base += para.length;
     if (i < paragraphs.length - 1) {
       base += 1; // '\n' 문단 경계 문자
-      candidates.push({ offset: base, isParagraphEnd: true });
+      // D11
+      if (PARAGRAPH_END_SENTENCE_RE.test(para)) {
+        candidates.push({ offset: base, isParagraphEnd: true });
+      }
     }
   });
 
