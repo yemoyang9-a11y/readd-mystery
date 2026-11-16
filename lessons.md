@@ -12,3 +12,9 @@
 - 원인: 장 캐시 키는 `previousRelationshipHints`(앞 장까지의 관계를 `JSON.stringify(semantics)`로 적은 문자열)를 포함한다. 검증 표시가 semantics 안에 있어 반대 검토 결과가 바뀔 때마다 다음 장 캐시 키가 달라졌다.
 - 해결: 힌트를 만들 때 `verification`을 뺀다(`hintSemantics`). 수정 뒤 다섯 장을 캐시에서 그대로 재생하고 반대 검토만 새로 불러 다시 끝냈다(장 생성 호출 0회). 테스트: `relationship-semantics.test.ts`의 "다음 장 힌트(캐시 키)는 검증 결과 표시에 따라 바뀌지 않는다".
 - 참고: 반대 검토 캐시 키는 입력이 아니라 만든 프롬프트 전체의 해시여야 한다. 프롬프트만 바꿨을 때 옛 답이 재사용되지 않는다.
+
+## 2026-11-16 — 관리자 화면이 "서버에 연결할 수 없습니다"를 띄우며 localhost:3000으로 요청함
+
+- 증상: `VITE_API_URL=http://127.0.0.1:3101`로 띄운 Vite인데 브라우저 요청이 `http://localhost:3000/admin/jobs`로 가서 `ERR_CONNECTION_REFUSED`.
+- 원인: 같은 5191 포트에 예전에 띄운 Vite(`--host 127.0.0.1`, 환경변수 없음)가 살아 있었다. 새 Vite는 `::1`에만 붙어서, `127.0.0.1:5191`로 접속하면 옛 서버가 응답했다.
+- 해결: `Get-NetTCPConnection -LocalPort <포트> -State Listen`으로 포트 소유 프로세스와 명령줄을 확인하고 옛 서버를 종료한 뒤 다시 접속했다. 업로드가 실제 서버로 들어가는 것을 확인했다. 개발 서버를 띄우기 전에 포트를 먼저 확인한다.
