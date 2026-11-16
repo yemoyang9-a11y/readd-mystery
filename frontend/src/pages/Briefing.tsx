@@ -31,6 +31,7 @@ export default function Briefing() {
       recapFailed={session.recapFailed}
       recapStreaming={session.recapStreaming}
       characterNames={session.characterNames}
+      notes={session.notes}
     />
   );
 }

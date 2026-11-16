@@ -14,9 +14,13 @@ const baseProps = {
   onCharacterModeChange: () => {},
   graph,
   graphFailed: false,
-  recapText: '',
-  recapStreaming: false,
-  recapFailed: false,
+  notes: [],
+  notesFailed: false,
+  currentPage: 12 as number | null,
+  onAddNote: async () => true,
+  onEditNote: async () => true,
+  onRemoveNote: async () => true,
+  onJumpToNote: () => {},
   chatTurns: [],
   chatStreaming: false,
   chatError: null,
@@ -38,7 +42,7 @@ const baseProps = {
 describe('싸비 사이드창', () => {
   it('FR-SVB-002: 최초 열기의 기본 탭은 인물 관계도다', () => {
     render(<SsabiPanel {...baseProps} />);
-    expect(screen.getByRole('tab', { name: '인물 관계도' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: '인물관계도' })).toHaveAttribute(
       'aria-selected',
       'true'
     );
@@ -54,9 +58,9 @@ describe('싸비 사이드창', () => {
   it('탭을 고르면 그 탭이 선택된다', async () => {
     render(<SsabiPanel {...baseProps} />);
 
-    await userEvent.click(screen.getByRole('tab', { name: '챗봇' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'AI 챗봇' }));
 
-    expect(screen.getByRole('tab', { name: '챗봇' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'AI 챗봇' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('탭이 바뀌면 어느 탭이 열렸는지 알린다 — 컨테이너가 그 탭 데이터를 조회한다', async () => {
@@ -64,27 +68,27 @@ describe('싸비 사이드창', () => {
     render(<SsabiPanel {...baseProps} onTabChange={onTabChange} />);
     onTabChange.mockClear();
 
-    await userEvent.click(screen.getByRole('tab', { name: '리캡' }));
+    await userEvent.click(screen.getByRole('tab', { name: '추리 노트' }));
 
-    expect(onTabChange).toHaveBeenCalledWith('recap');
+    expect(onTabChange).toHaveBeenCalledWith('notes');
   });
 
   it('FR-SVB-004: 같은 세션이면(epoch 동일) 다시 그려도 보던 탭이 유지된다', async () => {
     const { rerender } = render(<SsabiPanel {...baseProps} />);
-    await userEvent.click(screen.getByRole('tab', { name: '챗봇' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'AI 챗봇' }));
 
-    rerender(<SsabiPanel {...baseProps} recapText="갱신" />);
+    rerender(<SsabiPanel {...baseProps} currentPage={5} />);
 
-    expect(screen.getByRole('tab', { name: '챗봇' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'AI 챗봇' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('FR-SVB-004: epoch 이 바뀌면 새 세션이므로 기본 탭으로 돌아간다', async () => {
     const { rerender } = render(<SsabiPanel {...baseProps} />);
-    await userEvent.click(screen.getByRole('tab', { name: '챗봇' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'AI 챗봇' }));
 
     rerender(<SsabiPanel {...baseProps} sessionEpoch={8} />);
 
-    expect(screen.getByRole('tab', { name: '인물 관계도' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: '인물관계도' })).toHaveAttribute(
       'aria-selected',
       'true'
     );
@@ -95,7 +99,7 @@ describe('싸비 사이드창', () => {
 
     const tabs = screen.getAllByRole('tab');
     expect(tabs).toHaveLength(3);
-    expect(tabs.map((t) => t.textContent)).toEqual(['리캡', '인물 관계도', '챗봇']);
+    expect(tabs.map((t) => t.textContent)).toEqual(['추리 노트', '인물관계도', 'AI 챗봇']);
     expect(screen.queryByRole('tab', { name: '타임라인' })).not.toBeInTheDocument();
   });
 
@@ -135,7 +139,7 @@ describe('싸비 사이드창', () => {
 
   it('활성 탭은 brief-accent 테두리를 쓰고, 아래 카드와 같은 배경으로 포스트잇처럼 겹친다', () => {
     render(<SsabiPanel {...baseProps} />);
-    const activeTab = screen.getByRole('tab', { name: '인물 관계도' });
+    const activeTab = screen.getByRole('tab', { name: '인물관계도' });
     expect(activeTab.className).toContain('border-brief-accent');
     expect(activeTab.className).toContain('bg-brief-paper');
     expect(screen.getByRole('tabpanel').className).toContain('bg-brief-paper');
@@ -144,21 +148,21 @@ describe('싸비 사이드창', () => {
   it('본문에서 인용 요청이 오면(pendingQuote) 다른 탭을 보고 있어도 챗봇 탭으로 전환한다', () => {
     const { rerender } = render(<SsabiPanel {...baseProps} />);
     // 기본은 인물 관계도 탭
-    expect(screen.getByRole('tab', { name: '인물 관계도' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: '인물관계도' })).toHaveAttribute('aria-selected', 'true');
 
     rerender(<SsabiPanel {...baseProps} pendingQuote={{ text: '정 주사', token: 1 }} />);
 
-    expect(screen.getByRole('tab', { name: '챗봇' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'AI 챗봇' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('2026-08-24: initialTab이 같은 세션(epoch 일치)이면 그 탭에서 바로 시작한다 — 패널 재마운트(닫았다 열기) 대역', () => {
     render(<SsabiPanel {...baseProps} initialTab="chatbot" initialTabEpoch={7} />);
-    expect(screen.getByRole('tab', { name: '챗봇' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'AI 챗봇' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('2026-08-24: initialTab이 있어도 epoch이 다르면(닫혀 있는 동안 세션이 바뀜, FR-SVB-004) 기본 탭으로 시작한다', () => {
     render(<SsabiPanel {...baseProps} sessionEpoch={7} initialTab="chatbot" initialTabEpoch={6} />);
-    expect(screen.getByRole('tab', { name: '인물 관계도' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: '인물관계도' })).toHaveAttribute(
       'aria-selected',
       'true'
     );
@@ -168,12 +172,12 @@ describe('싸비 사이드창', () => {
     const { rerender } = render(
       <SsabiPanel {...baseProps} pendingQuote={{ text: '정 주사', token: 1 }} />
     );
-    await userEvent.click(screen.getByRole('tab', { name: '리캡' }));
-    expect(screen.getByRole('tab', { name: '리캡' })).toHaveAttribute('aria-selected', 'true');
+    await userEvent.click(screen.getByRole('tab', { name: '추리 노트' }));
+    expect(screen.getByRole('tab', { name: '추리 노트' })).toHaveAttribute('aria-selected', 'true');
 
     rerender(<SsabiPanel {...baseProps} pendingQuote={{ text: '정 주사', token: 2 }} />);
 
-    expect(screen.getByRole('tab', { name: '챗봇' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'AI 챗봇' })).toHaveAttribute('aria-selected', 'true');
   });
 
   describe('인물 관계도 — 주요인물/전체 토글 기억 (2026-08-25)', () => {
@@ -206,9 +210,9 @@ describe('싸비 사이드창', () => {
         'true'
       );
 
-      // 리캡 탭으로 갔다가(인물 관계도 tabpanel이 key={tab}으로 언마운트) 돌아온다
-      await userEvent.click(screen.getByRole('tab', { name: '리캡' }));
-      await userEvent.click(screen.getByRole('tab', { name: '인물 관계도' }));
+      // 추리 노트 탭으로 갔다가(인물 관계도 tabpanel이 key={tab}으로 언마운트) 돌아온다
+      await userEvent.click(screen.getByRole('tab', { name: '추리 노트' }));
+      await userEvent.click(screen.getByRole('tab', { name: '인물관계도' }));
 
       expect(within(people()).getByRole('button', { name: '전체' })).toHaveAttribute(
         'aria-pressed',
@@ -239,6 +243,78 @@ describe('싸비 사이드창', () => {
         'aria-pressed',
         'true'
       );
+    });
+  });
+
+  describe('추리 노트 탭 (2026-11-15 추리 전환)', () => {
+    const note = {
+      note_id: 'n1',
+      page_no: 7,
+      kind: 'clue' as const,
+      body: '장갑이 한 짝 없다',
+      created_at: '2026-11-16T00:00:00.000Z',
+      updated_at: '2026-11-16T00:00:00.000Z',
+    };
+
+    it('리캡 탭은 패널에 없다', () => {
+      render(<SsabiPanel {...baseProps} />);
+      expect(screen.queryByRole('tab', { name: '리캡' })).not.toBeInTheDocument();
+    });
+
+    it('적어 둔 노트와 쪽수 칩을 보여주고, 칩을 누르면 그 쪽으로 이동을 요청한다', async () => {
+      const onJumpToNote = vi.fn();
+      render(<SsabiPanel {...baseProps} initialTab="notes" initialTabEpoch={7} notes={[note]} onJumpToNote={onJumpToNote} />);
+
+      expect(screen.getByText('장갑이 한 짝 없다')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: '7쪽으로 이동' }));
+
+      expect(onJumpToNote).toHaveBeenCalledWith(7);
+    });
+
+    it('"+ 단서·가설 적기"는 가운데 메모 창을 열고 쪽수 기본값은 지금 펼친 쪽이다', async () => {
+      const onAddNote = vi.fn().mockResolvedValue(true);
+      render(<SsabiPanel {...baseProps} initialTab="notes" initialTabEpoch={7} currentPage={12} onAddNote={onAddNote} />);
+
+      await userEvent.click(screen.getByRole('button', { name: '+ 단서·가설 적기' }));
+      const dialog = screen.getByRole('dialog', { name: '단서·가설 적기' });
+      expect(within(dialog).getByLabelText('쪽수')).toHaveValue(12);
+
+      await userEvent.type(within(dialog).getByLabelText('내용'), '범인은 왼손잡이');
+      await userEvent.click(within(dialog).getByRole('radio', { name: '가설' }));
+      await userEvent.click(within(dialog).getByRole('button', { name: '저장' }));
+
+      expect(onAddNote).toHaveBeenCalledWith({ page_no: 12, kind: 'hypothesis', body: '범인은 왼손잡이' });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('내용이 비어 있으면 저장할 수 없다', async () => {
+      render(<SsabiPanel {...baseProps} initialTab="notes" initialTabEpoch={7} />);
+
+      await userEvent.click(screen.getByRole('button', { name: '+ 단서·가설 적기' }));
+
+      expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
+    });
+
+    it('저장에 실패하면 창이 남고 오류를 알린다', async () => {
+      render(<SsabiPanel {...baseProps} initialTab="notes" initialTabEpoch={7} onAddNote={async () => false} />);
+
+      await userEvent.click(screen.getByRole('button', { name: '+ 단서·가설 적기' }));
+      await userEvent.type(screen.getByLabelText('내용'), '메모');
+      await userEvent.click(screen.getByRole('button', { name: '저장' }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('저장하지 못했어요');
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    it('삭제는 한 번 더 확인한 뒤에만 실행한다', async () => {
+      const onRemoveNote = vi.fn().mockResolvedValue(true);
+      render(<SsabiPanel {...baseProps} initialTab="notes" initialTabEpoch={7} notes={[note]} onRemoveNote={onRemoveNote} />);
+
+      await userEvent.click(screen.getByRole('button', { name: '노트 삭제' }));
+      expect(onRemoveNote).not.toHaveBeenCalled();
+      await userEvent.click(screen.getByRole('button', { name: '노트 삭제 확인' }));
+
+      expect(onRemoveNote).toHaveBeenCalledWith('n1');
     });
   });
 });

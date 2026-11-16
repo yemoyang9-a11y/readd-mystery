@@ -33,7 +33,7 @@ describe('싸비 탭 상태 결정', () => {
   });
 
   it('epoch 이 뒤로 가더라도 "달라졌다"는 사실만으로 초기화한다 — 크기를 비교해 판정하지 않는다', () => {
-    expect(resolveSsabiTab({ previousEpoch: 9, currentEpoch: 3, lastTab: 'recap' })).toBe(
+    expect(resolveSsabiTab({ previousEpoch: 9, currentEpoch: 3, lastTab: 'notes' })).toBe(
       'relationship'
     );
   });

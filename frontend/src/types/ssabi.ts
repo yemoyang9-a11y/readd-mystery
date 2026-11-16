@@ -75,4 +75,4 @@ export interface CharacterResponse {
 }
 
 /** 싸비 사이드창 3탭. 최초 열기 기본값은 관계도 (FR-SVB-002) */
-export type SsabiTab = 'recap' | 'relationship' | 'chatbot';
+export type SsabiTab = 'notes' | 'relationship' | 'chatbot';

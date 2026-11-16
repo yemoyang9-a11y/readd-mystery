@@ -3,13 +3,14 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchBriefing, streamRecap } from '../services/recapService';
 import { fetchGraph } from '../services/ssabiService';
 import { useSSE } from './useSSE';
+import { useNotes } from './useNotes';
 import { nextSeq } from '../utils/seq';
 import { fetchBookInfo } from '../services/bookService';
 import { resolveCoverUrl } from '../utils/coverOverrides';
 import { setPendingJump } from '../utils/pendingJump';
 import { BOOK_ROUTES } from '../utils/routes';
 import { cameFromBook, useBackToBook } from './useBackToBook';
-import type { BriefingResponse, ChapterSummary } from '../types';
+import type { BriefingResponse, ChapterSummary, ReadingNote } from '../types';
 
 export interface BriefingSessionState {
   briefing: BriefingResponse | null;
@@ -20,6 +21,7 @@ export interface BriefingSessionState {
   author: string;
   coverUrl: string | null;
   characterNames: string[];
+  notes: ReadingNote[];
   streamedRecap: string;
   recapStreaming: boolean;
   recapFailed: boolean;
@@ -41,6 +43,7 @@ export function useBriefingSession(bookId: string): BriefingSessionState {
   const navigate = useNavigate();
   const fromBook = cameFromBook(useLocation().state);
   const goBack = useBackToBook(bookId);
+  const { notes } = useNotes(bookId);
 
   const [briefing, setBriefing] = useState<BriefingResponse | null>(null);
   const [chapters, setChapters] = useState<ChapterSummary[]>([]);
@@ -134,6 +137,7 @@ export function useBriefingSession(bookId: string): BriefingSessionState {
     author: book?.author ?? '',
     coverUrl: resolveCoverUrl(bookId, null),
     characterNames,
+    notes,
     streamedRecap,
     recapStreaming,
     recapFailed: recapError !== null,

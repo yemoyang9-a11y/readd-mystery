@@ -35,6 +35,7 @@ export default function MobileBriefing() {
       recapFailed={session.recapFailed}
       recapStreaming={session.recapStreaming}
       characterNames={session.characterNames}
+      notes={session.notes}
     />
   );
 }

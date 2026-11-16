@@ -3,22 +3,24 @@ import type {
   ChatbotConversationSummary,
   ChatbotConversationTurn,
   GraphResponse,
+  NoteDraft,
+  ReadingNote,
   SsabiTab,
 } from '../../types';
 import { resolveSsabiTab } from '../../utils/ssabiTab';
 import { resolveCharacterMode } from '../../utils/characterMode';
 import ssabiFace from '../../assets/images/ssabi-face.png';
-import RecapTab from './RecapTab';
+import NotesTab from './NotesTab';
 import RelationshipTab from './RelationshipTab';
 import ChatbotTab from './ChatbotTab';
 
 const TAB_LABELS: Record<SsabiTab, string> = {
-  recap: '리캡',
-  relationship: '인물 관계도',
-  chatbot: '챗봇',
+  notes: '추리 노트',
+  relationship: '인물관계도',
+  chatbot: 'AI 챗봇',
 };
 
-const TAB_ORDER: SsabiTab[] = ['recap', 'relationship', 'chatbot'];
+const TAB_ORDER: SsabiTab[] = ['notes', 'relationship', 'chatbot'];
 
 /**
  * 싸비 사이드창 3탭 — S5 (FR-SVB-002·004·005)
@@ -41,9 +43,13 @@ export default function SsabiPanel({
   graph,
   graphFailed,
   totalPages,
-  recapText,
-  recapStreaming,
-  recapFailed,
+  notes,
+  notesFailed,
+  currentPage,
+  onAddNote,
+  onEditNote,
+  onRemoveNote,
+  onJumpToNote,
   chatTurns,
   chatStreaming,
   chatError,
@@ -56,8 +62,6 @@ export default function SsabiPanel({
   onSelectChatConversation,
   onDeleteChatConversation,
   onQuoteDismissed,
-  onRecapQuote,
-  onRecapRefresh,
   compactHeader = false,
   requireTextToSend = false,
 }: {
@@ -89,9 +93,13 @@ export default function SsabiPanel({
   graphFailed: boolean;
   /** 목차 기준 전체 페이지 수 — 인물 관계도 탭의 되감기 트랙 오른쪽 끝 표시용(R1 요청). */
   totalPages?: number;
-  recapText: string;
-  recapStreaming: boolean;
-  recapFailed: boolean;
+  notes: ReadingNote[];
+  notesFailed: boolean;
+  currentPage: number | null;
+  onAddNote: (draft: NoteDraft) => Promise<boolean>;
+  onEditNote: (noteId: string, draft: Partial<NoteDraft>) => Promise<boolean>;
+  onRemoveNote: (noteId: string) => Promise<boolean>;
+  onJumpToNote: (page: number) => void;
   chatTurns: ChatbotConversationTurn[];
   chatStreaming: boolean;
   chatError: string | null;
@@ -108,15 +116,6 @@ export default function SsabiPanel({
   /** "선택한 문장" 카드가 지워질 때마다 호출된다(2026-08-25, 사용자 요청) — Reader.tsx가
    *  본문 하이라이트를 같이 지운다. */
   onQuoteDismissed?: () => void;
-  /**
-   * 리캡 카드에서 드래그로 인용했을 때(2026-08-25, 사용자 요청). ReaderView의 onQuote와
-   * 같은 핸들러(Reader.tsx의 handleQuote)를 받는다 — 소스가 본문이든 리캡이든 결과는
-   * 똑같이 pendingQuote로 흘러 챗봇 탭 전환·인용 프롬프트 주입까지 그대로 재사용된다.
-   */
-  onRecapQuote?: (text: string) => void;
-  /** 리캡 새로고침 버튼 클릭(2026-08-25, 사용자 요청) — Reader.tsx가 현재 페이지 기준으로
-   *  리캡을 다시 스트리밍한다. 자동 재생성(페이지 이동)은 막고 이 버튼으로만 허용한다. */
-  onRecapRefresh?: () => void;
   compactHeader?: boolean;
   requireTextToSend?: boolean;
 }) {
@@ -225,16 +224,16 @@ export default function SsabiPanel({
         role="tabpanel"
         className="brief-scroll relative z-0 flex-1 animate-tab-in overflow-y-auto rounded-b-xl rounded-tr-xl border border-brief-rule bg-brief-paper px-6 pb-6 pt-5"
       >
-        {tab === 'recap' ? (
-          <RecapTab
-            text={recapText}
-            streaming={recapStreaming}
-            failed={recapFailed}
-            // graph는 이미 기준점 K 이하로 필터된 응답이다(types/ssabi.ts:3) — 리캡 강조가
-            // 쓰는 이름 목록도 그 범위를 벗어나지 않는다.
-            characterNames={graph ? graph.nodes.flatMap((n) => [n.name, ...n.aliases]) : []}
-            onQuote={onRecapQuote}
-            onRefresh={onRecapRefresh}
+        {tab === 'notes' ? (
+          <NotesTab
+            notes={notes}
+            failed={notesFailed}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onAdd={onAddNote}
+            onEdit={onEditNote}
+            onRemove={onRemoveNote}
+            onJump={onJumpToNote}
           />
         ) : null}
         {tab === 'relationship' ? (

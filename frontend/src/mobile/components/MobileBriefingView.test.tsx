@@ -93,3 +93,31 @@ test('FR-SPL-005: 줄거리 불러오기에 실패해도 이어서 읽기 버튼
   await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
   expect(onContinue).toHaveBeenCalledTimes(1);
 });
+
+// 2026-11-15 추리 전환
+test('브리핑에 내 추리 노트 목록이 쪽수와 함께 나오고, 없으면 안내 문구가 나온다', () => {
+  const { rerender } = render(<MobileBriefingView {...baseProps} briefing={briefing()} />);
+  const empty = screen.getByRole('region', { name: '내 추리 노트' });
+  expect(empty).toHaveTextContent('아직 적은 게 없어요.');
+
+  rerender(
+    <MobileBriefingView
+      {...baseProps}
+      briefing={briefing()}
+      notes={[
+        {
+          note_id: 'n1',
+          page_no: 7,
+          kind: 'hypothesis',
+          body: '범인은 왼손잡이',
+          created_at: '2026-11-16T00:00:00.000Z',
+          updated_at: '2026-11-16T00:00:00.000Z',
+        },
+      ]}
+    />
+  );
+  const region = screen.getByRole('region', { name: '내 추리 노트' });
+  expect(region).toHaveTextContent('범인은 왼손잡이');
+  expect(region).toHaveTextContent('7쪽');
+  expect(region).toHaveTextContent('가설');
+});
