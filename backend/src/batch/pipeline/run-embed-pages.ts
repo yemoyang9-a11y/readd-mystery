@@ -14,13 +14,14 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 
+import { Pool } from 'pg';
 import { pool } from '../../config/database';
 import { embedDocuments, toVectorLiteral, EMBEDDING_DIM, EMBED_BATCH_SIZE } from './embed';
 import { bookArgsFromCli } from './run-args';
 
-async function main(): Promise<void> {
-  const BOOK_ID = bookArgsFromCli('run-embed-pages').bookId;
-  const pending = (await pool.query(
+// FR-ADM-005 🚦
+export async function embedBookPages(db: Pool, BOOK_ID: string): Promise<void> {
+  const pending = (await db.query(
     'SELECT page_no, content FROM pages WHERE book_id = $1 AND embedding IS NULL ORDER BY page_no',
     [BOOK_ID]
   )) as { rows: { page_no: number; content: string }[] };
@@ -39,14 +40,12 @@ async function main(): Promise<void> {
     // 인덱스로 짝지어 넣는다. embedding.ts가 개수 불일치를 이미 예외로 막지만
     // 여기서 한 번 더 확인해야 잘못된 벡터가 엉뚱한 페이지에 들어가는 걸 막는다.
     if (embeddings.length !== batch.length) {
-      throw new Error(
-        `임베딩 개수 불일치: 요청 ${batch.length}건, 응답 ${embeddings.length}건`
-      );
+      throw new Error(`임베딩 개수 불일치: 요청 ${batch.length}건, 응답 ${embeddings.length}건`);
     }
 
     // 한 배치를 한 트랜잭션으로 넣는다 — 중간에 끊기면 그 배치는 통째로 롤백되고,
     // 다음 실행에서 embedding IS NULL 로 다시 잡힌다(재개 방식 유지).
-    const client = await pool.connect();
+    const client = await db.connect();
     try {
       await client.query('BEGIN');
       for (let i = 0; i < batch.length; i++) {
@@ -70,21 +69,22 @@ async function main(): Promise<void> {
   }
 
   // V5 — 임베딩이 있는 페이지 수 == 전체 페이지 수 (누락 0)
-  const remaining = (await pool.query(
+  const remaining = (await db.query(
     'SELECT count(*)::int AS n FROM pages WHERE book_id = $1 AND embedding IS NULL',
     [BOOK_ID]
   )) as { rows: { n: number }[] };
 
   if (remaining.rows[0].n > 0) {
-    console.error(`[FAIL] V5 위반 — 임베딩 누락 ${remaining.rows[0].n}페이지`);
-    process.exit(1);
+    throw new Error(`V5 위반 — 임베딩 누락 ${remaining.rows[0].n}페이지`);
   }
 
   console.log(`[OK] "${BOOK_ID}" 전체 페이지 임베딩 완료 (${EMBEDDING_DIM}차원)`);
-  await pool.end();
 }
 
-main().catch((err) => {
-  console.error('[FAIL] 페이지 임베딩 실패', err);
-  process.exit(1);
-});
+if (require.main === module)
+  embedBookPages(pool, bookArgsFromCli('run-embed-pages').bookId)
+    .then(() => pool.end())
+    .catch((err) => {
+      console.error('[FAIL] 페이지 임베딩 실패', err);
+      process.exit(1);
+    });

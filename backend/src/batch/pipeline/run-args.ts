@@ -108,3 +108,24 @@ export function bookArgsFromCli(script: string): BookArgs {
 export function reviewSheetPath(args: BookArgs): string {
   return path.join(args.fullDir, `review-sheet-${args.bookId}.csv`);
 }
+
+// FR-ADM-005 🚦
+export function bookArgsFor(input: {
+  bookId: string;
+  filePath: string;
+  title: string;
+  author: string;
+  publishYear?: number;
+}): BookArgs {
+  const generatedDir = path.join(DATA_DIR, 'generated', input.bookId);
+  return {
+    bookId: input.bookId,
+    filePath: input.filePath,
+    generatedDir,
+    fullDir: path.join(generatedDir, 'full'),
+    title: input.title,
+    author: input.author,
+    publishYear: input.publishYear,
+    dryRun: false,
+  };
+}

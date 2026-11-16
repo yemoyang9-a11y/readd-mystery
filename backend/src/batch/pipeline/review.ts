@@ -102,7 +102,7 @@ export function relationshipSnapshot(relation: AccumulatedRelationship): Record<
   };
 }
 
-const SNAPSHOT_SQL = `jsonb_build_object('character_a_id', character_a_id, 'character_b_id', character_b_id,
+export const SNAPSHOT_SQL = `jsonb_build_object('character_a_id', character_a_id, 'character_b_id', character_b_id,
   'label', label, 'established_page', established_page, 'semantics', semantics)`;
 
 export function passedReviewKeys(records: ReviewRecordRow[], data?: ResolvedBookData): Set<string> {

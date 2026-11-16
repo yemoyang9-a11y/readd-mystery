@@ -5,7 +5,14 @@
  * D11        페이지 크기·경계 우선순위(장>문단>문장), 문장 중간 절단 금지
  */
 import { Chapter, Page } from '../../shared/types';
-import { parseChapters, reflowLines, splitBook, validateSplit, computeMeasurements } from './split';
+import {
+  findCandidates,
+  parseChapters,
+  reflowLines,
+  splitBook,
+  validateSplit,
+  computeMeasurements,
+} from './split';
 
 const BOOK_ID = 'takryu';
 
@@ -207,5 +214,24 @@ describe('computeMeasurements — CP1 실측 3건', () => {
     expect(measurements.sentenceFallbackCount).toBeGreaterThanOrEqual(0);
     expect(measurements.underMinRatio).toBeGreaterThanOrEqual(0);
     expect(measurements.overMaxRatio).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('D11 🚦 문장 부호로 끝나지 않는 문단 끝은 쪽 경계 후보가 아니다', () => {
+  const paragraphEnds = (paragraphs: string[]) =>
+    findCandidates(paragraphs).filter((c) => c.isParagraphEnd);
+
+  test('"…말을 이어"처럼 부호 없이 끝난 문단의 끝은 후보에서 빠진다', () => {
+    const paragraphs = ['그는 말을 이어', '“그러나 아직 모른다.”', '끝났다.'];
+
+    const secondEnd = '그는 말을 이어\n“그러나 아직 모른다.”'.length + 1;
+
+    expect(paragraphEnds(paragraphs).map((c) => c.offset)).toEqual([secondEnd]);
+  });
+
+  test('마침표·물음표·줄임표(+닫는 따옴표)로 끝난 문단의 끝은 후보로 남는다', () => {
+    const paragraphs = ['첫째다.', '둘째냐?', '셋째…', '“넷째다.”', '마지막'];
+
+    expect(paragraphEnds(paragraphs)).toHaveLength(4);
   });
 });

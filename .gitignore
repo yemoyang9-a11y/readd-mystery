@@ -78,3 +78,4 @@ frontend/.impeccable/
 
 evaluation/chatbot-harness/answer-key.local.json
 evaluation/chatbot-harness/results/
+backend/data/uploads/

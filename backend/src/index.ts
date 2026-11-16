@@ -13,6 +13,7 @@ import path from 'path';
 import routes from './api/routes';
 import { pool } from './config/database';
 import { createNotesRoutes } from './modules/notes/composition';
+import { adminRouter, resumeIngestJobs } from './modules/ingest/composition';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -68,6 +69,9 @@ app.use((req, res, next) => {
   return next();
 });
 
+// FR-ADM-006 🚦
+app.use('/admin', adminRouter);
+
 // 라우트
 app.use('/', createNotesRoutes(pool));
 app.use('/', routes);
@@ -117,6 +121,10 @@ API Endpoints:
 
 ${mockMode ? '🧪 Test Page: http://localhost:' + PORT + '/test/test-chatbot.html\n' : ''}Ready for requests!
   `);
+
+  if (!mockMode) {
+    resumeIngestJobs().catch((err) => console.error('[ingest] resume failed', err));
+  }
 });
 
 export default app;

@@ -9,6 +9,7 @@ dotenv.config();
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { Pool } from 'pg';
 import { pool } from '../../config/database';
 import { checkIntegrity, ResolvedBookData } from './check-integrity';
 import { registerGeneratedContent, replaceRelationshipSnapshot } from './register';
@@ -18,23 +19,28 @@ import {
   assertResolvedGrounding,
   assertStoredGrounding,
 } from './grounding';
-import { bookArgsFromCli } from './run-args';
+import { BookArgs, bookArgsFromCli } from './run-args';
 
-async function main(): Promise<void> {
-  const args = bookArgsFromCli('run-register-content');
+// FR-ADM-005 🚦
+export async function registerContent(
+  db: Pool,
+  args: BookArgs,
+  replace: boolean,
+  prepare?: (data: ResolvedBookData, totalPages: number) => ResolvedBookData
+): Promise<ResolvedBookData> {
   const BOOK_ID = args.bookId;
   const filePath = path.join(args.fullDir, 'all-resolved.json');
-  const data = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ResolvedBookData;
+  const sealed = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ResolvedBookData;
+  let data = sealed;
   const { pages } = splitBook(fs.readFileSync(args.filePath, 'utf-8'), BOOK_ID);
-  assertResolvedGrounding(data, pages);
+  assertResolvedGrounding(sealed, pages);
   if (data.book_id !== BOOK_ID) throw new Error('Artifact book_id mismatch');
 
-  const replace = process.argv.includes('--replace-relationships');
-  const client = await pool.connect();
+  const client = await db.connect();
   try {
     await client.query('BEGIN ISOLATION LEVEL READ COMMITTED');
     if (!replace) await assertInitialRegistration(client, BOOK_ID);
-    await assertStoredGrounding(client, data, BOOK_ID);
+    await assertStoredGrounding(client, sealed, BOOK_ID);
 
     const bookResult = (await client.query('SELECT total_pages FROM books WHERE book_id = $1', [
       BOOK_ID,
@@ -48,6 +54,7 @@ async function main(): Promise<void> {
       throw new Error('Book must be registered before generated content');
     }
     const totalPages = bookResult.rows[0].total_pages;
+    if (prepare) data = prepare(sealed, totalPages);
 
     const report = checkIntegrity(data, totalPages);
     if (!report.ok) {
@@ -97,10 +104,17 @@ async function main(): Promise<void> {
       `인물 ${data.characters.length}명, 관계 ${data.relationships.length}건, ` +
       `용어 ${data.terms.length}개, 사건 ${data.events.length}건`
   );
-  await pool.end();
+  return data;
 }
 
-main().catch((err) => {
-  console.error('[FAIL] 생성물 등록 실패', err);
-  process.exit(1);
-});
+if (require.main === module)
+  registerContent(
+    pool,
+    bookArgsFromCli('run-register-content'),
+    process.argv.includes('--replace-relationships')
+  )
+    .then(() => pool.end())
+    .catch((err) => {
+      console.error('[FAIL] 생성물 등록 실패', err);
+      process.exit(1);
+    });
