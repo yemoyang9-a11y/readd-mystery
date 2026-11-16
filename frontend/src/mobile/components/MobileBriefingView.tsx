@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import type { BriefingResponse, ChapterSummary, ReadingNote } from '../../types';
+import { useEffect, useRef } from 'react';
+import type { BriefingResponse, ReadingNote } from '../../types';
 import { resolveBriefingView } from '../../utils/briefingView';
 import { EMPTY_RECAP_MESSAGE } from '../../utils/constants';
 import { parseRecapParagraphs } from '../../utils/recapText';
 import { splitHighlighted } from '../../components/Ssabi/highlightNames';
-import ProgressBar from '../../components/Reader/ProgressBar';
 import TypographicCover from '../../components/common/TypographicCover';
 import BriefingNotes from '../../components/Ssabi/BriefingNotes';
 import { GREETING_LINES, MOCK_DAYS_SINCE_LABEL } from '../../pages/BriefingView';
@@ -12,14 +11,12 @@ import { GREETING_LINES, MOCK_DAYS_SINCE_LABEL } from '../../pages/BriefingView'
 // FR-BRF-002 FR-BRF-003 FR-SPL-005 🚦 FR-NAV-001
 export default function MobileBriefingView({
   briefing,
-  chapters,
   title,
   author,
   coverUrl,
   onContinue,
   onRequestFallback,
   onBack,
-  onSelectChapter,
   streamedRecap,
   recapFailed,
   recapStreaming,
@@ -27,14 +24,12 @@ export default function MobileBriefingView({
   notes = [],
 }: {
   briefing: BriefingResponse;
-  chapters: ChapterSummary[];
   title: string;
   author: string;
   coverUrl: string | null;
   onContinue: () => void;
   onRequestFallback: () => void;
   onBack: () => void;
-  onSelectChapter: (startPage: number) => void;
   streamedRecap: string;
   recapFailed: boolean;
   recapStreaming: boolean;
@@ -43,7 +38,6 @@ export default function MobileBriefingView({
 }) {
   const view = resolveBriefingView(briefing);
   const requested = useRef(false);
-  const [tocOpen, setTocOpen] = useState(false);
 
   // D13 NFR-AI-017
   useEffect(() => {
@@ -58,6 +52,7 @@ export default function MobileBriefingView({
     <div
       data-testid="mobile-briefing"
       data-mobile="true"
+      data-night
       className="min-h-[100dvh] bg-brief-paper font-dashSans text-brief-ink"
       style={{
         paddingTop: 'var(--safe-top)',
@@ -90,7 +85,7 @@ export default function MobileBriefingView({
         <div className="flex items-center gap-4">
           <TypographicCover size="brief-compact" title={title} author={author} coverUrl={coverUrl} />
           <div className="min-w-0 flex-1">
-            <p className="m-0 text-sm font-bold text-[#555]">{MOCK_DAYS_SINCE_LABEL}</p>
+            <p className="m-0 text-sm font-bold text-brief-muted">{MOCK_DAYS_SINCE_LABEL}</p>
             <h2 className="mt-2 break-keep font-dashSerif text-[22px] font-semibold leading-[1.35] tracking-[-.03em] text-brief-ink">
               {GREETING_LINES.map((line) => (
                 <span key={line} className="block">
@@ -104,23 +99,10 @@ export default function MobileBriefingView({
           </div>
         </div>
 
-        <section aria-label="진도" className="mt-6 rounded-brief-panel bg-white p-5 shadow-brief-soft-sm">
-          <div className="mb-6 flex items-start justify-between gap-3 text-sm">
-            <b className="min-w-0 break-keep font-semibold text-brief-ink">
-              제{briefing.current_chapter.chapter_no}장 {briefing.current_chapter.title}
-            </b>
-            <span className="shrink-0 font-semibold text-[#555]">{briefing.progress.total_pages}쪽</span>
-          </div>
-          <ProgressBar percent={briefing.progress.percent} tone="brief" size="md" runner />
-          <div className="mt-6 text-sm font-semibold text-[#555]">{briefing.progress.percent}%</div>
-        </section>
-
-        <div data-testid="brief-rule" className="my-7 h-[2px] w-full rounded-[1px] bg-brief-rule" />
-
         <h3 className="mb-3 font-dashSerif text-lg font-semibold tracking-[-.02em] text-brief-ink">
           그동안 이런 이야기였어요
         </h3>
-        <div className="rounded-brief-panel bg-white p-5 shadow-brief-soft-sm">
+        <div className="rounded-brief-panel bg-brief-card p-5 shadow-brief-soft-sm">
           {view.kind === 'empty' ? (
             <p className="m-0 font-dashSerif text-[15px] leading-[1.85]">{EMPTY_RECAP_MESSAGE}</p>
           ) : null}
@@ -174,73 +156,6 @@ export default function MobileBriefingView({
         <div data-testid="brief-rule" className="my-7 h-[2px] w-full rounded-[1px] bg-brief-rule" />
 
         <BriefingNotes notes={notes} />
-
-        <div data-testid="brief-rule" className="my-7 h-[2px] w-full rounded-[1px] bg-brief-rule" />
-
-        <button
-          type="button"
-          aria-expanded={tocOpen}
-          aria-controls="mobileTocPanel"
-          onClick={() => setTocOpen((open) => !open)}
-          className="flex min-h-12 w-full items-center justify-between rounded-lg"
-        >
-          <h3 className="m-0 font-dashSerif text-lg font-semibold tracking-[-.02em] text-brief-ink">목차</h3>
-          <span className="flex size-9 items-center justify-center rounded-full bg-white shadow-brief-soft-sm">
-            <span
-              aria-hidden="true"
-              className={`block text-[17px] leading-none transition-transform duration-200 ${tocOpen ? 'rotate-180' : ''}`}
-            >
-              ▾
-            </span>
-          </span>
-        </button>
-
-        <div
-          id="mobileTocPanel"
-          className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
-            tocOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-          }`}
-        >
-          <div className="overflow-hidden">
-            <ul aria-label="목차" className="flex flex-col gap-2 pt-3">
-              {chapters.map((chapter) => {
-                const isNow = chapter.chapter_no === briefing.current_chapter.chapter_no;
-                return (
-                  <li key={chapter.chapter_no}>
-                    <button
-                      type="button"
-                      aria-current={isNow ? 'true' : undefined}
-                      tabIndex={tocOpen ? 0 : -1}
-                      onClick={() => onSelectChapter(chapter.start_page)}
-                      className={`group flex min-h-12 w-full items-center gap-3 rounded-brief-card px-4 py-2.5 text-left shadow-[0_1px_2px_rgba(42,38,32,0.05)] transition-[background-color,box-shadow,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brief-accent/40 focus-visible:ring-offset-2 ${
-                        isNow
-                          ? 'bg-brief-accent-soft shadow-brief-soft-sm'
-                          : 'bg-white hover:translate-x-0.5 hover:bg-brief-accent/10 hover:shadow-brief-soft-sm'
-                      }`}
-                    >
-                      <span
-                        className={`flex size-[26px] shrink-0 items-center justify-center rounded-full font-dashMono text-xs font-semibold ${
-                          isNow
-                            ? 'bg-brief-accent text-white'
-                            : 'bg-brief-paper text-brief-muted transition-colors group-hover:bg-white group-hover:text-brief-accent'
-                        }`}
-                      >
-                        {chapter.chapter_no}
-                      </span>
-                      <span
-                        className={`min-w-0 flex-1 break-keep text-[15px] ${
-                          isNow ? 'font-semibold text-brief-accent' : 'text-brief-ink transition-colors group-hover:text-brief-accent'
-                        }`}
-                      >
-                        {chapter.title}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </div>
       </main>
 
       <div

@@ -34,8 +34,8 @@ export default function ChapterList({
               <span
                 className={`flex size-[24px] shrink-0 items-center justify-center rounded-full font-dashMono text-[11px] font-semibold ${
                   current
-                    ? 'bg-brief-accent text-white'
-                    : 'bg-brief-paper text-brief-muted transition-colors group-enabled:group-hover:bg-white group-enabled:group-hover:text-brief-accent'
+                    ? 'bg-brief-accent text-brief-on-accent'
+                    : 'bg-brief-paper text-brief-muted transition-colors group-enabled:group-hover:bg-brief-card group-enabled:group-hover:text-brief-accent'
                 }`}
               >
                 {chapter.chapter_no}

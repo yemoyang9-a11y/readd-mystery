@@ -5,8 +5,8 @@ import { FONT_SIZES, LINE_HEIGHTS, READER_THEMES, type useReaderPrefs, type Read
 type PrefsApi = ReturnType<typeof useReaderPrefs>;
 
 const TONES = {
-  brief: { text: 'text-brief-ink', muted: 'text-brief-muted', line: 'border-brief-rule', selected: 'border-brief-accent' },
-  dash: { text: 'text-dash-ink', muted: 'text-dash-muted', line: 'border-dash-line', selected: 'border-dash-ink' },
+  brief: { card: 'bg-brief-card', text: 'text-brief-ink', muted: 'text-brief-muted', line: 'border-brief-rule', selected: 'border-brief-accent' },
+  dash: { card: 'bg-dash-card', text: 'text-dash-ink', muted: 'text-dash-muted', line: 'border-dash-line', selected: 'border-dash-ink' },
 };
 
 const THEME_IDS = Object.keys(READER_THEMES) as ReaderTheme[];
@@ -24,7 +24,7 @@ function StepButton({ label, disabled, onClick, tone, children }: {
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className={`flex size-11 items-center justify-center rounded-full border bg-white ${tone.line} ${tone.text} disabled:opacity-40`}
+      className={`flex size-11 items-center justify-center rounded-full border ${tone.card} ${tone.line} ${tone.text} disabled:opacity-40`}
     >
       <svg aria-hidden="true" viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
         {children}

@@ -23,7 +23,7 @@ type TabId = (typeof TABS)[number]['id'];
 
 const NOTICE = 'py-10 text-center text-sm text-dash-ink';
 const OUTLINE_BUTTON =
-  'inline-flex min-h-11 items-center justify-center rounded-full border border-dash-ink bg-white px-5 text-sm font-bold text-dash-ink transition-colors hover:bg-dash-ink/5 active:bg-dash-ink/10';
+  'inline-flex min-h-11 items-center justify-center rounded-full border border-dash-ink bg-dash-card px-5 text-sm font-bold text-dash-ink transition-colors hover:bg-dash-ink/5 active:bg-dash-ink/10';
 
 function BackButton({ onClick }: { onClick: () => void }) {
   return (
@@ -221,7 +221,7 @@ export default function BookDetail() {
               type="button"
               onClick={startReading}
               disabled={!book.ssabi_ready || busy || status === 'loading' || status === 'not-ready'}
-              className="flex min-h-11 w-full items-center justify-center rounded-full border border-dash-ink bg-white px-4 text-sm font-bold text-dash-ink transition-colors hover:bg-dash-ink/5 active:bg-dash-ink/10 disabled:opacity-40 disabled:hover:bg-white mobile:min-h-12 mobile:text-[15px]"
+              className="flex min-h-11 w-full items-center justify-center rounded-full border border-dash-ink bg-dash-card px-4 text-sm font-bold text-dash-ink transition-colors hover:bg-dash-ink/5 active:bg-dash-ink/10 disabled:opacity-40 disabled:hover:bg-dash-card mobile:min-h-12 mobile:text-[15px]"
             >
               {resumeLabel(book, busy)}
             </button>
@@ -246,7 +246,8 @@ export default function BookDetail() {
               {position && position.applied_cutoff > 0 && (
                 <p className="mb-2 flex min-h-11 items-center gap-2.5 rounded-dash-card bg-brief-accent-soft px-3 py-2 text-[13px] text-brief-ink">
                   <img src={ssabiFace} alt="" aria-hidden="true" className="h-6 w-auto shrink-0" />
-                  <span>{`아모가 ${position.applied_cutoff}쪽까지 줄거리를 정리해 뒀어요`}</span>
+                  <span className="mobile:hidden">{`아모가 ${position.applied_cutoff}쪽까지 줄거리를 정리해 뒀어요`}</span>
+                  <span className="hidden mobile:inline">{`${position.applied_cutoff}쪽까지 읽었어요`}</span>
                 </p>
               )}
               <BookTabs detail={detail} position={position} onSelectChapter={selectChapter} />

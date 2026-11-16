@@ -12,24 +12,26 @@ export default function MobileBriefing() {
   if (!session.briefing) {
     if (session.briefingError) {
       return (
-        <div className="h-[100dvh] bg-brief-paper" style={{ paddingTop: 'var(--safe-top)' }}>
+        <div data-night className="h-[100dvh] bg-brief-paper" style={{ paddingTop: 'var(--safe-top)' }}>
           <MobileErrorState message="브리핑을 불러오지 못했습니다" onRetry={session.retryBriefing} />
         </div>
       );
     }
-    return <Loading />;
+    return (
+      <div data-night>
+        <Loading />
+      </div>
+    );
   }
 
   return (
     <MobileBriefingView
       briefing={session.briefing}
-      chapters={session.chapters}
       title={session.title}
       author={session.author}
       coverUrl={session.coverUrl}
       onContinue={session.continueReading}
       onRequestFallback={session.requestFallback}
-      onSelectChapter={session.selectChapter}
       onBack={session.goBack}
       streamedRecap={session.streamedRecap}
       recapFailed={session.recapFailed}

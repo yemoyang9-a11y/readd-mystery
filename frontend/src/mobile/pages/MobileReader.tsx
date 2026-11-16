@@ -13,7 +13,7 @@ import MobileErrorState from '../components/MobileErrorState';
 import { useVisualViewport } from '../useVisualViewport';
 import { useReaderPrefs } from '../../hooks/useReaderPrefs';
 import ReaderPrefsSheet from '../../components/Reader/ReaderPrefsSheet';
-import JumpReturnBar from '../../components/Reader/JumpReturnBar';
+import MobileJumpBar from '../components/MobileJumpBar';
 import TocJumpDialog from '../../components/Reader/TocJumpDialog';
 import { useBackToBook } from '../../hooks/useBackToBook';
 
@@ -21,7 +21,6 @@ const FOCUS_TOGGLE_CLASS =
   'sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-1/2 focus-visible:top-[calc(var(--safe-top)+6px)] focus-visible:z-[60] focus-visible:-translate-x-1/2 focus-visible:inline-flex focus-visible:min-h-11 focus-visible:items-center focus-visible:whitespace-nowrap focus-visible:rounded-full focus-visible:border focus-visible:border-brief-ink focus-visible:bg-white focus-visible:px-4 focus-visible:font-dashSans focus-visible:text-[13px] focus-visible:font-bold focus-visible:text-brief-ink focus-visible:shadow-brief-soft-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brief-accent focus-visible:ring-offset-2 focus-visible:aria-pressed:bg-brief-accent-soft focus-visible:aria-pressed:text-brief-accent';
 
 const HEADER_HEIGHT = 56;
-const JUMP_BAR_HEIGHT = 45;
 
 export default function MobileReader() {
   const { bookId = '' } = useParams();
@@ -39,6 +38,7 @@ function MobileReadingSession() {
   const prefsButtonRef = useRef<HTMLButtonElement>(null);
   const [tocOpen, setTocOpen] = useState(false);
   const [chromeHidden, setChromeHidden] = useState(false);
+  const [noteQuote, setNoteQuote] = useState<{ text: string; token: number } | null>(null);
   const viewport = useVisualViewport();
 
   useEffect(() => {
@@ -61,8 +61,12 @@ function MobileReadingSession() {
         chapterStart={chapters.find((chapter) => chapter.start_page === page.page_no) ?? null}
         swipeDisabled={panelOpen}
         onQuote={quote}
+        onNote={(text) => {
+          setNoteQuote((prev) => ({ text, token: (prev?.token ?? 0) + 1 }));
+          if (!panelOpen) togglePanel();
+        }}
         prefs={prefsApi.prefs}
-        insetTop={`calc(var(--safe-top) + ${HEADER_HEIGHT}px${jumpOrigin !== null ? ` + ${JUMP_BAR_HEIGHT}px` : ''})`}
+        insetTop={`calc(var(--safe-top) + ${HEADER_HEIGHT}px)`}
         chromeHidden={chromeHidden}
         canToggleChrome={!panelOpen && !tocOpen && !prefsOpen}
         onToggleChrome={() => setChromeHidden((hidden) => !hidden)}
@@ -130,8 +134,8 @@ function MobileReadingSession() {
             <span aria-hidden="true">가</span>
           </button>
         </header>
-        <JumpReturnBar origin={jumpOrigin} onReturn={returnToOrigin} onDismiss={dismissJumpOrigin} />
       </div>
+      <MobileJumpBar origin={jumpOrigin} currentPage={currentPage} hidden={chromeHidden} onReturn={returnToOrigin} onDismiss={dismissJumpOrigin} />
       <EdgeHandle side="left" label="목차" controls="toc-panel" open={tocOpen} onToggle={() => setTocOpen((open) => !open)} hidden={panelOpen || chromeHidden} />
       {tocOpen && !panelOpen ? (
         <TocList
@@ -157,6 +161,8 @@ function MobileReadingSession() {
             ssabiPanelProps.onJumpToNote(target);
             togglePanel();
           }}
+          pendingNoteQuote={noteQuote}
+          onNoteQuoteHandled={() => setNoteQuote(null)}
           compactHeader={viewport.keyboardOpen} requireTextToSend />
       </MobileSsabiSheet>
       {tocJumpConfirm !== null ? <TocJumpDialog onConfirm={confirmTocJump} onCancel={cancelTocJump} /> : null}

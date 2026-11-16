@@ -9,6 +9,8 @@ import Briefing from './pages/Briefing';
 import Reader from './pages/Reader';
 import NotFound from './pages/NotFound';
 import AuthCallback from './pages/AuthCallback';
+import MobileHome from './mobile/pages/MobileHome';
+import MobileFeedback from './mobile/pages/MobileFeedback';
 import MobileReader from './mobile/pages/MobileReader';
 import MobileBriefing from './mobile/pages/MobileBriefing';
 import MobileNotFound from './mobile/pages/MobileNotFound';
@@ -34,10 +36,11 @@ export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
     {
       element: <AppShell isMobile={isMobile} />,
       children: [
-        { path: APP_ROUTES.home, element: <Home /> },
+        { path: APP_ROUTES.home, element: isMobile ? <MobileHome /> : <Home /> },
         { path: APP_ROUTES.search, element: <Search /> },
         { path: APP_ROUTES.shelf, element: <Shelf /> },
         { path: APP_ROUTES.my, element: <My /> },
+        { path: APP_ROUTES.feedback, element: isMobile ? <MobileFeedback /> : <NotFound /> },
       ],
     },
     {

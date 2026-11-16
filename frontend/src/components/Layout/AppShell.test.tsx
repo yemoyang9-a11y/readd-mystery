@@ -23,6 +23,7 @@ function renderShell(path: string, props: { isMobile: boolean; nav?: boolean }) 
           { path: '/search', element: <Page name="검색" /> },
           { path: '/shelf', element: <Page name="내 서재" /> },
           { path: '/my', element: <Page name="MY" /> },
+          { path: '/feedback', element: <Page name="피드백" /> },
           { path: '/books/:bookId', element: <Page name="작품" /> },
         ],
       },
@@ -32,36 +33,36 @@ function renderShell(path: string, props: { isMobile: boolean; nav?: boolean }) 
   return render(<RouterProvider router={router} />);
 }
 
-test('NFR-USE: 모바일 틀은 주 메뉴 4개를 글자와 함께 보여 준다', () => {
+test('NFR-USE: 모바일 틀은 주 메뉴 3개(홈·피드백·MY)를 글자와 함께 보여 준다', () => {
   renderShell('/', { isMobile: true });
   const nav = screen.getByRole('navigation', { name: '주 메뉴' });
   const links = within(nav).getAllByRole('link');
-  expect(links.map((link) => link.textContent)).toEqual(['홈', '검색', '서재', 'MY']);
+  expect(links.map((link) => link.textContent)).toEqual(['홈', '피드백', 'MY']);
   expect(within(nav).getByRole('link', { name: '홈' })).toHaveAttribute('href', '/');
-  expect(within(nav).getByRole('link', { name: '검색' })).toHaveAttribute('href', '/search');
-  expect(within(nav).getByRole('link', { name: '서재' })).toHaveAttribute('href', '/shelf');
+  expect(within(nav).getByRole('link', { name: '피드백' })).toHaveAttribute('href', '/feedback');
   expect(within(nav).getByRole('link', { name: 'MY' })).toHaveAttribute('href', '/my');
 });
 
 test('NFR-USE: 현재 주소의 메뉴에 aria-current가 붙는다', () => {
-  renderShell('/shelf', { isMobile: true });
+  renderShell('/feedback', { isMobile: true });
   const nav = screen.getByRole('navigation', { name: '주 메뉴' });
-  expect(within(nav).getByRole('link', { name: '서재' })).toHaveAttribute('aria-current', 'page');
-  for (const name of ['홈', '검색', 'MY']) {
+  expect(within(nav).getByRole('link', { name: '피드백' })).toHaveAttribute('aria-current', 'page');
+  for (const name of ['홈', 'MY']) {
     expect(within(nav).getByRole('link', { name })).not.toHaveAttribute('aria-current');
   }
 });
 
 test('NFR-USE: 홈 메뉴는 다른 주소에서 현재 메뉴로 표시되지 않는다', () => {
-  renderShell('/search', { isMobile: true });
+  renderShell('/feedback', { isMobile: true });
   const nav = screen.getByRole('navigation', { name: '주 메뉴' });
   expect(within(nav).getByRole('link', { name: '홈' })).not.toHaveAttribute('aria-current');
-  expect(within(nav).getByRole('link', { name: '검색' })).toHaveAttribute('aria-current', 'page');
+  expect(within(nav).getByRole('link', { name: '피드백' })).toHaveAttribute('aria-current', 'page');
 });
 
-test('모바일 틀의 루트에 data-mobile이 있다', () => {
+test('모바일 틀의 루트에 data-mobile과 어두운 톤 data-night이 있다', () => {
   const { container } = renderShell('/', { isMobile: true });
   expect(container.firstElementChild).toHaveAttribute('data-mobile', 'true');
+  expect(container.firstElementChild).toHaveAttribute('data-night');
   expect(screen.getByRole('heading', { level: 1, name: '홈' })).toBeInTheDocument();
 });
 
@@ -74,6 +75,7 @@ test('nav={false}면 주 메뉴가 없다', () => {
 test('PC 틀에는 data-mobile이 없고 위 줄 메뉴가 있다', () => {
   const { container } = renderShell('/', { isMobile: false });
   expect(container.firstElementChild).not.toHaveAttribute('data-mobile');
+  expect(container.firstElementChild).not.toHaveAttribute('data-night');
   const nav = screen.getByRole('navigation', { name: '주 메뉴' });
   expect(within(nav).getByRole('link', { name: '홈' })).toHaveAttribute('aria-current', 'page');
   expect(within(nav).getByRole('link', { name: '서재' })).toHaveAttribute('href', '/shelf');

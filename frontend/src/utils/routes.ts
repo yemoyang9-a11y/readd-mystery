@@ -11,6 +11,7 @@ export const APP_ROUTES = {
   search: '/search',
   shelf: '/shelf',
   my: '/my',
+  feedback: '/feedback',
   book: '/books/:bookId',
 } as const;
 

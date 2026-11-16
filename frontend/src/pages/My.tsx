@@ -23,7 +23,7 @@ export default function My() {
           <ReaderPrefsControls {...prefsApi} tone="dash" />
         </div>
       </section>
-      <FeedbackEntry variant={isMobile ? 'sheet' : 'modal'} />
+      {isMobile ? null : <FeedbackEntry variant="modal" />}
     </div>
   );
 }

@@ -16,15 +16,15 @@ export default function Loading({
       role="status"
       className={
         fullScreen
-          ? 'flex h-screen flex-col items-center justify-center gap-3 bg-canvas px-6 text-center'
+          ? 'flex h-screen flex-col items-center justify-center gap-3 bg-canvas night:bg-brief-paper px-6 text-center'
           : 'flex flex-col items-center justify-center gap-3 py-16 text-center'
       }
     >
       <span
         aria-hidden="true"
-        className="size-5 animate-spin rounded-full border-2 border-line border-t-ink"
+        className="size-5 animate-spin rounded-full border-2 border-line border-t-ink night:border-brief-rule night:border-t-brief-ink"
       />
-      <span className="font-sans text-[13px] text-muted">{message}</span>
+      <span className="font-sans text-[13px] text-muted night:text-brief-muted">{message}</span>
     </div>
   );
 }

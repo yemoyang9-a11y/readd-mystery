@@ -16,7 +16,7 @@ export default function MobileErrorState({
       <button
         type="button"
         onClick={onRetry}
-        className="min-h-11 rounded-lg bg-ink px-6 text-[15px] font-bold text-white"
+        className="min-h-11 rounded-lg bg-ink px-6 text-[15px] font-bold text-white night:bg-brief-accent night:text-brief-on-accent"
       >
         다시 시도
       </button>

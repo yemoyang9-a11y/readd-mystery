@@ -18,7 +18,7 @@ export default function BriefingNotes({ notes }: { notes: ReadingNote[] }) {
           {notes.map((note) => (
             <li
               key={note.note_id}
-              className="rounded-brief-card bg-white p-3.5 font-dashSans shadow-brief-soft-sm"
+              className="rounded-brief-card bg-brief-card p-3.5 font-dashSans shadow-brief-soft-sm"
             >
               <div className="flex items-center gap-2 text-xs">
                 <span className="rounded-full bg-brief-accent-soft px-2.5 py-0.5 font-bold text-brief-accent">
