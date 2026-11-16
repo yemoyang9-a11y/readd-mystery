@@ -28,8 +28,8 @@ describe('Reader — 싸비 패널 탭 기억', () => {
     await screen.findByRole('article');
 
     await user.click(screen.getByRole('button', { name: '싸비 열기' }));
-    await user.click(screen.getByRole('tab', { name: '챗봇' }));
-    expect(screen.getByRole('tab', { name: '챗봇' })).toHaveAttribute('aria-selected', 'true');
+    await user.click(screen.getByRole('tab', { name: 'AI 챗봇' }));
+    expect(screen.getByRole('tab', { name: 'AI 챗봇' })).toHaveAttribute('aria-selected', 'true');
 
     await user.click(screen.getByRole('button', { name: '싸비 닫기' }));
     // 480ms 슬라이드 애니메이션이 끝나야 SsabiPanel이 실제로 언마운트된다
@@ -38,6 +38,6 @@ describe('Reader — 싸비 패널 탭 기억', () => {
     await new Promise((resolve) => setTimeout(resolve, 550));
 
     await user.click(screen.getByRole('button', { name: '싸비 열기' }));
-    expect(screen.getByRole('tab', { name: '챗봇' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'AI 챗봇' })).toHaveAttribute('aria-selected', 'true');
   }, 10000);
 });

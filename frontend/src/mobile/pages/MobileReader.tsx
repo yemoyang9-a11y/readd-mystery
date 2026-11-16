@@ -150,7 +150,14 @@ function MobileReadingSession() {
             <SsabiToggleButton open={panelOpen} onToggle={togglePanel} />
           </div>
         )}
-        <SsabiPanel key={currentPage} {...ssabiPanelProps} compactHeader={viewport.keyboardOpen} requireTextToSend />
+        <SsabiPanel
+          key={currentPage}
+          {...ssabiPanelProps}
+          onJumpToNote={(target) => {
+            ssabiPanelProps.onJumpToNote(target);
+            togglePanel();
+          }}
+          compactHeader={viewport.keyboardOpen} requireTextToSend />
       </MobileSsabiSheet>
       {tocJumpConfirm !== null ? <TocJumpDialog onConfirm={confirmTocJump} onCancel={cancelTocJump} /> : null}
       {prefsOpen ? (

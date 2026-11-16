@@ -24,6 +24,8 @@ import { AxiosError, type AxiosResponse } from 'axios';
 import type { AuthMe } from '../src/services/authService';
 import type { PositionResponse } from '../src/services/positionService';
 import type {
+  NoteDraft,
+  ReadingNote,
   SseFrame,
   BriefingResponse,
   CatalogResponse,
@@ -339,4 +341,29 @@ export function mockChatAnswer(query: string): string {
     return '현재까지 읽은 페이지 기준으로 알 수 없는 내용입니다. 다른 질문 해주세요.';
   }
   return `${mentioned.name}에 대해 ${cutoff}페이지까지의 내용으로 답하면, 아직 드러난 것은 많지 않습니다. (mock 답변)`;
+}
+
+const mockNotes: ReadingNote[] = [];
+
+export function mockListNotes(): ReadingNote[] {
+  return [...mockNotes].sort((a, b) => a.page_no - b.page_no);
+}
+
+export function mockCreateNote(draft: NoteDraft): ReadingNote {
+  const now = new Date().toISOString();
+  const note: ReadingNote = { note_id: crypto.randomUUID(), ...draft, created_at: now, updated_at: now };
+  mockNotes.push(note);
+  return note;
+}
+
+export function mockUpdateNote(noteId: string, draft: Partial<NoteDraft>): ReadingNote {
+  const note = mockNotes.find((n) => n.note_id === noteId);
+  if (!note) throw new Error('NOTE_NOT_FOUND');
+  Object.assign(note, draft, { updated_at: new Date().toISOString() });
+  return { ...note };
+}
+
+export function mockDeleteNote(noteId: string): void {
+  const index = mockNotes.findIndex((n) => n.note_id === noteId);
+  if (index >= 0) mockNotes.splice(index, 1);
 }

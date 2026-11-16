@@ -70,7 +70,6 @@ export function createPgReadingPositionRepository(db: QueryClient): ReadingPosit
       // 덮어쓰는 lost-update가 실사용 중 재현됐다(2026-08-25, 챗봇이 낡은 페이지 기준으로
       // 답한 문제). 이 한 문장의 INSERT ... ON CONFLICT는 Postgres가 충돌 행에 락을 건 상태로
       // 원자적으로 비교하므로 두 요청이 어떤 순서로 도착해도 더 새 seq가 항상 이긴다.
-      // max_page는 이 조건과 무관하게 GREATEST로만 올라간다.
       // FR-PRG-003 🚦
       const accepted = `(reading_position.event_seq < EXCLUDED.event_seq
         OR reading_position.last_writer_device_id <> EXCLUDED.last_writer_device_id)`;

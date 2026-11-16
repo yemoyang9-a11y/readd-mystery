@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import type { BriefingResponse, ChapterSummary } from '../../types';
+import type { BriefingResponse, ChapterSummary, ReadingNote } from '../../types';
 import { resolveBriefingView } from '../../utils/briefingView';
 import { EMPTY_RECAP_MESSAGE } from '../../utils/constants';
 import { parseRecapParagraphs } from '../../utils/recapText';
 import { splitHighlighted } from '../../components/Ssabi/highlightNames';
 import ProgressBar from '../../components/Reader/ProgressBar';
 import TypographicCover from '../../components/common/TypographicCover';
+import BriefingNotes from '../../components/Ssabi/BriefingNotes';
 import { GREETING_LINES, MOCK_DAYS_SINCE_LABEL } from '../../pages/BriefingView';
 
 // FR-BRF-002 FR-BRF-003 FR-SPL-005 🚦 FR-NAV-001
@@ -23,6 +24,7 @@ export default function MobileBriefingView({
   recapFailed,
   recapStreaming,
   characterNames,
+  notes = [],
 }: {
   briefing: BriefingResponse;
   chapters: ChapterSummary[];
@@ -37,6 +39,7 @@ export default function MobileBriefingView({
   recapFailed: boolean;
   recapStreaming: boolean;
   characterNames: string[];
+  notes?: ReadingNote[];
 }) {
   const view = resolveBriefingView(briefing);
   const requested = useRef(false);
@@ -167,6 +170,10 @@ export default function MobileBriefingView({
             </>
           ) : null}
         </div>
+
+        <div data-testid="brief-rule" className="my-7 h-[2px] w-full rounded-[1px] bg-brief-rule" />
+
+        <BriefingNotes notes={notes} />
 
         <div data-testid="brief-rule" className="my-7 h-[2px] w-full rounded-[1px] bg-brief-rule" />
 

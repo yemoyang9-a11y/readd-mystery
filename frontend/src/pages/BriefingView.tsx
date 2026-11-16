@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import type { BriefingResponse, ChapterSummary } from '../types';
+import type { BriefingResponse, ChapterSummary, ReadingNote } from '../types';
 import { resolveBriefingView } from '../utils/briefingView';
 import { EMPTY_RECAP_MESSAGE } from '../utils/constants';
 import { parseRecapParagraphs } from '../utils/recapText';
 import { splitHighlighted } from '../components/Ssabi/highlightNames';
 import ProgressBar from '../components/Reader/ProgressBar';
 import TypographicCover from '../components/common/TypographicCover';
+import BriefingNotes from '../components/Ssabi/BriefingNotes';
 
 /**
  * 브리핑 화면 — S6 (FR-BRF-002~005, D12, D13 ①) — 재설계 2026-08-23
@@ -45,6 +46,7 @@ export default function BriefingView({
   recapFailed,
   recapStreaming = false,
   characterNames = [],
+  notes = [],
 }: {
   briefing: BriefingResponse;
   chapters: ChapterSummary[];
@@ -62,6 +64,7 @@ export default function BriefingView({
   recapStreaming?: boolean;
   /** 리캡 인물명 강조(RecapTab.tsx와 동일) — 이미 K 이하로 걸러진 /ssabi/graph 이름 목록 */
   characterNames?: string[];
+  notes?: ReadingNote[];
 }) {
   const view = resolveBriefingView(briefing);
   const requested = useRef(false);
@@ -232,6 +235,10 @@ export default function BriefingView({
           </>
         ) : null}
       </div>
+
+      <div className="my-7 h-[2px] w-full rounded-[1px] bg-brief-rule" />
+
+      <BriefingNotes notes={notes} />
 
       <div className="my-7 h-[2px] w-full rounded-[1px] bg-brief-rule" />
 
