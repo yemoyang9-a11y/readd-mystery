@@ -28,6 +28,10 @@ export interface ReadingSessionState {
   returnToOrigin: () => void;
   dismissJumpOrigin: () => void;
   moveTo: (page: number) => void;
+  requestTocJump: (page: number) => void;
+  tocJumpConfirm: number | null;
+  confirmTocJump: () => void;
+  cancelTocJump: () => void;
   panelOpen: boolean;
   togglePanel: () => void;
   highlightedQuote: string | null;
@@ -211,6 +215,8 @@ export function useReadingSession(bookId: string): ReadingSessionState {
   } = useSSE(`${bookId}:${currentPage}`);
   // FR-BRF-005
   const [, setPanelAppliedCutoff] = useState<number | null>(null);
+  const knownAppliedCutoffRef = useRef<{ requestId: number; cutoff: number } | null>(null);
+  const [tocJumpConfirm, setTocJumpConfirm] = useState<number | null>(null);
   const progressRequestIdRef = useRef(0);
   const progressSyncRef = useRef<{
     page: number;
@@ -222,6 +228,9 @@ export function useReadingSession(bookId: string): ReadingSessionState {
       const request = { page: targetPage, promise: Promise.resolve() };
       request.promise = sendProgress(bookId, targetPage).then((appliedCutoff) => {
         if (appliedCutoff === null) throw new Error('PROGRESS_SYNC_FAILED');
+        if (requestId > (knownAppliedCutoffRef.current?.requestId ?? 0)) {
+          knownAppliedCutoffRef.current = { requestId, cutoff: appliedCutoff };
+        }
         if (requestId === progressRequestIdRef.current) setPanelAppliedCutoff(appliedCutoff);
       });
       progressSyncRef.current = request;
@@ -288,6 +297,18 @@ export function useReadingSession(bookId: string): ReadingSessionState {
     if (inRange && jump !== entryPage) setJumpOrigin(entryPage);
     setCurrentPage(inRange ? jump : entryPage);
   }, [entryPage, infoSettled, totalPages]);
+
+  // FR-PRG-003 🚦
+  const requestTocJump = useCallback((targetPage: number) => {
+    const applied = knownAppliedCutoffRef.current?.cutoff ?? null;
+    if (applied !== null && targetPage > applied) setTocJumpConfirm(targetPage);
+    else setCurrentPage(targetPage);
+  }, []);
+  const confirmTocJump = useCallback(() => {
+    if (tocJumpConfirm !== null) setCurrentPage(tocJumpConfirm);
+    setTocJumpConfirm(null);
+  }, [tocJumpConfirm]);
+  const cancelTocJump = useCallback(() => setTocJumpConfirm(null), []);
 
   const returnToOrigin = useCallback(() => {
     if (jumpOrigin !== null) setCurrentPage(jumpOrigin);
@@ -391,6 +412,10 @@ export function useReadingSession(bookId: string): ReadingSessionState {
     returnToOrigin,
     dismissJumpOrigin,
     moveTo: setCurrentPage,
+    requestTocJump,
+    tocJumpConfirm,
+    confirmTocJump,
+    cancelTocJump,
     panelOpen,
     togglePanel,
     highlightedQuote,

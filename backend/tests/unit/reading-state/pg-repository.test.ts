@@ -37,7 +37,7 @@ function mockClient(rows: any[] = []): {
 describe('진도 — createPgReadingPositionRepository', () => {
   test('findPosition은 device_id·book_id로 조회하고 event_seq(bigint)를 number로 변환한다', async () => {
     const { client, calls } = mockClient([
-      { current_page: 15, event_seq: '99', updated_at: new Date('2026-11-09T12:34:56.000Z') },
+      { current_page: 15, max_page: 80, event_seq: '99', updated_at: new Date('2026-11-09T12:34:56.000Z') },
     ]); // pg bigint → string
     const repo = createPgReadingPositionRepository(client);
 
@@ -45,6 +45,7 @@ describe('진도 — createPgReadingPositionRepository', () => {
 
     expect(result).toEqual({
       current_page: 15,
+      max_page: 80,
       event_seq: 99,
       updated_at: '2026-11-09T12:34:56.000Z',
     });
@@ -78,10 +79,10 @@ describe('진도 — createPgReadingPositionRepository', () => {
     await repo.savePosition('dev-1', 'book-1', { current_page: 20, event_seq: 7 }, deviceId);
 
     expect(calls[0].sql).toMatch(
-      /\(device_id, book_id, current_page, event_seq, last_writer_device_id, updated_at\)/
+      /\(device_id, book_id, current_page, max_page, event_seq, last_writer_device_id, updated_at\)/
     );
-    expect(calls[0].sql).toMatch(/VALUES \(\$1, \$2, \$3, \$4, \$5, now\(\)\)/);
-    expect(calls[0].sql).toMatch(/last_writer_device_id = EXCLUDED\.last_writer_device_id/);
+    expect(calls[0].sql).toMatch(/VALUES \(\$1, \$2, \$3, \$3, \$4, \$5, now\(\)\)/);
+    expect(calls[0].sql).toMatch(/THEN EXCLUDED\.last_writer_device_id/);
     expect(calls[0].params).toEqual(['dev-1', 'book-1', 20, 7, deviceId]);
   });
 
@@ -92,7 +93,7 @@ describe('진도 — createPgReadingPositionRepository', () => {
     await repo.savePosition('dev-1', 'book-1', { current_page: 20, event_seq: 7 });
 
     expect(calls[0].sql).toMatch(
-      /WHERE\s+reading_position\.event_seq\s*<\s*EXCLUDED\.event_seq\s+OR\s+reading_position\.last_writer_device_id\s*<>\s*EXCLUDED\.last_writer_device_id\s*$/
+      /CASE WHEN \(reading_position\.event_seq\s*<\s*EXCLUDED\.event_seq\s+OR\s+reading_position\.last_writer_device_id\s*<>\s*EXCLUDED\.last_writer_device_id\) THEN EXCLUDED\.current_page/
     );
     expect(calls[0].sql).not.toMatch(/IS\s+(NOT\s+)?DISTINCT\s+FROM/i);
     expect(calls[0].sql).not.toMatch(/last_writer_device_id\s+IS\s+NULL/i);
@@ -108,7 +109,24 @@ describe('진도 — createPgReadingPositionRepository', () => {
 
     await repo.savePosition('dev-1', 'book-1', { current_page: 20, event_seq: 7 });
 
-    expect(calls[0].sql).toMatch(/WHERE\s+reading_position\.event_seq\s*<\s*EXCLUDED\.event_seq/);
+    expect(calls[0].sql).toMatch(
+      /current_page = CASE WHEN \(reading_position\.event_seq\s*<\s*EXCLUDED\.event_seq/
+    );
+    expect(calls[0].sql).toMatch(
+      /event_seq = CASE WHEN \(reading_position\.event_seq\s*<\s*EXCLUDED\.event_seq/
+    );
+    expect(calls[0].sql).not.toMatch(/WHERE/);
+  });
+
+  test('FR-PRG-003: max_page는 seq 판정과 무관하게 GREATEST로만 올라간다', async () => {
+    const { client, calls } = mockClient();
+    const repo = createPgReadingPositionRepository(client);
+
+    await repo.savePosition('dev-1', 'book-1', { current_page: 20, event_seq: 7 });
+
+    expect(calls[0].sql).toMatch(
+      /max_page = GREATEST\(reading_position\.max_page, EXCLUDED\.max_page\)/
+    );
   });
 
   test('resetEventSeq는 event_seq만 0으로 되돌린다 (current_page 미변경)', async () => {

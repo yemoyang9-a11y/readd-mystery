@@ -14,7 +14,7 @@ import type { RecapCallLog } from '../../shared/types';
 
 /** 진도 테이블(reading_position)의 저장 레코드 — 5.1.2절 */
 export interface StoredPosition {
-  /** 마지막으로 열어본 페이지. 이 시스템의 유일한 저장값 (3.3절) */
+  /** 지금 펼친 페이지. 이어 읽기 위치 (3.3절) */
   current_page: number;
 
   /** 클라이언트 단조 증가 시퀀스. 순서 보장용 (FR-PRG-002) */
@@ -22,6 +22,8 @@ export interface StoredPosition {
 }
 
 export interface StoredPositionRecord extends StoredPosition {
+  /** 가장 멀리 읽은 페이지. 줄어들지 않는다 — cutoff의 원천 (FR-PRG-003 🚦) */
+  max_page: number;
   updated_at: string;
 }
 
@@ -56,7 +58,7 @@ export interface ReadingPositionRepository {
   /**
    * 진도 이벤트를 조건부로 저장한다. 저장된 기기가 없거나 같은 기기면 더 새로운 seq만
    * 수용하고, 다른 기기면 수용한다. 이 판단은 저장 단계에서 원자적으로 끝난다
-   * (FR-PRG-002, FR-PRG-003).
+   * (FR-PRG-002, FR-PRG-003). `max_page`는 seq 판정과 무관하게 항상 올라가기만 한다.
    *
    * cutoff 인자 없음의 근거 — findPosition과 동일하게 cutoff의 원천이다.
    */

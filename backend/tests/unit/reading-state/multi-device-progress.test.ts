@@ -39,8 +39,10 @@ function setup() {
 
   const currentCutoff = async () =>
     (await cutoff.getCutoffSnapshot(READER_ID, SEED_BOOK_ID)).cutoff;
+  const currentPage = async () =>
+    (await cutoff.getCutoffSnapshot(READER_ID, SEED_BOOK_ID)).current_page;
 
-  return { device, currentCutoff };
+  return { device, currentCutoff, currentPage };
 }
 
 async function deviceAReadThenDeviceBEnters(context: ReturnType<typeof setup>) {
@@ -74,17 +76,18 @@ describe('같은 독자 ID를 쓰는 두 기기의 진도', () => {
     expect(await context.currentCutoff()).toBe(12);
   });
 
-  test('FR-PRG-003: 기기 B가 앞쪽으로 돌아가도 마지막으로 열어본 페이지가 기준점이다', async () => {
+  test('FR-PRG-003: 기기 B가 앞쪽으로 돌아가도 가장 멀리 읽은 쪽이 기준점이고 이어 읽기 위치는 3쪽이다', async () => {
     const context = setup();
     const { a, b } = await deviceAReadThenDeviceBEnters(context);
 
     await a.openPage(20);
     await b.openPage(3);
 
-    expect(await context.currentCutoff()).toBe(3);
+    expect(await context.currentCutoff()).toBe(20);
+    expect(await context.currentPage()).toBe(3);
   });
 
-  test('FR-PRG-003: 두 기기가 번갈아 넘기면 매번 마지막 페이지가 기준점이다', async () => {
+  test('FR-PRG-003: 두 기기가 번갈아 앞으로 넘기면 매번 가장 멀리 읽은 쪽이 기준점이다', async () => {
     const context = setup();
     const { a, b } = await deviceAReadThenDeviceBEnters(context);
 

@@ -33,6 +33,8 @@
 
 기존 R1(기준점 = 마지막으로 연 쪽)과 R2(최대 도달 값은 없다)를 바꾼다. CLAUDE.md의 R1·R2, 절대 규칙 표, 3장을 이 설계에 맞춰 고친다.
 
+구현: `backend/migrations/012_reading_max_page.sql`, `backend/src/modules/reading-state/cutoff.service.ts`(Task 1).
+
 ```
 저장값(둘):  reading_position.current_page   지금 펼친 쪽. 이어 읽기 위치
              reading_position.max_page       가장 멀리 읽은 쪽. 줄어들지 않는다

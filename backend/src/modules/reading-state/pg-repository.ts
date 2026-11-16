@@ -46,12 +46,13 @@ export function createPgReadingPositionRepository(db: QueryClient): ReadingPosit
   return {
     async findPosition(deviceId: string, bookId: string): Promise<StoredPositionRecord | null> {
       const { rows } = await db.query(
-        `SELECT current_page, event_seq, updated_at FROM reading_position WHERE device_id = $1 AND book_id = $2`,
+        `SELECT current_page, max_page, event_seq, updated_at FROM reading_position WHERE device_id = $1 AND book_id = $2`,
         [deviceId, bookId]
       );
       if (rows.length === 0) return null;
       return {
         current_page: rows[0].current_page,
+        max_page: rows[0].max_page,
         event_seq: Number(rows[0].event_seq),
         updated_at: rows[0].updated_at.toISOString(),
       };
@@ -63,23 +64,25 @@ export function createPgReadingPositionRepository(db: QueryClient): ReadingPosit
       position: StoredPosition,
       writerDeviceId: string | null = null
     ): Promise<void> {
-      // FR-PRG-002 — 이 WHERE가 순서 보장의 유일한 강제 지점이다. 조회 뒤 비교하고 저장하면
-      // 두 번의 왕복이라 그 사이에 다른 요청이 끼어들면
+      // FR-PRG-002 — 이 CASE WHEN 조건(accepted)이 순서 보장의 유일한 강제 지점이다. 조회 뒤 비교하고
+      // 저장하면 두 번의 왕복이라 그 사이에 다른 요청이 끼어들면
       // (빠른 연속 페이지 넘김 등) 더 새 seq가 먼저 쓰이고 더 낡은 seq가 뒤늦게 도착해
       // 덮어쓰는 lost-update가 실사용 중 재현됐다(2026-08-25, 챗봇이 낡은 페이지 기준으로
-      // 답한 문제). 이 UPDATE는 Postgres가 충돌 행에 락을 건 상태로 원자적으로 비교하므로
-      // 두 요청이 어떤 순서로 도착해도 더 새 seq가 항상 이긴다.
-      // FR-PRG-003
+      // 답한 문제). 이 한 문장의 INSERT ... ON CONFLICT는 Postgres가 충돌 행에 락을 건 상태로
+      // 원자적으로 비교하므로 두 요청이 어떤 순서로 도착해도 더 새 seq가 항상 이긴다.
+      // max_page는 이 조건과 무관하게 GREATEST로만 올라간다.
+      // FR-PRG-003 🚦
+      const accepted = `(reading_position.event_seq < EXCLUDED.event_seq
+        OR reading_position.last_writer_device_id <> EXCLUDED.last_writer_device_id)`;
       await db.query(
-        `INSERT INTO reading_position (device_id, book_id, current_page, event_seq, last_writer_device_id, updated_at)
-         VALUES ($1, $2, $3, $4, $5, now())
+        `INSERT INTO reading_position (device_id, book_id, current_page, max_page, event_seq, last_writer_device_id, updated_at)
+         VALUES ($1, $2, $3, $3, $4, $5, now())
          ON CONFLICT (device_id, book_id) DO UPDATE SET
-           current_page = EXCLUDED.current_page,
-           event_seq = EXCLUDED.event_seq,
-           last_writer_device_id = EXCLUDED.last_writer_device_id,
-           updated_at = now()
-         WHERE reading_position.event_seq < EXCLUDED.event_seq
-            OR reading_position.last_writer_device_id <> EXCLUDED.last_writer_device_id`,
+           max_page = GREATEST(reading_position.max_page, EXCLUDED.max_page),
+           current_page = CASE WHEN ${accepted} THEN EXCLUDED.current_page ELSE reading_position.current_page END,
+           event_seq = CASE WHEN ${accepted} THEN EXCLUDED.event_seq ELSE reading_position.event_seq END,
+           last_writer_device_id = CASE WHEN ${accepted} THEN EXCLUDED.last_writer_device_id ELSE reading_position.last_writer_device_id END,
+           updated_at = CASE WHEN ${accepted} THEN now() ELSE reading_position.updated_at END`,
         [deviceId, bookId, position.current_page, position.event_seq, writerDeviceId]
       );
     },

@@ -230,7 +230,7 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
 
       // 기준점 스냅샷 가져오기 (R2 연동)
       // UC-27 A5: 질의 시점 고정, 스트리밍 중 페이지 변경해도 시작 시점 K 유지
-      // FR-PRG-003 🚦: K = 진도 레코드 없음 ? 0 : current_page
+      // FR-PRG-003 🚦: K = 진도 레코드 없음 ? 0 : max_page
       const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
       K = snapshot.cutoff;
       isComplete = snapshot.is_complete;

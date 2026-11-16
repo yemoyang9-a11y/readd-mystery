@@ -14,6 +14,7 @@ import { useVisualViewport } from '../useVisualViewport';
 import { useReaderPrefs } from '../../hooks/useReaderPrefs';
 import ReaderPrefsSheet from '../../components/Reader/ReaderPrefsSheet';
 import JumpReturnBar from '../../components/Reader/JumpReturnBar';
+import TocJumpDialog from '../../components/Reader/TocJumpDialog';
 import { useBackToBook } from '../../hooks/useBackToBook';
 
 const FOCUS_TOGGLE_CLASS =
@@ -30,7 +31,7 @@ export default function MobileReader() {
 // FR-PRG-003 🚦 FR-BRF-001
 function MobileReadingSession() {
   const { bookId = '' } = useParams();
-  const { entryError, retryEntry, page, pageError, retryPage, currentPage, totalPages, chapters, jumpOrigin, returnToOrigin, dismissJumpOrigin, moveTo, highlightedQuote, panelOpen, togglePanel, ssabiPanelProps, quote } =
+  const { entryError, retryEntry, page, pageError, retryPage, currentPage, totalPages, chapters, jumpOrigin, returnToOrigin, dismissJumpOrigin, moveTo, requestTocJump, tocJumpConfirm, confirmTocJump, cancelTocJump, highlightedQuote, panelOpen, togglePanel, ssabiPanelProps, quote } =
     useReadingSession(bookId);
   const backToBook = useBackToBook(bookId);
   const prefsApi = useReaderPrefs();
@@ -137,7 +138,7 @@ function MobileReadingSession() {
           chapters={chapters}
           currentPage={currentPage}
           onSelect={(startPage) => {
-            moveTo(startPage);
+            requestTocJump(startPage);
             setTocOpen(false);
           }}
         />
@@ -151,6 +152,7 @@ function MobileReadingSession() {
         )}
         <SsabiPanel key={currentPage} {...ssabiPanelProps} compactHeader={viewport.keyboardOpen} requireTextToSend />
       </MobileSsabiSheet>
+      {tocJumpConfirm !== null ? <TocJumpDialog onConfirm={confirmTocJump} onCancel={cancelTocJump} /> : null}
       {prefsOpen ? (
         <ReaderPrefsSheet
           variant="sheet"

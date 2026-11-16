@@ -31,12 +31,19 @@ import type { RecapCallLog } from '../../../src/shared/types';
 
 /** 진도(reading_position) 페이크 — R2 소유 테이블 */
 export class FakeReadingPositionRepository implements ReadingPositionRepository {
-  private readonly rows = new Map<string, StoredPosition>();
+  private readonly rows = new Map<string, StoredPosition & { max_page: number }>();
   private readonly lastWriters = new Map<string, string | null>();
 
   /** 테스트에서 저장 위치를 세팅한다 (진도 이벤트 수용은 S2 범위) */
-  set(deviceId: string, bookId: string, position: StoredPosition): void {
-    this.rows.set(this.key(deviceId, bookId), position);
+  set(
+    deviceId: string,
+    bookId: string,
+    position: StoredPosition & { max_page?: number }
+  ): void {
+    this.rows.set(this.key(deviceId, bookId), {
+      ...position,
+      max_page: position.max_page ?? position.current_page,
+    });
   }
 
   async findPosition(deviceId: string, bookId: string): Promise<StoredPositionRecord | null> {
@@ -55,9 +62,15 @@ export class FakeReadingPositionRepository implements ReadingPositionRepository 
     const storedWriter = this.lastWriters.get(key) ?? null;
     const fromOtherDevice =
       storedWriter !== null && writerDeviceId !== null && storedWriter !== writerDeviceId;
-    if (stored && !fromOtherDevice && position.event_seq <= stored.event_seq) return;
+    if (stored && !fromOtherDevice && position.event_seq <= stored.event_seq) {
+      this.rows.set(key, { ...stored, max_page: Math.max(stored.max_page, position.current_page) });
+      return;
+    }
 
-    this.rows.set(key, position);
+    this.rows.set(key, {
+      ...position,
+      max_page: Math.max(stored?.max_page ?? 0, position.current_page),
+    });
     this.lastWriters.set(key, writerDeviceId);
   }
 
