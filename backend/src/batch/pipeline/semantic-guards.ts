@@ -19,6 +19,33 @@ export function labelMentions(text: string, label: string): { start: number; end
   }));
 }
 
+const ROLE_WORDS =
+  '보이|운전수|운전사|경관|간수|전옥|경찰|경찰의|순사|순경|의사|간호사|경부|경부보|검사|판사|변호사|형사|하인|하녀|식모|사환|급사|지배인|주인|노파|노인|청년|신사|부인|소년|소녀|사내|여자|남자|기자|점원|사무원|범인|탐정|문지기|차장';
+const ROLE_WORD = new RegExp(`^(?:${ROLE_WORDS})$`, 'u');
+const ROLE_FRAGMENT = new RegExp(`^(?:${ROLE_WORDS})(?:의|은|는|이|가|을|를|에게|도|들)$`, 'u');
+const GENERIC_ALIAS = /^(?:군|씨|양|님|의도|그|그녀|그이|이분|저분|자기|당신|소생|나|너|우리)$/u;
+
+// FR-CHR-001 🚦
+export function characterNameReviewReason(name: string): string | undefined {
+  const value = name.trim();
+  const text = compact(value);
+  if ([...text].length < 2) return 'name_too_short: single-letter name needs identity review';
+  if (ROLE_WORD.test(text)) return 'role_word_not_a_name: bare role word is not a character name';
+  if (ROLE_FRAGMENT.test(text)) return 'name_is_a_fragment: role word with a particle';
+  if (/^\S\s?(?:군|씨|양|님|옹)$/u.test(value))
+    return 'surname_honorific_form: bind to a full-name character only with a grounding sentence';
+  const tokens = value.split(/\s+/u);
+  if (
+    tokens.length >= 2 &&
+    ROLE_WORD.test(tokens[tokens.length - 1]) &&
+    tokens.slice(0, -1).every((t) => [...t].length >= 2)
+  )
+    return 'descriptive_phrase_not_a_name: description of a role is not a character name';
+  if (tokens.length >= 3 && tokens.some((t) => /(?:[을를]|낀|하는|있는|입은|쓴)$/u.test(t)))
+    return 'descriptive_phrase_not_a_name: description is not a character name';
+  return undefined;
+}
+
 export function aliasReviewReason(
   name: string,
   alias: string,
@@ -26,6 +53,9 @@ export function aliasReviewReason(
   quote: string
 ): string | undefined {
   const value = alias.trim();
+  if ([...compact(value)].length < 2) return 'alias_too_short: single-letter alias is not a label';
+  if (GENERIC_ALIAS.test(value.replace(/\(.*?\)/gu, '').trim()))
+    return 'alias_is_generic_word: particle, pronoun or common noun is not a person label';
   if (!hasLabelMention(quote, value))
     return 'Alias is only a word/conjugation fragment, not a standalone reference';
   if (

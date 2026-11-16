@@ -1,6 +1,12 @@
 import { createHash } from 'crypto';
 import { Chapter, Page, RelationshipSemantics } from '../../shared/types';
-import { aliasReviewReason, labelMentions, relationshipReviewReason } from './semantic-guards';
+import {
+  aliasReviewReason,
+  characterNameReviewReason,
+  labelMentions,
+  relationshipReviewReason,
+} from './semantic-guards';
+import { locateQuote } from './quote-locator';
 const GROUNDING_SCHEMA_VERSION = 4;
 
 /** Offsets are zero-based UTF-16 code units in the stored split page; end is exclusive. */
@@ -73,6 +79,14 @@ function pageNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value > 0;
 }
 
+export interface GroundingOptions {
+  requireRelationshipSemantics?: boolean;
+  // FR-CHR-001 🚦
+  deferRelationshipEndpoints?: boolean;
+  // FR-CHR-001 🚦
+  requireStoryPresence?: boolean;
+}
+
 /** Exact provenance is necessary, not a semantic proof of the extractor's conclusion. */
 function validEvidence(
   value: unknown,
@@ -80,15 +94,23 @@ function validEvidence(
   date: unknown,
   names: unknown[]
 ): SourceEvidence | undefined {
-  const e = object(value);
+  let e = object(value);
   const page = pages.find((p) => p.page_no === e.source_page);
   if (!page || !pageNumber(date) || date !== e.source_page || !nonempty(e.quote)) return undefined;
   let start = e.start_char as number;
   let end = e.end_char as number;
   if (e.start_char === undefined && e.end_char === undefined) {
     start = page.content.indexOf(e.quote);
-    if (start !== page.content.lastIndexOf(e.quote)) return undefined;
-    end = start + e.quote.length;
+    if (start === -1) {
+      const located = locateQuote(page.content, e.quote);
+      if (!located) return undefined;
+      start = located.start;
+      end = located.end;
+      e = { ...e, quote: page.content.slice(start, end) };
+    } else {
+      if (start !== page.content.lastIndexOf(e.quote)) return undefined;
+      end = start + e.quote.length;
+    }
   }
   if (
     !Number.isInteger(start) ||
@@ -108,7 +130,7 @@ function validEvidence(
 export function validateGroundedChapter(
   input: unknown,
   pages: Page[],
-  options: { requireRelationshipSemantics?: boolean } = {}
+  options: GroundingOptions = {}
 ): {
   characters: GroundedCharacter[];
   relationships: GroundedRelationship[];
@@ -135,6 +157,24 @@ export function validateGroundedChapter(
         'Person classification, rationale and exact dated name evidence required'
       );
       continue;
+    }
+    if (options.requireStoryPresence) {
+      // FR-CHR-001 🚦
+      if (c.story_presence !== 'in_story') {
+        hold(
+          'character',
+          item,
+          c.story_presence === 'mentioned_only'
+            ? 'mentioned_only: name appears only in talk about works or people outside the story world'
+            : 'story_presence_required: in_story or mentioned_only must be declared'
+        );
+        continue;
+      }
+      const nameIssue = characterNameReviewReason(c.name as string);
+      if (nameIssue) {
+        hold('character', item, nameIssue);
+        continue;
+      }
     }
     const earlier = pages
       .filter((p) => p.page_no < (c.first_appearance_page as number))
@@ -240,10 +280,11 @@ export function validateGroundedChapter(
   const relationships: GroundedRelationship[] = [];
   for (const item of Array.isArray(raw.relationships) ? raw.relationships : []) {
     const r = object(item);
-    const relationshipEvidence = validEvidence(r.evidence, pages, r.established_page, [
-      r.character_a,
-      r.character_b,
-    ]);
+    const endpointNames = options.deferRelationshipEndpoints ? [] : [r.character_a, r.character_b];
+    const evidenceDate = options.deferRelationshipEndpoints
+      ? object(r.evidence).source_page
+      : r.established_page;
+    const relationshipEvidence = validEvidence(r.evidence, pages, evidenceDate, endpointNames);
     if (
       !nonempty(r.label) ||
       !nonempty(r.rationale) ||
@@ -260,10 +301,7 @@ export function validateGroundedChapter(
     let semantics: RelationshipSemantics | undefined;
     if (r.semantics !== undefined || options.requireRelationshipSemantics) {
       const s = object(r.semantics);
-      const semanticEvidence = validEvidence(s.evidence, pages, r.established_page, [
-        r.character_a,
-        r.character_b,
-      ]);
+      const semanticEvidence = validEvidence(s.evidence, pages, evidenceDate, endpointNames);
       const attributed = ['belief', 'claim', 'rumor', 'uncertain'].includes(
         String(s.assertion_status)
       );
@@ -325,18 +363,12 @@ export function validateGroundedChapter(
       semantics?.state === 'ended';
     const changeEvidence =
       needsChangeEvidence || r.change_evidence !== undefined
-        ? validEvidence(r.change_evidence, pages, r.established_page, [
-            r.character_a,
-            r.character_b,
-          ])
+        ? validEvidence(r.change_evidence, pages, evidenceDate, endpointNames)
         : undefined;
     const innerChange =
       semantics?.change_evidence === undefined
         ? undefined
-        : validEvidence(semantics.change_evidence, pages, r.established_page, [
-            r.character_a,
-            r.character_b,
-          ]);
+        : validEvidence(semantics.change_evidence, pages, evidenceDate, endpointNames);
     if (
       (semantics?.change_evidence !== undefined &&
         (!innerChange ||

@@ -94,7 +94,9 @@ export function invalidateFailedOutput(args: BookArgs): void {
     ? (JSON.parse(fs.readFileSync(failurePath, 'utf-8')) as { chapters: number[] | 'all' })
     : undefined;
 
-  const chapterFiles = fs.readdirSync(dir).filter((f) => /^chapter-\d+\.json$/.test(f));
+  const chapterFiles = fs
+    .readdirSync(dir)
+    .filter((f) => /^chapter-\d+(?:\.rel-run\d+|\.verifier)?\.json$/.test(f));
   for (const file of chapterFiles) {
     const no = Number(/\d+/.exec(file)![0]);
     if (

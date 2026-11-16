@@ -291,6 +291,13 @@ export interface RelationshipSemantics {
   state: 'active' | 'ended';
   evidence: RelationshipEvidence;
   change_evidence?: RelationshipEvidence;
+  verification?: RelationshipVerification;
+}
+
+export interface RelationshipVerification {
+  check: 'confirmed' | 'needs_review' | 'held';
+  reasons: string[];
+  runs_agreed: number;
 }
 
 /**

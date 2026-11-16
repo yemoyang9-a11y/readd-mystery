@@ -44,6 +44,7 @@ import { Chapter, Page } from '../../shared/types';
 import {
   GroundedCharacter,
   GroundedRelationship,
+  GroundingOptions,
   ReviewCandidate,
   assertGroundingCache,
   groundingManifest,
@@ -60,6 +61,14 @@ import {
   requireBookMeta,
 } from './run-args';
 import { ResolvedBookData } from './check-integrity';
+import {
+  VerifierAnswer,
+  VerifierCharacter,
+  VerifierInput,
+  buildVerifierPrompt,
+  verifyRelationships,
+} from './relationship-verification';
+import { createHash } from 'crypto';
 
 // 출력 상한은 reasoning 토큰을 포함한다 — 기본 4096이면 장 하나의 인물·별칭·노트 JSON이 잘린다(화분 1장 incomplete)
 const GENERATE_MAX_TOKENS = 16000;
@@ -99,6 +108,14 @@ const EXTRACTION_CONTRACT = JSON.stringify({
   effort: DEFAULT_EFFORT,
 });
 
+// FR-CHR-001 🚦
+const PIPELINE_MODE: GroundingOptions = {
+  requireRelationshipSemantics: true,
+  deferRelationshipEndpoints: true,
+  requireStoryPresence: true,
+};
+const DEFAULT_MODE: GroundingOptions = { requireRelationshipSemantics: true };
+
 type RawCharacter = GroundedCharacter;
 type RawRelationship = GroundedRelationship;
 interface RawTerm {
@@ -136,7 +153,8 @@ async function generateChapter(
   chapter: Chapter,
   pages: Page[],
   known: string[],
-  previousRelationships: string[]
+  previousRelationships: string[],
+  mode: GroundingOptions
 ): Promise<ChapterOutput> {
   const warnings: string[] = [];
   const bounds = { min: chapter.start_page, max: chapter.end_page };
@@ -171,7 +189,7 @@ async function generateChapter(
     buildCharacterPrompt(chapter, pages, known),
     chapter.chapter_no
   );
-  const accepted = validateGroundedChapter({ characters }, pages);
+  const accepted = validateGroundedChapter({ characters }, pages, mode);
   record(
     '인물/별칭/노트',
     accepted.characters.flatMap((c) => [
@@ -189,9 +207,9 @@ async function generateChapter(
   );
   record(
     '관계',
-    validateGroundedChapter({ relationships }, pages, {
-      requireRelationshipSemantics: true,
-    }).relationships.map((r) => r.established_page)
+    validateGroundedChapter({ relationships }, pages, mode).relationships.map(
+      (r) => r.established_page
+    )
   );
 
   const { terms } = await callJson<{ terms: RawTerm[] }>(
@@ -236,7 +254,8 @@ export async function loadOrGenerateChapter(
   pages: Page[],
   known: string[],
   previousRelationships: string[] = [],
-  outDir: string = DEFAULT_OUT_DIR
+  outDir: string = DEFAULT_OUT_DIR,
+  mode: GroundingOptions = DEFAULT_MODE
 ): Promise<ChapterOutput> {
   const cacheContext = [...known, JSON.stringify(previousRelationships)];
   const filePath = chapterFilePath(chapter.chapter_no, outDir);
@@ -246,17 +265,17 @@ export async function loadOrGenerateChapter(
     assertGroundingCache(cached, chapter, pages, cacheContext, EXTRACTION_CONTRACT);
     return {
       ...cached,
-      ...validateGroundedChapter(cached, pages, { requireRelationshipSemantics: true }),
+      ...validateGroundedChapter(cached, pages, mode),
     };
   }
 
   console.log(
     `[생성] ${chapter.chapter_no}장 "${chapter.title}" (p.${chapter.start_page}~${chapter.end_page}) 게이트웨이 호출 중...`
   );
-  const output = await generateChapter(chapter, pages, known, previousRelationships);
+  const output = await generateChapter(chapter, pages, known, previousRelationships, mode);
   const validated = {
     ...output,
-    ...validateGroundedChapter(output, pages, { requireRelationshipSemantics: true }),
+    ...validateGroundedChapter(output, pages, mode),
   };
   // Keep original candidates in the chapter cache for review and repeat validation.
   const cached = sealChapterCache(
@@ -272,6 +291,86 @@ export async function loadOrGenerateChapter(
   }
   console.log(`  [저장] ${filePath}`);
   return { ...validated, grounding: cached.grounding };
+}
+
+// FR-CHR-001 🚦
+export async function loadOrGenerateRelationshipRun(
+  chapter: Chapter,
+  pages: Page[],
+  known: string[],
+  previousRelationships: string[],
+  chapterCharacters: string[],
+  runNo: number,
+  outDir: string,
+  mode: GroundingOptions
+): Promise<GroundedRelationship[]> {
+  const cacheContext = [...known, JSON.stringify(previousRelationships)];
+  const contract = `${EXTRACTION_CONTRACT}|relationship-run-${runNo}`;
+  const filePath = path.join(outDir, `chapter-${chapter.chapter_no}.rel-run${runNo}.json`);
+  if (fs.existsSync(filePath)) {
+    console.log(`[재생] ${chapter.chapter_no}장 관계 ${runNo}차 추출 — 기존 결과 재사용`);
+    const cached = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as {
+      relationships: RawRelationship[];
+    };
+    assertGroundingCache(cached, chapter, pages, cacheContext, contract);
+    return validateGroundedChapter(cached, pages, mode).relationships;
+  }
+  console.log(`[생성] ${chapter.chapter_no}장 관계 ${runNo}차 추출 게이트웨이 호출 중...`);
+  const { relationships } = await callJson<{ relationships: RawRelationship[] }>(
+    'generate_relationship',
+    buildRelationshipPrompt(
+      chapter,
+      pages,
+      [...known, ...chapterCharacters],
+      previousRelationships
+    ),
+    chapter.chapter_no
+  );
+  const sealed = sealChapterCache(
+    { chapter_no: chapter.chapter_no, run: runNo, relationships },
+    chapter,
+    pages,
+    cacheContext,
+    contract
+  );
+  fs.writeFileSync(filePath, JSON.stringify(sealed, null, 2), 'utf-8');
+  return validateGroundedChapter(sealed, pages, mode).relationships;
+}
+
+// NFR-AI-004
+export function cachedRelationshipVerifier(
+  chapterNo: number,
+  outDir: string
+): (input: VerifierInput) => Promise<VerifierAnswer> {
+  const filePath = path.join(outDir, `chapter-${chapterNo}.verifier.json`);
+  const cache: Record<string, VerifierAnswer> = fs.existsSync(filePath)
+    ? JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+    : {};
+  return async (input) => {
+    const key = createHash('sha256').update(buildVerifierPrompt(input)).digest('hex');
+    if (cache[key]) return cache[key];
+    const answer = await callJson<VerifierAnswer>(
+      'generate_relationship',
+      buildVerifierPrompt(input),
+      `${chapterNo}-검토`
+    );
+    if (typeof answer.supports !== 'boolean') throw new Error('verifier answer malformed');
+    cache[key] = { supports: answer.supports, why: String(answer.why ?? '') };
+    fs.writeFileSync(filePath, JSON.stringify(cache, null, 2), 'utf-8');
+    return cache[key];
+  };
+}
+
+function verifierLexicon(state: GenerationState): VerifierCharacter[] {
+  return state.characters.map((c) => ({
+    id: c.id,
+    name: c.name,
+    first_appearance_page: c.first_appearance_page,
+    aliases: c.aliases.map((a) => ({
+      alias: a.alias,
+      first_appearance_page: a.first_appearance_page,
+    })),
+  }));
 }
 
 async function loadOrGenerateBackground(
@@ -378,6 +477,7 @@ export async function generateFullBook(args: BookArgs): Promise<ResolvedBookData
   const state = createEmptyState(BOOK_ID);
   const chapterReviews: { chapter_no: number; candidates: ReviewCandidate[] }[] = [];
   const chapterSummaries: { chapter_no: number; title: string; summary: string }[] = [];
+  const verification = { candidates: 0, confirmed: 0, needs_review: 0, held: 0 };
   const allEvents: { id: string; event: string; description: string; occurrence_page: number }[] =
     [];
   // events.id는 전역 PK다 — takryu는 기존 id를 유지하고, 다른 책은 bookId를 붙여 다른 도서와 충돌하지 않게 한다
@@ -395,12 +495,54 @@ export async function generateFullBook(args: BookArgs): Promise<ResolvedBookData
       pages,
       known,
       previousRelationships,
-      OUT_DIR
+      OUT_DIR,
+      PIPELINE_MODE
     );
     chapterReviews.push({ chapter_no: chapter.chapter_no, candidates: output.review });
 
     mergeCharacters(state, output.characters);
-    mergeChapterRelationships(state, chapter.chapter_no, output.relationships);
+    const secondRun = await loadOrGenerateRelationshipRun(
+      chapter,
+      pages,
+      known,
+      previousRelationships,
+      output.characters.map((c) => c.name),
+      2,
+      OUT_DIR,
+      PIPELINE_MODE
+    );
+    const verified = await verifyRelationships(
+      output.relationships,
+      pages,
+      verifierLexicon(state),
+      {
+        secondRun,
+        verifier: cachedRelationshipVerifier(chapter.chapter_no, OUT_DIR),
+      }
+    );
+    const accepted: RawRelationship[] = [];
+    for (const v of verified) {
+      verification.candidates++;
+      verification[v.check]++;
+      const stamp = { check: v.check, reasons: v.reasons, runs_agreed: v.runs_agreed };
+      if (v.check === 'held') {
+        state.review.push({
+          kind: 'relationship',
+          reason: `held: ${v.reasons.join(', ')}`,
+          candidate: {
+            ...v.relationship,
+            verification: stamp,
+            ...(v.verifier_why ? { verifier_why: v.verifier_why } : {}),
+          },
+        });
+        continue;
+      }
+      accepted.push({
+        ...v.relationship,
+        semantics: { ...v.relationship.semantics!, verification: stamp },
+      });
+    }
+    mergeChapterRelationships(state, chapter.chapter_no, accepted);
     mergeTerms(state, output.terms);
 
     chapterSummaries.push({
@@ -437,6 +579,8 @@ export async function generateFullBook(args: BookArgs): Promise<ResolvedBookData
       validation_scope:
         'exact source provenance and conservative semantic guards; human semantic review required',
       identities: state.identity_evidence,
+      identity_merges: state.merges,
+      relationship_verification: verification,
     },
   };
   const combinedPath = path.join(OUT_DIR, 'all-resolved.json');

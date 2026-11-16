@@ -406,3 +406,20 @@ test('FR-CHR-001: 대체가 없는 기존 행만 있으면 이전 관계 힌트�
     '영희 / 철수: 남매 (p.2) legacy-unverified',
   ]);
 });
+
+test('FR-CHR-001: 다음 장 힌트(캐시 키)는 검증 결과 표시에 따라 바뀌지 않는다', () => {
+  const a = createEmptyState('synthetic-contract');
+  const b = createEmptyState('synthetic-contract');
+  for (const [state, verification] of [
+    [a, { check: 'confirmed', reasons: [], runs_agreed: 2 }],
+    [b, { check: 'needs_review', reasons: ['single_run'], runs_agreed: 1 }],
+  ] as const) {
+    state.characters.push(
+      { id: 'a', name: '민수', first_appearance_page: 1, aliases: [], notes: [] },
+      { id: 'z', name: '영희', first_appearance_page: 1, aliases: [], notes: [] }
+    );
+    mergeRelationships(state, [resolved({ semantics: { ...semantic(), verification } })] as never);
+  }
+  expect(previousRelationshipHints(a)).toHaveLength(1);
+  expect(previousRelationshipHints(a)).toEqual(previousRelationshipHints(b));
+});

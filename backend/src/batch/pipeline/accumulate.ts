@@ -69,8 +69,16 @@ export interface AccumulatedTerm {
   first_appearance_page: number;
 }
 
+export interface IdentityMerge {
+  character_id: string;
+  name: string;
+  merged_into: string;
+  reason: 'spelling_variant';
+}
+
 export interface GenerationState {
   book_id: string;
+  merges: IdentityMerge[];
   review: ReviewCandidate[];
   identity_evidence: { character_id: string; candidate: ChapterCharacterInput }[];
   characters: AccumulatedCharacter[];
@@ -82,6 +90,7 @@ export interface GenerationState {
 export function createEmptyState(bookId = 'unscoped'): GenerationState {
   return {
     book_id: bookId,
+    merges: [],
     review: [],
     identity_evidence: [],
     characters: [],
@@ -96,6 +105,31 @@ function stableId(state: GenerationState, ...parts: unknown[]): string {
 
 function normalize(text: string): string {
   return text.trim();
+}
+
+const LOOSE_INITIALS: Record<number, number> = {
+  1: 0,
+  15: 0,
+  4: 3,
+  16: 3,
+  8: 7,
+  17: 7,
+  10: 9,
+  13: 12,
+  14: 12,
+};
+
+// FR-CHR-001 🚦
+export function looseSpellingKey(name: string): string {
+  return [...name.replace(/\s+/gu, '')]
+    .map((ch) => {
+      const code = ch.charCodeAt(0) - 0xac00;
+      if (code < 0 || code > 11171) return ch;
+      const initial = Math.floor(code / 588);
+      const rest = code % 588;
+      return String.fromCharCode(0xac00 + (LOOSE_INITIALS[initial] ?? initial) * 588 + rest);
+    })
+    .join('');
 }
 
 /** 대표명 또는 별칭 문자열로 기존 인물을 찾는다 (관계 추출이 별칭으로 인물을 지칭하는 경우 대응) */
@@ -196,6 +230,27 @@ export function mergeCharacters(
         ? []
         : matchingCharacters(state, name, c.first_appearance_page)
     );
+    let spellingMatch: AccumulatedCharacter | undefined;
+    if (candidates.size === 0 && [...name.replace(/\s+/gu, '')].length >= 3) {
+      const loose = state.characters.filter(
+        (x) =>
+          x.name !== name &&
+          x.first_appearance_page <= c.first_appearance_page &&
+          [...x.name.replace(/\s+/gu, '')].length >= 3 &&
+          looseSpellingKey(x.name) === looseSpellingKey(name)
+      );
+      if (loose.length === 1) {
+        spellingMatch = loose[0];
+        candidates.add(spellingMatch);
+      } else if (loose.length > 1) {
+        state.review.push({
+          kind: 'identity',
+          reason: 'Multiple spelling-variant candidates; no automatic merge',
+          candidate: { character: c, ids: loose.map((x) => x.id).sort() },
+        });
+        continue;
+      }
+    }
     const deferredAliases = new Set<ChapterCharacterInput['aliases'][number]>();
     // Reverse matching requires its own dated identity evidence, never just a mention.
     for (const a of c.aliases) {
@@ -300,6 +355,21 @@ export function mergeCharacters(
           a.identity_established_page &&
           matchingCharacters(state, a.alias, a.identity_established_page).includes(existing!)
       );
+      if (!identity && spellingMatch && !existing.aliases.some((a) => a.alias === name)) {
+        existing.aliases.push({
+          alias: name,
+          type: 'name',
+          first_appearance_page: c.first_appearance_page,
+          evidence: c.evidence,
+          rationale: 'spelling_variant',
+        });
+        state.merges.push({
+          character_id: existing.id,
+          name,
+          merged_into: existing.name,
+          reason: 'spelling_variant',
+        });
+      }
       if (identity && !existing.aliases.some((a) => a.alias === name)) {
         existing.aliases.push({
           ...identity,
@@ -500,6 +570,14 @@ export function mergeRelationships(
  * 줄 형식과 순서(트랙이 처음 나온 순서)는 예전과 같다. 이 문자열은 장 캐시 키다 — 대체된 관계가 있거나,
  * 같은 쪽 관계의 병합 순서(이제 근거 위치 순)가 LLM 출력 순서와 다르면 이후 장의 캐시가 맞지 않는다.
  */
+// FR-CHR-001 🚦
+function hintSemantics(
+  semantics: RelationshipSemantics
+): Omit<RelationshipSemantics, 'verification'> {
+  const { verification: _verification, ...rest } = semantics;
+  return rest;
+}
+
 export function previousRelationshipHints(state: GenerationState): string[] {
   // 현재 관계는 트랙마다 하나다(같은 트랙은 같은 칸을 차지해 서로 대체한다)
   const currentByTrack = new Map(
@@ -516,7 +594,7 @@ export function previousRelationshipHints(state: GenerationState): string[] {
     .flatMap((track) => currentByTrack.get(track) ?? [])
     .map(
       (r) =>
-        `${names.get(r.character_a_id)} / ${names.get(r.character_b_id)}: ${r.label} (p.${r.established_page}) ${r.semantics ? JSON.stringify(r.semantics) : 'legacy-unverified'}`
+        `${names.get(r.character_a_id)} / ${names.get(r.character_b_id)}: ${r.label} (p.${r.established_page}) ${r.semantics ? JSON.stringify(hintSemantics(r.semantics)) : 'legacy-unverified'}`
     );
 }
 
