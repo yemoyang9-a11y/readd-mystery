@@ -20,10 +20,22 @@ export interface CutoffSnapshot {
   /** 지금 펼친 페이지 (저장값, 이어 읽기 위치) */
   current_page: number;
 
-  /** 기준점 (진도 레코드가 없으면 0, 있으면 max_page) - FR-PRG-003 🚦 */
+  /**
+   * 기준점 (진도 레코드가 없으면 0, 있으면 차례로 읽었다고 확인된 마지막 쪽) - FR-PRG-003 🚦
+   * (2026-11-17 대표 결정 — 가장 멀리 펼친 쪽(max_page)에서 바뀜)
+   */
   cutoff: number;
 
-  /** 진도 퍼센트 (max_page / total_pages) */
+  /** 가장 멀리 펼친 쪽 (저장값 max_page). 기준점이 아니다 — 확인 카드에만 쓴다 */
+  furthest_page: number;
+
+  /**
+   * 싸비 확인 카드. 가장 멀리 펼친 쪽이 기준점보다 뒤이고 독자가 아직 답하지 않았으면 채워진다.
+   * current_page 는 기준점과 가장 먼 쪽 사이일 때만 선택지로 준다.
+   */
+  frontier_confirm: { current_page: number | null; furthest_page: number } | null;
+
+  /** 진도 퍼센트 (기준점 / total_pages) */
   percent: number;
 
   /**
@@ -57,7 +69,22 @@ export interface ProgressEvent {
 
   /** 클라이언트 단조 증가 시퀀스 (순서 보장용) */
   seq: number;
+
+  /**
+   * 바로 전에 화면에 떠 있던 쪽 (없으면 null·생략). 이동 사실일 뿐 기준점이 아니다 —
+   * 서버가 from_page + 1 = page 일 때만 차례 넘김으로 인정한다 (FR-PRG-003 🚦)
+   */
+  from_page?: number | null;
+
+  /**
+   * 목차 확인 창에서 "앞부분은 이미 읽었어요"를 눌렀을 때만 'read_through'.
+   * 숫자를 싣지 않는다 — 인정 범위는 이 이벤트의 page 까지다 (절대 규칙 8번)
+   */
+  claim?: 'read_through' | null;
 }
+
+/** 싸비 확인 카드의 선택지. 숫자는 서버 저장값에서 정한다 (절대 규칙 8번) */
+export type FrontierConfirmChoice = 'keep' | 'current' | 'furthest';
 
 // ============================================================================
 // 리캡 관련 (R2)

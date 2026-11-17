@@ -39,11 +39,20 @@ const CATALOG = [
 ];
 
 const LAST_READ_AT = '2026-11-09T12:34:56.000Z';
-const STORED = { current_page: 80, max_page: 80, event_seq: 3, updated_at: LAST_READ_AT };
+const STORED = {
+  current_page: 80,
+  max_page: 80,
+  read_pages: [] as number[],
+  confirm_dismissed_max: 0,
+  event_seq: 3,
+  updated_at: LAST_READ_AT,
+};
 
 const SNAPSHOT: CutoffSnapshot = {
   current_page: 80,
   cutoff: 79,
+  furthest_page: 80,
+  frontier_confirm: null,
   percent: 23.5,
   is_complete: false,
   chapter: { chapter_no: 3, title: '제3장' },
@@ -66,6 +75,8 @@ function positionsWith(
   return {
     findPosition: find,
     savePosition: async () => {},
+    addReadPages: async () => {},
+    dismissFrontierConfirm: async () => {},
     resetEventSeq: async () => {},
   };
 }

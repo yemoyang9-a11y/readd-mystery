@@ -31,24 +31,40 @@ import type { RecapCallLog } from '../../../src/shared/types';
 
 /** 진도(reading_position) 페이크 — R2 소유 테이블 */
 export class FakeReadingPositionRepository implements ReadingPositionRepository {
-  private readonly rows = new Map<string, StoredPosition & { max_page: number }>();
+  private readonly rows = new Map<
+    string,
+    StoredPosition & { max_page: number; read_pages: number[]; confirm_dismissed_max: number }
+  >();
   private readonly lastWriters = new Map<string, string | null>();
 
-  /** 테스트에서 저장 위치를 세팅한다 (진도 이벤트 수용은 S2 범위) */
+  /**
+   * 테스트에서 저장 위치를 세팅한다 (진도 이벤트 수용은 S2 범위).
+   * read_pages 를 주지 않으면 1 ~ current_page 를 읽은 것으로 둔다 — 마이그레이션 019 가
+   * 기존 독자를 다루는 방식과 같다 (2026-11-17 대표 결정).
+   */
   set(
     deviceId: string,
     bookId: string,
-    position: StoredPosition & { max_page?: number }
+    position: StoredPosition & {
+      max_page?: number;
+      read_pages?: number[];
+      confirm_dismissed_max?: number;
+    }
   ): void {
     this.rows.set(this.key(deviceId, bookId), {
       ...position,
       max_page: position.max_page ?? position.current_page,
+      read_pages:
+        position.read_pages ?? Array.from({ length: position.current_page }, (_, i) => i + 1),
+      confirm_dismissed_max: position.confirm_dismissed_max ?? 0,
     });
   }
 
   async findPosition(deviceId: string, bookId: string): Promise<StoredPositionRecord | null> {
     const row = this.rows.get(this.key(deviceId, bookId));
-    return row ? { ...row, updated_at: '2026-01-01T00:00:00.000Z' } : null;
+    return row
+      ? { ...row, read_pages: [...row.read_pages], updated_at: '2026-01-01T00:00:00.000Z' }
+      : null;
   }
 
   async savePosition(
@@ -70,8 +86,28 @@ export class FakeReadingPositionRepository implements ReadingPositionRepository 
     this.rows.set(key, {
       ...position,
       max_page: Math.max(stored?.max_page ?? 0, position.current_page),
+      read_pages: stored?.read_pages ?? [],
+      confirm_dismissed_max: stored?.confirm_dismissed_max ?? 0,
     });
     this.lastWriters.set(key, writerDeviceId);
+  }
+
+  async addReadPages(deviceId: string, bookId: string, pages: number[]): Promise<void> {
+    const key = this.key(deviceId, bookId);
+    const stored = this.rows.get(key);
+    if (!stored) return;
+    const merged = [...new Set([...stored.read_pages, ...pages])].sort((a, b) => a - b);
+    this.rows.set(key, { ...stored, read_pages: merged });
+  }
+
+  async dismissFrontierConfirm(deviceId: string, bookId: string, upToPage: number): Promise<void> {
+    const key = this.key(deviceId, bookId);
+    const stored = this.rows.get(key);
+    if (!stored) return;
+    this.rows.set(key, {
+      ...stored,
+      confirm_dismissed_max: Math.max(stored.confirm_dismissed_max, upToPage),
+    });
   }
 
   async resetEventSeq(deviceId: string, bookId: string): Promise<void> {

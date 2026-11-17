@@ -8,14 +8,18 @@
  *
  * 조항: FR-PRG-003 🚦 (기준점 규칙) · FR-BRF-005 🚦 (파생값 단일 원천)
  *
- * ┌ 저장값 (둘) ──────────────────────────────────────────────────┐
- * │  reading_position.current_page   ← 지금 펼친 페이지 (이어 읽기)  │
- * │  reading_position.max_page       ← 가장 멀리 읽은 페이지         │
- * └───────────────────────────────────────────────────────────────┘
- *      cutoff      = 진도 레코드 없음 ? 0 : max_page   (FR-PRG-003 🚦)
- *      percent     = max_page / total_pages     (R2 불변식, MVP 1장)
- *      is_complete = 진도 레코드 있음 && max_page >= total_pages  (D14, FR-QNA-004 🚦)
- *      chapter     = max_page가 속한 장           (장 경계 테이블)
+ * ┌ 저장값 ─────────────────────────────────────────────────────────────┐
+ * │  reading_position.current_page   ← 지금 펼친 페이지 (이어 읽기)        │
+ * │  reading_position.max_page       ← 가장 멀리 펼친 페이지 (확인 카드용)  │
+ * │  reading_position.read_pages     ← 읽음으로 인정된 쪽들 (줄지 않음)     │
+ * │  reading_position.confirm_dismissed_max ← 확인 카드 "그대로" 기록       │
+ * └─────────────────────────────────────────────────────────────────────┘
+ *      frontier    = read_pages 에서 1쪽부터 끊김 없이 이어진 마지막 쪽 (없으면 0)
+ *      cutoff      = 진도 레코드 없음 ? 0 : frontier   (FR-PRG-003 🚦, 2026-11-17 대표 결정 A + C안)
+ *      percent     = cutoff / total_pages
+ *      is_complete = 진도 레코드 있음 && frontier >= total_pages  (D14, FR-QNA-004 🚦)
+ *      chapter     = max(cutoff, 1)이 속한 장
+ *      frontier_confirm = max_page > cutoff 이고 max_page > confirm_dismissed_max 일 때만
  *
  * ⚠️ **이 파일 밖에서 cutoff나 `%`를 계산하는 코드는 존재해서는 안 된다** (프론트 포함).
  *    FR-BRF-005의 "불일치 0건"은 검증이 아니라 계산 지점 단일화로 달성한다.
@@ -81,7 +85,10 @@ export function createCutoffService(deps: CutoffServiceDeps): CutoffService & Re
       const stored = await positions.findPosition(deviceId, bookId);
 
       const currentPage = stored?.current_page ?? FIRST_ENTRY_PAGE;
-      const maxPage = stored?.max_page ?? FIRST_ENTRY_PAGE;
+      const furthestPage = stored?.max_page ?? FIRST_ENTRY_PAGE;
+      // FR-PRG-003 🚦 — 1쪽부터 끊김 없이 읽었다고 인정된 마지막 쪽
+      const frontier = contiguousFrontier(stored?.read_pages ?? []);
+      const chapterPage = Math.max(frontier, FIRST_ENTRY_PAGE);
 
       const totalPages = await books.findTotalPages(bookId);
       if (totalPages === null || totalPages <= 0) {
@@ -90,29 +97,39 @@ export function createCutoffService(deps: CutoffServiceDeps): CutoffService & Re
         );
       }
 
-      const chapter = await books.findChapterContaining(bookId, maxPage);
+      const chapter = await books.findChapterContaining(bookId, chapterPage);
       if (chapter === null) {
         // 장 범위 합집합 = [1, 마지막 페이지] 완전 커버는 파이프라인이 검증한다
         // (FR-DAT-001 🚦). 여기 도달했다면 데이터 결함이므로 조용히 삼키지 않는다.
         throw new Error(
-          `[cutoff] page=${maxPage}가 속한 장을 찾을 수 없어 스냅샷을 만들지 않는다: bookId=${bookId}`
+          `[cutoff] page=${chapterPage}가 속한 장을 찾을 수 없어 스냅샷을 만들지 않는다: bookId=${bookId}`
         );
       }
 
       // ── 파생 계산: 이 블록이 시스템 전체의 유일한 계산 지점이다 ──────────────
       // FR-PRG-003 🚦
-      const cutoff = stored === null ? 0 : maxPage;
+      const cutoff = stored === null ? 0 : frontier;
       const percent = round(
-        (maxPage / totalPages) * 100, // FR-BRF-005 🚦
+        (cutoff / totalPages) * 100, // FR-BRF-005 🚦
         PERCENT_DECIMALS
       );
       // FR-BRF-005 🚦, FR-QNA-004 🚦
-      const isComplete = stored !== null && maxPage >= totalPages;
+      const isComplete = stored !== null && frontier >= totalPages;
+      // FR-PRG-003 🚦 — 확인 카드. 숫자는 전부 저장값이다
+      const frontierConfirm =
+        stored !== null && furthestPage > cutoff && furthestPage > stored.confirm_dismissed_max
+          ? {
+              current_page: currentPage > cutoff && currentPage < furthestPage ? currentPage : null,
+              furthest_page: furthestPage,
+            }
+          : null;
       // ───────────────────────────────────────────────────────────────────────
 
       return {
         current_page: currentPage,
         cutoff,
+        furthest_page: stored === null ? 0 : furthestPage,
+        frontier_confirm: frontierConfirm,
         percent,
         is_complete: isComplete,
         chapter: {
@@ -135,6 +152,17 @@ export function createCutoffService(deps: CutoffServiceDeps): CutoffService & Re
   };
 
   return service;
+}
+
+/**
+ * 1쪽부터 끊김 없이 이어진 마지막 쪽. 하나도 없으면 0.
+ * 기준점 파생이므로 이 파일에만 둔다 (FR-BRF-005 🚦, 절대 규칙 2번).
+ */
+function contiguousFrontier(readPages: readonly number[]): number {
+  const read = new Set(readPages);
+  let frontier = 0;
+  while (read.has(frontier + 1)) frontier += 1;
+  return frontier;
 }
 
 function round(value: number, decimals: number): number {

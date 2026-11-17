@@ -47,13 +47,15 @@ export function createPgReadingPositionRepository(db: QueryClient): ReadingPosit
   return {
     async findPosition(deviceId: string, bookId: string): Promise<StoredPositionRecord | null> {
       const { rows } = await db.query(
-        `SELECT current_page, max_page, event_seq, updated_at FROM reading_position WHERE device_id = $1 AND book_id = $2`,
+        `SELECT current_page, max_page, read_pages, confirm_dismissed_max, event_seq, updated_at FROM reading_position WHERE device_id = $1 AND book_id = $2`,
         [deviceId, bookId]
       );
       if (rows.length === 0) return null;
       return {
         current_page: rows[0].current_page,
         max_page: rows[0].max_page,
+        read_pages: (rows[0].read_pages ?? []).map(Number),
+        confirm_dismissed_max: Number(rows[0].confirm_dismissed_max ?? 0),
         event_seq: Number(rows[0].event_seq),
         updated_at: rows[0].updated_at.toISOString(),
       };
@@ -84,6 +86,30 @@ export function createPgReadingPositionRepository(db: QueryClient): ReadingPosit
            last_writer_device_id = CASE WHEN ${accepted} THEN EXCLUDED.last_writer_device_id ELSE reading_position.last_writer_device_id END,
            updated_at = CASE WHEN ${accepted} THEN now() ELSE reading_position.updated_at END`,
         [deviceId, bookId, position.current_page, position.event_seq, writerDeviceId]
+      );
+    },
+
+    async addReadPages(deviceId: string, bookId: string, pages: number[]): Promise<void> {
+      if (pages.length === 0) return;
+      // FR-PRG-003 🚦 — 한 문장의 UPDATE 라 동시에 도착한 이벤트끼리 덮어쓰지 않는다(행 잠금).
+      // 합집합이므로 기준점은 줄지 않는다.
+      await db.query(
+        `UPDATE reading_position
+            SET read_pages = ARRAY(SELECT DISTINCT p FROM unnest(read_pages || $3::int[]) AS p ORDER BY p)
+          WHERE device_id = $1 AND book_id = $2`,
+        [deviceId, bookId, pages]
+      );
+    },
+
+    async dismissFrontierConfirm(
+      deviceId: string,
+      bookId: string,
+      upToPage: number
+    ): Promise<void> {
+      await db.query(
+        `UPDATE reading_position SET confirm_dismissed_max = GREATEST(confirm_dismissed_max, $3)
+          WHERE device_id = $1 AND book_id = $2`,
+        [deviceId, bookId, upToPage]
       );
     },
 

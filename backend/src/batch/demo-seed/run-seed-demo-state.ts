@@ -42,7 +42,8 @@ async function main(): Promise<void> {
     query: (sql, params) => pool.query(sql, params),
   });
 
-  // cutoff = 레코드 없음 ? 0 : max_page 이므로 낮은 cutoff로 되돌리려면 행을 지우고 다시 써야 한다.
+  // cutoff = 레코드 없음 ? 0 : 차례로 읽은 쪽(read_pages) 이고 줄지 않으므로, 낮은 cutoff로
+  // 되돌리려면 행을 지우고 다시 써야 한다 (2026-11-17 차례 읽기 기준점).
   await pool.query(`DELETE FROM reading_position WHERE device_id = $1 AND book_id = $2`, [
     DEVICE_ID,
     BOOK_ID,
@@ -51,7 +52,12 @@ async function main(): Promise<void> {
     console.log('[OK] reading_position 삭제 완료 — 책을 한 번도 열지 않은 상태 (cutoff=0)');
   } else {
     await positions.savePosition(DEVICE_ID, BOOK_ID, { current_page: cutoff, event_seq: 1 });
-    console.log(`[OK] reading_position 주입 완료 — max_page=${cutoff} (cutoff=${cutoff})`);
+    await positions.addReadPages(
+      DEVICE_ID,
+      BOOK_ID,
+      Array.from({ length: cutoff }, (_, i) => i + 1)
+    );
+    console.log(`[OK] reading_position 주입 완료 — 1~${cutoff}쪽 읽음 (cutoff=${cutoff})`);
   }
 
   // 세션 레코드 삭제 — 다음 POST /entry가 반드시 새 세션으로 판정하게 만든다 (R6)

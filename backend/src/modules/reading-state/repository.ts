@@ -22,8 +22,15 @@ export interface StoredPosition {
 }
 
 export interface StoredPositionRecord extends StoredPosition {
-  /** 가장 멀리 읽은 페이지. 줄어들지 않는다 — cutoff의 원천 (FR-PRG-003 🚦) */
+  /** 가장 멀리 펼친 페이지. 줄어들지 않는다. 2026-11-17부터 cutoff 가 아니라 확인 카드의 근거 */
   max_page: number;
+  /**
+   * 읽었다고 인정된 쪽들 (오름차순, 중복 없음). 줄어들지 않는다 — cutoff 의 원천 (FR-PRG-003 🚦).
+   * 1쪽부터 끊김 없이 이어진 마지막 쪽이 기준점이며, 그 계산은 기준점 결정기에서만 한다.
+   */
+  read_pages: number[];
+  /** 독자가 확인 카드에서 "그대로"를 고른 시점의 가장 먼 쪽. 그 쪽까지는 다시 묻지 않는다 */
+  confirm_dismissed_max: number;
   updated_at: string;
 }
 
@@ -68,6 +75,18 @@ export interface ReadingPositionRepository {
     position: StoredPosition,
     writerDeviceId?: string | null
   ): Promise<void>;
+
+  /**
+   * 읽음으로 인정된 쪽들을 합친다(합집합). 저장 위치가 없으면 아무 것도 하지 않는다.
+   * seq 판정과 무관하다 — 늦게 도착한 이벤트의 차례 넘김도 인정된다 (FR-PRG-003 🚦).
+   * cutoff 인자 없음의 근거 — findPosition과 동일하게 cutoff의 원천이다.
+   */
+  addReadPages(deviceId: string, bookId: string, pages: number[]): Promise<void>;
+
+  /**
+   * 확인 카드 "그대로"의 기록. 값은 줄지 않는다(GREATEST). 저장 위치가 없으면 아무 것도 하지 않는다.
+   */
+  dismissFrontierConfirm(deviceId: string, bookId: string, upToPage: number): Promise<void>;
 
   /**
    * 저장된 `event_seq`를 0으로 되돌린다. 저장 위치가 없으면 아무 것도 하지 않는다 —

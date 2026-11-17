@@ -39,7 +39,8 @@ const FORBIDDEN_PATTERNS = [
   },
   {
     label: '기준점 재계산 (진도 레코드 유무 조건식)',
-    regex: /\bstored\s*===?\s*null\s*\?\s*0\s*:\s*(current_?[Pp]age|max_?[Pp]age)\b/,
+    // 2026-11-17 — 기준점이 max_page 에서 차례로 읽은 쪽(frontier)으로 바뀜
+    regex: /\bstored\s*===?\s*null\s*\?\s*0\s*:\s*(current_?[Pp]age|max_?[Pp]age|frontier)\b/,
     requiredAtSolePoint: true,
   },
   {
@@ -52,7 +53,7 @@ const FORBIDDEN_PATTERNS = [
     // 다시 계산하면(예: 프론트가 percent === 100 으로 완독을 흉내내거나 라우트가
     // page >= total_pages 를 재판정) 그 지점이 곧 우회 표면이 된다. FR-QNA-004 🚦
     label: '완독 여부 재계산 (page >= total_pages)',
-    regex: /\b(current_?[Pp]age|max_?[Pp]age|page)\s*>=?\s*\(?\s*total_?[Pp]ages\b/,
+    regex: /\b(current_?[Pp]age|max_?[Pp]age|page|frontier)\s*>=?\s*\(?\s*total_?[Pp]ages\b/,
     requiredAtSolePoint: true,
   },
 ];

@@ -127,7 +127,7 @@ describe('routes — 진도를 쓴 기기 전달', () => {
     expect(services.progressService.acceptProgressEvent).toHaveBeenCalledWith(
       TOKEN_READER,
       'book',
-      { page: 12, seq: 1 },
+      { page: 12, seq: 1, from_page: null, claim: null },
       OTHER_DEVICE
     );
   });
@@ -142,7 +142,7 @@ describe('routes — 진도를 쓴 기기 전달', () => {
     expect(services.progressService.acceptProgressEvent).toHaveBeenCalledWith(
       TOKEN_READER,
       'book',
-      { page: 12, seq: 1 },
+      { page: 12, seq: 1, from_page: null, claim: null },
       TOKEN_READER
     );
   });
@@ -154,7 +154,7 @@ describe('routes — 진도를 쓴 기기 전달', () => {
     expect(services.progressService.acceptProgressEvent).toHaveBeenCalledWith(
       TOKEN_READER,
       'book',
-      { page: 12, seq: 1 },
+      { page: 12, seq: 1, from_page: null, claim: null },
       TOKEN_READER
     );
   });
@@ -166,7 +166,7 @@ describe('routes — 진도를 쓴 기기 전달', () => {
     expect(services.progressService.acceptProgressEvent).toHaveBeenCalledWith(
       OTHER_DEVICE,
       'book',
-      { page: 12, seq: 1 },
+      { page: 12, seq: 1, from_page: null, claim: null },
       OTHER_DEVICE
     );
   });
@@ -178,7 +178,7 @@ describe('routes — 진도를 쓴 기기 전달', () => {
     expect(services.progressService.acceptProgressEvent).toHaveBeenCalledWith(
       'not-a-uuid',
       'book',
-      { page: 12, seq: 1 },
+      { page: 12, seq: 1, from_page: null, claim: null },
       null
     );
   });

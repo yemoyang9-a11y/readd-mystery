@@ -33,6 +33,7 @@ import {
 import { ensureBookReady } from './book-ready.guard';
 import { pageIsIncludedInCutoff } from './cutoff-inclusion';
 import { mockGetCutoffSnapshot } from '../modules/chatbot/__mocks__/mock-data';
+import type { FrontierConfirmChoice, ProgressEvent } from '../shared/types';
 
 const router = express.Router();
 // FR-QNA-004 🚦
@@ -63,7 +64,7 @@ function acceptProgress(
   req: Request,
   deviceId: string,
   bookId: string,
-  event: { page: number; seq: number }
+  event: ProgressEvent
 ): Promise<void> {
   return readingState.progressService.acceptProgressEvent(
     deviceId,
@@ -233,7 +234,7 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
 
       // 기준점 스냅샷 가져오기 (R2 연동)
       // UC-27 A5: 질의 시점 고정, 스트리밍 중 페이지 변경해도 시작 시점 K 유지
-      // FR-PRG-003 🚦: K = 진도 레코드 없음 ? 0 : max_page
+      // FR-PRG-003 🚦: K = 진도 레코드 없음 ? 0 : 차례로 읽은 쪽 (2026-11-17)
       const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
       K = snapshot.cutoff;
       isComplete = snapshot.is_complete;
@@ -461,9 +462,22 @@ router.post('/books/:bookId/progress', async (req: Request, res: Response) => {
   const deviceId = requireDeviceId(req, res);
   if (!deviceId) return;
 
-  const { page, seq } = req.body;
+  const { page, seq, from_page: fromPage, claim } = req.body;
   if (typeof page !== 'number' || typeof seq !== 'number') {
     res.status(400).json({ error: 'BAD_REQUEST', message: 'page, seq는 숫자여야 합니다' });
+    return;
+  }
+  // FR-PRG-003 🚦 — 이동 사실(from_page)과 선택(claim)만 받는다. 기준점 숫자는 받지 않는다(절대 규칙 8번)
+  if (
+    fromPage !== undefined &&
+    fromPage !== null &&
+    !(Number.isSafeInteger(fromPage) && fromPage >= 1)
+  ) {
+    res.status(400).json({ error: 'BAD_REQUEST', message: 'from_page는 1 이상의 정수여야 합니다' });
+    return;
+  }
+  if (claim !== undefined && claim !== null && claim !== 'read_through') {
+    res.status(400).json({ error: 'BAD_REQUEST', message: 'claim은 read_through만 허용합니다' });
     return;
   }
 
@@ -471,12 +485,60 @@ router.post('/books/:bookId/progress', async (req: Request, res: Response) => {
     // FR-BRW-002 🚦 R12
     if (!(await ensureBookReady(contentServices.content, bookId, res))) return;
 
-    await acceptProgress(req, deviceId, bookId, { page, seq });
+    await acceptProgress(req, deviceId, bookId, {
+      page,
+      seq,
+      from_page: fromPage ?? null,
+      claim: claim ?? null,
+    });
     await readingState.sessionService.touchActivity(deviceId, bookId);
     const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
-    res.json({ success: true, applied_cutoff: snapshot.cutoff });
+    res.json({
+      success: true,
+      applied_cutoff: snapshot.cutoff,
+      confirm: snapshot.frontier_confirm ?? null,
+    });
   } catch (error) {
     console.error('[API] progress error', { bookId, error });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
+
+const FRONTIER_CHOICES: readonly FrontierConfirmChoice[] = ['keep', 'current', 'furthest'];
+
+/**
+ * POST /books/:bookId/progress/confirm — 싸비 확인 카드의 답 (2026-11-17 대표 결정 A + C안)
+ *
+ * 선택지 id 만 받는다. 인정할 쪽은 서버의 저장값(current_page·max_page)에서 정한다 —
+ * 클라이언트가 기준점 숫자를 보내는 경로가 아니다 (절대 규칙 8번, FR-PRG-003 🚦).
+ */
+router.post('/books/:bookId/progress/confirm', async (req: Request, res: Response) => {
+  const { bookId } = req.params;
+  const deviceId = requireDeviceId(req, res);
+  if (!deviceId) return;
+
+  const choice = req.body?.choice;
+  if (!FRONTIER_CHOICES.includes(choice)) {
+    res
+      .status(400)
+      .json({ error: 'BAD_REQUEST', message: 'choice는 keep·current·furthest 중 하나여야 합니다' });
+    return;
+  }
+
+  try {
+    // FR-BRW-002 🚦 R12
+    if (!(await ensureBookReady(contentServices.content, bookId, res))) return;
+
+    await readingState.progressService.confirmFrontier(deviceId, bookId, choice);
+    await readingState.sessionService.touchActivity(deviceId, bookId);
+    const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
+    res.json({
+      success: true,
+      applied_cutoff: snapshot.cutoff,
+      confirm: snapshot.frontier_confirm ?? null,
+    });
+  } catch (error) {
+    console.error('[API] progress confirm error', { bookId, error });
     res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });

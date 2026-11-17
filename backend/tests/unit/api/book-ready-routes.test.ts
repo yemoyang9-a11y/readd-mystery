@@ -2,6 +2,7 @@ const mockState = {
   findReadiness: jest.fn(),
   getPage: jest.fn(),
   acceptProgressEvent: jest.fn(),
+  confirmFrontier: jest.fn(),
   touchActivity: jest.fn(),
   acceptHeartbeat: jest.fn(),
   getCutoffSnapshot: jest.fn(),
@@ -18,7 +19,10 @@ const mockState = {
 jest.mock('../../../src/config/database', () => ({ pool: {} }));
 jest.mock('../../../src/modules/reading-state/composition', () => ({
   createReadingStateServices: () => ({
-    progressService: { acceptProgressEvent: mockState.acceptProgressEvent },
+    progressService: {
+      acceptProgressEvent: mockState.acceptProgressEvent,
+      confirmFrontier: mockState.confirmFrontier,
+    },
     sessionService: {
       touchActivity: mockState.touchActivity,
       acceptHeartbeat: mockState.acceptHeartbeat,
@@ -96,7 +100,17 @@ const CASES: RouteCase[] = [
     body: { page: 40, seq: 1 },
     okExpect: (res) => {
       expect(mockState.acceptProgressEvent).toHaveBeenCalledTimes(1);
-      expect(res.json).toHaveBeenCalledWith({ success: true, applied_cutoff: 40 });
+      expect(res.json).toHaveBeenCalledWith({ success: true, applied_cutoff: 40, confirm: null });
+    },
+  },
+  {
+    name: 'POST /books/:bookId/progress/confirm',
+    method: 'post',
+    path: '/books/:bookId/progress/confirm',
+    body: { choice: 'keep' },
+    okExpect: (res) => {
+      expect(mockState.confirmFrontier).toHaveBeenCalledWith('reader', 'book', 'keep');
+      expect(res.json).toHaveBeenCalledWith({ success: true, applied_cutoff: 40, confirm: null });
     },
   },
   {
@@ -178,6 +192,7 @@ async function call(router: any, c: RouteCase) {
 function expectNothingTouched() {
   expect(mockState.checkRateLimit).not.toHaveBeenCalled();
   expect(mockState.acceptProgressEvent).not.toHaveBeenCalled();
+  expect(mockState.confirmFrontier).not.toHaveBeenCalled();
   expect(mockState.touchActivity).not.toHaveBeenCalled();
   expect(mockState.acceptHeartbeat).not.toHaveBeenCalled();
   expect(mockState.getCutoffSnapshot).not.toHaveBeenCalled();

@@ -53,7 +53,7 @@ describe('기준점 결정기 — getCutoffSnapshot', () => {
     const { positions, books } = makeSeededFakes();
     const service = createCutoffService({ positions, books });
 
-    await positions.savePosition(SEED_DEVICE_ID, SEED_BOOK_ID, { current_page: 25, event_seq: 10 });
+    positions.set(SEED_DEVICE_ID, SEED_BOOK_ID, { current_page: 25, event_seq: 10 });
     const forward = await service.getCutoffSnapshot(SEED_DEVICE_ID, SEED_BOOK_ID);
     expect(forward.cutoff).toBe(25);
 
@@ -70,10 +70,12 @@ describe('기준점 결정기 — getCutoffSnapshot', () => {
     expect(snapshot.percent).toBe(50); // 15 / 30
   });
 
-  test('FR-BRF-005 🚦: 첫 진입(진도 부재)의 percent도 같은 규칙으로 파생된다', async () => {
+  test('FR-BRF-005 🚦: 첫 진입(진도 부재)의 percent도 같은 규칙으로 파생된다 — 기준점 0 → 0%', async () => {
     const snapshot = await serviceWith(null).getCutoffSnapshot(SEED_DEVICE_ID, SEED_BOOK_ID);
 
-    expect(snapshot.percent).toBe(3.3); // 1 / 30 → 3.33... → 3.3
+    // 2026-11-17 — percent 는 기준점 / total_pages. 진도 부재는 기준점 0 이므로 0%
+    // (전에는 max_page 기본값 1쪽으로 3.3%였다)
+    expect(snapshot.percent).toBe(0);
   });
 
   describe('chapter — current_page가 속한 장 (목차는 전체 상시 노출 — R3 불변식)', () => {

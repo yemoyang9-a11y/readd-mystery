@@ -14,7 +14,7 @@
  *    cutoff.service.ts가 담당한다 (FR-BRF-005 🚦, 계산 지점 단일화).
  */
 
-import type { ProgressEvent } from '../../shared/types';
+import type { FrontierConfirmChoice, ProgressEvent } from '../../shared/types';
 import type { ReadingPositionRepository } from './repository';
 
 export interface ProgressServiceDeps {
@@ -36,6 +36,37 @@ export interface ProgressService {
     event: ProgressEvent,
     writerDeviceId?: string | null
   ): Promise<void>;
+
+  /**
+   * 싸비 확인 카드의 답을 반영한다. 클라이언트는 선택지 id 만 보내고, 인정할 쪽은 서버의
+   * 저장값(current_page·max_page)에서 정한다 (절대 규칙 8번). 저장 위치가 없으면 아무 것도
+   * 하지 않는다.
+   */
+  confirmFrontier(deviceId: string, bookId: string, choice: FrontierConfirmChoice): Promise<void>;
+}
+
+/** 1쪽부터 last쪽까지 */
+function throughPage(last: number): number[] {
+  return Array.from({ length: Math.max(0, Math.floor(last)) }, (_, i) => i + 1);
+}
+
+/**
+ * 이 이동으로 읽음 인정되는 쪽들 (2026-11-17 대표 결정 A + C안). 기준점 계산은 하지 않는다 —
+ * 인정된 쪽들을 저장할 뿐이고, 1쪽부터 이어진 마지막 쪽을 찾는 것은 기준점 결정기의 몫이다.
+ *
+ * - claim=read_through(목차 확인 창 "앞부분은 이미 읽었어요") → 1 ~ page
+ * - '다음' 넘김(from_page + 1 = page) → 떠난 쪽과 도착한 쪽
+ * - 1쪽 도착 → 1쪽 (책의 시작)
+ * - 그 밖(목차·노트·되돌아가기·재진입) → 없음
+ *
+ * FR-PRG-003 🚦
+ */
+export function pagesReadByEvent(event: ProgressEvent): number[] {
+  if (event.claim === 'read_through') return throughPage(event.page);
+  const from = event.from_page;
+  if (typeof from === 'number' && from + 1 === event.page) return [from, event.page];
+  if (event.page === 1) return [1];
+  return [];
 }
 
 export function createProgressService(deps: ProgressServiceDeps): ProgressService {
@@ -55,6 +86,25 @@ export function createProgressService(deps: ProgressServiceDeps): ProgressServic
         { current_page: event.page, event_seq: event.seq },
         writerDeviceId
       );
+      // FR-PRG-003 🚦 — seq 판정과 무관하게 합친다. 늦게 도착한 차례 넘김도 인정된다
+      const read = pagesReadByEvent(event);
+      if (read.length > 0) await positions.addReadPages(deviceId, bookId, read);
+    },
+
+    async confirmFrontier(
+      deviceId: string,
+      bookId: string,
+      choice: FrontierConfirmChoice
+    ): Promise<void> {
+      const stored = await positions.findPosition(deviceId, bookId);
+      if (stored === null) return;
+      // FR-PRG-003 🚦, 절대 규칙 8번 — 숫자는 저장값에서
+      if (choice === 'keep') {
+        await positions.dismissFrontierConfirm(deviceId, bookId, stored.max_page);
+        return;
+      }
+      const upTo = choice === 'current' ? stored.current_page : stored.max_page;
+      await positions.addReadPages(deviceId, bookId, throughPage(upTo));
     },
   };
 }
