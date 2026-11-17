@@ -118,17 +118,7 @@ export function buildTermPrompt(chapter: Chapter, pages: Page[]): string {
 ${buildPageTaggedText(pages)}`;
 }
 
-/** 사건 — FR-DAT-008 */
-export function buildEventPrompt(chapter: Chapter, pages: Page[]): string {
-  return `다음은 이 작품 ${chapter.chapter_no}장 "${chapter.title}"의 원문이다(각 문단 앞에 [페이지 N] 표시).
-이 장에서 벌어진 주요 사건(타임라인에 남을 사건)을 추출하라. 발생 페이지를 표시하라.
-
-출력은 아래 JSON 형식만 반환하라. 다른 설명·마크다운 코드블록 없이 JSON 텍스트만 출력하라.
-{"events": [{"event": "...", "description": "...", "occurrence_page": 0}]}
-
---- 원문 ---
-${buildPageTaggedText(pages)}`;
-}
+// 사건(FR-DAT-008)은 장면 단위로 뽑는다 — event-scenes.ts의 buildSceneBoundaryPrompt·buildSceneEventPrompt
 
 /** LLM 응답에서 JSON을 안전하게 뽑아낸다(마크다운 코드블록으로 감싸는 경우 대응) */
 export function parseJsonResponse<T>(raw: string): T {

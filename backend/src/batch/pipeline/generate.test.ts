@@ -5,9 +5,9 @@ import {
   buildRelationshipPrompt,
   buildBackgroundPrompt,
   buildTermPrompt,
-  buildEventPrompt,
   parseJsonResponse,
 } from './generate';
+import { buildSceneBoundaryPrompt } from './event-scenes';
 import { Chapter, Page } from '../../shared/types';
 
 const chapter: Chapter = {
@@ -58,9 +58,9 @@ describe('프롬프트 빌더 — 장 번호·제목·원문이 포함되는지'
     expect(p).toContain('금지');
   });
 
-  test('용어·사건 프롬프트에 원문이 들어간다', () => {
+  test('용어·사건(장면 경계) 프롬프트에 원문이 들어간다', () => {
     expect(buildTermPrompt(chapter, pages)).toContain('첫 페이지 내용.');
-    expect(buildEventPrompt(chapter, pages)).toContain('첫 페이지 내용.');
+    expect(buildSceneBoundaryPrompt(chapter, pages)).toContain('첫 페이지 내용.');
   });
 });
 

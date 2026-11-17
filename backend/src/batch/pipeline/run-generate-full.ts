@@ -26,9 +26,19 @@ import {
   buildRelationshipPrompt,
   buildBackgroundPrompt,
   buildTermPrompt,
-  buildEventPrompt,
   parseJsonResponse,
 } from './generate';
+import {
+  ChapterEventRaw,
+  ChapterEventResult,
+  EVENT_EXTRACTION_VERSION,
+  TimelineEvent,
+  buildSceneBoundaryPrompt,
+  buildSceneEventPrompt,
+  chapterEventCallCount,
+  evaluateChapterEvents,
+  extractChapterEventsRaw,
+} from './event-scenes';
 import { checkPageBounds } from './validate';
 import {
   createEmptyState,
@@ -72,6 +82,8 @@ import {
   ReaderTextInput,
   eventReaderInput,
   eventReaderKey,
+  introducedNames,
+  readerNameLexicon,
   relationshipReaderInput,
   relationshipReaderKey,
   rewriteReaderTexts,
@@ -124,17 +136,23 @@ const PIPELINE_MODE: GroundingOptions = {
 };
 const DEFAULT_MODE: GroundingOptions = { requireRelationshipSemantics: true };
 
+// FR-DAT-008 — 사건 추출 계약. 인물·관계 캐시(EXTRACTION_CONTRACT)와 따로 봉인해, 사건 규칙이
+// 바뀌어도 인물·관계를 다시 부르지 않는다. 바뀌면 사건 캐시만 Stale로 멈춘다.
+const EVENT_EXTRACTION_CONTRACT = JSON.stringify({
+  version: EVENT_EXTRACTION_VERSION,
+  sceneBoundaryPrompt: buildSceneBoundaryPrompt.toString(),
+  sceneEventPrompt: buildSceneEventPrompt.toString(),
+  provider: LLM_PROVIDER,
+  models: MODEL_CONFIG,
+  effort: DEFAULT_EFFORT,
+});
+
 type RawCharacter = GroundedCharacter;
 type RawRelationship = GroundedRelationship;
 interface RawTerm {
   term: string;
   definition: string;
   first_appearance_page: number;
-}
-interface RawEvent {
-  event: string;
-  description: string;
-  occurrence_page: number;
 }
 
 interface ChapterOutput {
@@ -148,7 +166,6 @@ interface ChapterOutput {
   characters: RawCharacter[];
   relationships: RawRelationship[];
   terms: RawTerm[];
-  events: RawEvent[];
   warnings: string[];
 }
 
@@ -230,15 +247,7 @@ async function generateChapter(
     terms.map((t) => t.first_appearance_page)
   );
 
-  const { events } = await callJson<{ events: RawEvent[] }>(
-    'generate_event',
-    buildEventPrompt(chapter, pages),
-    chapter.chapter_no
-  );
-  record(
-    '사건',
-    events.map((e) => e.occurrence_page)
-  );
+  // 사건은 장면 단위로 따로 뽑는다 — loadOrGenerateChapterEvents (FR-DAT-008)
 
   return {
     grounding: groundingManifest(chapter, pages, known, EXTRACTION_CONTRACT),
@@ -251,7 +260,6 @@ async function generateChapter(
     characters,
     relationships,
     terms,
-    events,
     warnings,
   };
 }
@@ -343,6 +351,50 @@ export async function loadOrGenerateRelationshipRun(
   );
   fs.writeFileSync(filePath, JSON.stringify(sealed, null, 2), 'utf-8');
   return validateGroundedChapter(sealed, pages, mode).relationships;
+}
+
+/**
+ * 사건(타임라인) — 장면 단위 추출. FR-DAT-008 · FR-SPL-002 🚦 · NFR-AI-004
+ * 원본 LLM 응답(경계 + 장면별 응답)만 chapter-{N}.events.json에 봉인해 두고, 새 실행과 재생
+ * 모두 evaluateChapterEvents로 같은 검증을 거친다. 재생 때는 LLM을 부르지 않는다.
+ */
+export async function loadOrGenerateChapterEvents(
+  chapter: Chapter,
+  pages: Page[],
+  outDir: string = DEFAULT_OUT_DIR
+): Promise<ChapterEventResult> {
+  const filePath = path.join(outDir, `chapter-${chapter.chapter_no}.events.json`);
+  let raw: ChapterEventRaw;
+  if (fs.existsSync(filePath)) {
+    console.log(`[재생] ${chapter.chapter_no}장 사건(장면 단위) — 기존 결과 재사용`);
+    const cached = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ChapterEventRaw;
+    assertGroundingCache(cached, chapter, pages, [], EVENT_EXTRACTION_CONTRACT);
+    raw = cached;
+  } else {
+    // 게이트웨이 경유만 — 4.3절. 배치 전용이라 런타임 호출 수(R9)와 무관하다
+    raw = await extractChapterEventsRaw(chapter, pages, (prompt) =>
+      callJson<unknown>('generate_event', prompt, chapter.chapter_no)
+    );
+    const sealed = sealChapterCache(
+      { chapter_no: chapter.chapter_no, ...raw },
+      chapter,
+      pages,
+      [],
+      EVENT_EXTRACTION_CONTRACT
+    );
+    fs.writeFileSync(filePath, JSON.stringify(sealed, null, 2), 'utf-8');
+    console.log(
+      `  [사건] ${chapter.chapter_no}장 장면 ${raw.scenes.length}개 · LLM 호출 ${chapterEventCallCount(raw.scenes.length)}회 → ${filePath}`
+    );
+  }
+  const result = evaluateChapterEvents(pages, raw);
+  console.log(
+    `  [사건] ${chapter.chapter_no}장 저장 ${result.events.length}건 · 검수 후보 ${result.review.length}건`
+  );
+  if (result.warnings.length > 0) {
+    console.warn(`  [사건 경고] ${chapter.chapter_no}장:`, result.warnings);
+  }
+  return result;
 }
 
 // NFR-AI-004
@@ -470,6 +522,7 @@ async function applyReaderTexts(
   outDir: string
 ): Promise<void> {
   const names = new Map(state.characters.map((c) => [c.id, c.name]));
+  const lexicon = readerNameLexicon(state.characters);
   const items: ReaderTextInput[] = [
     ...state.relationships.flatMap((r) => {
       const item =
@@ -495,14 +548,32 @@ async function applyReaderTexts(
   }
   fs.writeFileSync(cachePath, JSON.stringify(cache, null, 2), 'utf-8');
 
-  const readerText = (key: string, source: string): string | undefined =>
-    cache[key]?.source === source ? cache[key].text : undefined;
+  // NFR-AI-004 — 쉬운 문장이 원래 문장에 없던 고유명사(인물명 등)를 들여오면 쓰지 않고 검수로
+  const readerText = (
+    kind: 'relationship' | 'event',
+    id: string,
+    key: string,
+    source: string
+  ): string | undefined => {
+    if (cache[key]?.source !== source) return undefined;
+    const text = cache[key].text;
+    const added = introducedNames(source, text, lexicon);
+    if (added.length === 0) return text;
+    state.review.push({
+      kind,
+      reason: 'reader_text_new_proper_noun',
+      candidate: { id, source, reader_text: text, introduced_names: added },
+    });
+    return undefined;
+  };
   state.relationships = state.relationships.map((r) => {
-    const text = r.semantics && readerText(relationshipReaderKey(r.id), r.semantics.summary);
+    const text =
+      r.semantics &&
+      readerText('relationship', r.id, relationshipReaderKey(r.id), r.semantics.summary);
     return text ? { ...r, semantics: { ...r.semantics!, reader_summary: text } } : r;
   });
   for (const e of events) {
-    const text = readerText(eventReaderKey(e.id), e.description);
+    const text = readerText('event', e.id, eventReaderKey(e.id), e.description);
     if (text) e.reader_description = text;
   }
 }
@@ -530,13 +601,8 @@ export async function generateFullBook(args: BookArgs): Promise<ResolvedBookData
   const chapterReviews: { chapter_no: number; candidates: ReviewCandidate[] }[] = [];
   const chapterSummaries: { chapter_no: number; title: string; summary: string }[] = [];
   const verification = { candidates: 0, confirmed: 0, needs_review: 0, held: 0 };
-  const allEvents: {
-    id: string;
-    event: string;
-    description: string;
-    reader_description?: string;
-    occurrence_page: number;
-  }[] = [];
+  // FR-DAT-008 — DB events 열(event, description, occurrence_page, reader_description) + 근거 필드(JSON 산출물 전용)
+  const allEvents: (TimelineEvent & { id: string; reader_description?: string })[] = [];
   // events.id는 전역 PK다 — takryu는 기존 id를 유지하고, 다른 책은 bookId를 붙여 다른 도서와 충돌하지 않게 한다
   const eventIdPrefix = BOOK_ID === DEFAULT_BOOK_ID ? '' : `${BOOK_ID}:`;
 
@@ -555,7 +621,11 @@ export async function generateFullBook(args: BookArgs): Promise<ResolvedBookData
       OUT_DIR,
       PIPELINE_MODE
     );
-    chapterReviews.push({ chapter_no: chapter.chapter_no, candidates: output.review });
+    const chapterEvents = await loadOrGenerateChapterEvents(chapter, pages, OUT_DIR);
+    chapterReviews.push({
+      chapter_no: chapter.chapter_no,
+      candidates: [...output.review, ...chapterEvents.review],
+    });
 
     mergeCharacters(state, output.characters);
     const secondRun = await loadOrGenerateRelationshipRun(
@@ -607,7 +677,7 @@ export async function generateFullBook(args: BookArgs): Promise<ResolvedBookData
       title: output.title,
       summary: output.summary,
     });
-    for (const e of output.events) {
+    for (const e of chapterEvents.events) {
       allEvents.push({ id: `${eventIdPrefix}${chapter.chapter_no}-${allEvents.length}`, ...e });
     }
 

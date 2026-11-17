@@ -97,3 +97,26 @@ export function relationshipReaderInput(
 export function eventReaderInput(id: string, description: string): ReaderTextInput {
   return { key: eventReaderKey(id), kind: 'event', text: description, names: [] };
 }
+
+const MIN_NAME_LENGTH = 2;
+
+/**
+ * 고유명사 사전 — 인물 대표명과 이름·별명 별칭. 직함·가족 호칭은 일반 명사라 제외하고,
+ * 한 글자 표기는 다른 낱말 속에서 오탐하므로 뺀다. NFR-AI-004
+ */
+export function readerNameLexicon(
+  characters: { name: string; aliases?: { alias: string; type: string }[] }[]
+): string[] {
+  const names = characters.flatMap((c) => [
+    c.name,
+    ...(c.aliases ?? [])
+      .filter((a) => a.type === 'name' || a.type === 'nickname')
+      .map((a) => a.alias),
+  ]);
+  return [...new Set(names.map((n) => n.trim()).filter((n) => n.length >= MIN_NAME_LENGTH))];
+}
+
+/** 독자용 문장에 원래 문장에 없던 고유명사가 새로 생겼는지 — 생긴 이름 목록. NFR-AI-004 */
+export function introducedNames(source: string, rewritten: string, lexicon: string[]): string[] {
+  return lexicon.filter((name) => rewritten.includes(name) && !source.includes(name));
+}
