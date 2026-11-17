@@ -19,12 +19,8 @@ import { resolveConversationContext } from './conversation-context';
 import { formatConversationInput } from './conversation-input';
 import { emptyNotesReader, type NotesReader } from './notes-reader';
 import { classifyQuestion, type QuestionIntent } from './harness/question-intent';
-import {
-  createVerbatimMeter,
-  guardAnswer,
-  VERBATIM_LIMIT,
-  type GuardViolation,
-} from './harness/output-guard';
+import { guardAnswer, type GuardViolation } from './harness/output-guard';
+import { takeSentences } from './harness/sentence-buffer';
 import {
   HARNESS_FIXED_ANSWER,
   HARNESS_PREDICTION_ANSWER,
@@ -35,7 +31,14 @@ const MOCK_MODE = process.env.MOCK_MODE === 'true';
 
 export { CHATBOT_TASK };
 
+// outside는 전체 생성 후 검사·재생성 대신 문장 단위 검사 후 스트리밍한다 (2026-11-17 결정 34)
 const UNGUARDED_INTENTS: ReadonlySet<QuestionIntent> = new Set(['outside']);
+// outside 스트리밍을 끊는 위반. 인용 출처 불일치는 작품 밖 인용이 흔해 지금처럼 로그만 남긴다
+const OUTSIDE_BLOCKING: ReadonlySet<GuardViolation> = new Set<GuardViolation>([
+  'verdict_phrase',
+  'page_beyond_cutoff',
+  'verbatim_over_limit',
+]);
 
 export interface ChatbotDeps {
   notesReader?: NotesReader;
@@ -334,32 +337,45 @@ export async function* handleQuery(
       }
       yield responseText;
     } else {
-      // FR-QNA-004 🚦 (2026-11-17 결정 34): outside는 스트리밍을 유지하되, 이미 나간 원문은
-      // 회수할 수 없으므로 내보내기 전에 "나간 텍스트 + 이번 청크"의 원문 일치량을 잰다.
-      // 200자를 넘기는 청크는 내보내지 않고 끊는다. 나간 텍스트는 항상 상한 이내다.
-      const measure = createVerbatimMeter(
-        [
-          ...allowedPages.map((page) => page.content),
-          ...(context.current_chapter_text ? [context.current_chapter_text] : []),
-        ],
-        quote ? [query, quote] : [query]
-      );
-      let truncated = false;
-      for await (const chunk of generateChunks(fullPrompt)) {
-        if (measure(responseText + chunk) > VERBATIM_LIMIT) {
-          truncated = true;
-          break;
+      // NFR-AI-005, FR-QNA-004 🚦 (절대 규칙 11·12): outside는 스트리밍을 유지하되, 이미 나간
+      // 글은 회수할 수 없으므로 문장 단위로 모아 "나간 텍스트 + 이번 문장"을 출력 검사에 통과시킨
+      // 뒤에만 내보낸다. 위반 문장은 내보내지 않고 끊은 뒤 고정 답변으로 맺는다.
+      // 이 경로는 재생성하지 않는다(모델 호출 1회).
+      let blocked: GuardViolation[] | undefined;
+      const release = (sentence: string): boolean => {
+        const violations = guardAgainst(responseText + sentence);
+        if (violations.some((violation) => OUTSIDE_BLOCKING.has(violation))) {
+          blocked = violations;
+          return false;
         }
-        responseText += chunk;
-        yield chunk;
+        responseText += sentence;
+        return true;
+      };
+      let pending = '';
+      stream: for await (const chunk of generateChunks(fullPrompt)) {
+        const { sentences, rest } = takeSentences(pending + chunk);
+        pending = rest;
+        for (const sentence of sentences) {
+          if (!release(sentence)) break stream;
+          yield sentence;
+        }
       }
-      if (!responseText.trim() && !truncated) throw new Error('CHATBOT_EMPTY_RESPONSE');
-      if (truncated) {
-        const notice = `${responseText ? '\n\n' : ''}${HARNESS_VERBATIM_ANSWER}`;
+      if (!blocked && pending && release(pending)) yield pending;
+
+      if (blocked) {
+        // 원문 분량만 넘은 경우는 추리 판정 안내가 아니라 원문 상한 안내로 맺는다
+        const answer = blocked
+          .filter((violation) => OUTSIDE_BLOCKING.has(violation))
+          .every((violation) => violation === 'verbatim_over_limit')
+          ? HARNESS_VERBATIM_ANSWER
+          : HARNESS_FIXED_ANSWER;
+        const notice = `${responseText ? '\n\n' : ''}${answer}`;
         responseText += notice;
         yield notice;
-        attemptViolations.push(['verbatim_over_limit']);
+        attemptViolations.push(blocked);
+        fixedAnswer = true;
       } else {
+        if (!responseText.trim()) throw new Error('CHATBOT_EMPTY_RESPONSE');
         attemptViolations.push(guardAgainst(responseText));
       }
     }

@@ -98,6 +98,12 @@ describe('원문 출력 상한 — 챗봇 응답 (답변당 합계 200자)', () 
   });
 
   describe('작품 밖 질문(outside) — 스트리밍하면서 원문 200자에서 끊는다', () => {
+    // outside는 문장(줄) 단위로 검사한 뒤 내보내므로, 원문을 50자씩 줄로 나눠 옮기는 답을 흉내 낸다.
+    // 줄바꿈은 원문 일치 계산에서 무시되므로 일치량은 그대로다.
+    function inLines(text: string, width = 50): string {
+      return (text.match(new RegExp(`.{1,${width}}`, 'gsu')) ?? []).join('\n');
+    }
+
     function streamInChunks(text: string, size = 20): void {
       const mock = llmStream as jest.Mock;
       mock.mockReset();
@@ -113,7 +119,7 @@ describe('원문 출력 상한 — 챗봇 응답 (답변당 합계 200자)', () 
     }
 
     test('FR-QNA-004: outside 답변도 원문 일치가 200자를 넘는 순간 끊겨 나간 텍스트의 원문 일치는 0건 초과 없음', async () => {
-      streamInChunks(SOURCE.slice(0, 300));
+      streamInChunks(inLines(SOURCE.slice(0, 300)));
       const chunks = await runChunks('이 쪽 번역해줘');
       const out = chunks.join('');
       const copied = out.endsWith(HARNESS_VERBATIM_ANSWER)
@@ -121,7 +127,7 @@ describe('원문 출력 상한 — 챗봇 응답 (답변당 합계 200자)', () 
         : out;
       expect(out.endsWith(HARNESS_VERBATIM_ANSWER)).toBe(true);
       expect(verbatimLength(copied, [SOURCE])).toBeLessThanOrEqual(200);
-      expect(out).not.toContain(SOURCE.slice(0, 260));
+      expect(out.replace(/\n/g, '')).not.toContain(SOURCE.slice(0, 260));
       // 스트리밍은 유지된다: 끊기기 전까지 여러 청크로 나간다
       expect(chunks.length).toBeGreaterThan(2);
       expect(llmStream).toHaveBeenCalledTimes(1);
@@ -130,7 +136,7 @@ describe('원문 출력 상한 — 챗봇 응답 (답변당 합계 200자)', () 
     });
 
     test('FR-QNA-004: outside 답변이 원문 200자 이하면 끊지 않고 그대로 스트리밍한다 (positive 쌍)', async () => {
-      const text = `번역은 제가 해 드릴 수 없어요. ${SOURCE.slice(0, 150)}`;
+      const text = `번역은 제가 해 드릴 수 없어요. ${inLines(SOURCE.slice(0, 150))}`;
       streamInChunks(text);
       const chunks = await runChunks('이 쪽 번역해줘');
       expect(chunks.join('')).toBe(text);

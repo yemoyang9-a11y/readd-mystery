@@ -115,8 +115,8 @@ describe('챗봇 하네스 (FR-QNA-004 🚦, NFR-AI-005)', () => {
     expect(llmStream).not.toHaveBeenCalled();
   });
 
-  test('FR-QNA-004: 작품 밖 질문만 청크 단위로 바로 스트리밍한다', async () => {
-    answers('날씨는 제가 알 수 없어요.');
+  test('FR-QNA-004: 작품 밖 질문만 문장 단위로 검사하며 스트리밍한다', async () => {
+    answers('날씨는 제가 알 수 없어요. 대신 책 이야기를 해요.');
     const chunks: string[] = [];
     for await (const chunk of handleQuery(BOOK_ID, '오늘 날씨 어때?', K, DEVICE_ID)) {
       chunks.push(chunk);
