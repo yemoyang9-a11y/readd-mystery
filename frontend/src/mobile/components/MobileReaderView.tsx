@@ -38,6 +38,7 @@ export default function MobileReaderView({
   canToggleChrome = false,
   onToggleChrome,
   onOpenCommunity,
+  communityLocked = false,
   onBack,
 }: {
   content: string;
@@ -56,7 +57,10 @@ export default function MobileReaderView({
   chromeHidden?: boolean;
   canToggleChrome?: boolean;
   onToggleChrome?: () => void;
+  /** 서버가 완독(is_complete)이라고 알려 준 독자에게만 넘긴다 — 마지막 쪽 도달은 완독이 아니다 (FR-BRF-005 🚦) */
   onOpenCommunity?: () => void;
+  /** 서버가 완독이 아니라고 답한 경우. 글 수·제목 없는 안내 한 줄만 그린다 */
+  communityLocked?: boolean;
   onBack?: () => void;
 }) {
   const theme = READER_THEMES[prefs.theme];
@@ -218,6 +222,15 @@ export default function MobileReaderView({
             </header>
           ) : null}
           {highlightContent(content, highlightedQuote)}
+          {nextPage === null && !onOpenCommunity && communityLocked ? (
+            <p
+              data-testid="community-locked-hint"
+              className="mt-12 whitespace-normal break-keep border-t border-brief-rule pt-8 text-center font-dashSans text-[14px] text-brief-muted"
+              style={darkInk}
+            >
+              앞부분까지 모두 읽으면 완독자 이야기가 열려요
+            </p>
+          ) : null}
           {nextPage === null && onOpenCommunity ? (
             <section
               aria-label="완독"
