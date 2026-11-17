@@ -4,6 +4,7 @@ import {
   buildQuoteSection,
   HARNESS_GUIDANCE,
   HARNESS_RETRY_NOTICE,
+  VERBATIM_RETRY_NOTICE,
 } from './response-policy';
 import type { ChatbotQueryLog } from '../../shared/types';
 import { assembleContext, buildStableContextParts } from './context-assembly';
@@ -19,7 +20,11 @@ import { formatConversationInput } from './conversation-input';
 import { emptyNotesReader, type NotesReader } from './notes-reader';
 import { classifyQuestion, type QuestionIntent } from './harness/question-intent';
 import { guardAnswer, type GuardViolation } from './harness/output-guard';
-import { HARNESS_FIXED_ANSWER, HARNESS_PREDICTION_ANSWER } from './harness/messages';
+import {
+  HARNESS_FIXED_ANSWER,
+  HARNESS_PREDICTION_ANSWER,
+  HARNESS_VERBATIM_ANSWER,
+} from './harness/messages';
 
 const MOCK_MODE = process.env.MOCK_MODE === 'true';
 
@@ -287,6 +292,7 @@ export async function* handleQuery(
         pages: allowedPages,
         intent,
         echoedUserText: quote ? [query, quote] : [query],
+        rawText: context.current_chapter_text ? [context.current_chapter_text] : [],
       }).violations;
 
     let responseText = '';
@@ -308,12 +314,18 @@ export async function* handleQuery(
           break;
         }
         if (attempt === 1) {
-          responseText = HARNESS_FIXED_ANSWER;
+          // 원문 분량만 넘은 경우는 추리 판정 안내가 아니라 원문 상한 안내로 대체한다
+          responseText = violations.every((v) => v === 'verbatim_over_limit')
+            ? HARNESS_VERBATIM_ANSWER
+            : HARNESS_FIXED_ANSWER;
           fixedAnswer = true;
           break;
         }
         modelCalls++;
-        attemptPrompt = fullPrompt + HARNESS_RETRY_NOTICE;
+        attemptPrompt =
+          fullPrompt +
+          HARNESS_RETRY_NOTICE +
+          (violations.includes('verbatim_over_limit') ? VERBATIM_RETRY_NOTICE : '');
       }
       yield responseText;
     } else {
