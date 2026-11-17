@@ -60,7 +60,7 @@ export interface GroundedRelationship {
 }
 
 export interface ReviewCandidate {
-  kind: 'character' | 'alias' | 'note' | 'relationship' | 'identity';
+  kind: 'character' | 'alias' | 'note' | 'relationship' | 'identity' | 'event';
   reason: string;
   candidate: unknown;
 }
@@ -87,8 +87,8 @@ export interface GroundingOptions {
   requireStoryPresence?: boolean;
 }
 
-/** Exact provenance is necessary, not a semantic proof of the extractor's conclusion. */
-function validEvidence(
+/** Exact provenance is necessary, not a semantic proof of the extractor's conclusion. NFR-AI-004 */
+export function validEvidence(
   value: unknown,
   pages: Page[],
   date: unknown,

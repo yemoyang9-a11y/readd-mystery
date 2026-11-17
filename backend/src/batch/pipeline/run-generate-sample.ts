@@ -19,9 +19,9 @@ import {
   buildRelationshipPrompt,
   buildBackgroundPrompt,
   buildTermPrompt,
-  buildEventPrompt,
   parseJsonResponse,
 } from './generate';
+import { evaluateChapterEvents, extractChapterEventsRaw } from './event-scenes';
 import { checkPageBounds } from './validate';
 import { validateGroundedChapter } from './grounding';
 import { bookArgsFromCli, parseChapterNo, requireBookMeta } from './run-args';
@@ -172,15 +172,20 @@ async function main(): Promise<void> {
 
   // 6) 사건
   console.log('\n--- ⑥ 사건 ---');
-  const eventOut = await callJson<{
-    events: { event: string; description: string; occurrence_page: number }[];
-  }>('generate_event', buildEventPrompt(chapter, pages), chapter.chapter_no);
+  // FR-DAT-008 — 장면 단위 추출(경계 1회 + 장면당 1회). 장면 입력은 장 시작~그 장면 끝뿐(FR-SPL-002 🚦)
+  const eventRaw = await extractChapterEventsRaw(chapter, pages, (prompt) =>
+    callJson<unknown>('generate_event', prompt, chapter.chapter_no)
+  );
+  const eventOut = evaluateChapterEvents(pages, eventRaw);
   console.log(JSON.stringify(eventOut, null, 1));
   reportPageBounds(
     '사건',
     eventOut.events.map((e) => e.occurrence_page)
   );
-  results.events = eventOut;
+  results.events = { events: eventOut.events };
+  results.event_scenes = eventOut.scenes;
+  results.event_review = eventOut.review;
+  results.raw_event_responses = eventRaw;
 
   const outDir = args.generatedDir;
   fs.mkdirSync(outDir, { recursive: true });

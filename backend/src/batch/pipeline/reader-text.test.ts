@@ -3,6 +3,8 @@ import {
   ReaderTextInput,
   buildReaderTextPrompt,
   eventReaderInput,
+  introducedNames,
+  readerNameLexicon,
   relationshipReaderInput,
   rewriteReaderTexts,
   validateReaderText,
@@ -158,5 +160,37 @@ describe('relationshipReaderInput', () => {
 
   test('사건 항목은 names가 비어 있다', () => {
     expect(eventReaderInput('1-0', '사건').names).toEqual([]);
+  });
+});
+
+describe('NFR-AI-004: 독자용 문장에 원래 없던 고유명사', () => {
+  const lexicon = ['유불란', '박영민', '이몽란', '백마'];
+
+  test('NFR-AI-004: 원래 문장에 없던 인물명이 새로 생기면 그 이름을 돌려준다', () => {
+    expect(introducedNames('형사가 칼을 발견했다', '박영민이 칼을 발견해요.', lexicon)).toEqual([
+      '박영민',
+    ]);
+  });
+
+  test('NFR-AI-004: positive — 원래 문장에 있던 이름만 쓰면 빈 목록', () => {
+    expect(
+      introducedNames('유불란이 손수건을 주웠다', '유불란이 손수건을 주워요.', lexicon)
+    ).toEqual([]);
+  });
+
+  test('NFR-AI-004: 사전은 인물 대표명과 이름·별명 별칭만, 두 글자 이상만 쓴다', () => {
+    expect(
+      readerNameLexicon([
+        {
+          name: '유불란',
+          aliases: [
+            { alias: '백마', type: 'nickname' },
+            { alias: '선생', type: 'title' },
+            { alias: '아버지', type: 'kinship' },
+            { alias: '유', type: 'name' },
+          ],
+        },
+      ])
+    ).toEqual(['유불란', '백마']);
   });
 });
