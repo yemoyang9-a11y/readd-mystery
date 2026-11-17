@@ -306,7 +306,13 @@ export function mockTimelineResponse(page?: number): TimelineResponse {
   return {
     chapters: mockChapters
       .filter((c) => c.start_page <= k)
-      .map(({ chapter_no, title, start_page, end_page }) => ({ chapter_no, title, start_page, end_page })),
+      .map(({ chapter_no, title, start_page, end_page }) => ({
+        chapter_no,
+        title,
+        start_page,
+        end_page,
+        completed: end_page <= k,
+      })),
     events: mockTimelineEvents.filter((e) => e.occurrence_page <= k),
     applied_cutoff: k,
   };

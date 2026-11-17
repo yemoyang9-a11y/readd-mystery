@@ -6,8 +6,8 @@ import type { TimelineResponse } from '../../types';
 const timeline: TimelineResponse = {
   applied_cutoff: 13,
   chapters: [
-    { chapter_no: 1, title: '첫 장', start_page: 1, end_page: 9 },
-    { chapter_no: 2, title: '둘째 장', start_page: 10, end_page: 25 },
+    { chapter_no: 1, title: '첫 장', start_page: 1, end_page: 9, completed: true },
+    { chapter_no: 2, title: '둘째 장', start_page: 10, end_page: 25, completed: false },
   ],
   events: [
     { id: 'e1', event: '편지가 도착해요', description: '유불란에게 편지가 와요.', occurrence_page: 4 },
@@ -64,6 +64,30 @@ describe('사건 정리', () => {
     expect(within(lastChapter).queryAllByRole('button')).toHaveLength(0);
     const firstChapter = screen.getByText('첫 장').closest('li') as HTMLElement;
     expect(within(firstChapter).queryByText('이 장을 다 읽으면 사건이 정리돼요')).toBeNull();
+  });
+
+  // 2026-11-17 대표 결정 — 다 읽은 장인지는 서버가 준 completed 로만 안다
+  it('마지막 장을 다 읽었는데 그 장에 사건이 0건이면 다 읽으면 정리된다는 안내가 없다', () => {
+    const finished: TimelineResponse = {
+      applied_cutoff: 25,
+      chapters: timeline.chapters.map((chapter) => ({ ...chapter, completed: true })),
+      events: timeline.events.filter((event) => event.id !== 'e3'),
+    };
+    render(<EventSummary timeline={finished} failed={false} />);
+    expect(screen.queryByText('이 장을 다 읽으면 사건이 정리돼요')).toBeNull();
+    const lastChapter = screen.getByText('둘째 장').closest('li') as HTMLElement;
+    expect(within(lastChapter).queryAllByRole('button')).toHaveLength(0);
+  });
+
+  it('다 읽은 장인지는 쪽수가 아니라 서버의 completed 로만 정한다', () => {
+    // 기준점·쪽수만 보면 다 읽은 것처럼 보여도 서버가 completed=false 를 주면 안내가 뜬다
+    const serverSaysReading: TimelineResponse = {
+      applied_cutoff: 25,
+      chapters: timeline.chapters,
+      events: timeline.events.filter((event) => event.id !== 'e3'),
+    };
+    render(<EventSummary timeline={serverSaysReading} failed={false} />);
+    expect(screen.getByText('이 장을 다 읽으면 사건이 정리돼요')).toBeInTheDocument();
   });
 
   it('지금 읽는 장에 사건이 있으면 안내 한 줄은 없다', () => {

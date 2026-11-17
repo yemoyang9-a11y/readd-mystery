@@ -318,7 +318,7 @@ describe('싸비 사이드창', () => {
   describe('추리 노트 안 사건 정리', () => {
     const timeline = {
       applied_cutoff: 12,
-      chapters: [{ chapter_no: 1, title: '첫 장', start_page: 1, end_page: 9 }],
+      chapters: [{ chapter_no: 1, title: '첫 장', start_page: 1, end_page: 9, completed: true }],
       events: [{ id: 'e1', event: '편지가 도착해요', description: null, occurrence_page: 4 }],
     };
 

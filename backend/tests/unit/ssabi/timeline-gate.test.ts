@@ -66,6 +66,39 @@ describe('FR-SPL-002 🚦: 타임라인 스포일러 상한', () => {
     expect(t.chapters.map((c) => c.chapter_no)).toEqual([1, 2]);
   });
 
+  // 2026-11-17 대표 결정 — "이 장을 다 읽으면…" 안내의 근거. 장 경계는 목차라 상한 대상이 아니다(R3)
+  it('FR-SPL-002: 읽는 중인 장은 completed=false, 다 읽은 장은 completed=true', async () => {
+    // 2장 = 10~25쪽. K=13은 2장 중간
+    const reading = await service.getTimeline(BOOK, 13);
+    expect(reading.chapters.map((c) => [c.chapter_no, c.completed])).toEqual([
+      [1, true],
+      [2, false],
+    ]);
+    // 마지막 쪽 직전(K=24)에도 아직 다 읽은 장이 아니다
+    const almost = await service.getTimeline(BOOK, 24);
+    expect(almost.chapters.find((c) => c.chapter_no === 2)!.completed).toBe(false);
+  });
+
+  it('FR-SPL-002: 그 장 마지막 쪽(K=25)까지 읽으면 completed=true로 바뀐다', async () => {
+    const t = await service.getTimeline(BOOK, 25);
+    expect(t.chapters.map((c) => [c.chapter_no, c.completed])).toEqual([
+      [1, true],
+      [2, true],
+    ]);
+  });
+
+  it('FR-SPL-002: completed를 실어도 기준점 뒤에서 시작하는 장은 0건', async () => {
+    const t = await service.getTimeline(BOOK, 25);
+    expect(t.chapters.filter((c) => c.start_page > 25)).toHaveLength(0);
+    // positive 쌍 — 기준점을 올리면 3장이 보인다
+    const later = await service.getTimeline(BOOK, 26);
+    expect(later.chapters.map((c) => [c.chapter_no, c.completed])).toEqual([
+      [1, true],
+      [2, true],
+      [3, false],
+    ]);
+  });
+
   it('FR-SPL-002: 다른 책의 장·사건은 섞이지 않는다', async () => {
     const t = await service.getTimeline('other-book', 40);
     expect(t.chapters).toHaveLength(0);
@@ -104,6 +137,15 @@ describe('FR-SPL-002 🚦: 타임라인 pg 쿼리 계약', () => {
     expect(eventSql).toMatch(new RegExp(`${alias}\\.start_page\\s*<=\\s*\\w+\\.occurrence_page`, 'i'));
     expect(eventSql).toMatch(new RegExp(`${alias}\\.end_page\\s*>=\\s*\\w+\\.occurrence_page`, 'i'));
     expect(eventSql).toMatch(new RegExp(`${alias}\\.book_id\\s*=\\s*\\w+\\.book_id`, 'i'));
+  });
+
+  it('FR-SPL-002: 장 쿼리는 completed를 end_page <= 기준점($2) SQL 식으로 고른다 — 조회 밖에서 판정하지 않는다', async () => {
+    const { query, repository } = capture();
+    await repository.findTimeline('synthetic-book', 13);
+    const chapterSql: string = query.mock.calls[0][0];
+    expect(chapterSql).toMatch(/\(\s*end_page\s*<=\s*\$2\s*\)\s+AS\s+completed/i);
+    // 장 목록 자체의 상한은 그대로다
+    expect(chapterSql.slice(chapterSql.search(/\bWHERE\b/i))).toMatch(/start_page\s*<=\s*\$2/i);
   });
 
   it('FR-SPL-002: 사건은 reader_description만 description으로 고르고 원본 컬럼은 고르지 않는다', async () => {

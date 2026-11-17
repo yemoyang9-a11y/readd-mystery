@@ -207,7 +207,8 @@ export function createPgSsabiRepository(db: QueryClient): SsabiRepository {
     async findTimeline(bookId: string, cutoff: number): Promise<Timeline> {
       // FR-SPL-002 🚦
       const chapters = await db.query(
-        `SELECT chapter_no, title, start_page, end_page
+        `SELECT chapter_no, title, start_page, end_page,
+                (end_page <= $2) AS completed
            FROM chapters
           WHERE book_id = $1
             AND start_page <= $2

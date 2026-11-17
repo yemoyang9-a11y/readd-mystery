@@ -21,6 +21,11 @@ export interface TimelineChapter {
   title: string;
   start_page: number;
   end_page: number;
+  /**
+   * 다 읽은 장인가 (end_page <= cutoff). 조회 쿼리가 cutoff 로 고른 값이다 — "이 장을 다 읽으면
+   * 사건이 정리돼요" 안내의 근거 (2026-11-17 대표 결정). 장 경계는 목차라 상한 대상이 아니다 (R3).
+   */
+  completed: boolean;
 }
 
 export interface TimelineEvent {
@@ -120,6 +125,7 @@ export interface SsabiRepository {
    * 타임라인(장 + 사건) 조회
    *
    * FR-SPL-002 🚦: 장 시작 페이지·사건 발생 페이지 <= cutoff
+   * 장마다 completed(end_page <= cutoff)를 함께 고른다
    * 사건 description은 독자용 문장(reader_description)만 내보낸다
    */
   findTimeline(bookId: string, cutoff: number): Promise<Timeline>;
