@@ -184,7 +184,6 @@ async function* generateAndPersist(
   const prompt = buildRecapPrompt(input, targetSentences);
 
   let fullText = '';
-  let usage: LLMUsage | undefined;
   const gen = io.llmStream('recap', prompt, { maxTokens: RECAP_MAX_TOKENS_SAFETY });
   let step = await gen.next();
   while (!step.done) {
@@ -211,7 +210,7 @@ async function* generateAndPersist(
     }
     step = { done: true, value: undefined };
   }
-  usage = step.value ?? undefined; // gen.next()의 마지막 호출 — TReturn 값 (for await로는 못 받는다)
+  const usage: LLMUsage | undefined = step.value ?? undefined; // gen.next()의 마지막 호출 — TReturn 값 (for await로는 못 받는다)
 
   if (trigger === 'realtime') {
     await io.sessionCache.saveCached(

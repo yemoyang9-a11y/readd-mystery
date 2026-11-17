@@ -300,6 +300,20 @@ export function validateSplit(
     }
   }
 
+  // FR-DAT-001 🚦 — 합집합의 끝도 마지막 쪽과 같아야 하고, 장마다 시작 쪽 <= 끝 쪽이어야 한다
+  const lastPageNo = pages.reduce((max, p) => Math.max(max, p.page_no), 0);
+  const lastChapter = sortedChapters[sortedChapters.length - 1];
+  if (lastChapter && lastChapter.end_page !== lastPageNo) {
+    chapterCoverageViolations++;
+    details.push('FR-DAT-001 위반: 마지막 장이 마지막 페이지에서 끝나지 않음');
+  }
+  for (const chapter of sortedChapters) {
+    if (chapter.start_page > chapter.end_page) {
+      chapterCoverageViolations++;
+      details.push(`FR-DAT-001 위반: 장 ${chapter.chapter_no}의 시작 페이지가 끝 페이지보다 뒤`);
+    }
+  }
+
   return {
     coverageViolations,
     crossChapterViolations: crossChapterViolations + chapterCoverageViolations,

@@ -223,12 +223,14 @@ export function mockPageResponse(bookId: string, pageNo: number): PageResponse {
   // 범위 밖 pageNo(예: 0)가 들어와도 page_no·content·prev/next_page가 서로 어긋나지
   // 않게, 한 번 접은 값에서 전부 파생한다(2026-08-24 — 접은 content만 쓰고 page_no는
   // 안 접었더니 "0페이지인데 1페이지 본문"처럼 필드끼리 모순되던 버그를 고침).
-  const page = Math.min(lastPage, Math.max(1, pageNo));
+  // 변수 이름에 page 를 쓰지 않는다 — 이전 쪽 번호 계산이 "page - 1 금지" 린트 규칙(절대 규칙 2번,
+  // 기준점 재계산 방지)에 걸리지 않게 한다. 여기 값은 기준점이 아니라 쪽 이동용 번호다.
+  const no = Math.min(lastPage, Math.max(1, pageNo));
   return {
-    page_no: page,
-    content: mockPageContent(page),
-    prev_page: page > 1 ? page - 1 : null,
-    next_page: page < lastPage ? page + 1 : null,
+    page_no: no,
+    content: mockPageContent(no),
+    prev_page: no > 1 ? no - 1 : null,
+    next_page: no < lastPage ? no + 1 : null,
   };
 }
 

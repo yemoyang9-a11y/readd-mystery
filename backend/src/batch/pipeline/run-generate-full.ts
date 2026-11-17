@@ -372,8 +372,9 @@ export async function loadOrGenerateChapterEvents(
     raw = cached;
   } else {
     // 게이트웨이 경유만 — 4.3절. 배치 전용이라 런타임 호출 수(R9)와 무관하다
-    raw = await extractChapterEventsRaw(chapter, pages, (prompt) =>
-      callJson<unknown>('generate_event', prompt, chapter.chapter_no)
+    raw = await extractChapterEventsRaw(chapter, pages, (prompt, task) =>
+      // NFR-OBS-004 — 경계 호출과 장면별 추출의 작업 이름이 달라 비용 지표가 나뉜다
+      callJson<unknown>(task, prompt, chapter.chapter_no)
     );
     const sealed = sealChapterCache(
       { chapter_no: chapter.chapter_no, ...raw },

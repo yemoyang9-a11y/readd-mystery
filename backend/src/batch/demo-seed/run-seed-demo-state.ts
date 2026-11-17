@@ -34,7 +34,9 @@ async function main(): Promise<void> {
   const cutoffArg = process.argv[2];
   const cutoff = cutoffArg ? parseInt(cutoffArg, 10) : NaN;
   if (!Number.isInteger(cutoff) || cutoff < 0) {
-    console.error('[FAIL] 기준점(cutoff)을 0 이상 정수로 지정할 것 — 예: run-seed-demo-state.ts 100');
+    console.error(
+      '[FAIL] 기준점(cutoff)을 0 이상 정수로 지정할 것 — 예: run-seed-demo-state.ts 100'
+    );
     process.exit(1);
   }
 

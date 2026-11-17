@@ -55,6 +55,18 @@ describe('NFR-AI-001: provider and model configuration', () => {
     expect(new Set(Object.values(config.MODEL_CONFIG))).toEqual(new Set(['test-openai-model']));
   });
 
+  test('NFR-OBS-004: 장면 경계 작업 이름은 사건 추출과 같은 모델을 쓰고 경고 없이 통과한다', () => {
+    const config = load({ LLM_PROVIDER: 'openai', OPENAI_MODEL: 'test-openai-model' });
+    const warn = jest.spyOn(console, 'warn').mockImplementation();
+    expect(config.getModelForTask('generate_event_scene_boundary')).toBe(
+      config.MODEL_CONFIG.generate_event
+    );
+    expect(warn).not.toHaveBeenCalled();
+    // 장 캐시 계약이 MODEL_CONFIG 를 통째로 담으므로 키를 늘리지 않는다 (기존 생성 결과 재사용)
+    expect(Object.keys(config.MODEL_CONFIG)).not.toContain('generate_event_scene_boundary');
+    warn.mockRestore();
+  });
+
   test('unknown task warns and uses the same selected provider model', () => {
     const config = load({ LLM_PROVIDER: 'openai', OPENAI_MODEL: 'test-openai-model' });
     const warn = jest.spyOn(console, 'warn').mockImplementation();

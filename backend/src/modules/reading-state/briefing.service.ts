@@ -12,11 +12,7 @@
  */
 
 import type { CutoffService } from './cutoff.service';
-import type {
-  BookMetaReader,
-  ReadingPositionRepository,
-  SavedRecapRepository,
-} from './repository';
+import type { BookMetaReader, ReadingPositionRepository, SavedRecapRepository } from './repository';
 import type { BriefingResponse } from '../../shared/types';
 
 export interface BriefingServiceDeps {

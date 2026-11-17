@@ -6,6 +6,8 @@ import {
   buildSceneEventPrompt,
   chapterEventCallCount,
   evaluateChapterEvents,
+  EVENT_SCENE_BOUNDARY_TASK,
+  EVENT_SCENE_EXTRACTION_TASK,
   extractChapterEventsRaw,
   resolveScenes,
   validateSceneEvents,
@@ -157,6 +159,24 @@ describe('장면별 사건 추출 입력 — FR-SPL-002 🚦', () => {
     expect(prompts[1]).toContain('손수건을 주웠다');
     expect(prompts[2]).not.toContain('이튿날 아침');
     expect(prompts[2]).toContain('찻집에 앉아');
+  });
+
+  test('NFR-OBS-004: 장면 경계 호출과 장면별 추출 호출은 작업 이름이 다르다 — 비용 지표가 나뉜다', async () => {
+    const tasks: string[] = [];
+    const ask = async (_prompt: string, task: string): Promise<unknown> => {
+      tasks.push(task);
+      return tasks.length === 1 ? THREE_SCENES : { events: [] };
+    };
+    await extractChapterEventsRaw(chapter, pages, ask);
+    expect(EVENT_SCENE_BOUNDARY_TASK).not.toBe(EVENT_SCENE_EXTRACTION_TASK);
+    expect(tasks).toEqual([
+      EVENT_SCENE_BOUNDARY_TASK,
+      EVENT_SCENE_EXTRACTION_TASK,
+      EVENT_SCENE_EXTRACTION_TASK,
+      EVENT_SCENE_EXTRACTION_TASK,
+    ]);
+    expect(EVENT_SCENE_BOUNDARY_TASK).toBe('generate_event_scene_boundary');
+    expect(EVENT_SCENE_EXTRACTION_TASK).toBe('generate_event');
   });
 
   test('FR-DAT-008: 장당 LLM 호출 수 = 1(경계) + 장면 수', async () => {

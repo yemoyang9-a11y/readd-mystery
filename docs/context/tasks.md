@@ -44,15 +44,14 @@
 
 | 항목 | 메모 |
 | --- | --- |
-| `chatbot/service.ts` eslint 오류 | `no-inner-declarations`(`generateChunks` 선언 위치). `feat/chatbot-verbatim-limit` 이전부터 있었다 |
 | 백엔드 jest 종료 경고 | 전체 실행 시 "worker process has failed to exit gracefully". 시험은 모두 통과 |
-| 장 범위가 겹치면 사건 중복 | 사건 조회가 장 범위로 조인하므로 범위가 겹치는 책에서는 같은 사건이 두 번 나올 수 있다(챗봇 쿼리도 같음). 파이프라인이 장 범위 겹침을 막는지 확인 필요 |
-| 사건 추출 LLM 지표 구분 안 됨 | 장면 경계와 장면별 추출이 같은 작업 이름(`generate_event`)이라 비용 지표에서 나뉘지 않는다 |
+| 남은 린트 오류 | 백엔드 `npx eslint src --ext .ts` 기준으로 서식(prettier) 오류가 `chatbot/harness/question-intent.ts`·`community/router.ts`·`ingest/admin-router.ts`(특수 공백 1건 포함)·`llm-gateway/retry.ts`에 남아 있다(동작과 무관, 이번 작업 범위 밖). 백엔드 `src` 안의 테스트 파일은 tsconfig에 없어 린트가 "Parsing error"를 낸다. 프론트 `mocks/pages.ts`의 `pageNo - 1`은 린트 대상(`src`) 밖이다 |
 
 ## 5. 완료
 
 | 날짜 | 작업 | 커밋 |
 | --- | --- | --- |
+| 2026-11-17 | 알려진 문제 정리 — ① `chatbot/service.ts` 린트 오류(`generateChunks` 선언 위치) ② 장 범위 겹침: 등록 단계(`validateSplit`)가 이미 겹침·간극을 거절함을 시험으로 고정하고, 마지막 장이 마지막 쪽에서 끝나는지·시작 쪽 ≤ 끝 쪽 검사를 추가 ③ 장면 경계 AI 호출의 작업 이름을 `generate_event_scene_boundary`로 분리(장면별 추출은 `generate_event` 그대로) ④ `recap.service.ts`·`run-seed-demo-state.ts` 린트 오류, mock의 `page - 1` | (이 커밋) |
 | 2026-11-17 | 사건 정리 "이 장을 다 읽으면…" 안내 정확도 — 사건 정리 응답의 장마다 서버가 다 읽었는지(`completed`)를 싣고, 다 읽은 장에는 안내를 내지 않는다 | (이 커밋) |
 | 2026-11-17 | 첫 방문 브리핑(휴대폰 화면)에 배경지식 표시 — 작품 소개 아래. `GET /info`의 `background` 그대로, 없거나 조회 실패면 그리지 않는다 | (이 커밋) |
 | 2026-11-17 | 브리핑 응답에 마지막 읽은 시각(`last_read_at`) 추가 — 브리핑 화면이 `GET /books`를 따로 부르지 않는다. 화면 동작은 같다 | (이 커밋) |

@@ -173,8 +173,9 @@ async function main(): Promise<void> {
   // 6) 사건
   console.log('\n--- ⑥ 사건 ---');
   // FR-DAT-008 — 장면 단위 추출(경계 1회 + 장면당 1회). 장면 입력은 장 시작~그 장면 끝뿐(FR-SPL-002 🚦)
-  const eventRaw = await extractChapterEventsRaw(chapter, pages, (prompt) =>
-    callJson<unknown>('generate_event', prompt, chapter.chapter_no)
+  const eventRaw = await extractChapterEventsRaw(chapter, pages, (prompt, task) =>
+    // NFR-OBS-004 — 경계 호출과 장면별 추출의 작업 이름이 달라 비용 지표가 나뉜다
+    callJson<unknown>(task, prompt, chapter.chapter_no)
   );
   const eventOut = evaluateChapterEvents(pages, eventRaw);
   console.log(JSON.stringify(eventOut, null, 1));
