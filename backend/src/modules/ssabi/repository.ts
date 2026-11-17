@@ -4,7 +4,7 @@
  * ⚠️ G1 제약: 모든 메서드가 cutoff 인자를 갖는다
  * 인자가 없는 메서드는 그 자체로 우회 표면이 된다.
  *
- * 조항: FR-SPL-002 🚦, FR-CHR-001, query-endpoints-split.md §5
+ * 조항: FR-SPL-002 🚦, FR-CHR-001, docs/archive/2026-08-hackathon/query-endpoints-split.md §5
  */
 
 import type {
