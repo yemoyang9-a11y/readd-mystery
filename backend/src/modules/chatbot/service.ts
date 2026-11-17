@@ -4,6 +4,7 @@ import {
   buildQuoteSection,
   HARNESS_GUIDANCE,
   HARNESS_RETRY_NOTICE,
+  VERBATIM_RETRY_NOTICE,
 } from './response-policy';
 import type { ChatbotQueryLog } from '../../shared/types';
 import { assembleContext, buildStableContextParts } from './context-assembly';
@@ -18,8 +19,17 @@ import { resolveConversationContext } from './conversation-context';
 import { formatConversationInput } from './conversation-input';
 import { emptyNotesReader, type NotesReader } from './notes-reader';
 import { classifyQuestion, type QuestionIntent } from './harness/question-intent';
-import { guardAnswer, type GuardViolation } from './harness/output-guard';
-import { HARNESS_FIXED_ANSWER, HARNESS_PREDICTION_ANSWER } from './harness/messages';
+import {
+  createVerbatimMeter,
+  guardAnswer,
+  VERBATIM_LIMIT,
+  type GuardViolation,
+} from './harness/output-guard';
+import {
+  HARNESS_FIXED_ANSWER,
+  HARNESS_PREDICTION_ANSWER,
+  HARNESS_VERBATIM_ANSWER,
+} from './harness/messages';
 
 const MOCK_MODE = process.env.MOCK_MODE === 'true';
 
@@ -287,6 +297,7 @@ export async function* handleQuery(
         pages: allowedPages,
         intent,
         echoedUserText: quote ? [query, quote] : [query],
+        rawText: context.current_chapter_text ? [context.current_chapter_text] : [],
       }).violations;
 
     let responseText = '';
@@ -308,21 +319,49 @@ export async function* handleQuery(
           break;
         }
         if (attempt === 1) {
-          responseText = HARNESS_FIXED_ANSWER;
+          // 원문 분량만 넘은 경우는 추리 판정 안내가 아니라 원문 상한 안내로 대체한다
+          responseText = violations.every((v) => v === 'verbatim_over_limit')
+            ? HARNESS_VERBATIM_ANSWER
+            : HARNESS_FIXED_ANSWER;
           fixedAnswer = true;
           break;
         }
         modelCalls++;
-        attemptPrompt = fullPrompt + HARNESS_RETRY_NOTICE;
+        attemptPrompt =
+          fullPrompt +
+          HARNESS_RETRY_NOTICE +
+          (violations.includes('verbatim_over_limit') ? VERBATIM_RETRY_NOTICE : '');
       }
       yield responseText;
     } else {
+      // FR-QNA-004 🚦 (2026-11-17 결정 34): outside는 스트리밍을 유지하되, 이미 나간 원문은
+      // 회수할 수 없으므로 내보내기 전에 "나간 텍스트 + 이번 청크"의 원문 일치량을 잰다.
+      // 200자를 넘기는 청크는 내보내지 않고 끊는다. 나간 텍스트는 항상 상한 이내다.
+      const measure = createVerbatimMeter(
+        [
+          ...allowedPages.map((page) => page.content),
+          ...(context.current_chapter_text ? [context.current_chapter_text] : []),
+        ],
+        quote ? [query, quote] : [query]
+      );
+      let truncated = false;
       for await (const chunk of generateChunks(fullPrompt)) {
+        if (measure(responseText + chunk) > VERBATIM_LIMIT) {
+          truncated = true;
+          break;
+        }
         responseText += chunk;
         yield chunk;
       }
-      if (!responseText.trim()) throw new Error('CHATBOT_EMPTY_RESPONSE');
-      attemptViolations.push(guardAgainst(responseText));
+      if (!responseText.trim() && !truncated) throw new Error('CHATBOT_EMPTY_RESPONSE');
+      if (truncated) {
+        const notice = `${responseText ? '\n\n' : ''}${HARNESS_VERBATIM_ANSWER}`;
+        responseText += notice;
+        yield notice;
+        attemptViolations.push(['verbatim_over_limit']);
+      } else {
+        attemptViolations.push(guardAgainst(responseText));
+      }
     }
 
     if (conversationId != null) {
