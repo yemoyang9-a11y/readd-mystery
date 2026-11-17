@@ -13,6 +13,7 @@ function briefing(overrides: Partial<BriefingResponse> = {}): BriefingResponse {
     applied_cutoff: 15,
     recap: '정주사는 미두장에서 재산을 잃었다.',
     current_chapter: { chapter_no: 2, title: '생활 제일과' },
+    resume_chapter: { chapter_no: 2, title: '생활 제일과' },
     progress: { current_page: 15, total_pages: 20, percent: 75 },
     ...overrides,
   };

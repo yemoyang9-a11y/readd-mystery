@@ -83,4 +83,21 @@ describe('브리핑 조립 — getBriefing', () => {
     expect(briefing.applied_cutoff).toBe(0);
     expect(briefing.recap).toBeNull();
   });
+
+  test('FR-BRF-005 🚦: resume_chapter는 이어 읽기 위치의 장 — 되돌아가 읽어도 쪽(progress.current_page)과 어긋나지 않는다', async () => {
+    const { positions, service } = build();
+    positions.set(SEED_DEVICE_ID, SEED_BOOK_ID, {
+      current_page: 5,
+      event_seq: 2,
+      max_page: 25,
+      read_pages: Array.from({ length: 25 }, (_, i) => i + 1),
+    });
+
+    const briefing = await service.getBriefing(SEED_DEVICE_ID, SEED_BOOK_ID);
+
+    expect(briefing.progress.current_page).toBe(5);
+    expect(briefing.resume_chapter).toEqual({ chapter_no: 1, title: '제1장 인간기념물' });
+    // 기준점의 장은 그대로 3장이다
+    expect(briefing.current_chapter).toEqual({ chapter_no: 3, title: '제3장 생활 제일과' });
+  });
 });

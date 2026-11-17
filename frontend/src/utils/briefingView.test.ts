@@ -6,6 +6,7 @@ function briefing(overrides: Partial<BriefingResponse>): BriefingResponse {
     applied_cutoff: 79,
     recap: '정주사는 고무신 장사로 돈을 모았고...',
     current_chapter: { chapter_no: 3, title: '제3장' },
+    resume_chapter: { chapter_no: 3, title: '제3장' },
     progress: { current_page: 80, total_pages: 411, percent: 19.5 },
     ...overrides,
   };

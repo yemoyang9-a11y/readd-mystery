@@ -242,6 +242,8 @@ export function mockBriefingResponse(): BriefingResponse {
       chapter_no: snap.chapter?.chapter_no ?? 1,
       title: snap.chapter?.title ?? '',
     },
+    // 대역은 기준점과 이어 읽기 위치가 같은 쪽이라 같은 장이다
+    resume_chapter: snap.chapter ? { chapter_no: snap.chapter.chapter_no, title: snap.chapter.title } : null,
     progress: {
       current_page: snap.current_page,
       total_pages: snap.total_pages,

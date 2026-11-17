@@ -55,6 +55,7 @@ export function createBriefingService(deps: BriefingServiceDeps): BriefingServic
         applied_cutoff: snapshot.cutoff, // 클라이언트가 폴백 필요/불필요를 가르는 근거(❓Q1)
         recap,
         current_chapter: snapshot.chapter, // FR-BRF-005 🚦 — 결정기 스냅샷과 동일 원천
+        resume_chapter: snapshot.resume_chapter, // FR-BRF-005 🚦 — 이어 읽기 위치의 장도 결정기에서만
         progress: {
           current_page: snapshot.current_page,
           total_pages: totalPages,

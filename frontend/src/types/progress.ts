@@ -88,10 +88,17 @@ export interface BriefingResponse {
   applied_cutoff: number;
   /** null 이면 스트리밍 폴백. 단 첫 진입(cutoff=0)은 폴백 대상이 아니다 (D13 ①) */
   recap: string | null;
+  /** 기준점(applied_cutoff)이 속한 장 */
   current_chapter: {
     chapter_no: number;
     title: string;
   };
+  /**
+   * 이어 읽기 위치(progress.current_page)가 속한 장 — 서버 계산값. 되돌아가 읽으면
+   * current_chapter 와 다르다. 서버가 장을 찾지 못하면 null 이고 화면은 장 이름을 그리지 않는다
+   * (2026-11-17 대표 결정, FR-BRF-005 🚦).
+   */
+  resume_chapter: { chapter_no: number; title: string } | null;
   /**
    * percent 는 서버 계산값 — 그대로 렌더한다 (FR-BRF-005 🚦).
    * 첫 진입(current_page=1)은 0%가 아니라 1/total_pages 값이 온다(예: 0.2%) — R2가 계약대로

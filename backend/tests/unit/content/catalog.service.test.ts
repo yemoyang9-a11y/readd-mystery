@@ -56,6 +56,7 @@ const SNAPSHOT: CutoffSnapshot = {
   percent: 23.5,
   is_complete: false,
   chapter: { chapter_no: 3, title: '제3장' },
+  resume_chapter: { chapter_no: 3, title: '제3장' },
 };
 
 function repoWith(catalog: BookCatalogRow[]): ContentRepository {

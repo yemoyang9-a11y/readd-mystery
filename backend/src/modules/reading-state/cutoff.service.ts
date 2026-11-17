@@ -19,6 +19,7 @@
  *      percent     = cutoff / total_pages
  *      is_complete = 진도 레코드 있음 && frontier >= total_pages  (D14, FR-QNA-004 🚦)
  *      chapter     = max(cutoff, 1)이 속한 장
+ *      resume_chapter = current_page(이어 읽기 위치)가 속한 장. 못 찾으면 null
  *      frontier_confirm = max_page > cutoff 이고 max_page > confirm_dismissed_max 일 때만
  *
  * ⚠️ **이 파일 밖에서 cutoff나 `%`를 계산하는 코드는 존재해서는 안 된다** (프론트 포함).
@@ -106,6 +107,14 @@ export function createCutoffService(deps: CutoffServiceDeps): CutoffService & Re
         );
       }
 
+      // FR-BRF-005 🚦 — 이어 읽기 위치의 장 (2026-11-17 대표 결정). 홈 카드가 "제N장 · 쪽"을
+      // 같은 원천에서 받게 한다. 장 경계·제목은 목차라 상한 대상이 아니다 (R3, FR-NAV-001).
+      // 못 찾으면 null — 기준점의 장으로 메우지 않는다 (FR-SPL-005 🚦).
+      const resumeChapter =
+        chapter.start_page <= currentPage && currentPage <= chapter.end_page
+          ? chapter
+          : await books.findChapterContaining(bookId, currentPage);
+
       // ── 파생 계산: 이 블록이 시스템 전체의 유일한 계산 지점이다 ──────────────
       // FR-PRG-003 🚦
       const cutoff = stored === null ? 0 : frontier;
@@ -136,6 +145,10 @@ export function createCutoffService(deps: CutoffServiceDeps): CutoffService & Re
           chapter_no: chapter.chapter_no,
           title: chapter.title,
         },
+        resume_chapter:
+          resumeChapter === null
+            ? null
+            : { chapter_no: resumeChapter.chapter_no, title: resumeChapter.title },
       };
     },
 

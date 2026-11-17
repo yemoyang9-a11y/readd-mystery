@@ -34,7 +34,9 @@ const readingBook = {
 const serverBriefing: BriefingResponse = {
   applied_cutoff: 13,
   recap: null,
-  current_chapter: { chapter_no: 2, title: '해왕좌의 밤' },
+  // 기준점의 장(3장)과 이어 읽기 위치의 장(2장)이 다른 독자 — 되돌아가 읽는 중
+  current_chapter: { chapter_no: 3, title: '지문' },
+  resume_chapter: { chapter_no: 2, title: '해왕좌의 밤' },
   progress: { current_page: 13, total_pages: 68, percent: 19.1 },
 };
 
@@ -175,8 +177,10 @@ describe('모바일 홈 3D 책 캐러셀', () => {
     expect(card).toHaveTextContent('가상범인');
     // 진도 바 폭은 GET /books 가 준 percent 그대로 (프론트 재계산 없음)
     expect(within(card).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '19.1');
-    // 장 이름은 서버 브리핑 응답의 current_chapter 그대로
+    // 장 이름은 서버 브리핑 응답의 resume_chapter(이어 읽기 위치의 장) 그대로 — 쪽과 같은 위치다.
+    // 기준점의 장(current_chapter)은 쓰지 않는다
     await waitFor(() => expect(card).toHaveTextContent('제2장 해왕좌의 밤'));
+    expect(card).not.toHaveTextContent('지문');
     expect(briefingApi.fetchBriefing).toHaveBeenCalledWith('bk-95898cdf13');
     // 작은 이어서 읽기 버튼과 중복되지 않는다 — 이어 읽기 링크는 카드 하나
     expect(screen.getAllByRole('link', { name: /이어서 읽기/ })).toHaveLength(1);
@@ -189,6 +193,18 @@ describe('모바일 홈 3D 책 캐러셀', () => {
     await waitFor(() => expect(briefingApi.fetchBriefing).toHaveBeenCalled());
     expect(card).toHaveTextContent('13p');
     expect(card).not.toHaveTextContent('제');
+  });
+
+  test('FR-SPL-005: 서버가 이어 읽기 위치의 장을 못 주면(resume_chapter null) 장 이름만 빠진다 — 기준점의 장으로 메우지 않는다', async () => {
+    catalog.books = [readingBook];
+    briefingApi.fetchBriefing.mockResolvedValue({ ...serverBriefing, resume_chapter: null });
+    renderHome();
+    const card = screen.getByTestId('home-continue-card');
+    await waitFor(() => expect(briefingApi.fetchBriefing).toHaveBeenCalled());
+    await Promise.resolve();
+    expect(card).toHaveTextContent('13p');
+    expect(card).not.toHaveTextContent('제');
+    expect(card).not.toHaveTextContent('지문');
   });
 
   test('진도 기록이 있는 책이 없으면 이어 읽기 카드가 없다', () => {

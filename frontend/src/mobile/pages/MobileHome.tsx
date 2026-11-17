@@ -19,16 +19,18 @@ const FROM_HOME = { fromHome: true };
  * "이어서 읽기 · 13p" 버튼과 같은 곳으로 가므로 그 버튼을 대신한다.
  *
  * 값은 전부 서버 응답 그대로다 — 쪽(progress.current_page)·진도 바(progress.percent)는
- * GET /books, 장 이름은 GET /briefing 의 current_chapter. 프론트는 목차에서 장을 찾거나
+ * GET /books, 장 이름은 GET /briefing 의 resume_chapter(이어 읽기 위치의 장 — 쪽과 같은 위치,
+ * 2026-11-17 대표 결정. 기준점의 장인 current_chapter 를 쓰면 되돌아가 읽을 때 "제3장 · 5p"처럼
+ * 어긋난다). 프론트는 목차에서 장을 찾거나
  * 퍼센트를 나누지 않는다 (절대 규칙 2, FR-BRF-005 🚦). 퍼센트는 숫자로 쓰지 않는다
  * (e25408b — 이어서 읽기에는 퍼센트 대신 쪽).
  *
- * 장 이름 조회가 실패하면 장 이름만 빠지고 카드는 그대로 뜬다(FR-SPL-005 🚦 — 실패 = 미노출).
+ * 장 이름 조회가 실패하거나 서버가 장을 못 주면(null) 장 이름만 빠지고 카드는 그대로 뜬다(FR-SPL-005 🚦 — 실패 = 미노출).
  * GET /briefing 은 읽기 전용 조회라 진도·세션을 바꾸지 않는다.
  */
 // FR-BRF-001 FR-BRF-005 🚦
 function ContinueCard({ book }: { book: BookSummary }) {
-  const [chapter, setChapter] = useState<BriefingResponse['current_chapter'] | null>(null);
+  const [chapter, setChapter] = useState<BriefingResponse['resume_chapter']>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -36,7 +38,7 @@ function ContinueCard({ book }: { book: BookSummary }) {
     Promise.resolve()
       .then(() => fetchBriefing(book.book_id))
       .then((briefing) => {
-        if (!cancelled) setChapter(briefing.current_chapter);
+        if (!cancelled) setChapter(briefing.resume_chapter ?? null);
       })
       .catch(() => {
         if (!cancelled) setChapter(null);
