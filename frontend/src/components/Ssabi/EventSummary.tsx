@@ -7,7 +7,8 @@ import type { TimelineResponse } from '../../types';
  * 응답은 서버가 기준점 K 이하로 이미 걸러 보낸 것이다. 여기서 K를 계산하거나 초과 여부를
  * 판별하지 않는다 (FR-SPL-002 🚦, 절대 규칙 7번). 조회가 실패하면 아무 데이터도 보이지 않는다
  * (FR-SPL-005 🚦). 사건은 장 범위(서버가 준 start/end)에 들어가는 쪽에 묶어 보여 줄 뿐이고,
- * 쪽수는 화면에 내지 않는다.
+ * 쪽수는 화면에 내지 않는다. 서버는 다 읽은 장의 사건만 보내므로(결정 31) 지금 읽는 장은 제목만
+ * 오고, 그 장에 사건이 없으면 안내 한 줄만 둔다.
  */
 export default function EventSummary({
   timeline,
@@ -66,6 +67,11 @@ export default function EventSummary({
                   </span>
                 ) : null}
               </div>
+              {isLast && events.length === 0 ? (
+                <p className="m-0 mt-2 px-2 text-[13px] text-brief-muted">
+                  이 장을 다 읽으면 사건이 정리돼요
+                </p>
+              ) : null}
               <ul className="m-0 mt-2 flex list-none flex-col gap-1 p-0">
                 {events.map((event) => {
                   const open = openId === event.id;

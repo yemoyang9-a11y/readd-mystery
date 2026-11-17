@@ -44,6 +44,28 @@ describe('FR-SPL-002 🚦: 타임라인 스포일러 상한', () => {
     }
   });
 
+  it('FR-SPL-002: 읽는 중인 장의 사건은 타임라인에 0건 (결정 31)', async () => {
+    // 2장 = 10~25쪽, 사건 12·24쪽. K=13은 2장 중간
+    const t = await service.getTimeline(BOOK, 13);
+    expect(t.events.filter((e) => e.occurrence_page >= 10 && e.occurrence_page <= 25)).toHaveLength(0);
+    expect(t.events.map((e) => e.occurrence_page)).toEqual([4, 9]);
+  });
+
+  it('FR-SPL-002: 장 마지막 쪽 직전(K=24)이면 그 장 사건은 발생 쪽이 지났어도 0건', async () => {
+    const t = await service.getTimeline(BOOK, 24);
+    expect(t.events.filter((e) => e.occurrence_page >= 10 && e.occurrence_page <= 25)).toHaveLength(0);
+  });
+
+  it('FR-SPL-002: 그 장 마지막 쪽(K=25)까지 읽으면 그 장 사건이 보인다', async () => {
+    const t = await service.getTimeline(BOOK, 25);
+    expect(t.events.map((e) => e.occurrence_page)).toEqual([4, 9, 12, 24]);
+  });
+
+  it('FR-SPL-002: 읽는 중인 장도 장 목록에는 제목으로 남는다 (R3)', async () => {
+    const t = await service.getTimeline(BOOK, 13);
+    expect(t.chapters.map((c) => c.chapter_no)).toEqual([1, 2]);
+  });
+
   it('FR-SPL-002: 다른 책의 장·사건은 섞이지 않는다', async () => {
     const t = await service.getTimeline('other-book', 40);
     expect(t.chapters).toHaveLength(0);
@@ -69,6 +91,19 @@ describe('FR-SPL-002 🚦: 타임라인 pg 쿼리 계약', () => {
     expect(chapterSql).toMatch(/start_page\s*<=\s*\$2/i);
     expect(eventSql).toMatch(/book_id\s*=\s*\$1/i);
     expect(eventSql).toMatch(/occurrence_page\s*<=\s*\$2/i);
+  });
+
+  it('FR-SPL-002: 사건 쿼리는 사건이 속한 장의 end_page <= 기준점을 SQL 조건으로 건다 (결정 31)', async () => {
+    const { query, repository } = capture();
+    await repository.findTimeline('synthetic-book', 13);
+    const eventSql: string = query.mock.calls[1][0];
+    expect(eventSql).toMatch(/JOIN\s+chapters\s+(\w+)/i);
+    const alias = eventSql.match(/JOIN\s+chapters\s+(\w+)/i)![1];
+    const where = eventSql.slice(eventSql.search(/\bWHERE\b/i));
+    expect(where).toMatch(new RegExp(`${alias}\\.end_page\\s*<=\\s*\\$2`, 'i'));
+    expect(eventSql).toMatch(new RegExp(`${alias}\\.start_page\\s*<=\\s*\\w+\\.occurrence_page`, 'i'));
+    expect(eventSql).toMatch(new RegExp(`${alias}\\.end_page\\s*>=\\s*\\w+\\.occurrence_page`, 'i'));
+    expect(eventSql).toMatch(new RegExp(`${alias}\\.book_id\\s*=\\s*\\w+\\.book_id`, 'i'));
   });
 
   it('FR-SPL-002: 사건은 reader_description만 description으로 고르고 원본 컬럼은 고르지 않는다', async () => {

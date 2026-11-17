@@ -44,9 +44,10 @@ export class FakeSsabiRepository implements SsabiRepository {
   constructor(private fixture: SsabiFixture) {}
 
   async findTimeline(bookId: string, cutoff: number): Promise<Timeline> {
-    // FR-SPL-002 🚦: 장 시작 페이지·사건 발생 페이지 <= cutoff
-    const chapters = (this.fixture.timelineChapters ?? [])
-      .filter((c) => c.book_id === bookId && c.start_page <= cutoff)
+    // FR-SPL-002 🚦: 장 시작 페이지 <= cutoff. 사건은 결정 31에 따라 다 읽은 장(end_page <= cutoff)만
+    const bookChapters = (this.fixture.timelineChapters ?? []).filter((c) => c.book_id === bookId);
+    const chapters = bookChapters
+      .filter((c) => c.start_page <= cutoff)
       .sort((a, b) => a.chapter_no - b.chapter_no)
       .map(({ chapter_no, title, start_page, end_page }) => ({
         chapter_no,
@@ -55,7 +56,17 @@ export class FakeSsabiRepository implements SsabiRepository {
         end_page,
       }));
     const events = (this.fixture.timelineEvents ?? [])
-      .filter((e) => e.book_id === bookId && e.occurrence_page <= cutoff)
+      .filter(
+        (e) =>
+          e.book_id === bookId &&
+          e.occurrence_page <= cutoff &&
+          bookChapters.some(
+            (c) =>
+              c.start_page <= e.occurrence_page &&
+              c.end_page >= e.occurrence_page &&
+              c.end_page <= cutoff
+          )
+      )
       .sort((a, b) => a.occurrence_page - b.occurrence_page || a.id.localeCompare(b.id))
       .map(({ id, event, description, occurrence_page }) => ({
         id,

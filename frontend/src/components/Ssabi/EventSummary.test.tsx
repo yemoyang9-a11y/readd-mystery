@@ -52,6 +52,25 @@ describe('사건 정리', () => {
     expect(within(lastChapter).getByText('지금 읽는 곳')).toBeInTheDocument();
   });
 
+  it('사건이 아직 없는 지금 읽는 장에는 다 읽으면 정리된다는 한 줄만 보인다 (결정 31)', () => {
+    const reading: TimelineResponse = {
+      applied_cutoff: 13,
+      chapters: timeline.chapters,
+      events: timeline.events.filter((event) => event.id !== 'e3'),
+    };
+    render(<EventSummary timeline={reading} failed={false} />);
+    const lastChapter = screen.getByText('둘째 장').closest('li') as HTMLElement;
+    expect(within(lastChapter).getByText('이 장을 다 읽으면 사건이 정리돼요')).toBeInTheDocument();
+    expect(within(lastChapter).queryAllByRole('button')).toHaveLength(0);
+    const firstChapter = screen.getByText('첫 장').closest('li') as HTMLElement;
+    expect(within(firstChapter).queryByText('이 장을 다 읽으면 사건이 정리돼요')).toBeNull();
+  });
+
+  it('지금 읽는 장에 사건이 있으면 안내 한 줄은 없다', () => {
+    render(<EventSummary timeline={timeline} failed={false} />);
+    expect(screen.queryByText('이 장을 다 읽으면 사건이 정리돼요')).toBeNull();
+  });
+
   it('쪽수 문구가 없다', async () => {
     const user = userEvent.setup();
     const { container } = render(<EventSummary timeline={timeline} failed={false} />);

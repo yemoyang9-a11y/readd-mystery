@@ -214,13 +214,17 @@ export function createPgSsabiRepository(db: QueryClient): SsabiRepository {
           ORDER BY chapter_no`,
         [bookId, cutoff]
       );
-      // FR-SPL-002 🚦
+      // FR-SPL-002 🚦 결정 31: 다 읽은 장(장 end_page <= cutoff)의 사건만
       const events = await db.query(
-        `SELECT id, event, reader_description AS description, occurrence_page
-           FROM events
-          WHERE book_id = $1
-            AND occurrence_page <= $2
-          ORDER BY occurrence_page, id`,
+        `SELECT e.id, e.event, e.reader_description AS description, e.occurrence_page
+           FROM events e
+           JOIN chapters c ON c.book_id = e.book_id
+            AND c.start_page <= e.occurrence_page
+            AND c.end_page >= e.occurrence_page
+          WHERE e.book_id = $1
+            AND e.occurrence_page <= $2
+            AND c.end_page <= $2
+          ORDER BY e.occurrence_page, e.id`,
         [bookId, cutoff]
       );
       return { chapters: chapters.rows, events: events.rows };
