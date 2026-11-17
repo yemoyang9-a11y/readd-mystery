@@ -173,7 +173,16 @@ export function makeEdgePaths(
       if (distance === 0) return;
       // Canonical orientation is used only to place lanes, never to infer arrows.
       const orientation = edge.source < edge.target ? 1 : -1;
-      const offset = (index - (sorted.length - 1) / 2) * gap * orientation;
+      const laneOffset = (index - (sorted.length - 1) / 2) * gap * orientation;
+      const offset =
+        laneOffset +
+        avoidanceOffset(
+          from,
+          to,
+          nodes.filter((n) => n.id !== edge.source && n.id !== edge.target),
+          points,
+          radiusFor
+        );
       const control = {
         x: (from.x + to.x) / 2 - (dy / distance) * offset,
         y: (from.y + to.y) / 2 + (dx / distance) * offset,
@@ -198,6 +207,45 @@ export function makeEdgePaths(
     });
   }
   return result;
+}
+
+const AVOID_PADDING = 6;
+const AVOID_CLEARANCE = 8;
+const AVOID_END_RATIO = 0.08;
+
+/**
+ * 선이 다른 인물 카드 위를 지나면 반대쪽으로 휘게 하는 control 점 이동량.
+ * 카드 중심~선분 거리 < 카드 반지름 + 6px 이고 선분 양 끝 8% 밖이면 지나는 것으로 본다.
+ * 2차 곡선의 중간점은 control 점 이동량의 절반만 움직이므로 필요한 간격의 두 배를 준다.
+ * 가장 깊이 가린 카드 하나를 기준으로 하고, 카드가 선 위에 정확히 놓이면(거리 0) 한쪽으로 고정한다.
+ */
+function avoidanceOffset(
+  from: Point,
+  to: Point,
+  others: readonly { id: string }[],
+  points: ReadonlyMap<string, Point>,
+  radiusFor: (id: string) => number
+): number {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const lengthSq = dx * dx + dy * dy;
+  if (lengthSq === 0) return 0;
+  const distance = Math.sqrt(lengthSq);
+  let worst: { need: number; side: number } | null = null;
+  for (const other of others) {
+    const p = points.get(other.id);
+    if (!p || ![p.x, p.y].every(Number.isFinite)) continue;
+    const t = ((p.x - from.x) * dx + (p.y - from.y) * dy) / lengthSq;
+    if (t < AVOID_END_RATIO || t > 1 - AVOID_END_RATIO) continue;
+    // 선분의 법선(-dy, dx) 기준 부호 있는 거리
+    const signed = ((p.x - from.x) * -dy + (p.y - from.y) * dx) / distance;
+    const reach = radiusFor(other.id) + AVOID_PADDING;
+    if (Math.abs(signed) >= reach) continue;
+    const need = reach - Math.abs(signed);
+    if (!worst || need > worst.need) worst = { need, side: signed > 0 ? -1 : 1 };
+  }
+  if (!worst) return 0;
+  return worst.side * 2 * (worst.need + AVOID_CLEARANCE);
 }
 
 function outsideCircle(center: Point, toward: Point, radius: number): Point {

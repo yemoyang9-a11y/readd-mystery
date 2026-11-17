@@ -110,7 +110,13 @@ export default function RelationshipTab({
   onCharacterModeChange?: (mode: 'major' | 'all') => void;
 }) {
   const [picked, setPicked] = useState<number | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelectedState] = useState<string | null>(null);
+  // 선택한 선(graphEdgeKey). 인물을 고르면 풀린다 — 인물 선택과 선 선택은 함께 남지 않는다.
+  const [selectedEdgeKey, setSelectedEdgeKey] = useState<string | null>(null);
+  function setSelected(id: string | null) {
+    setSelectedEdgeKey(null);
+    setSelectedState(id);
+  }
   const [query, setQuery] = useState('');
   const [resultsOpen, setResultsOpen] = useState(false);
   const [characterMode, setCharacterModeState] = useState<'major' | 'all'>(
@@ -188,7 +194,13 @@ export default function RelationshipTab({
 
   return (
     <div className="space-y-5">
-      <RelationshipGraph graph={displayed} selectedId={activeSelected} onSelect={setSelected} />
+      <RelationshipGraph
+        graph={displayed}
+        selectedId={activeSelected}
+        onSelect={setSelected}
+        selectedEdgeKey={selectedEdgeKey}
+        onSelectEdge={setSelectedEdgeKey}
+      />
       <p className="text-[11px] leading-relaxed text-brief-muted">
         화살표는 감정·행동의 방향이고, 점선은 주장·소문이거나 끝난 관계입니다. 인물을 선택하면 그
         인물의 관계가 그래프에 글자로 나옵니다.

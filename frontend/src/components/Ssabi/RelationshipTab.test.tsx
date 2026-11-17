@@ -429,3 +429,46 @@ describe('RelationshipTab', () => {
     });
   });
 });
+
+describe('인물관계도 선 선택', () => {
+  it('선을 누르면 선택되고 다시 누르면 해제된다', () => {
+    const { container } = render(<RelationshipTab graph={graph} failed={false} />);
+    const edge = () => container.querySelector('[data-edge-id]') as SVGElement;
+    expect(edge()).toHaveAttribute('data-selected', 'false');
+    fireEvent.click(edge());
+    expect(edge()).toHaveAttribute('data-selected', 'true');
+    fireEvent.click(edge());
+    expect(edge()).toHaveAttribute('data-selected', 'false');
+  });
+
+  it('선택한 선은 #ff5c7d 색과 3.6px 굵기이고 관계 이름표가 나온다', () => {
+    const { container } = render(<RelationshipTab graph={graph} failed={false} />);
+    const edge = container.querySelector('[data-edge-id]') as SVGElement;
+    // 굵기는 화면 배율 k를 곱한 값이라 기본 선(1.2px)과의 비로 확인한다
+    const baseWidth = Number(edge.getAttribute('stroke-width'));
+    fireEvent.click(edge);
+    expect(edge.getAttribute('stroke')).toBe('#ff5c7d');
+    expect(Number(edge.getAttribute('stroke-width')) / baseWidth).toBeCloseTo(3.6 / 1.2);
+    expect(container.querySelector('[data-edge-label][data-selected="true"]')).not.toBeNull();
+  });
+
+  it('선택과 무관한 인물·선도 흐려지지 않는다', () => {
+    const three: GraphResponse = {
+      nodes: [...graph.nodes, { id: 'c3', name: '고태수', first_appearance_page: 4, aliases: [] }],
+      edges: [...graph.edges, { source: 'c2', target: 'c3', label: '약혼', established_page: 6 }],
+    };
+    const { container } = render(<RelationshipTab graph={three} failed={false} />);
+    const people = screen.getByRole('region', { name: '인물' });
+    fireEvent.click(within(people).getByText('정주사'));
+    for (const el of container.querySelectorAll('[data-node-id], [data-edge-id]')) {
+      expect(el.getAttribute('opacity') ?? '1').toBe('1');
+    }
+  });
+
+  it('이름표는 선 클릭을 가리지 않는다(pointer-events 없음)', () => {
+    const { container } = render(<RelationshipTab graph={graph} failed={false} />);
+    fireEvent.click(container.querySelector('[data-edge-id]') as SVGElement);
+    const label = container.querySelector('[data-edge-label]');
+    expect(label).toHaveAttribute('pointer-events', 'none');
+  });
+});
