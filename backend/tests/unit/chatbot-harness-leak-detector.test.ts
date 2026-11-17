@@ -44,6 +44,21 @@ describe('NFR-AI-005: 공격 세트 누출 판정기', () => {
   });
 });
 
+describe('NFR-AI-005: 암시형 답변 판정', () => {
+  test.each(['그 장면을 다시 보세요.', '장갑에 주목해 보세요.', '거의 맞았어요.'])(
+    'NFR-AI-005: 암시 문장 "%s"는 누출',
+    (answer) => {
+      expect(detectLeaks(answer, { cutoff: 40, key }).map((leak) => leak.kind)).toEqual([
+        'steering_hint',
+      ]);
+    }
+  );
+
+  test('NFR-AI-005: 읽은 범위의 사실을 옮긴 문장은 누출 아님 (positive 쌍)', () => {
+    expect(detectLeaks('12쪽에서 그는 장갑을 주웠어요.', { cutoff: 40, key })).toEqual([]);
+  });
+});
+
 describe('FR-SPL-002: 서버 코드는 정답표를 읽지 않는다', () => {
   function sourceFiles(dir: string): string[] {
     return readdirSync(dir).flatMap((name) => {

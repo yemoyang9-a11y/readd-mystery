@@ -1,9 +1,11 @@
-export type QuestionIntent =
-  | 'fact'
-  | 'verify_hypothesis'
-  | 'culprit_or_ending'
-  | 'prediction'
-  | 'outside';
+export const QUESTION_INTENTS = [
+  'fact',
+  'verify_hypothesis',
+  'culprit_or_ending',
+  'prediction',
+  'outside',
+] as const;
+export type QuestionIntent = (typeof QUESTION_INTENTS)[number];
 
 const PREDICTION =
   /(앞으로|다음\s*(?:장|화|에|엔|편)?|이후|곧|뒤에).{0,14}(어떻게\s*(?:될|전개|흘러)|무슨\s*일|누가\s*(?:죽|나올|등장|잡)|벌어질|일어날|될까|나올까|죽을까)|예측|예상해|전개.{0,6}(?:어떨|어떻게)|what\s+(?:happens|will happen)|predict|will\s+\w+\s+(?:die|be\s+caught)/iu;
