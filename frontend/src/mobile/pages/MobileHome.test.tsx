@@ -3,9 +3,15 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import MobileHome from './MobileHome';
 
+const catalog = vi.hoisted(() => ({ books: [] as unknown[] }));
+
 vi.mock('../../hooks/useCatalog', () => ({
-  useCatalog: () => ({ books: [], status: 'ready', reload: () => {} }),
+  useCatalog: () => ({ books: catalog.books, status: 'ready', reload: () => {} }),
 }));
+
+beforeEach(() => {
+  catalog.books = [];
+});
 
 function Where() {
   return <p data-testid="where">{useLocation().pathname}</p>;
@@ -119,5 +125,65 @@ describe('모바일 홈 3D 책 캐러셀', () => {
       '/covers/main.webp',
     ]);
     covers.forEach((face) => expect(face.textContent).toBe(''));
+  });
+
+  test('FR-BRF-005: 이어서 읽기에는 퍼센트 대신 마지막으로 펼친 쪽이 p로 보인다', () => {
+    catalog.books = [
+      {
+        book_id: 'bk-95898cdf13',
+        title: '가상범인',
+        author: '김내성',
+        cover_url: '',
+        intro_summary: null,
+        ssabi_ready: true,
+        genre: '미스터리',
+        registered_at: '2026-11-01',
+        progress: { current_page: 13, percent: 19.1, is_complete: false, last_read_at: '2026-11-17T00:00:00Z' },
+      },
+    ];
+    renderHome();
+    const link = screen.getByRole('link', { name: /이어서 읽기/ });
+    expect(link).toHaveTextContent('이어서 읽기 · 13p');
+    expect(link.textContent).not.toContain('%');
+  });
+
+  test('책마다 책등에 제목이 있다', () => {
+    renderHome();
+    const spines = [...screen.getByTestId('book-carousel').querySelectorAll('.b3d-spine')];
+    expect(spines.map((spine) => spine.textContent)).toEqual(['가상범인', '타원형의 거울', '마인']);
+  });
+
+  test('입체 책 상자에는 filter·opacity를 걸지 않는다 — 면마다 변수로만 어둡게·숨긴다', () => {
+    renderHome();
+    const books = screen.getByTestId('book-carousel').querySelectorAll<HTMLElement>('.b3d-book');
+    expect(books).toHaveLength(3);
+    books.forEach((book) => {
+      expect(book.style.filter).toBe('');
+      expect(book.style.opacity).toBe('');
+      expect(book.getAttribute('style')).not.toMatch(/filter|opacity(?!-)/);
+      expect(book.style.getPropertyValue('--b3d-b')).not.toBe('');
+      expect(book.style.getPropertyValue('--b3d-o')).not.toBe('');
+      // 앞·뒤·책등·종이·윗면
+      expect(book.querySelectorAll('.b3d-face')).toHaveLength(5);
+    });
+  });
+
+  test('가운데 책은 환하고 옆 책은 어둡고, 책을 넘기면 가운데가 바뀐다', async () => {
+    const user = userEvent.setup();
+    renderHome();
+    const bookOf = (title: string) => screen.getByRole('button', { name: new RegExp(`^${title}`) });
+    expect(bookOf('가상범인').style.getPropertyValue('--b3d-b')).toBe('1');
+    expect(bookOf('타원형의 거울').style.getPropertyValue('--b3d-b')).toBe('0.45');
+    await user.click(screen.getByRole('button', { name: '다음 책' }));
+    expect(bookOf('타원형의 거울').style.getPropertyValue('--b3d-b')).toBe('1');
+    expect(bookOf('가상범인').style.getPropertyValue('--b3d-b')).toBe('0.45');
+  });
+
+  test('제목은 26px 굵게 흰색이다', () => {
+    renderHome();
+    const title = screen.getByText('가상범인', { selector: 'b' });
+    expect(title.className).toContain('text-[26px]');
+    expect(title.className).toContain('font-extrabold');
+    expect(title.className).toContain('text-white');
   });
 });
