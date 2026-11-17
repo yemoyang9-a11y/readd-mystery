@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { parseBookArgs, parseChapterNo, requireBookMeta } from './run-args';
+import { parseBookArgs, parseChapterNo, parseSceneWindow, requireBookMeta } from './run-args';
 
 const DATA_DIR = path.join(__dirname, '../../../data');
 
@@ -56,7 +56,9 @@ describe('NFR-OBS-004: 파이프라인 bookId 매개변수화', () => {
     expect(() => parseBookArgs(['--book', '--file', 'x'])).toThrow(/값이 필요/);
     expect(() => parseBookArgs(['--book', '../takryu'])).toThrow(/형식/);
     expect(() =>
-      requireBookMeta(parseBookArgs(['--book', 'x', '--title', 't', '--author', 'a', '--year', 'abc']))
+      requireBookMeta(
+        parseBookArgs(['--book', 'x', '--title', 't', '--author', 'a', '--year', 'abc'])
+      )
     ).toThrow(/정수/);
   });
 });
@@ -71,5 +73,34 @@ describe('NFR-OBS-004: run-generate-sample 장 선택', () => {
     expect(() => parseChapterNo(['--chapter'])).toThrow(/정수/);
     expect(() => parseChapterNo(['--chapter', '0'])).toThrow(/정수/);
     expect(() => parseChapterNo(['--chapter', '1.5'])).toThrow(/정수/);
+  });
+});
+
+describe('T9: 사건 추출 입력 창 선택', () => {
+  test('아무것도 없으면 full(기본 동작 불변)', () => {
+    expect(parseSceneWindow([], {})).toEqual({ mode: 'full' });
+    expect(parseSceneWindow(['--book', 'hwabun'], { EVENT_SCENE_WINDOW: '' })).toEqual({
+      mode: 'full',
+    });
+  });
+
+  test('--scene-window 또는 환경 변수 EVENT_SCENE_WINDOW로 고르고, 둘 다 있으면 플래그가 이긴다', () => {
+    expect(parseSceneWindow(['--scene-window', 'recent:2'], {})).toEqual({
+      mode: 'recent',
+      scenes: 2,
+    });
+    expect(parseSceneWindow([], { EVENT_SCENE_WINDOW: 'recent:1' })).toEqual({
+      mode: 'recent',
+      scenes: 1,
+    });
+    expect(
+      parseSceneWindow(['--scene-window', 'full'], { EVENT_SCENE_WINDOW: 'recent:1' })
+    ).toEqual({ mode: 'full' });
+  });
+
+  test('잘못된 값은 거부한다', () => {
+    expect(() => parseSceneWindow(['--scene-window'], {})).toThrow(/값이 필요/);
+    expect(() => parseSceneWindow(['--scene-window', 'recent:x'], {})).toThrow(/recent/);
+    expect(() => parseSceneWindow([], { EVENT_SCENE_WINDOW: 'half' })).toThrow(/recent/);
   });
 });

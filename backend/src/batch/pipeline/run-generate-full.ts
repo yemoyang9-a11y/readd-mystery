@@ -10,6 +10,8 @@
  *
  * 사용법: npx ts-node --transpile-only src/batch/pipeline/run-generate-full.ts
  *        [--book <bookId> --file <원문 경로> --title <제목> --author <저자>]
+ *        [--scene-window <full|recent:N>] — 사건 추출 입력 창(T9). 기본 full. 환경 변수
+ *        EVENT_SCENE_WINDOW 로도 준다. 장마다 창별 입력 글자 수를 [사건 입력] 로그로 남긴다
  *        다른 책의 산출물은 data/generated/<bookId>/full/ 에 따로 둔다 — run-args.ts 참조
  */
 import * as dotenv from 'dotenv';
@@ -32,12 +34,17 @@ import {
   ChapterEventRaw,
   ChapterEventResult,
   EVENT_EXTRACTION_VERSION,
+  FULL_SCENE_WINDOW,
+  SceneInputWindow,
   TimelineEvent,
+  WINDOWED_SCENE_PROMPT_SOURCE,
   buildSceneBoundaryPrompt,
   buildSceneEventPrompt,
   chapterEventCallCount,
   evaluateChapterEvents,
   extractChapterEventsRaw,
+  sceneInputComparison,
+  sceneWindowLabel,
 } from './event-scenes';
 import { checkPageBounds } from './validate';
 import {
@@ -76,6 +83,7 @@ import {
   DEFAULT_BOOK_ID,
   bookArgsFromCli,
   parseBookArgs,
+  parseSceneWindow,
   requireBookMeta,
 } from './run-args';
 import { ResolvedBookData } from './check-integrity';
@@ -164,6 +172,31 @@ const SUMMARY_GROUNDING_CONTRACT = JSON.stringify({
   models: MODEL_CONFIG,
   effort: DEFAULT_EFFORT,
 });
+
+/**
+ * T9 — 입력 창이 full이 아니면 계약과 캐시 파일을 따로 둔다. full 계약 문자열은 그대로라
+ * 이미 만든 사건 캐시는 낡지 않고, 창을 바꿔 실행해도 full 캐시를 덮어쓰지 않는다.
+ */
+function eventCache(
+  chapterNo: number,
+  outDir: string,
+  window: SceneInputWindow
+): { filePath: string; contract: string } {
+  if (window.mode === 'full') {
+    return {
+      filePath: path.join(outDir, `chapter-${chapterNo}.events.json`),
+      contract: EVENT_EXTRACTION_CONTRACT,
+    };
+  }
+  return {
+    filePath: path.join(outDir, `chapter-${chapterNo}.events.recent-${window.scenes}.json`),
+    contract: JSON.stringify({
+      base: EVENT_EXTRACTION_CONTRACT,
+      window: sceneWindowLabel(window),
+      windowedPrompt: WINDOWED_SCENE_PROMPT_SOURCE,
+    }),
+  };
+}
 
 type RawCharacter = GroundedCharacter;
 type RawRelationship = GroundedRelationship;
@@ -379,27 +412,32 @@ export async function loadOrGenerateRelationshipRun(
 export async function loadOrGenerateChapterEvents(
   chapter: Chapter,
   pages: Page[],
-  outDir: string = DEFAULT_OUT_DIR
+  outDir: string = DEFAULT_OUT_DIR,
+  window: SceneInputWindow = FULL_SCENE_WINDOW
 ): Promise<ChapterEventResult> {
-  const filePath = path.join(outDir, `chapter-${chapter.chapter_no}.events.json`);
+  const { filePath, contract } = eventCache(chapter.chapter_no, outDir, window);
   let raw: ChapterEventRaw;
   if (fs.existsSync(filePath)) {
     console.log(`[재생] ${chapter.chapter_no}장 사건(장면 단위) — 기존 결과 재사용`);
     const cached = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ChapterEventRaw;
-    assertGroundingCache(cached, chapter, pages, [], EVENT_EXTRACTION_CONTRACT);
+    assertGroundingCache(cached, chapter, pages, [], contract);
     raw = cached;
   } else {
     // 게이트웨이 경유만 — 4.3절. 배치 전용이라 런타임 호출 수(R9)와 무관하다
-    raw = await extractChapterEventsRaw(chapter, pages, (prompt, task) =>
-      // NFR-OBS-004 — 경계 호출과 장면별 추출의 작업 이름이 달라 비용 지표가 나뉜다
-      callJson<unknown>(task, prompt, chapter.chapter_no)
+    raw = await extractChapterEventsRaw(
+      chapter,
+      pages,
+      (prompt, task) =>
+        // NFR-OBS-004 — 경계 호출과 장면별 추출의 작업 이름이 달라 비용 지표가 나뉜다
+        callJson<unknown>(task, prompt, chapter.chapter_no),
+      window
     );
     const sealed = sealChapterCache(
       { chapter_no: chapter.chapter_no, ...raw },
       chapter,
       pages,
       [],
-      EVENT_EXTRACTION_CONTRACT
+      contract
     );
     fs.writeFileSync(filePath, JSON.stringify(sealed, null, 2), 'utf-8');
     console.log(
@@ -409,6 +447,10 @@ export async function loadOrGenerateChapterEvents(
   const result = evaluateChapterEvents(pages, raw);
   console.log(
     `  [사건] ${chapter.chapter_no}장 저장 ${result.events.length}건 · 검수 후보 ${result.review.length}건`
+  );
+  // T9 — 창별 장면 추출 입력 글자 수(LLM 없이 계산). 재생 때도 남으므로 캐시만으로 비교할 수 있다
+  console.log(
+    `  [사건 입력] ${chapter.chapter_no}장 장면 ${result.scenes.length}개 · 창 ${sceneWindowLabel(window)} · 원문 입력 글자 수 ${JSON.stringify(sceneInputComparison(result.scenes))}`
   );
   if (result.warnings.length > 0) {
     console.warn(`  [사건 경고] ${chapter.chapter_no}장:`, result.warnings);
@@ -654,7 +696,10 @@ async function applyReaderTexts(
 }
 
 // FR-ADM-005 🚦
-export async function generateFullBook(args: BookArgs): Promise<ResolvedBookData> {
+export async function generateFullBook(
+  args: BookArgs,
+  sceneWindow: SceneInputWindow = FULL_SCENE_WINDOW
+): Promise<ResolvedBookData> {
   const BOOK_ID = args.bookId;
   const OUT_DIR = args.fullDir;
   const { title, author } = requireBookMeta(args);
@@ -696,7 +741,7 @@ export async function generateFullBook(args: BookArgs): Promise<ResolvedBookData
       OUT_DIR,
       PIPELINE_MODE
     );
-    const chapterEvents = await loadOrGenerateChapterEvents(chapter, pages, OUT_DIR);
+    const chapterEvents = await loadOrGenerateChapterEvents(chapter, pages, OUT_DIR, sceneWindow);
     const summaryGrounding = await loadOrGenerateSummaryGrounding(
       chapter,
       pages,
@@ -812,7 +857,7 @@ export async function generateFullBook(args: BookArgs): Promise<ResolvedBookData
 }
 
 if (require.main === module)
-  generateFullBook(bookArgsFromCli('run-generate-full')).catch((err) => {
+  generateFullBook(bookArgsFromCli('run-generate-full'), parseSceneWindow()).catch((err) => {
     console.error('[FAIL]', err);
     process.exit(1);
   });

@@ -4,6 +4,7 @@
  *
  * 사용법: npx ts-node --transpile-only src/batch/pipeline/run-generate-sample.ts
  *        [--book <bookId> --file <원문 경로> --title <제목> --author <저자> --chapter <장 번호>]
+ *        [--scene-window <full|recent:N>] — 사건 추출 입력 창(T9, 기본 full). 창별 입력 글자 수를 출력한다
  *        결과: takryu는 data/generated/sample-chapter-N.json, 다른 책은 data/generated/<bookId>/
  */
 import * as dotenv from 'dotenv';
@@ -21,10 +22,15 @@ import {
   buildTermPrompt,
   parseJsonResponse,
 } from './generate';
-import { evaluateChapterEvents, extractChapterEventsRaw } from './event-scenes';
+import {
+  evaluateChapterEvents,
+  extractChapterEventsRaw,
+  sceneInputComparison,
+  sceneWindowLabel,
+} from './event-scenes';
 import { checkPageBounds } from './validate';
 import { validateGroundedChapter } from './grounding';
-import { bookArgsFromCli, parseChapterNo, requireBookMeta } from './run-args';
+import { bookArgsFromCli, parseChapterNo, parseSceneWindow, requireBookMeta } from './run-args';
 
 // 출력 상한은 reasoning 토큰을 포함한다 — 기본 4096이면 장 하나의 인물·별칭·노트 JSON이 잘린다(화분 1장 incomplete)
 const GENERATE_MAX_TOKENS = 16000;
@@ -173,12 +179,22 @@ async function main(): Promise<void> {
   // 6) 사건
   console.log('\n--- ⑥ 사건 ---');
   // FR-DAT-008 — 장면 단위 추출(경계 1회 + 장면당 1회). 장면 입력은 장 시작~그 장면 끝뿐(FR-SPL-002 🚦)
-  const eventRaw = await extractChapterEventsRaw(chapter, pages, (prompt, task) =>
-    // NFR-OBS-004 — 경계 호출과 장면별 추출의 작업 이름이 달라 비용 지표가 나뉜다
-    callJson<unknown>(task, prompt, chapter.chapter_no)
+  const sceneWindow = parseSceneWindow(); // T9 — 기본 full
+  const eventRaw = await extractChapterEventsRaw(
+    chapter,
+    pages,
+    (prompt, task) =>
+      // NFR-OBS-004 — 경계 호출과 장면별 추출의 작업 이름이 달라 비용 지표가 나뉜다
+      callJson<unknown>(task, prompt, chapter.chapter_no),
+    sceneWindow
   );
   const eventOut = evaluateChapterEvents(pages, eventRaw);
   console.log(JSON.stringify(eventOut, null, 1));
+  // T9 — 창별 장면 추출 입력 글자 수(LLM 없이 계산)
+  const inputChars = sceneInputComparison(eventOut.scenes);
+  console.log(
+    `[사건 입력] 장면 ${eventOut.scenes.length}개 · 창 ${sceneWindowLabel(sceneWindow)} · 원문 입력 글자 수 ${JSON.stringify(inputChars)}`
+  );
   reportPageBounds(
     '사건',
     eventOut.events.map((e) => e.occurrence_page)
@@ -186,6 +202,8 @@ async function main(): Promise<void> {
   results.events = { events: eventOut.events };
   results.event_scenes = eventOut.scenes;
   results.event_review = eventOut.review;
+  results.event_scene_window = sceneWindowLabel(sceneWindow);
+  results.event_input_chars = inputChars;
   results.raw_event_responses = eventRaw;
 
   const outDir = args.generatedDir;

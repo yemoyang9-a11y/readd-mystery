@@ -9,6 +9,7 @@
  * 장 캐시가 책 B 실행에서 재생(replay)되면 안 되기 때문이다.
  */
 import * as path from 'path';
+import { SceneInputWindow, parseSceneInputWindow } from './event-scenes';
 
 const DATA_DIR = path.join(__dirname, '../../../data');
 
@@ -92,6 +93,17 @@ export function parseChapterNo(argv: string[] = process.argv.slice(2)): number {
     throw new Error(`--chapter 는 1 이상의 정수여야 한다: ${argv[i + 1]}`);
   }
   return chapterNo;
+}
+
+/**
+ * 사건 추출 입력 창(T9) — --scene-window <full|recent:N>, 없으면 환경 변수 EVENT_SCENE_WINDOW,
+ * 둘 다 없으면 full(기존 동작). run-generate-full · run-generate-sample 이 쓴다.
+ */
+export function parseSceneWindow(
+  argv: string[] = process.argv.slice(2),
+  env: Record<string, string | undefined> = process.env
+): SceneInputWindow {
+  return parseSceneInputWindow(flagValue(argv, '--scene-window') ?? env.EVENT_SCENE_WINDOW);
 }
 
 /** 스크립트 진입부에서 쓴다 — --dry-run이면 해석 결과만 출력하고 종료한다 */

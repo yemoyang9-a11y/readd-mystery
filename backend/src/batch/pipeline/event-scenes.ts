@@ -8,6 +8,8 @@
  * 2) 장면별 사건 추출(LLM 1회/장면): 입력은 장 시작부터 그 장면 끝까지의 원문뿐이다.
  *    장면 뒤 텍스트는 같은 장 안이라도 주지 않는다 — 뒤쪽을 보고 고르거나 뒤에서 밝혀진
  *    사실로 앞 사건을 쓰는 일을 구조로 막는다(FR-SPL-002 🚦).
+ *    입력 창(T9): full(기본)은 장 시작부터, recent:N은 앞 장면 N개부터 준다. 어느 창이든
+ *    장면 끝 뒤는 0자다. 창별 입력 글자 수는 sceneInputChars로 LLM 없이 센다.
  * 3) 코드 검증(NFR-AI-004): 인용이 그 쪽 원문에 실제로 있는지, 근거가 장면 끝을 넘지
  *    않는지, realis=actual인지, 대사 사건이 발화 행위로 적혔는지, 해석·평가어가 없는지.
  *    occurrence_page는 LLM 값을 버리고 그 장면의 끝 쪽으로 둔다. 검증 실패는 버리지 않고
@@ -246,6 +248,122 @@ ${context}
 ${target}`;
 }
 
+/**
+ * 장면별 추출 입력 창 — T9. full은 장 시작부터 대상 장면 끝까지(기본, 기존 동작),
+ * recent는 앞 장면 scenes개 + 대상 장면. 창은 앞쪽 시작 위치만 바꾼다 — 끝은 언제나 대상
+ * 장면의 끝이다(FR-SPL-002 🚦).
+ */
+export type SceneInputWindow = { mode: 'full' } | { mode: 'recent'; scenes: number };
+export const FULL_SCENE_WINDOW: SceneInputWindow = { mode: 'full' };
+
+/** "full" | "recent:N"(N은 0 이상의 정수). 없으면 full. 잘못된 값은 기본값으로 바꾸지 않고 거부한다 */
+export function parseSceneInputWindow(value: string | undefined): SceneInputWindow {
+  const text = (value ?? '').trim();
+  if (text === '' || text === 'full') return FULL_SCENE_WINDOW;
+  const matched = /^recent:(\d+)$/.exec(text);
+  if (!matched) {
+    throw new Error(`사건 추출 입력 창은 full 또는 recent:N(0 이상의 정수)이어야 한다: "${text}"`);
+  }
+  return { mode: 'recent', scenes: Number(matched[1]) };
+}
+
+export function sceneWindowLabel(window: SceneInputWindow): string {
+  return window.mode === 'full' ? 'full' : `recent:${window.scenes}`;
+}
+
+/** 대상 장면(scenes[index])에 줄 원문의 시작 위치 — 끝은 언제나 scenes[index].end */
+function contextStart(scenes: Scene[], index: number, window: SceneInputWindow): number {
+  return window.mode === 'full' ? 0 : scenes[Math.max(0, index - window.scenes)].start;
+}
+
+const RULES_START = '[앞 맥락]은 ';
+const RULES_END = '--- [앞 맥락] ---';
+
+/**
+ * 창 모드 프롬프트 — 앞 장면 N개부터 대상 장면 끝까지만 넣는다. FR-SPL-002 🚦
+ * 판정 기준 문구는 buildSceneEventPrompt의 것을 그대로 쓴다(원문 없이 만든 틀에서 잘라 온다)
+ * — 두 창의 차이가 입력 범위뿐이어야 비용·품질을 비교할 수 있다.
+ */
+function buildWindowedSceneEventPrompt(
+  chapter: Chapter,
+  pages: Page[],
+  scene: Scene,
+  from: number,
+  window: { mode: 'recent'; scenes: number }
+): string {
+  const template = buildSceneEventPrompt({ ...chapter, title: '' }, [], {
+    ...scene,
+    start: 0,
+    end: 0,
+  });
+  const rulesAt = template.indexOf(RULES_START);
+  const rulesEnd = template.indexOf(RULES_END);
+  if (rulesAt === -1 || rulesEnd < rulesAt) {
+    throw new Error('장면 사건 프롬프트 틀에서 판정 기준 구간을 찾을 수 없다');
+  }
+  const { spans } = layout(pages);
+  const context =
+    from < scene.start
+      ? renderSpan(spans, from, scene.start)
+      : '(없음 — 앞 맥락 없이 대상 장면만 주어진다)';
+  return `다음은 이 작품 ${chapter.chapter_no}장 "${chapter.title}"의 원문 일부다(각 문단 앞에 [페이지 N] 표시). 원문은 [대상 장면] 바로 앞 장면 ${window.scenes}개부터 [대상 장면]의 끝까지만 주어진다(그보다 앞의 원문은 생략됐다).
+${template.slice(rulesAt, rulesEnd)}${RULES_END}
+${context}
+
+--- [대상 장면] ---
+${renderSpan(spans, scene.start, scene.end)}`;
+}
+
+/** 캐시 계약용 — 창 모드 프롬프트 문구가 바뀌면 창 모드 사건 캐시만 낡는다 */
+export const WINDOWED_SCENE_PROMPT_SOURCE = buildWindowedSceneEventPrompt.toString();
+
+/**
+ * 창에 맞는 장면 추출 프롬프트. full이거나 창이 장 첫머리까지 닿으면 buildSceneEventPrompt와
+ * 글자 하나 다르지 않다. 어느 창이든 장면 끝 뒤 원문은 0자다 — FR-SPL-002 🚦
+ */
+export function sceneEventPrompt(
+  chapter: Chapter,
+  pages: Page[],
+  scenes: Scene[],
+  scene: Scene,
+  window: SceneInputWindow = FULL_SCENE_WINDOW
+): string {
+  const index = scenes.findIndex((s) => s.start === scene.start && s.end === scene.end);
+  if (index === -1) throw new Error(`장면 ${scene.scene_no}이 장면 목록에 없다`);
+  const from = contextStart(scenes, index, window);
+  return window.mode === 'full' || from === 0
+    ? buildSceneEventPrompt(chapter, pages, scene)
+    : buildWindowedSceneEventPrompt(chapter, pages, scene, from, window);
+}
+
+/**
+ * 장면별 추출에 넣는 원문 글자 수(쪽 표시·지시문 제외) — T9. 장면 경계만 있으면 LLM 없이
+ * 창별 비용을 비교할 수 있다. 경계 호출(장 원문 1회)은 창과 무관하므로 세지 않는다.
+ */
+export function sceneInputChars(
+  scenes: Scene[],
+  window: SceneInputWindow
+): { per_scene: number[]; total: number } {
+  const per_scene = scenes.map((scene, i) => scene.end - contextStart(scenes, i, window));
+  return { per_scene, total: per_scene.reduce((sum, n) => sum + n, 0) };
+}
+
+const COMPARED_WINDOWS: SceneInputWindow[] = [
+  FULL_SCENE_WINDOW,
+  { mode: 'recent', scenes: 1 },
+  { mode: 'recent', scenes: 2 },
+];
+
+/** 창별 합계 — { full, 'recent:1', 'recent:2' }. 실행기가 장마다 로그로 남긴다 */
+export function sceneInputComparison(
+  scenes: Scene[],
+  windows: SceneInputWindow[] = COMPARED_WINDOWS
+): Record<string, number> {
+  return Object.fromEntries(
+    windows.map((w) => [sceneWindowLabel(w), sceneInputChars(scenes, w).total])
+  );
+}
+
 /** 장당 LLM 호출 수 = 경계 1 + 장면 수 */
 export function chapterEventCallCount(sceneCount: number): number {
   return sceneCount === 0 ? 0 : 1 + sceneCount;
@@ -413,7 +531,8 @@ export function validateSceneEvents(
 export async function extractChapterEventsRaw(
   chapter: Chapter,
   pages: Page[],
-  ask: AskJson
+  ask: AskJson,
+  window: SceneInputWindow = FULL_SCENE_WINDOW
 ): Promise<ChapterEventRaw> {
   if (layout(pages).text.length === 0) return { boundaries: null, scenes: [] };
   const boundaries = await ask(buildSceneBoundaryPrompt(chapter, pages), EVENT_SCENE_BOUNDARY_TASK);
@@ -421,7 +540,7 @@ export async function extractChapterEventsRaw(
   const out: ChapterEventRaw['scenes'] = [];
   for (const scene of scenes) {
     const response = await ask(
-      buildSceneEventPrompt(chapter, pages, scene),
+      sceneEventPrompt(chapter, pages, scenes, scene, window),
       EVENT_SCENE_EXTRACTION_TASK
     );
     out.push({ start: scene.start, end: scene.end, response });

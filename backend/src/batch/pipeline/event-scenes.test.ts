@@ -9,7 +9,14 @@ import {
   EVENT_SCENE_BOUNDARY_TASK,
   EVENT_SCENE_EXTRACTION_TASK,
   extractChapterEventsRaw,
+  FULL_SCENE_WINDOW,
+  parseSceneInputWindow,
   resolveScenes,
+  SceneInputWindow,
+  sceneEventPrompt,
+  sceneInputChars,
+  sceneInputComparison,
+  sceneWindowLabel,
   validateSceneEvents,
 } from './event-scenes';
 
@@ -407,5 +414,159 @@ describe('사건 검증 — NFR-AI-004, FR-DAT-008', () => {
     expect(() => evaluateChapterEvents(pages, { ...raw, scenes: raw.scenes.slice(0, 1) })).toThrow(
       /Stale/
     );
+  });
+});
+
+describe('장면별 사건 추출 입력 창 — T9, FR-SPL-002 🚦', () => {
+  const scenes = scenesOf(THREE_SCENES);
+  const recent = (n: number): SceneInputWindow => ({ mode: 'recent', scenes: n });
+  const WINDOWS = [recent(0), recent(1), recent(2)];
+  const promptFor = (i: number, window: SceneInputWindow) =>
+    sceneEventPrompt(chapter, pages, scenes, scenes[i], window);
+
+  test('T9: 창 표기를 해석한다 — 없으면 full(기본), recent:N은 앞 장면 N개', () => {
+    expect(parseSceneInputWindow(undefined)).toEqual(FULL_SCENE_WINDOW);
+    expect(parseSceneInputWindow('')).toEqual(FULL_SCENE_WINDOW);
+    expect(parseSceneInputWindow('full')).toEqual({ mode: 'full' });
+    expect(parseSceneInputWindow('recent:2')).toEqual({ mode: 'recent', scenes: 2 });
+    expect(parseSceneInputWindow(' recent:0 ')).toEqual({ mode: 'recent', scenes: 0 });
+    expect(sceneWindowLabel(FULL_SCENE_WINDOW)).toBe('full');
+    expect(sceneWindowLabel(recent(2))).toBe('recent:2');
+  });
+
+  test.each([
+    'recent',
+    'recent:',
+    'recent:-1',
+    'recent:1.5',
+    'recent:x',
+    'all',
+    'FULL',
+    'recent:1:2',
+  ])('T9: 잘못된 창 표기 "%s"는 거부한다 — 조용히 기본값으로 바꾸지 않는다', (value) => {
+    expect(() => parseSceneInputWindow(value)).toThrow(/full|recent/);
+  });
+
+  test('T9: full 창은 기존 프롬프트와 글자 하나 다르지 않다 — 기본 동작 불변', () => {
+    scenes.forEach((scene, i) => {
+      expect(promptFor(i, FULL_SCENE_WINDOW)).toBe(buildSceneEventPrompt(chapter, pages, scene));
+    });
+  });
+
+  test.each(WINDOWS)(
+    'FR-SPL-002: 창 %j에서도 장면 추출 프롬프트에 장면 뒤 텍스트가 0자 포함된다',
+    (window) => {
+      for (const scene of scenes.slice(0, -1)) {
+        const prompt = sceneEventPrompt(chapter, pages, scenes, scene, window);
+        const after = sentencesAfter(scene);
+        expect(after.length).toBeGreaterThan(0);
+        expect(after.filter((s) => prompt.includes(s))).toEqual([]);
+        for (let page = scene.end_page + 1; page <= chapter.end_page; page++) {
+          expect(prompt).not.toContain(`[페이지 ${page}]`);
+        }
+      }
+      const first = sceneEventPrompt(chapter, pages, scenes, scenes[0], window);
+      expect(first).not.toContain('찻집');
+      expect(first).not.toContain('피 묻은 칼');
+    }
+  );
+
+  test.each(WINDOWS)('FR-SPL-002: positive — 창 %j에서도 대상 장면 전체는 포함된다', (window) => {
+    scenes.forEach((scene) => {
+      const prompt = sceneEventPrompt(chapter, pages, scenes, scene, window);
+      expect(prompt).toContain(TEXT.slice(scene.start, scene.end).trim().split('\n').pop());
+      expect(prompt).toContain(`[페이지 ${scene.end_page}]`);
+    });
+  });
+
+  test('T9: recent:N은 앞 장면 N개와 대상 장면만 준다 — 그보다 앞 원문 0자', () => {
+    // 장면 3(쪽 3) · recent:1 → 장면 2(쪽 2)부터. 장면 1(쪽 1)은 없다
+    const one = promptFor(2, recent(1));
+    expect(one).toContain('그날 밤 박영민은 극장 앞 찻집에 앉아 있었다.');
+    expect(one).toContain('형사가 무대 뒤에서 피 묻은 칼을 발견했다.');
+    expect(one).not.toContain('손수건');
+    expect(one).not.toContain('[페이지 1]');
+    // recent:0 → 대상 장면만
+    const zero = promptFor(2, recent(0));
+    expect(zero).toContain('형사가 무대 뒤에서 피 묻은 칼을 발견했다.');
+    expect(zero).not.toContain('찻집');
+    expect(zero).not.toContain('[페이지 2]');
+    // positive — full에서는 같은 장면에 장 처음부터 들어간다
+    expect(promptFor(2, FULL_SCENE_WINDOW)).toContain('유불란이 바닥에서 손수건을 주웠다.');
+  });
+
+  test('T9: 창이 장 첫머리까지 닿으면 full과 같은 프롬프트다', () => {
+    expect(promptFor(0, recent(1))).toBe(promptFor(0, FULL_SCENE_WINDOW));
+    expect(promptFor(1, recent(1))).toBe(promptFor(1, FULL_SCENE_WINDOW));
+    expect(promptFor(2, recent(2))).toBe(promptFor(2, FULL_SCENE_WINDOW));
+    expect(promptFor(2, recent(9))).toBe(promptFor(2, FULL_SCENE_WINDOW));
+  });
+
+  test('T9: 창 모드에서도 사건 판정 기준 문구는 full과 같다 — 비교가 입력 범위 차이만 재도록', () => {
+    const rules = (prompt: string) =>
+      prompt.slice(prompt.indexOf('사건 판정 기준:'), prompt.indexOf('--- [앞 맥락] ---'));
+    expect(rules(promptFor(2, recent(1)))).toBe(rules(promptFor(2, FULL_SCENE_WINDOW)));
+    expect(rules(promptFor(2, recent(0))).length).toBeGreaterThan(200);
+    expect(promptFor(2, recent(1))).not.toContain('장 처음부터');
+  });
+
+  test('FR-SPL-002: 실행 중에도 창 모드의 각 장면 호출은 창 안의 원문만 받는다', async () => {
+    const prompts: string[] = [];
+    const ask = async (prompt: string): Promise<unknown> => {
+      prompts.push(prompt);
+      return prompts.length === 1 ? THREE_SCENES : { events: [] };
+    };
+    const raw = await extractChapterEventsRaw(chapter, pages, ask, recent(1));
+    expect(prompts).toHaveLength(1 + 3);
+    expect(prompts.slice(1)).toEqual(scenes.map((_, i) => promptFor(i, recent(1))));
+    expect(prompts[3]).not.toContain('손수건');
+    expect(prompts[2]).not.toContain('이튿날 아침');
+    // 검증은 창과 무관하게 같은 경로를 탄다
+    expect(evaluateChapterEvents(pages, raw).scenes).toEqual(scenes);
+  });
+
+  test('T9: 입력 글자 수 — 장면별 추출에 넣는 원문 글자 수를 LLM 없이 센다', () => {
+    const [l1, l2, l3] = [P1.length, P2.length, P3.length];
+    expect(sceneInputChars(scenes, FULL_SCENE_WINDOW)).toEqual({
+      per_scene: [l1, l1 + l2, l1 + l2 + l3],
+      total: 3 * l1 + 2 * l2 + l3,
+    });
+    expect(sceneInputChars(scenes, recent(1))).toEqual({
+      per_scene: [l1, l1 + l2, l2 + l3],
+      total: 2 * l1 + 2 * l2 + l3,
+    });
+    expect(sceneInputChars(scenes, recent(0))).toEqual({
+      per_scene: [l1, l2, l3],
+      total: TEXT.length,
+    });
+    expect(sceneInputChars(scenes, recent(9))).toEqual(sceneInputChars(scenes, FULL_SCENE_WINDOW));
+    expect(sceneInputChars([], FULL_SCENE_WINDOW)).toEqual({ per_scene: [], total: 0 });
+  });
+
+  test('T9: 센 글자 수만큼의 원문이 실제 프롬프트에 들어간다', () => {
+    const squeeze = (part: string) => part.replace(/\[페이지 \d+\]/g, '').replace(/\s/g, '');
+    for (const window of [FULL_SCENE_WINDOW, ...WINDOWS]) {
+      const counted = sceneInputChars(scenes, window).per_scene;
+      scenes.forEach((scene, i) => {
+        const prompt = sceneEventPrompt(chapter, pages, scenes, scene, window);
+        const context = prompt.slice(
+          prompt.indexOf('--- [앞 맥락] ---') + '--- [앞 맥락] ---'.length,
+          prompt.indexOf('--- [대상 장면] ---')
+        );
+        const target = prompt.slice(
+          prompt.indexOf('--- [대상 장면] ---') + '--- [대상 장면] ---'.length
+        );
+        const source = (context.trim().startsWith('(없음') ? '' : context) + target;
+        expect(squeeze(source)).toBe(squeeze(TEXT.slice(scene.end - counted[i], scene.end)));
+      });
+    }
+  });
+
+  test('T9: 모드별 합계를 한 번에 비교한다 — full · recent:1 · recent:2', () => {
+    expect(sceneInputComparison(scenes)).toEqual({
+      full: sceneInputChars(scenes, FULL_SCENE_WINDOW).total,
+      'recent:1': sceneInputChars(scenes, recent(1)).total,
+      'recent:2': sceneInputChars(scenes, recent(2)).total,
+    });
   });
 });

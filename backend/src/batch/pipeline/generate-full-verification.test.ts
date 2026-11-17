@@ -434,3 +434,38 @@ describe('FR-DAT-003: 장 요약 문장별 근거 확인이 생성 경로에 들
     await expect(generateFullBook(args)).rejects.toThrow(/Stale\/unverified/);
   });
 });
+
+describe('T9: 사건 추출 입력 창이 생성 경로에 들어 있다', () => {
+  const sceneCalls = () =>
+    (call as jest.Mock).mock.calls.filter(([task]) => task === 'generate_event');
+  const eventFile = (args: { fullDir: string }, name: string) => path.join(args.fullDir, name);
+
+  test('T9: 기본은 full — 사건 캐시 파일 이름이 그대로다', async () => {
+    const args = setup({ second: [relationship()], supports: true });
+    await generateFullBook(args);
+    expect(fs.existsSync(eventFile(args, 'chapter-1.events.json'))).toBe(true);
+    expect(fs.readdirSync(args.fullDir).filter((f) => f.includes('.events.'))).toEqual([
+      'chapter-1.events.json',
+    ]);
+  });
+
+  test('T9: recent:N으로 실행하면 사건 캐시를 따로 두고 full 캐시를 건드리지 않는다', async () => {
+    const args = setup({ second: [relationship()], supports: true });
+    const full = await generateFullBook(args);
+    const before = fs.readFileSync(eventFile(args, 'chapter-1.events.json'), 'utf-8');
+    fs.rmSync(path.join(args.fullDir, 'all-resolved.json'));
+    (call as jest.Mock).mockClear();
+
+    const windowed = await generateFullBook(args, { mode: 'recent', scenes: 1 });
+    expect(sceneCalls()).toHaveLength(1);
+    expect(fs.existsSync(eventFile(args, 'chapter-1.events.recent-1.json'))).toBe(true);
+    expect(fs.readFileSync(eventFile(args, 'chapter-1.events.json'), 'utf-8')).toBe(before);
+    expect(windowed.events).toEqual(full.events);
+
+    // 같은 창으로 다시 실행하면 재생한다
+    fs.rmSync(path.join(args.fullDir, 'all-resolved.json'));
+    (call as jest.Mock).mockClear();
+    await generateFullBook(args, { mode: 'recent', scenes: 1 });
+    expect(sceneCalls()).toHaveLength(0);
+  });
+});
