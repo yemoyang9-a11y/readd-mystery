@@ -12,7 +12,7 @@ const BATCH_SIZE = 30;
 const MAX_LENGTH = 60;
 const MAX_TOKENS = 16000;
 const JSON_PARSE_RETRIES = 2;
-const META_WORDS = ['원문', '본문', '페이지', '텍스트', '입력', '인용', '요약'];
+const META_WORDS = ['원문', '본문', '작품에서', '서술', '페이지', '텍스트', '입력', '인용', '요약'];
 const EASY_ENDING = /요\.?$/u;
 
 // NFR-AI-004
@@ -82,14 +82,15 @@ export const eventReaderKey = (id: string): string => `evt:${id}`;
 export function relationshipReaderInput(
   id: string,
   summary: string,
-  nameA: string,
-  nameB: string
-): ReaderTextInput {
+  nameA: string | undefined,
+  nameB: string | undefined
+): ReaderTextInput | undefined {
+  if (!nameA || !nameB) return undefined;
   return {
     key: relationshipReaderKey(id),
     kind: 'relationship',
     text: summary,
-    names: [...new Set([nameA, nameB])].filter((name) => summary.includes(name)),
+    names: [...new Set([nameA, nameB])],
   };
 }
 

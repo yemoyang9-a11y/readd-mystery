@@ -2,6 +2,8 @@ import { call } from '../../modules/llm-gateway/gateway';
 import {
   ReaderTextInput,
   buildReaderTextPrompt,
+  eventReaderInput,
+  relationshipReaderInput,
   rewriteReaderTexts,
   validateReaderText,
 } from './reader-text';
@@ -44,6 +46,11 @@ describe('validateReaderText', () => {
     const event: ReaderTextInput = { key: 'evt:1', kind: 'event', text: '긴 문장', names: [] };
     expect(validateReaderText(event, `${'가'.repeat(60)}예요.`)).toBe(false);
     expect(validateReaderText(event, `${'가'.repeat(57)}예요.`)).toBe(true);
+  });
+
+  test.each(['원문', '본문', '작품에서', '서술'])('메타어 %s 거절', (word) => {
+    const event: ReaderTextInput = { key: 'evt:1', kind: 'event', text: '사건', names: [] };
+    expect(validateReaderText(event, `${word} 사건이 나와요.`)).toBe(false);
   });
 
   test('마침표 없는 해요체와 사건 문장은 통과', () => {
@@ -134,5 +141,22 @@ describe('buildReaderTextPrompt', () => {
     expect(prompt).toContain('해요체');
     expect(prompt).toContain('60자');
     expect(prompt).not.toContain('페이지 본문');
+  });
+});
+
+describe('relationshipReaderInput', () => {
+  test('두 정규 이름을 요약에 없어도 그대로 names에 넣는다', () => {
+    const item = relationshipReaderInput('1', '좌장은 부인을 아낀다.', '박영민', '이몽란');
+    expect(item?.names).toEqual(['박영민', '이몽란']);
+    expect(validateReaderText(item!, '좌장은 부인을 아껴요.')).toBe(false);
+  });
+
+  test('인물 이름이 없으면 항목을 만들지 않는다', () => {
+    expect(relationshipReaderInput('1', '요약.', undefined, '이몽란')).toBeUndefined();
+    expect(relationshipReaderInput('1', '요약.', '박영민', '')).toBeUndefined();
+  });
+
+  test('사건 항목은 names가 비어 있다', () => {
+    expect(eventReaderInput('1-0', '사건').names).toEqual([]);
   });
 });

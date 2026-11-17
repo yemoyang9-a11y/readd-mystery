@@ -69,6 +69,7 @@ import {
   verifyRelationships,
 } from './relationship-verification';
 import {
+  ReaderTextInput,
   eventReaderInput,
   eventReaderKey,
   relationshipReaderInput,
@@ -469,19 +470,18 @@ async function applyReaderTexts(
   outDir: string
 ): Promise<void> {
   const names = new Map(state.characters.map((c) => [c.id, c.name]));
-  const items = [
-    ...state.relationships.flatMap((r) =>
-      r.semantics
-        ? [
-            relationshipReaderInput(
-              r.id,
-              r.semantics.summary,
-              names.get(r.character_a_id) ?? '',
-              names.get(r.character_b_id) ?? ''
-            ),
-          ]
-        : []
-    ),
+  const items: ReaderTextInput[] = [
+    ...state.relationships.flatMap((r) => {
+      const item =
+        r.semantics &&
+        relationshipReaderInput(
+          r.id,
+          r.semantics.summary,
+          names.get(r.character_a_id),
+          names.get(r.character_b_id)
+        );
+      return item ? [item] : [];
+    }),
     ...events.map((e) => eventReaderInput(e.id, e.description)),
   ];
 
