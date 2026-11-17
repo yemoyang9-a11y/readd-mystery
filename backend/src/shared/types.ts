@@ -52,6 +52,13 @@ export interface CutoffSnapshot {
     chapter_no: number;
     title: string;
   };
+
+  /**
+   * 이어 읽기 위치(current_page)가 속한 장 — 홈 이어 읽기 카드의 "제N장 · 쪽" 표시용
+   * (2026-11-17 대표 결정). 기준점의 장(chapter)과 다를 수 있다. 장 경계·제목은 목차라
+   * 상한 대상이 아니다(R3). 장을 찾지 못하면 null — 다른 장으로 메우지 않는다.
+   */
+  resume_chapter: { chapter_no: number; title: string } | null;
 }
 
 // ============================================================================
@@ -126,11 +133,17 @@ export interface BriefingResponse {
   /** 저장 리캡 (없으면 null, applied_cutoff > 0일 때만 클라이언트가 스트리밍 폴백 호출) */
   recap: string | null;
 
-  /** 목차 위치 */
+  /** 목차 위치 — 기준점(applied_cutoff)이 속한 장 */
   current_chapter: {
     chapter_no: number;
     title: string;
   };
+
+  /**
+   * 이어 읽기 위치(progress.current_page)가 속한 장. 되돌아가 읽거나 목차로 건너뛰면
+   * current_chapter 와 다르다. 찾지 못하면 null (2026-11-17 대표 결정)
+   */
+  resume_chapter: { chapter_no: number; title: string } | null;
 
   /** 진도 파생값 */
   progress: {
@@ -138,6 +151,12 @@ export interface BriefingResponse {
     total_pages: number;
     percent: number;
   };
+
+  /**
+   * 마지막으로 읽은 시각(reading_position.updated_at, ISO 8601) — 브리핑의 "N일 만이에요"용.
+   * GET /books 의 progress.last_read_at 과 같은 값. 진도 레코드가 없으면 null
+   */
+  last_read_at: string | null;
 }
 
 // ============================================================================

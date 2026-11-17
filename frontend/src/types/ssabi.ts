@@ -85,6 +85,8 @@ export interface TimelineChapter {
   title: string;
   start_page: number;
   end_page: number;
+  /** 다 읽은 장인가 — 서버가 기준점으로 정한 값. 프론트는 쪽수로 다시 판정하지 않는다 (FR-BRF-005 🚦) */
+  completed: boolean;
 }
 
 export interface TimelineEvent {

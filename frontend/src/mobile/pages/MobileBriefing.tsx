@@ -37,6 +37,7 @@ export default function MobileBriefing() {
       onSelectChapter={session.selectChapter}
       lastReadAt={session.lastReadAt}
       introduction={session.introduction}
+      background={session.background}
       title={session.title}
       author={session.author}
       coverUrl={session.coverUrl}

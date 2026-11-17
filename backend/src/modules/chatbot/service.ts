@@ -255,7 +255,7 @@ export async function* handleQuery(
     recordSelection(modelSelection.model);
 
     const task = CHATBOT_TASK;
-    async function* generateChunks(promptText: string): AsyncGenerator<string> {
+    const generateChunks = async function* (promptText: string): AsyncGenerator<string> {
       if (generationDeadline) clearTimeout(generationDeadline);
       generationController?.abort();
       const controller = new AbortController();
@@ -287,7 +287,7 @@ export async function* handleQuery(
       controller.signal.throwIfAborted();
       if (pending) yield pending;
       clearTimeout(generationDeadline);
-    }
+    };
 
     const allowedPages: Array<{ page_no: number; content: string }> = searchResults.map((r) => ({
       page_no: r.page_no,

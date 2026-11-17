@@ -8,7 +8,8 @@ import type { TimelineResponse } from '../../types';
  * 판별하지 않는다 (FR-SPL-002 🚦, 절대 규칙 7번). 조회가 실패하면 아무 데이터도 보이지 않는다
  * (FR-SPL-005 🚦). 사건은 장 범위(서버가 준 start/end)에 들어가는 쪽에 묶어 보여 줄 뿐이고,
  * 쪽수는 화면에 내지 않는다. 서버는 다 읽은 장의 사건만 보내므로(결정 31) 지금 읽는 장은 제목만
- * 오고, 그 장에 사건이 없으면 안내 한 줄만 둔다.
+ * 오고, 그 장에 사건이 없으면 안내 한 줄만 둔다. 마지막 장을 이미 다 읽었으면(서버가 준
+ * completed) 안내를 내지 않는다 — 다 읽었는지는 쪽수로 다시 따지지 않는다 (2026-11-17 대표 결정).
  */
 export default function EventSummary({
   timeline,
@@ -67,7 +68,7 @@ export default function EventSummary({
                   </span>
                 ) : null}
               </div>
-              {isLast && events.length === 0 ? (
+              {isLast && !chapter.completed && events.length === 0 ? (
                 <p className="m-0 mt-2 px-2 text-[13px] text-brief-muted">
                   이 장을 다 읽으면 사건이 정리돼요
                 </p>

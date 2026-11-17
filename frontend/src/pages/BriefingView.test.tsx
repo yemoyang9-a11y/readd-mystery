@@ -16,7 +16,9 @@ function briefing(overrides: Partial<BriefingResponse> = {}): BriefingResponse {
     applied_cutoff: 20,
     recap: '정주사는 미두장에서 재산을 잃었다.',
     current_chapter: { chapter_no: 3, title: '신판 흥부전' },
+    resume_chapter: { chapter_no: 3, title: '신판 흥부전' },
     progress: { current_page: 21, total_pages: 30, percent: 70 },
+    last_read_at: null,
     ...overrides,
   };
 }

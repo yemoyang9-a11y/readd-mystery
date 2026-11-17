@@ -5,7 +5,7 @@ import { fetchGraph } from '../services/ssabiService';
 import { useSSE } from './useSSE';
 import { useNotes } from './useNotes';
 import { nextSeq } from '../utils/seq';
-import { fetchBookInfo, fetchCatalog } from '../services/bookService';
+import { fetchBookInfo } from '../services/bookService';
 import { resolveCoverUrl } from '../utils/coverOverrides';
 import { setPendingJump } from '../utils/pendingJump';
 import { BOOK_ROUTES } from '../utils/routes';
@@ -20,10 +20,12 @@ export interface BriefingSessionState {
   title: string;
   author: string;
   coverUrl: string | null;
-  /** 서버의 마지막 읽은 시각(GET /books progress.last_read_at). 없거나 조회 실패면 null */
+  /** 서버의 마지막 읽은 시각(GET /briefing last_read_at). 없거나 조회 실패면 null */
   lastReadAt: string | null;
   /** 서버의 작품 소개(GET /info introduction, 상한 예외 R5). 없으면 null */
   introduction: string | null;
+  /** 서버의 배경지식(GET /info background, 상한 예외 R5). 없거나 조회 실패면 null */
+  background: string | null;
   characterNames: string[];
   notes: ReadingNote[];
   streamedRecap: string;
@@ -51,8 +53,12 @@ export function useBriefingSession(bookId: string): BriefingSessionState {
 
   const [briefing, setBriefing] = useState<BriefingResponse | null>(null);
   const [chapters, setChapters] = useState<ChapterSummary[]>([]);
-  const [book, setBook] = useState<{ title: string; author: string; introduction: string } | null>(null);
-  const [lastReadAt, setLastReadAt] = useState<string | null>(null);
+  const [book, setBook] = useState<{
+    title: string;
+    author: string;
+    introduction: string;
+    background: string;
+  } | null>(null);
   /** 리캡 인물명 강조(RecapTab.tsx와 동일 방식) — /ssabi/graph도 K 이하로 이미 걸러진
    *  응답이라 여기서 새로 판별하지 않는다(types/ssabi.ts:3). 조회 실패 시에도 리캡 본문
    *  자체는 그대로 보여줘야 하므로 강조만 조용히 빠진다. */
@@ -80,36 +86,19 @@ export function useBriefingSession(bookId: string): BriefingSessionState {
 
   useEffect(() => {
     loadBriefing();
-    void fetchBookInfo(bookId).then((info) => {
-      setChapters(info.chapters);
-      setBook({
-        title: info.basic_info.title,
-        author: info.basic_info.author,
-        introduction: info.introduction,
-      });
-    });
-  }, [bookId, loadBriefing]);
-
-  // 경과 안내("N일 만이에요")의 원천 — 브리핑 응답에는 마지막 읽은 시각이 없고, GET /books 의
-  // progress.last_read_at(reading_position.updated_at)에만 있다. 실패하면 그 줄을 그리지 않는다
-  // — 다른 값으로 채우지 않는다 (2026-11-17 대표 결정, MOCK_DAYS_SINCE_LABEL 제거).
-  useEffect(() => {
-    let cancelled = false;
-    setLastReadAt(null);
-    Promise.resolve()
-      .then(() => fetchCatalog())
-      .then((catalog) => {
-        if (cancelled) return;
-        const found = catalog.books.find((b) => b.book_id === bookId);
-        setLastReadAt(found?.progress?.last_read_at ?? null);
+    void fetchBookInfo(bookId)
+      .then((info) => {
+        setChapters(info.chapters);
+        setBook({
+          title: info.basic_info.title,
+          author: info.basic_info.author,
+          introduction: info.introduction,
+          background: info.background,
+        });
       })
-      .catch(() => {
-        if (!cancelled) setLastReadAt(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [bookId]);
+      // 조회 실패 = 소개·배경지식·목차를 그리지 않는다. 다른 값으로 채우지 않는다 (FR-SPL-005 🚦)
+      .catch(() => {});
+  }, [bookId, loadBriefing]);
 
   useEffect(() => {
     if (currentPage === null) return;
@@ -166,8 +155,12 @@ export function useBriefingSession(bookId: string): BriefingSessionState {
     title: book?.title ?? '',
     author: book?.author ?? '',
     coverUrl: resolveCoverUrl(bookId, null),
-    lastReadAt,
+    // 경과 안내("N일 만이에요")의 원천 — 브리핑 응답의 last_read_at(reading_position.updated_at).
+    // 없으면 그 줄을 그리지 않는다 — 다른 값으로 채우지 않는다 (2026-11-17 대표 결정)
+    lastReadAt: briefing?.last_read_at ?? null,
     introduction: book?.introduction ? book.introduction : null,
+    // FR-BGK-002 🚦 R5 — 배경지식은 상한 대상이 아닌 고정 콘텐츠다
+    background: book?.background ? book.background : null,
     characterNames,
     notes,
     streamedRecap,

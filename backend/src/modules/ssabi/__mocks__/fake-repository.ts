@@ -26,7 +26,8 @@ export interface TimelineFixtureEvent extends TimelineEvent {
 }
 
 export interface SsabiFixture {
-  timelineChapters?: (TimelineChapter & { book_id: string })[];
+  /** completed 는 조회 시 cutoff 로 정해지므로 픽스처에는 두지 않는다 */
+  timelineChapters?: (Omit<TimelineChapter, 'completed'> & { book_id: string })[];
   timelineEvents?: TimelineFixtureEvent[];
   characters: Character[];
   relationships: Relationship[];
@@ -54,6 +55,7 @@ export class FakeSsabiRepository implements SsabiRepository {
         title,
         start_page,
         end_page,
+        completed: end_page <= cutoff,
       }));
     const events = (this.fixture.timelineEvents ?? [])
       .filter(

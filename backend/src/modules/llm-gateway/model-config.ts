@@ -49,8 +49,19 @@ export const MODEL_CONFIG = {
   rewrite_reader_text: DEFAULT_MODEL,
 } as const;
 
+/**
+ * NFR-OBS-004: 지표에서만 따로 세는 작업 이름 → 모델을 빌려 쓰는 작업.
+ *
+ * MODEL_CONFIG 에 키를 더하지 않는 이유 — 배치 장 캐시의 계약 문자열이 MODEL_CONFIG 를 통째로
+ * 담는다(run-generate-full.ts). 키가 늘면 이미 생성·검수한 결과가 전부 "낡은 캐시"가 되어
+ * 다시 생성해야 한다. 모델은 같으므로 이름만 나눈다.
+ */
+const METRIC_TASK_ALIASES: Record<string, keyof typeof MODEL_CONFIG> = {
+  generate_event_scene_boundary: 'generate_event',
+};
+
 export function getModelForTask(task: string): string {
-  const model = MODEL_CONFIG[task as keyof typeof MODEL_CONFIG];
+  const model = MODEL_CONFIG[(METRIC_TASK_ALIASES[task] ?? task) as keyof typeof MODEL_CONFIG];
   if (!model) {
     console.warn(`Unknown task: ${task}, falling back to default model`);
     return DEFAULT_MODEL;

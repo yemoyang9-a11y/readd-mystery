@@ -65,7 +65,7 @@ export default function BriefingView({
   /** 리캡 인물명 강조(RecapTab.tsx와 동일) — 이미 K 이하로 걸러진 /ssabi/graph 이름 목록 */
   characterNames?: string[];
   notes?: ReadingNote[];
-  /** 서버의 마지막 읽은 시각(GET /books progress.last_read_at). 없으면 경과 안내를 그리지 않는다 */
+  /** 서버의 마지막 읽은 시각(GET /briefing last_read_at). 없으면 경과 안내를 그리지 않는다 */
   lastReadAt?: string | null;
 }) {
   const view = resolveBriefingView(briefing);

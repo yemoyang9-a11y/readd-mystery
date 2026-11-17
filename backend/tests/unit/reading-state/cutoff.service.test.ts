@@ -252,3 +252,62 @@ describe('읽은 장 조회 — getReadChapters', () => {
     expect(result.read_chapter_nos).toEqual([1, 2, 3, 4]);
   });
 });
+
+describe('이어 읽기 위치의 장 — resume_chapter (2026-11-17 대표 결정)', () => {
+  test('FR-BRF-005 🚦: 되돌아가 읽으면 resume_chapter는 이어 읽기 위치의 장, chapter는 기준점의 장', async () => {
+    const { positions, books } = makeSeededFakes();
+    const service = createCutoffService({ positions, books });
+    // 25쪽(3장)까지 차례로 읽고 5쪽(1장)으로 되돌아갔다
+    positions.set(SEED_DEVICE_ID, SEED_BOOK_ID, {
+      current_page: 5,
+      event_seq: 2,
+      max_page: 25,
+      read_pages: Array.from({ length: 25 }, (_, i) => i + 1),
+    });
+
+    const snapshot = await service.getCutoffSnapshot(SEED_DEVICE_ID, SEED_BOOK_ID);
+
+    expect(snapshot.cutoff).toBe(25);
+    expect(snapshot.chapter).toEqual({ chapter_no: 3, title: '제3장 생활 제일과' });
+    expect(snapshot.resume_chapter).toEqual({ chapter_no: 1, title: '제1장 인간기념물' });
+  });
+
+  test('목차로 건너뛴 위치(기준점보다 뒤)에서도 resume_chapter는 이어 읽기 위치의 장 — 목차는 상시 공개(R3)', async () => {
+    const { positions, books } = makeSeededFakes();
+    const service = createCutoffService({ positions, books });
+    positions.set(SEED_DEVICE_ID, SEED_BOOK_ID, {
+      current_page: 22,
+      event_seq: 2,
+      max_page: 22,
+      read_pages: [1, 2, 3],
+    });
+
+    const snapshot = await service.getCutoffSnapshot(SEED_DEVICE_ID, SEED_BOOK_ID);
+
+    expect(snapshot.cutoff).toBe(3);
+    expect(snapshot.chapter.chapter_no).toBe(1);
+    expect(snapshot.resume_chapter).toEqual({ chapter_no: 3, title: '제3장 생활 제일과' });
+  });
+
+  test('이어 읽기 위치와 기준점이 같은 장이면 두 값이 같다', async () => {
+    const snapshot = await serviceWith(15).getCutoffSnapshot(SEED_DEVICE_ID, SEED_BOOK_ID);
+
+    expect(snapshot.resume_chapter).toEqual(snapshot.chapter);
+  });
+
+  test('FR-SPL-005 🚦: 이어 읽기 위치가 속한 장을 찾지 못하면 resume_chapter는 null (다른 장으로 메우지 않는다)', async () => {
+    const { positions, books } = makeSeededFakes();
+    const service = createCutoffService({ positions, books });
+    positions.set(SEED_DEVICE_ID, SEED_BOOK_ID, {
+      current_page: 99,
+      event_seq: 2,
+      max_page: 99,
+      read_pages: [1, 2, 3],
+    });
+
+    const snapshot = await service.getCutoffSnapshot(SEED_DEVICE_ID, SEED_BOOK_ID);
+
+    expect(snapshot.cutoff).toBe(3);
+    expect(snapshot.resume_chapter).toBeNull();
+  });
+});

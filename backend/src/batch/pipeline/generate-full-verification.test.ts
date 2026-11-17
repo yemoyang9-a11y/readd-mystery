@@ -79,12 +79,9 @@ function setup(options: {
     if (task === 'generate_summary') return JSON.stringify({ summary: options.summary ?? '요약' });
     if (task === 'generate_character') return JSON.stringify({ characters });
     if (task === 'generate_term') return JSON.stringify({ terms: [] });
+    if (task === 'generate_event_scene_boundary') return JSON.stringify({ boundaries: [] });
     if (task === 'generate_event')
-      return JSON.stringify(
-        prompt.includes('장면 경계')
-          ? { boundaries: [] }
-          : { events: options.events ?? [sceneEvent()] }
-      );
+      return JSON.stringify({ events: options.events ?? [sceneEvent()] });
     if (task === 'rewrite_reader_text') {
       const keys = [...prompt.matchAll(/"key": "([^"]+)"/g)].map((m) => m[1]);
       return JSON.stringify({
@@ -204,8 +201,12 @@ describe('R9: 독자용 쉬운 문장이 생성 경로에 들어 있다', () => 
 });
 
 describe('FR-DAT-008: 사건은 장면 단위로 뽑고 원문 근거로 검증한다', () => {
-  const eventCalls = () =>
-    (call as jest.Mock).mock.calls.filter(([task]) => task === 'generate_event');
+  const callsOf = (name: string) =>
+    (call as jest.Mock).mock.calls.filter(([task]) => task === name);
+  // 경계 호출과 장면별 추출 호출은 작업 이름이 다르다 (NFR-OBS-004 — 비용 지표 구분)
+  const boundaryCalls = () => callsOf('generate_event_scene_boundary');
+  const sceneCalls = () => callsOf('generate_event');
+  const eventCalls = () => [...boundaryCalls(), ...sceneCalls()];
   const reviewOf = (book: unknown) =>
     JSON.stringify((book as { review_candidates: unknown }).review_candidates);
 
@@ -213,6 +214,8 @@ describe('FR-DAT-008: 사건은 장면 단위로 뽑고 원문 근거로 검증�
     const args = setup({ second: [relationship()], supports: true });
     const book = await generateFullBook(args);
     expect(eventCalls()).toHaveLength(2);
+    expect(boundaryCalls()).toHaveLength(1);
+    expect(sceneCalls()).toHaveLength(1);
     expect(book.events).toHaveLength(1);
     expect(book.events[0]).toMatchObject({
       event: '박영민이 손님을 맞았다',

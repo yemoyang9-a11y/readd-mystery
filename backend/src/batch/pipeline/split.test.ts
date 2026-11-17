@@ -198,6 +198,69 @@ describe('FR-DAT-001 🚦 장 경계 커버리지 — 간극·중첩 0', () => {
   });
 });
 
+describe('FR-DAT-001 🚦 validateSplit — 장 범위 겹침·간극을 등록 전에 거절한다', () => {
+  // 사건 정리·챗봇의 사건 조회는 장 범위로 조인한다. 범위가 겹치는 책이 등록되면 같은 사건이
+  // 두 번 나오므로, 등록 게이트(run-register.ts 의 crossChapterViolations > 0 → 거절)가 막아야 한다.
+  function sentence(n: number): string {
+    return `문장 ${n} 내용을 충분히 길게 채워서 페이지 분할이 여러 장에 걸쳐 발생하도록 만든다.`;
+  }
+  const para = Array.from({ length: 60 }, (_, i) => sentence(i)).join(' ');
+  const rawText = ['1 장1', '', para, '', '2 장2', '', para, '', '3 장3', '', para, ''].join('\n');
+  const split = () => splitBook(rawText, BOOK_ID);
+
+  test('FR-DAT-001: 정상 분할은 장 범위 위반 0건 (positive 쌍)', () => {
+    const { pages, chapters } = split();
+    expect(chapters).toHaveLength(3);
+    expect(chapters[0].end_page).toBeGreaterThan(chapters[0].start_page);
+    expect(validateSplit(pages, chapters, rawText).crossChapterViolations).toBe(0);
+  });
+
+  test('FR-DAT-001: 2장이 1장 마지막 쪽에서 시작하면(겹침) 위반으로 보고한다', () => {
+    const { pages, chapters } = split();
+    const overlapping = chapters.map((c) =>
+      c.chapter_no === 2 ? { ...c, start_page: c.start_page - 1 } : c
+    );
+    const report = validateSplit(pages, overlapping, rawText);
+    expect(report.crossChapterViolations).toBeGreaterThan(0);
+    expect(report.details.some((d) => d.includes('FR-DAT-001'))).toBe(true);
+  });
+
+  test('FR-DAT-001: 한 장이 다른 장 범위 안에 통째로 들어가도(포함) 위반으로 보고한다', () => {
+    const { pages, chapters } = split();
+    const first = chapters[0];
+    const nested = chapters.map((c) =>
+      c.chapter_no === 2 ? { ...c, start_page: first.start_page, end_page: first.end_page } : c
+    );
+    expect(validateSplit(pages, nested, rawText).crossChapterViolations).toBeGreaterThan(0);
+  });
+
+  test('FR-DAT-001: 장 사이에 빈 쪽이 있으면(간극) 위반으로 보고한다', () => {
+    const { pages, chapters } = split();
+    const gapped = chapters.map((c) =>
+      c.chapter_no === 2 ? { ...c, start_page: c.start_page + 1 } : c
+    );
+    const report = validateSplit(pages, gapped, rawText);
+    expect(report.crossChapterViolations).toBeGreaterThan(0);
+    expect(report.details.some((d) => d.includes('FR-DAT-001'))).toBe(true);
+  });
+
+  test('FR-DAT-001: 마지막 장이 마지막 쪽까지 닿지 않으면 위반으로 보고한다', () => {
+    const { pages, chapters } = split();
+    const short = chapters.map((c) => (c.chapter_no === 3 ? { ...c, end_page: c.end_page - 1 } : c));
+    const report = validateSplit(pages, short, rawText);
+    expect(report.crossChapterViolations).toBeGreaterThan(0);
+    expect(report.details.some((d) => d.includes('FR-DAT-001'))).toBe(true);
+  });
+
+  test('FR-DAT-001: 장의 시작 쪽이 끝 쪽보다 뒤면 위반으로 보고한다', () => {
+    const { pages, chapters } = split();
+    const inverted = chapters.map((c) =>
+      c.chapter_no === 1 ? { ...c, start_page: c.end_page, end_page: c.start_page } : c
+    );
+    expect(validateSplit(pages, inverted, rawText).crossChapterViolations).toBeGreaterThan(0);
+  });
+});
+
 describe('computeMeasurements — CP1 실측 3건', () => {
   test('글자수 분포 · 문장경계 폴백 횟수 · 최장 장 크기를 산출한다', () => {
     function sentence(n: number): string {

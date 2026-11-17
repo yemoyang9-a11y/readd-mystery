@@ -12,13 +12,15 @@
  */
 
 import type { CutoffService } from './cutoff.service';
-import type { BookMetaReader, SavedRecapRepository } from './repository';
+import type { BookMetaReader, ReadingPositionRepository, SavedRecapRepository } from './repository';
 import type { BriefingResponse } from '../../shared/types';
 
 export interface BriefingServiceDeps {
   cutoffService: CutoffService;
   books: BookMetaReader;
   savedRecap: SavedRecapRepository;
+  /** 마지막 읽은 시각(reading_position.updated_at)의 원천 */
+  positions: ReadingPositionRepository;
 }
 
 export interface BriefingService {
@@ -26,7 +28,7 @@ export interface BriefingService {
 }
 
 export function createBriefingService(deps: BriefingServiceDeps): BriefingService {
-  const { cutoffService, books, savedRecap } = deps;
+  const { cutoffService, books, savedRecap, positions } = deps;
 
   return {
     async getBriefing(deviceId: string, bookId: string): Promise<BriefingResponse> {
@@ -51,15 +53,22 @@ export function createBriefingService(deps: BriefingServiceDeps): BriefingServic
         // 이므로 클라이언트가 스트리밍 폴백을 호출한다(recap/stream).
       }
 
+      // 마지막 읽은 시각 — GET /books 의 progress.last_read_at 과 같은 저장값이다. 브리핑 화면이
+      // 이 값 하나 때문에 GET /books 를 더 부르지 않게 한다 (2026-11-17 대표 결정).
+      // 기준점 파생값이 아니라 저장 시각 그대로이며, 레코드가 없으면 null 로 둔다.
+      const stored = await positions.findPosition(deviceId, bookId);
+
       return {
         applied_cutoff: snapshot.cutoff, // 클라이언트가 폴백 필요/불필요를 가르는 근거(❓Q1)
         recap,
         current_chapter: snapshot.chapter, // FR-BRF-005 🚦 — 결정기 스냅샷과 동일 원천
+        resume_chapter: snapshot.resume_chapter, // FR-BRF-005 🚦 — 이어 읽기 위치의 장도 결정기에서만
         progress: {
           current_page: snapshot.current_page,
           total_pages: totalPages,
           percent: snapshot.percent,
         },
+        last_read_at: stored?.updated_at ?? null,
       };
     },
   };

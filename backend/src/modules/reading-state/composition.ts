@@ -59,7 +59,7 @@ export function createReadingStateServices(pool: Pool): ReadingStateServices {
   const cutoffService = createCutoffService({ positions, books });
   const progressService = createProgressService({ positions });
   const sessionService = createSessionService({ positions, books, sessions, clock: systemClock });
-  const briefingService = createBriefingService({ cutoffService, books, savedRecap });
+  const briefingService = createBriefingService({ cutoffService, books, savedRecap, positions });
   const recapService = createRecapService({
     content: books,
     books,

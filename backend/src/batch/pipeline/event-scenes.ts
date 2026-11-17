@@ -73,7 +73,16 @@ export interface ChapterEventResult {
   warnings: string[];
 }
 
-export type AskJson = (prompt: string) => Promise<unknown>;
+/**
+ * LLM 게이트웨이 작업 이름 — 비용 지표([LLM Metrics]의 task)를 경계 호출과 장면별 추출로 나눈다
+ * (NFR-OBS-004). 장면별 추출은 기존 이름을 그대로 써서 이전 지표와 이어진다.
+ */
+export const EVENT_SCENE_BOUNDARY_TASK = 'generate_event_scene_boundary';
+export const EVENT_SCENE_EXTRACTION_TASK = 'generate_event';
+export type EventTask = typeof EVENT_SCENE_BOUNDARY_TASK | typeof EVENT_SCENE_EXTRACTION_TASK;
+
+/** 호출부는 받은 task 를 그대로 게이트웨이에 넘긴다 — 게이트웨이 경유만 (절대 규칙 4번, 4.3절) */
+export type AskJson = (prompt: string, task: EventTask) => Promise<unknown>;
 
 interface PageSpan {
   page: Page;
@@ -407,11 +416,14 @@ export async function extractChapterEventsRaw(
   ask: AskJson
 ): Promise<ChapterEventRaw> {
   if (layout(pages).text.length === 0) return { boundaries: null, scenes: [] };
-  const boundaries = await ask(buildSceneBoundaryPrompt(chapter, pages));
+  const boundaries = await ask(buildSceneBoundaryPrompt(chapter, pages), EVENT_SCENE_BOUNDARY_TASK);
   const { scenes } = resolveScenes(pages, boundaries);
   const out: ChapterEventRaw['scenes'] = [];
   for (const scene of scenes) {
-    const response = await ask(buildSceneEventPrompt(chapter, pages, scene));
+    const response = await ask(
+      buildSceneEventPrompt(chapter, pages, scene),
+      EVENT_SCENE_EXTRACTION_TASK
+    );
     out.push({ start: scene.start, end: scene.end, response });
   }
   return { boundaries, scenes: out };
