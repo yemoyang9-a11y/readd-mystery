@@ -4,13 +4,16 @@ import type {
   ChatbotConversationTurn,
   GraphResponse,
   NoteDraft,
+  NotesView,
   ReadingNote,
   SsabiTab,
+  TimelineResponse,
 } from '../../types';
 import { resolveSsabiTab } from '../../utils/ssabiTab';
 import { resolveCharacterMode } from '../../utils/characterMode';
 import AmoSherlock from '../common/AmoSherlock';
 import NotesTab from './NotesTab';
+import EventSummary from './EventSummary';
 import RelationshipTab from './RelationshipTab';
 import ChatbotTab from './ChatbotTab';
 
@@ -40,8 +43,12 @@ export default function SsabiPanel({
   initialCharacterMode = null,
   initialCharacterModeEpoch = null,
   onCharacterModeChange,
+  initialNotesView = 'mine',
+  onNotesViewChange,
   graph,
   graphFailed,
+  timeline = null,
+  timelineFailed = false,
   totalPages,
   notes,
   notesFailed,
@@ -91,8 +98,14 @@ export default function SsabiPanel({
   initialCharacterMode?: 'major' | 'all' | null;
   initialCharacterModeEpoch?: number | null;
   onCharacterModeChange: (mode: 'major' | 'all') => void;
+  /** 추리 노트 안 `내 노트 | 사건 정리` — 마지막에 고른 쪽 기억(탭 기억과 같은 방식, 컨테이너가 들고 있다) */
+  initialNotesView?: NotesView;
+  onNotesViewChange?: (view: NotesView) => void;
   graph: GraphResponse | null;
   graphFailed: boolean;
+  /** 사건 정리 — 서버가 K 이하로 걸러 준 것 (FR-SPL-002 🚦) */
+  timeline?: TimelineResponse | null;
+  timelineFailed?: boolean;
   /** 목차 기준 전체 페이지 수 — 인물 관계도 탭의 되감기 트랙 오른쪽 끝 표시용(R1 요청). */
   totalPages?: number;
   notes: ReadingNote[];
@@ -169,13 +182,22 @@ export default function SsabiPanel({
     onCharacterModeChange(mode);
   }
 
+  const [notesView, setNotesView] = useState<NotesView>(initialNotesView);
+  function handleNotesView(view: NotesView) {
+    setNotesView(view);
+    onNotesViewChange?.(view);
+  }
+
   // 본문에서 인용 요청이 올 때마다(token 변화) 챗봇 탭으로 전환한다
   useEffect(() => {
     if (pendingQuote) setLastTab('chatbot');
   }, [pendingQuote?.token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (pendingNoteQuote) setLastTab('notes');
+    if (pendingNoteQuote) {
+      setLastTab('notes');
+      handleNotesView('mine'); // 노트 적기는 내 노트에서만
+    }
   }, [pendingNoteQuote?.token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
@@ -234,18 +256,51 @@ export default function SsabiPanel({
         className="brief-scroll relative z-0 flex-1 animate-tab-in overflow-y-auto rounded-b-xl rounded-tr-xl border border-brief-rule bg-brief-paper px-6 pb-6 pt-5"
       >
         {tab === 'notes' ? (
-          <NotesTab
-            notes={notes}
-            failed={notesFailed}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onAdd={onAddNote}
-            onEdit={onEditNote}
-            onRemove={onRemoveNote}
-            onJump={onJumpToNote}
-            quoteDraft={pendingNoteQuote}
-            onQuoteDraftHandled={onNoteQuoteHandled}
-          />
+          <div className="flex min-h-full flex-col">
+            <div
+              role="group"
+              aria-label="추리 노트 보기"
+              className="mb-4 flex gap-5 border-b border-brief-rule font-dashSans"
+            >
+              {(
+                [
+                  ['mine', '내 노트'],
+                  ['events', '사건 정리'],
+                ] as const
+              ).map(([view, label]) => (
+                <button
+                  key={view}
+                  type="button"
+                  data-track={`추리 노트-${label}`}
+                  aria-pressed={notesView === view}
+                  onClick={() => handleNotesView(view)}
+                  className={
+                    notesView === view
+                      ? '-mb-px min-h-11 border-b-2 border-brief-accent text-sm font-extrabold text-brief-ink'
+                      : '-mb-px min-h-11 border-b-2 border-transparent text-sm font-bold text-brief-muted'
+                  }
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {notesView === 'mine' ? (
+              <NotesTab
+                notes={notes}
+                failed={notesFailed}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onAdd={onAddNote}
+                onEdit={onEditNote}
+                onRemove={onRemoveNote}
+                onJump={onJumpToNote}
+                quoteDraft={pendingNoteQuote}
+                onQuoteDraftHandled={onNoteQuoteHandled}
+              />
+            ) : (
+              <EventSummary timeline={timeline} failed={timelineFailed} />
+            )}
+          </div>
         ) : null}
         {tab === 'relationship' ? (
           <RelationshipTab

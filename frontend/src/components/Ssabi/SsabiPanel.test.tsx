@@ -316,4 +316,56 @@ describe('싸비 사이드창', () => {
       expect(onRemoveNote).toHaveBeenCalledWith('n1');
     });
   });
+
+  describe('추리 노트 안 사건 정리', () => {
+    const timeline = {
+      applied_cutoff: 12,
+      chapters: [{ chapter_no: 1, title: '첫 장', start_page: 1, end_page: 9 }],
+      events: [{ id: 'e1', event: '편지가 도착해요', description: null, occurrence_page: 4 }],
+    };
+
+    it('탭은 추리 노트·인물관계도·AI 챗봇 세 개다', () => {
+      render(<SsabiPanel {...baseProps} />);
+      const names = screen.getAllByRole('tab').map((t) => t.textContent);
+      expect(names).toEqual(['추리 노트', '인물관계도', 'AI 챗봇']);
+    });
+
+    it('추리 노트에 내 노트·사건 정리 전환이 있고 기본은 내 노트다', async () => {
+      const user = userEvent.setup();
+      render(<SsabiPanel {...baseProps} timeline={timeline} />);
+      await user.click(screen.getByRole('tab', { name: '추리 노트' }));
+      expect(screen.getByRole('button', { name: '내 노트' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: '사건 정리' })).toHaveAttribute('aria-pressed', 'false');
+    });
+
+    it('사건 정리를 고른 뒤 다른 탭에 갔다 와도 사건 정리가 유지된다', async () => {
+      const user = userEvent.setup();
+      render(<SsabiPanel {...baseProps} timeline={timeline} />);
+      await user.click(screen.getByRole('tab', { name: '추리 노트' }));
+      await user.click(screen.getByRole('button', { name: '사건 정리' }));
+      expect(screen.getByText('지금까지, 1개 장면이에요')).toBeInTheDocument();
+      await user.click(screen.getByRole('tab', { name: '인물관계도' }));
+      await user.click(screen.getByRole('tab', { name: '추리 노트' }));
+      expect(screen.getByRole('button', { name: '사건 정리' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByText('지금까지, 1개 장면이에요')).toBeInTheDocument();
+    });
+
+    it('단서·가설 적기는 내 노트에서만 보인다', async () => {
+      const user = userEvent.setup();
+      render(<SsabiPanel {...baseProps} timeline={timeline} />);
+      await user.click(screen.getByRole('tab', { name: '추리 노트' }));
+      expect(screen.getByRole('button', { name: /단서·가설 적기/ })).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: '사건 정리' }));
+      expect(screen.queryByRole('button', { name: /단서·가설 적기/ })).toBeNull();
+    });
+
+    it('고른 쪽은 바뀔 때 알려 준다(패널을 닫았다 열어도 기억하기 위해)', async () => {
+      const user = userEvent.setup();
+      const onNotesViewChange = vi.fn();
+      render(<SsabiPanel {...baseProps} timeline={timeline} onNotesViewChange={onNotesViewChange} />);
+      await user.click(screen.getByRole('tab', { name: '추리 노트' }));
+      await user.click(screen.getByRole('button', { name: '사건 정리' }));
+      expect(onNotesViewChange).toHaveBeenLastCalledWith('events');
+    });
+  });
 });

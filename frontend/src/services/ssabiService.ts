@@ -12,7 +12,7 @@
 
 import { api } from './api';
 import { USE_MOCK } from '../utils/constants';
-import type { CharacterResponse, GraphResponse } from '../types';
+import type { CharacterResponse, GraphResponse, TimelineResponse } from '../types';
 
 export async function fetchGraph(
   bookId: string,
@@ -45,5 +45,20 @@ export async function fetchCharacter(
     `/books/${bookId}/ssabi/characters/${characterId}`,
     { params: { page, seq } }
   );
+  return data;
+}
+
+export async function fetchTimeline(
+  bookId: string,
+  page: number,
+  seq: number
+): Promise<TimelineResponse> {
+  if (USE_MOCK) {
+    const { mockTimelineResponse } = await import('../../mocks/server');
+    return mockTimelineResponse(page);
+  }
+  const { data } = await api.get<TimelineResponse>(`/books/${bookId}/ssabi/timeline`, {
+    params: { page, seq },
+  });
   return data;
 }
