@@ -28,14 +28,22 @@ export default function ProgressBar({
   runner = false,
 }: {
   percent: number;
-  tone?: 'ink' | 'accent' | 'dash' | 'brief';
+  /** night — 어두운 화면(data-night: 모바일 브리핑·홈) 전용. 기존 brief 토큰의 밤 값을 쓴다 */
+  tone?: 'ink' | 'accent' | 'dash' | 'brief' | 'night';
   size?: 'sm' | 'md';
   runner?: boolean;
 }) {
   const width = Math.min(Math.max(percent, 0), 100);
   const fillClass =
-    tone === 'accent' ? 'bg-accent' : tone === 'dash' || tone === 'brief' ? 'bg-[#555]' : 'bg-ink';
-  const trackClass = tone === 'dash' ? 'bg-dash-line' : tone === 'brief' ? 'bg-brief-line' : 'bg-line';
+    tone === 'accent'
+      ? 'bg-accent'
+      : tone === 'night'
+        ? 'bg-brief-ink'
+        : tone === 'dash' || tone === 'brief'
+          ? 'bg-[#555]'
+          : 'bg-ink';
+  const trackClass =
+    tone === 'dash' ? 'bg-dash-line' : tone === 'brief' || tone === 'night' ? 'bg-brief-line' : 'bg-line';
   const heightClass = size === 'md' ? 'h-1.5' : 'h-1';
 
   return (

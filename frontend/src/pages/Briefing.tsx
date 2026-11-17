@@ -32,6 +32,7 @@ export default function Briefing() {
       recapStreaming={session.recapStreaming}
       characterNames={session.characterNames}
       notes={session.notes}
+      lastReadAt={session.lastReadAt}
     />
   );
 }

@@ -615,3 +615,52 @@ describe('ChatbotTab — 대화 이력', () => {
     expect(screen.queryByText('2026-08-25T00:00:00.000Z')).not.toBeInTheDocument();
   });
 });
+
+// 2026-11-17 대표 결정 — 챗봇 빈 화면 추천 질문 (NFR-AI-005: 판정 유도 질문 금지)
+describe('ChatbotTab 빈 화면 추천 질문', () => {
+  const SUGGESTIONS = ['지금까지 나온 인물 정리해 줘', '방금 읽은 장면 다시 찾아 줘', '내 노트랑 관련된 장면 있어?'];
+  const emptyProps = {
+    streaming: false,
+    error: null,
+    turns: [],
+    conversations: [],
+    onToggleHistory: () => {},
+    onNewChat: () => {},
+  };
+
+  it('대화가 없으면 고정 추천 질문 3개와 판정하지 않는다는 한 줄을 보여 준다', () => {
+    render(<ChatbotTab {...emptyProps} onAsk={() => {}} />);
+    const group = screen.getByRole('group', { name: '추천 질문' });
+    const chips = Array.from(group.querySelectorAll('button'));
+    expect(chips.map((chip) => chip.textContent)).toEqual(SUGGESTIONS);
+    expect(screen.getByText('아모는 추리가 맞는지 판정하지 않아요')).toBeInTheDocument();
+  });
+
+  it('NFR-AI-005: 추천 질문에 범인·정답 판정을 유도하는 문장이 없다', () => {
+    render(<ChatbotTab {...emptyProps} onAsk={() => {}} />);
+    const group = screen.getByRole('group', { name: '추천 질문' });
+    for (const chip of Array.from(group.querySelectorAll('button'))) {
+      expect(chip.textContent).not.toMatch(/범인|맞아|맞지|정답|결말|누가 죽|틀렸/);
+    }
+  });
+
+  it('칩을 누르면 그 문장이 입력칸에 들어가고 바로 보내지 않는다', async () => {
+    const onAsk = vi.fn();
+    render(<ChatbotTab {...emptyProps} onAsk={onAsk} />);
+    await userEvent.click(screen.getByRole('button', { name: '방금 읽은 장면 다시 찾아 줘' }));
+    expect(screen.getByLabelText('질문')).toHaveValue('방금 읽은 장면 다시 찾아 줘');
+    expect(screen.getByLabelText('질문')).toHaveFocus();
+    expect(onAsk).not.toHaveBeenCalled();
+  });
+
+  it('대화가 시작되면 추천 질문은 사라진다', () => {
+    render(<ChatbotTab {...emptyProps} turns={[{ role: 'user', text: '정주사가 누구야' }]} onAsk={() => {}} />);
+    expect(screen.queryByRole('group', { name: '추천 질문' })).toBeNull();
+    expect(screen.queryByRole('button', { name: SUGGESTIONS[0] })).toBeNull();
+  });
+
+  it('지난 대화 목록을 보는 동안에는 추천 질문을 그리지 않는다', () => {
+    render(<ChatbotTab {...emptyProps} historyOpen onAsk={() => {}} />);
+    expect(screen.queryByRole('group', { name: '추천 질문' })).toBeNull();
+  });
+});
