@@ -33,6 +33,10 @@ export default function MobileBriefing() {
   return (
     <MobileBriefingView
       briefing={session.briefing}
+      chapters={session.chapters}
+      onSelectChapter={session.selectChapter}
+      lastReadAt={session.lastReadAt}
+      introduction={session.introduction}
       title={session.title}
       author={session.author}
       coverUrl={session.coverUrl}

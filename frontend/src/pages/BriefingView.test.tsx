@@ -72,13 +72,27 @@ describe('브리핑 화면', () => {
     expect(onRequestFallback).toHaveBeenCalledTimes(1);
   });
 
-  it('시안 상단: 표지·경과 안내·인사·제목·저자를 보여준다', () => {
+  it('시안 상단: 표지·인사·제목·저자를 보여주고, 고정 문구 "3일 만이에요"는 그리지 않는다', () => {
     render(<BriefingView {...baseProps} briefing={briefing()} />);
 
     expect(screen.getByTestId('typographic-cover')).toBeInTheDocument();
-    expect(screen.getByText('3일 만이에요')).toBeInTheDocument();
+    expect(screen.queryByText('3일 만이에요')).toBeNull();
+    expect(screen.queryByTestId('since-last-read')).toBeNull();
     expect(screen.getByRole('heading', { name: /다시 오셨네요/ })).toBeInTheDocument();
     expect(screen.getByText('탁류 · 채만식')).toBeInTheDocument();
+  });
+
+  it('2026-11-17: 서버가 준 마지막 읽은 시각이 있으면 그 값으로 경과 안내를 그린다', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 17, 21, 0));
+    try {
+      render(
+        <BriefingView {...baseProps} briefing={briefing()} lastReadAt={new Date(2026, 10, 15, 8, 0).toISOString()} />
+      );
+      expect(screen.getByTestId('since-last-read')).toHaveTextContent('2일 만이에요');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('돌아가기를 누르면 onBack 이 불린다', async () => {
