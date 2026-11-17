@@ -30,3 +30,20 @@
 - 증상: `tailwind.config.js`에 `brief.mark` 색을 추가하고 `bg-brief-mark`를 썼는데 브라우저 computed 배경이 `rgba(0, 0, 0, 0)`이었다.
 - 원인: 이미 떠 있던 Vite 개발 서버가 옛 Tailwind 설정을 캐시한 채였다(CSS 변수는 정상).
 - 해결: Vite를 재시작하자 `rgb(196, 71, 95)`로 적용됐다. 설정 파일을 바꾼 뒤에는 개발 서버를 다시 띄워 확인한다.
+
+## 2026-11-16 — 운영 비밀값 파일 이름이 git 무시 규칙에 걸리지 않음
+
+- 증상: `backend/.env.mystery-prod`를 만들었는데 `git check-ignore`가 아무것도 반환하지 않았다(커밋될 수 있는 상태).
+- 원인: `.gitignore`는 `.env`, `.env.local`, `.env.*.local`, `backend/.env`만 무시한다. `.env.<이름>` 형태는 규칙에 없다.
+- 해결: 이름을 `.env.mystery-prod.local`로 바꿔 `.env.*.local` 규칙에 맞췄고, `git check-ignore -v`로 무시되는 것을 확인했다. 비밀값 파일은 만들자마자 `git check-ignore -v`로 확인한다.
+
+## 2026-11-16 — Bash 도구 heredoc으로 쓴 Python 정규식에서 백슬래시가 사라짐
+
+- 증상: heredoc(`<<'EOF'`)으로 만든 스크립트의 `[^"\]`가 파일에 `[^"\]`로 저장돼 `re.PatternError: unterminated character set`이 났다. 수집한 239쪽 전부가 파싱 실패로 기록됐다.
+- 해결: 정규식이 든 스크립트는 Write 도구로 파일을 만들어 실행하자 정상 파싱됐다(239/239). 백슬래시가 든 코드는 heredoc 대신 파일로 쓴다. 긴 수집은 파서를 캐시 파일 한 개로 먼저 시험한 뒤 돌린다.
+
+## 2026-11-17 — 3D 책이 넘길 때마다 납작해졌다가 두꺼워짐
+
+- 증상: 홈 입체 책 시안에서 책을 넘기는 동안 책등·종이 두께가 사라졌다가 전환이 끝나면 다시 생겼다. 옆 책은 늘 납작했다.
+- 원인: `transform-style: preserve-3d`인 책 요소 자체에 `filter: brightness()`와 `opacity`를 걸었다. 이 둘(`none`/1이 아닐 때)은 3D 자식을 평면으로 눌러 버린다. 가운데 책은 전환이 끝나 `filter: none`이 된 뒤에야 입체로 돌아왔다.
+- 해결: 어둡게 하기·숨기기를 책 요소에서 빼고, 면(`.f`) 하나하나에 `filter: brightness(var(--b))`, `opacity: var(--o)`로 걸었다. `@property`로 `--b`·`--o`를 등록해 전환되게 했다. `document.getAnimations()`로 전환 중간(120ms)에 멈춰 찍어 보니, 고치기 전에는 책등이 없고 고친 뒤에는 책등과 두께가 보였다.
