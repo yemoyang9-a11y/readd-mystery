@@ -6,7 +6,13 @@ test('홈·검색: 작은 화면에서도 탐색하고 미검수 도서를 숨�
   await installMockApi(page);
   await page.goto('/');
   await expect(page.getByRole('main')).toBeVisible();
-  await expect(page.getByText('RE:ADD', { exact: true }).first()).toBeVisible();
+  if (info.project.name === 'desktop') {
+    // PC의 콜론은 북마크 SVG이므로 실제 텍스트는 READD다.
+    await expect(page.getByRole('banner')).toContainText('READD');
+  } else {
+    await expect(page.getByText('RE:ADD', { exact: true }).first()).toBeVisible();
+  }
+  await expect(page.getByText('탁류', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('검수 전 도서')).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: info.outputPath('home.png'), fullPage: true });
