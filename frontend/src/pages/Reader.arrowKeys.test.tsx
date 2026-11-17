@@ -59,7 +59,7 @@ describe('FR-PRG-001: PC 읽기 화면 방향키 이동', () => {
     localStorage.clear();
     sendProgressMock
       .mockReset()
-      .mockImplementation((_bookId: string, page: number) => Promise.resolve(page));
+      .mockImplementation((_bookId: string, page: number) => Promise.resolve({ success: true, applied_cutoff: page, confirm: null }));
     fetchPageSpy.mockClear();
     startAt(25);
   });

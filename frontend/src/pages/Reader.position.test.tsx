@@ -9,11 +9,11 @@ import {
   fetchChatConversations,
   fetchChatConversationDetail,
 } from '../services/chatbotService';
-import type { SseFrame } from '../types';
+import type { ProgressResponse, SseFrame } from '../types';
 
 vi.mock('../services/progressService', () => ({
   enterBook: vi.fn(),
-  sendProgress: vi.fn(async () => 90),
+  sendProgress: vi.fn(async () => ({ success: true, applied_cutoff: 90, confirm: null })),
 }));
 vi.mock('../services/bookService', () => ({
   fetchBookInfo: vi.fn(async () => ({ chapters: [] })),
@@ -78,7 +78,7 @@ async function* frames(...values: SseFrame[]): AsyncGenerator<SseFrame> {
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
-  vi.mocked(sendProgress).mockResolvedValue(90);
+  vi.mocked(sendProgress).mockResolvedValue({ success: true, applied_cutoff: 90, confirm: null });
   vi.mocked(enterBook).mockResolvedValue({
     route: 'reader',
     page: 90,
@@ -137,7 +137,7 @@ it('shows a retryable error when the new page request rejects', async () => {
 it.each(['history', 'history detail'])(
   'waits for K40 progress acknowledgment before fetching %s',
   async (action) => {
-    let acknowledge!: (cutoff: number) => void;
+    let acknowledge!: (response: ProgressResponse) => void;
     renderReader();
     await screen.findByText('body 90');
     vi.mocked(sendProgress).mockReturnValueOnce(
@@ -153,7 +153,7 @@ it.each(['history', 'history detail'])(
     expect(fetchChatConversations).not.toHaveBeenCalled();
     expect(fetchChatConversationDetail).not.toHaveBeenCalled();
     await act(async () => {
-      acknowledge(40);
+      acknowledge({ success: true, applied_cutoff: 40, confirm: null });
     });
     await waitFor(() =>
       expect(
@@ -173,11 +173,11 @@ it('blocks history on failed progress and retries progress when history is retri
   fireEvent.click(await screen.findByText('history', { selector: 'button' }));
   await waitFor(() => expect(screen.getByTestId('chat-error')).not.toBeEmptyDOMElement());
   expect(fetchChatConversations).not.toHaveBeenCalled();
-  vi.mocked(sendProgress).mockResolvedValueOnce(40);
+  vi.mocked(sendProgress).mockResolvedValueOnce({ success: true, applied_cutoff: 40, confirm: null });
   fireEvent.click(screen.getByText('history', { selector: 'button' }));
   fireEvent.click(screen.getByText('history', { selector: 'button' }));
   await waitFor(() => expect(fetchChatConversations).toHaveBeenCalledTimes(1));
-  expect(sendProgress).toHaveBeenLastCalledWith('book', 40);
+  expect(sendProgress).toHaveBeenLastCalledWith('book', 40, { fromPage: 90 });
 });
 
 it('forwards the expected position and retries progress after the server rejects a mismatched position', async () => {

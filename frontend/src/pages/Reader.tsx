@@ -258,7 +258,14 @@ function ReadingSession() {
       </div>
 
       <JumpReturnBar origin={jumpOrigin} onReturn={returnToOrigin} onDismiss={dismissJumpOrigin} />
-      {tocJumpConfirm !== null ? <TocJumpDialog onConfirm={confirmTocJump} onCancel={cancelTocJump} /> : null}
+      {tocJumpConfirm !== null ? (
+        <TocJumpDialog
+          targetPage={tocJumpConfirm}
+          onMoveOnly={() => confirmTocJump('move')}
+          onReadThrough={() => confirmTocJump('read_through')}
+          onCancel={cancelTocJump}
+        />
+      ) : null}
       {prefsOpen ? (
         <ReaderPrefsSheet
           variant="popover"

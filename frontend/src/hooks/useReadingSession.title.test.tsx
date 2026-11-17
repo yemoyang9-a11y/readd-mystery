@@ -14,7 +14,7 @@ vi.mock('../services/bookService', async (importOriginal) => {
 
 vi.mock('../services/progressService', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../services/progressService')>();
-  return { ...actual, enterBook: enterBookMock, sendProgress: vi.fn().mockResolvedValue(15) };
+  return { ...actual, enterBook: enterBookMock, sendProgress: vi.fn().mockResolvedValue({ success: true, applied_cutoff: 15, confirm: null }) };
 });
 
 describe('useReadingSession — 윗줄 표시 값', () => {

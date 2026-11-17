@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import Reader from './Reader';
 
-const { sendProgressMock } = vi.hoisted(() => ({ sendProgressMock: vi.fn().mockResolvedValue(21) }));
+const { sendProgressMock } = vi.hoisted(() => ({ sendProgressMock: vi.fn().mockResolvedValue({ success: true, applied_cutoff: 21, confirm: null }) }));
 
 vi.mock('../services/progressService', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../services/progressService')>();
@@ -28,9 +28,9 @@ describe('Reader 자동 현재 페이지 동기화', () => {
     renderReader();
 
     await screen.findByRole('article');
-    await waitFor(() => expect(sendProgressMock).toHaveBeenCalledWith('takryu', 21));
+    await waitFor(() => expect(sendProgressMock).toHaveBeenCalledWith('takryu', 21, { fromPage: null }));
 
     await user.click(screen.getByRole('button', { name: '다음 페이지' }));
-    await waitFor(() => expect(sendProgressMock).toHaveBeenCalledWith('takryu', 22));
+    await waitFor(() => expect(sendProgressMock).toHaveBeenCalledWith('takryu', 22, { fromPage: 21 }));
   });
 });

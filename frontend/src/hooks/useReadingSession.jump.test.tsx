@@ -62,7 +62,7 @@ describe('useReadingSession — 목차에서 고른 장으로 옮기기', () => 
     enterBookMock
       .mockReset()
       .mockResolvedValue({ route: 'reader', page: SERVER_PAGE, is_new_session: false, session_epoch: 1 });
-    sendProgressMock.mockReset().mockImplementation((_bookId: string, page: number) => Promise.resolve(page));
+    sendProgressMock.mockReset().mockImplementation((_bookId: string, page: number) => Promise.resolve({ success: true, applied_cutoff: page, confirm: null }));
   });
   afterEach(() => vi.restoreAllMocks());
 

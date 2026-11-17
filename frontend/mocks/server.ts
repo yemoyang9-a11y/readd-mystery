@@ -35,6 +35,9 @@ import type {
   GraphResponse,
   TimelineResponse,
   PageResponse,
+  FrontierChoice,
+  ProgressClaim,
+  ProgressResponse,
 } from '../src/types';
 
 /**
@@ -125,12 +128,27 @@ export function mockEntry(bookId: string = MOCK_BOOK_ID): EntryResponse {
 // FR-PRG-003
 const maxPages: Record<string, number | undefined> = {};
 
-export function mockRecordProgress(bookId: string, page: number): number {
+/**
+ * 진도 이벤트 대역. 실제 서버는 from_page·claim 으로 "차례로 읽은 범위"를 따로 판정하지만
+ * (2026-11-17), mock 은 단순하게 가장 멀리 연 쪽을 기준점으로 두고 확인 요청(confirm)을
+ * 보내지 않는다 — 열어 본 쪽이 곧 기준점이라 확인할 거리가 생기지 않으므로 일관된다.
+ */
+export function mockRecordProgress(
+  bookId: string,
+  page: number,
+  _opts: { fromPage?: number; claim?: ProgressClaim } = {}
+): ProgressResponse {
   if (bookId === MOCK_BOOK_ID) currentPage = page;
   else otherPages[bookId] = page;
   maxPages[bookId] = Math.max(maxPages[bookId] ?? 0, page);
   lastReadAt[bookId] = new Date().toISOString();
-  return deriveCutoff(maxPages[bookId]!);
+  return { success: true, applied_cutoff: deriveCutoff(maxPages[bookId]!), confirm: null };
+}
+
+/** 넘겨 본 쪽 확인 답 대역 — mock 은 확인 요청을 만들지 않으므로 기준점을 그대로 돌려준다 */
+export function mockConfirmFrontier(bookId: string, _choice: FrontierChoice): ProgressResponse {
+  const page = maxPages[bookId] ?? pageOf(bookId) ?? 0;
+  return { success: true, applied_cutoff: deriveCutoff(page), confirm: null };
 }
 
 // FR-BRF-005

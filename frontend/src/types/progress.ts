@@ -33,6 +33,41 @@ export interface ProgressEvent {
   page: number;
   /** 클라이언트 단조 증가 시퀀스. 서버는 더 새로운 seq만 수용 (FR-PRG-002) */
   seq: number;
+  /**
+   * 이 쪽 직전에 화면에 떠 있던 쪽 (2026-11-17, 차례로 읽은 범위). 직전 화면이 없으면
+   * (진입 뒤 첫 쪽) 싣지 않는다. 다음·이전·목차·노트 이동 등 모든 쪽 변경에 싣고,
+   * 차례로 넘긴 것인지는 서버만 판정한다 — 프론트는 사실만 보고한다 (절대 규칙 2·8번).
+   */
+  from_page?: number;
+  /** 목차 확인 창의 "앞부분은 이미 읽었어요"로 생긴 이동 이벤트 하나에만 싣는다 */
+  claim?: ProgressClaim;
+}
+
+export type ProgressClaim = 'read_through';
+
+/**
+ * 넘겨 본 쪽 확인 요청 — 확정 기준점보다 뒤 쪽을 열어 본 뒤 아직 답하지 않았을 때만 온다.
+ * current_page 는 기준점과 furthest_page 사이의 의미 있는 선택지일 때만 숫자다.
+ * 숫자는 화면에 그대로 쓴다 — 프론트가 계산하지 않는다 (FR-BRF-005 🚦).
+ */
+export interface FrontierConfirm {
+  current_page: number | null;
+  furthest_page: number;
+}
+
+/** POST /books/:bookId/progress, POST /books/:bookId/progress/confirm 응답 */
+export interface ProgressResponse {
+  success: boolean;
+  applied_cutoff: number;
+  confirm: FrontierConfirm | null;
+}
+
+/** POST /books/:bookId/progress/confirm 본문의 choice */
+export type FrontierChoice = 'keep' | 'current' | 'furthest';
+
+/** 싸비 확인 카드가 그리는 값 — 같은 응답의 applied_cutoff 와 confirm 을 묶은 것 */
+export interface FrontierConfirmPrompt extends FrontierConfirm {
+  applied_cutoff: number;
 }
 
 /** POST /books/:bookId/heartbeat — 5분 주기, 조작 시각 갱신 전용 (A2) */

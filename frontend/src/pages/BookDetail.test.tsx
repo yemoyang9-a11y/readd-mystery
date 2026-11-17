@@ -11,13 +11,13 @@ import BookDetail from './BookDetail';
 import ChapterList from '../components/BookDetail/ChapterList';
 import { clearPendingJump, setPendingJump, takePendingJump } from '../utils/pendingJump';
 import type { PositionResponse } from '../services/positionService';
-import type { BookInfoResponse, BookSummary, CatalogResponse, EntryResponse } from '../types';
+import type { BookInfoResponse, BookSummary, CatalogResponse, EntryResponse, ProgressResponse } from '../types';
 
 const fetchCatalogMock = vi.fn<() => Promise<CatalogResponse>>();
 const fetchBookInfoMock = vi.fn<(bookId: string) => Promise<BookInfoResponse>>();
 const fetchPositionMock = vi.fn<(...args: unknown[]) => Promise<PositionResponse>>();
 const enterBookMock = vi.fn<(bookId: string) => Promise<EntryResponse>>();
-const sendProgressMock = vi.fn<(...args: unknown[]) => Promise<number | null>>();
+const sendProgressMock = vi.fn<(...args: unknown[]) => Promise<ProgressResponse | null>>();
 
 vi.mock('../services/bookService', () => ({
   fetchCatalog: () => fetchCatalogMock(),
@@ -162,7 +162,7 @@ beforeEach(() => {
   );
   fetchPositionMock.mockImplementation(async (bookId) => POSITIONS[bookId as string]);
   enterBookMock.mockResolvedValue(entry('briefing'));
-  sendProgressMock.mockResolvedValue(21);
+  sendProgressMock.mockResolvedValue({ success: true, applied_cutoff: 21, confirm: null });
 });
 
 test('FR-BRW-003: 제목·저자·서버가 준 퍼센트를 보여 준다', async () => {

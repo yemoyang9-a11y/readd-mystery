@@ -46,7 +46,7 @@ describe('모바일 읽기 화면 윗줄', () => {
     clearPendingJump();
     localStorage.clear();
     enterBookMock.mockReset().mockResolvedValue({ route: 'reader', page: 21, is_new_session: false, session_epoch: 1 });
-    sendProgressMock.mockReset().mockImplementation((_bookId: string, page: number) => Promise.resolve(page));
+    sendProgressMock.mockReset().mockImplementation((_bookId: string, page: number) => Promise.resolve({ success: true, applied_cutoff: page, confirm: null }));
     fetchPageSpy.mockClear();
   });
 

@@ -19,6 +19,7 @@ export function useSsabiData({
   tab,
   currentPage,
   notesView = 'mine',
+  refreshKey = 0,
   fetchGraph = defaultFetchGraph,
   fetchTimeline = defaultFetchTimeline,
 }: {
@@ -28,6 +29,11 @@ export function useSsabiData({
   currentPage: number | null;
   /** 추리 노트 탭에서 '사건 정리'가 선택됐을 때만 사건 정리를 조회한다 */
   notesView?: NotesView;
+  /**
+   * 기준점이 페이지 이동 밖에서 바뀌었을 때(넘겨 본 쪽 확인 답, 2026-11-17) 올린다.
+   * 값이 바뀌면 옛 데이터를 버리고 열린 탭을 다시 조회한다 — 새 K 는 서버가 정한다.
+   */
+  refreshKey?: number;
   fetchGraph?: (bookId: string, page: number, seq: number) => Promise<GraphResponse>;
   fetchTimeline?: (bookId: string, page: number, seq: number) => Promise<TimelineResponse>;
 }): {
@@ -41,10 +47,10 @@ export function useSsabiData({
   const [timeline, setTimeline] = useState<TimelineResponse | null>(null);
   const [timelineFailed, setTimelineFailed] = useState(false);
   const generation = useRef(0);
-  const [position, setPosition] = useState({ bookId, currentPage });
-  if (position.bookId !== bookId || position.currentPage !== currentPage) {
+  const [position, setPosition] = useState({ bookId, currentPage, refreshKey });
+  if (position.bookId !== bookId || position.currentPage !== currentPage || position.refreshKey !== refreshKey) {
     generation.current++;
-    setPosition({ bookId, currentPage });
+    setPosition({ bookId, currentPage, refreshKey });
     setGraph(null);
     setFailed(false);
     setTimeline(null);
@@ -73,7 +79,7 @@ export function useSsabiData({
     };
     // currentPage 가 의존성에 있는 이유가 이 훅의 요지다 — 페이지가 바뀌면 K 가 바뀌므로
     // 열려 있는 탭을 다시 조회해야 한다 (FR-SVB-003).
-  }, [panelOpen, bookId, tab, currentPage, fetchGraph]);
+  }, [panelOpen, bookId, tab, currentPage, refreshKey, fetchGraph]);
 
   // FR-SPL-002 🚦: 사건 정리도 같은 규칙 — 서버가 K 이하만 주고, 실패하면 옛 데이터를 남기지 않는다
   useEffect(() => {
@@ -96,7 +102,7 @@ export function useSsabiData({
     return () => {
       cancelled = true;
     };
-  }, [panelOpen, bookId, tab, notesView, currentPage, fetchTimeline]);
+  }, [panelOpen, bookId, tab, notesView, currentPage, refreshKey, fetchTimeline]);
 
   return { graph, failed, timeline, timelineFailed };
 }

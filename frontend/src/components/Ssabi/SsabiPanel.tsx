@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type {
   ChatbotConversationSummary,
+  FrontierChoice,
+  FrontierConfirmPrompt,
   ChatbotConversationTurn,
   GraphResponse,
   NoteDraft,
@@ -16,6 +18,7 @@ import NotesTab from './NotesTab';
 import EventSummary from './EventSummary';
 import RelationshipTab from './RelationshipTab';
 import ChatbotTab from './ChatbotTab';
+import FrontierConfirmCard from './FrontierConfirmCard';
 
 const TAB_LABELS: Record<SsabiTab, string> = {
   notes: '추리 노트',
@@ -73,6 +76,8 @@ export default function SsabiPanel({
   onNoteQuoteHandled,
   compactHeader = false,
   requireTextToSend = false,
+  frontierConfirm = null,
+  onFrontierConfirm,
 }: {
   sessionEpoch: number;
   /**
@@ -135,6 +140,13 @@ export default function SsabiPanel({
   onNoteQuoteHandled?: () => void;
   compactHeader?: boolean;
   requireTextToSend?: boolean;
+  /**
+   * 넘겨 본 쪽 확인 요청 (2026-11-17, FR-PRG-003 🚦) — 서버 진도 응답의 confirm 과
+   * applied_cutoff 를 그대로 받는다. null 이면 카드를 그리지 않는다.
+   */
+  frontierConfirm?: FrontierConfirmPrompt | null;
+  /** 카드의 답. 성공하면 true — 실패하면 카드가 그대로 남는다 (FR-SPL-005 🚦) */
+  onFrontierConfirm?: (choice: FrontierChoice) => Promise<boolean>;
 }) {
   const [lastTab, setLastTab] = useState<SsabiTab | null>(initialTab);
   const previousEpoch = useRef<number | null>(initialTabEpoch);
@@ -220,6 +232,11 @@ export default function SsabiPanel({
           <h2 className="whitespace-nowrap font-dashSerif text-base font-extrabold text-brief-ink">아모의 가이드북</h2>
         </div>
       </div>
+
+      {/* 키보드가 열려 헤더를 접은 동안(compactHeader)은 입력 칸 자리를 지키려고 잠시 숨긴다 */}
+      {frontierConfirm && onFrontierConfirm && !compactHeader ? (
+        <FrontierConfirmCard prompt={frontierConfirm} onAnswer={onFrontierConfirm} />
+      ) : null}
 
       {/*
        * 탭은 3개다. 시안의 '타임라인'은 만들지 않는다 (00-shared §2.5 "[이후 확장]").

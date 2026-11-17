@@ -120,7 +120,7 @@ describe('FR-PRG-001: 모바일 읽기 화면 한 번 탭 = 본문만', () => {
       .mockResolvedValue({ route: 'reader', page: 25, is_new_session: false, session_epoch: 1 });
     sendProgressMock
       .mockReset()
-      .mockImplementation((_bookId: string, page: number) => Promise.resolve(page));
+      .mockImplementation((_bookId: string, page: number) => Promise.resolve({ success: true, applied_cutoff: page, confirm: null }));
     fetchPageSpy.mockClear();
   });
 

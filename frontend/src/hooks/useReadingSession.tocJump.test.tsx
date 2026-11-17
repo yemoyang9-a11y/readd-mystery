@@ -57,7 +57,7 @@ describe('useReadingSession — 목차 점프 확인 창', () => {
     enterBookMock
       .mockReset()
       .mockResolvedValue({ route: 'reader', page: 40, is_new_session: false, session_epoch: 1 });
-    sendProgressMock.mockReset().mockResolvedValue(APPLIED_CUTOFF);
+    sendProgressMock.mockReset().mockResolvedValue({ success: true, applied_cutoff: APPLIED_CUTOFF, confirm: null });
   });
 
   test('FR-PRG-003: 목차로 applied_cutoff보다 뒤 쪽을 고르면 이동하지 않고 확인 창을 띄운다', async () => {
@@ -74,7 +74,7 @@ describe('useReadingSession — 목차 점프 확인 창', () => {
     const { result } = await startReading();
     act(() => result.current.requestTocJump(200));
 
-    act(() => result.current.confirmTocJump());
+    act(() => result.current.confirmTocJump('move'));
 
     await waitFor(() => expect(result.current.currentPage).toBe(200));
     expect(result.current.tocJumpConfirm).toBeNull();

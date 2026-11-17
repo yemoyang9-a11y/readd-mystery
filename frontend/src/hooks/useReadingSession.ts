@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ComponentProps } from 'react';
 import type SsabiPanel from '../components/Ssabi/SsabiPanel';
 import { fetchBookInfo, fetchPage } from '../services/bookService';
-import { enterBook, sendProgress } from '../services/progressService';
+import { confirmFrontier, enterBook, sendProgress } from '../services/progressService';
 import { useSsabiData } from './useSsabiData';
 import { useHeartbeat } from './useHeartbeat';
 import { useNotes } from './useNotes';
@@ -10,7 +10,18 @@ import { useChatConversation } from './useChatConversation';
 import { nextSeq } from '../utils/seq';
 import { takePendingJump } from '../utils/pendingJump';
 import { DEFAULT_SSABI_TAB } from '../utils/constants';
-import type { ChapterSummary, EntryResponse, NotesView, PageResponse, SsabiTab } from '../types';
+import type {
+  ChapterSummary,
+  EntryResponse,
+  FrontierChoice,
+  FrontierConfirmPrompt,
+  NotesView,
+  PageResponse,
+  ProgressClaim,
+  SsabiTab,
+} from '../types';
+
+export type TocJumpChoice = 'move' | 'read_through';
 
 export interface ReadingSessionState {
   entryError: boolean;
@@ -29,8 +40,13 @@ export interface ReadingSessionState {
   moveTo: (page: number) => void;
   requestTocJump: (page: number) => void;
   tocJumpConfirm: number | null;
-  confirmTocJump: () => void;
+  /** 'move' = 이동만 하기, 'read_through' = 앞부분은 이미 읽었어요 (그 이동 이벤트에 claim) */
+  confirmTocJump: (choice: TocJumpChoice) => void;
   cancelTocJump: () => void;
+  /** 넘겨 본 쪽 확인 요청 — 서버 응답 그대로. 싸비 카드가 그린다 (ssabiPanelProps 에도 실린다) */
+  frontierConfirm: FrontierConfirmPrompt | null;
+  /** 확인 카드의 답. 성공하면 true, 실패하면 false 이고 아무것도 바꾸지 않는다 */
+  answerFrontierConfirm: (choice: FrontierChoice) => Promise<boolean>;
   panelOpen: boolean;
   togglePanel: () => void;
   highlightedQuote: string | null;
@@ -226,29 +242,54 @@ export function useReadingSession(bookId: string): ReadingSessionState {
 
   const notesState = useNotes(bookId);
   // FR-BRF-005
-  const [, setPanelAppliedCutoff] = useState<number | null>(null);
   const knownAppliedCutoffRef = useRef<{ requestId: number; cutoff: number } | null>(null);
   const [tocJumpConfirm, setTocJumpConfirm] = useState<number | null>(null);
+  /**
+   * 넘겨 본 쪽 확인 요청 (2026-11-17, FR-PRG-003 🚦). 가장 최근 응답의 applied_cutoff 와
+   * confirm 을 묶어 그대로 들고 있다가 싸비 카드에 넘긴다 — 숫자를 계산하지 않는다.
+   */
+  const [frontierConfirm, setFrontierConfirm] = useState<FrontierConfirmPrompt | null>(null);
+  /** 확인 답으로 기준점이 바뀌면 올린다 — useSsabiData 가 열린 탭을 다시 조회한다 */
+  const [ssabiRefreshKey, setSsabiRefreshKey] = useState(0);
   const progressRequestIdRef = useRef(0);
   const progressSyncRef = useRef<{
     page: number;
     promise: Promise<void>;
   } | null>(null);
+  /**
+   * 화면에 뜬 쪽과 그 직전에 떠 있던 쪽 (2026-11-17, FR-PRG-003 🚦). 진도 이벤트의
+   * from_page 로 그대로 싣는다 — 차례로 넘긴 것인지는 서버만 판정한다. 같은 쪽을 다시
+   * 보낼 때(챗봇 직전 재동기화·StrictMode 재실행)도 그 쪽의 직전 쪽을 그대로 쓴다.
+   * 책이 바뀌면 직전 쪽은 없다(null).
+   */
+  const displayedRef = useRef<{ bookId: string; page: number | null; from: number | null }>({
+    bookId,
+    page: null,
+    from: null,
+  });
+  /** "앞부분은 이미 읽었어요"로 고른 쪽. 그 쪽의 진도 이벤트 하나가 claim 을 싣고 비운다 */
+  const pendingClaimRef = useRef<number | null>(null);
   const syncPageProgress = useCallback(
-    (targetPage: number): Promise<void> => {
+    (targetPage: number, opts: { fromPage: number | null; claim?: ProgressClaim }): Promise<void> => {
       const requestId = ++progressRequestIdRef.current;
       const request = { page: targetPage, promise: Promise.resolve() };
-      request.promise = sendProgress(bookId, targetPage).then((appliedCutoff) => {
-        if (appliedCutoff === null) throw new Error('PROGRESS_SYNC_FAILED');
+      request.promise = sendProgress(bookId, targetPage, opts).then((response) => {
+        if (response === null) throw new Error('PROGRESS_SYNC_FAILED');
         if (requestId > (knownAppliedCutoffRef.current?.requestId ?? 0)) {
-          knownAppliedCutoffRef.current = { requestId, cutoff: appliedCutoff };
+          knownAppliedCutoffRef.current = { requestId, cutoff: response.applied_cutoff };
+          setFrontierConfirm(
+            response.confirm ? { applied_cutoff: response.applied_cutoff, ...response.confirm } : null
+          );
         }
-        if (requestId === progressRequestIdRef.current) setPanelAppliedCutoff(appliedCutoff);
       });
       progressSyncRef.current = request;
       return request.promise;
     },
     [bookId]
+  );
+  const fromPageOf = useCallback(
+    (targetPage: number) => (displayedRef.current.page === targetPage ? displayedRef.current.from : null),
+    []
   );
   const ensureHistoryPosition = useCallback(async () => {
     if (currentPage === null) throw new Error('POSITION_NOT_READY');
@@ -257,8 +298,27 @@ export function useReadingSession(bookId: string): ReadingSessionState {
       await pending.promise;
       return;
     }
-    await syncPageProgress(currentPage);
-  }, [currentPage, syncPageProgress]);
+    await syncPageProgress(currentPage, { fromPage: fromPageOf(currentPage) });
+  }, [currentPage, fromPageOf, syncPageProgress]);
+
+  // FR-PRG-003 🚦 — 답이 실패하면 카드·기준점·싸비 데이터를 그대로 둔다 (FR-SPL-005 🚦)
+  const answerFrontierConfirm = useCallback(
+    async (choice: FrontierChoice): Promise<boolean> => {
+      const response = await confirmFrontier(bookId, choice);
+      if (response === null) return false;
+      // 답 이전에 나간 진도 응답이 늦게 와서 이 결과를 덮지 않게 순번을 올린다
+      const requestId = ++progressRequestIdRef.current;
+      knownAppliedCutoffRef.current = { requestId, cutoff: response.applied_cutoff };
+      setFrontierConfirm(
+        response.confirm ? { applied_cutoff: response.applied_cutoff, ...response.confirm } : null
+      );
+      // 챗봇 직전 재동기화가 옛 응답을 기다리지 않게 한다
+      progressSyncRef.current = null;
+      setSsabiRefreshKey((key) => key + 1);
+      return true;
+    },
+    [bookId]
+  );
   const invalidateHistoryPosition = useCallback(() => {
     progressSyncRef.current = null;
   }, []);
@@ -285,6 +345,7 @@ export function useReadingSession(bookId: string): ReadingSessionState {
     tab,
     currentPage,
     notesView,
+    refreshKey: ssabiRefreshKey,
   });
 
   /**
@@ -322,10 +383,25 @@ export function useReadingSession(bookId: string): ReadingSessionState {
     if (applied !== null && targetPage > applied) setTocJumpConfirm(targetPage);
     else setCurrentPage(targetPage);
   }, []);
-  const confirmTocJump = useCallback(() => {
-    if (tocJumpConfirm !== null) setCurrentPage(tocJumpConfirm);
-    setTocJumpConfirm(null);
-  }, [tocJumpConfirm]);
+  const confirmTocJump = useCallback(
+    (choice: TocJumpChoice) => {
+      const target = tocJumpConfirm;
+      setTocJumpConfirm(null);
+      if (target === null) return;
+      if (choice === 'read_through') {
+        if (target === currentPage) {
+          // 이미 그 쪽에 있으면 쪽이 바뀌지 않아 아래 effect 가 돌지 않는다 — 답만 한 번 보낸다
+          void syncPageProgress(target, { fromPage: fromPageOf(target), claim: 'read_through' }).catch(() => {
+            // FR-SPL-005
+          });
+          return;
+        }
+        pendingClaimRef.current = target;
+      }
+      setCurrentPage(target);
+    },
+    [currentPage, fromPageOf, syncPageProgress, tocJumpConfirm]
+  );
   const cancelTocJump = useCallback(() => setTocJumpConfirm(null), []);
 
   // FR-PRG-003
@@ -365,11 +441,21 @@ export function useReadingSession(bookId: string): ReadingSessionState {
     if (currentPage === null) return; // 진입 판정 전에는 진도를 보내지 않는다
     loadPage(currentPage);
     // 페이지 열림이 확정된 시점에 진도를 알린다 (FR-PRG-002, NFR-PERF-005)
-    setPanelAppliedCutoff(null);
-    void syncPageProgress(currentPage).catch(() => {
-      // FR-SPL-005
-    });
-  }, [currentPage, loadPage, syncPageProgress]);
+    // FR-PRG-003 🚦 — 직전 화면 쪽(from_page)과 claim 은 사실만 싣는다. 판정은 서버가 한다.
+    const displayed = displayedRef.current;
+    if (displayed.bookId !== bookId) {
+      displayedRef.current = { bookId, page: currentPage, from: null };
+    } else if (displayed.page !== currentPage) {
+      displayedRef.current = { bookId, page: currentPage, from: displayed.page };
+    }
+    const claim: ProgressClaim | undefined = pendingClaimRef.current === currentPage ? 'read_through' : undefined;
+    pendingClaimRef.current = null;
+    void syncPageProgress(currentPage, { fromPage: displayedRef.current.from, ...(claim ? { claim } : {}) }).catch(
+      () => {
+        // FR-SPL-005
+      }
+    );
+  }, [bookId, currentPage, loadPage, syncPageProgress]);
 
   const handleAsk = useCallback(
     (query: string, quote?: string) => {
@@ -407,6 +493,8 @@ export function useReadingSession(bookId: string): ReadingSessionState {
     tocJumpConfirm,
     confirmTocJump,
     cancelTocJump,
+    frontierConfirm,
+    answerFrontierConfirm,
     panelOpen,
     togglePanel,
     highlightedQuote,
@@ -445,6 +533,8 @@ export function useReadingSession(bookId: string): ReadingSessionState {
       onToggleChatHistory: toggleChatHistory,
       onSelectChatConversation: selectChatConversation,
       onDeleteChatConversation: deleteChatConversation,
+      frontierConfirm,
+      onFrontierConfirm: answerFrontierConfirm,
     },
   };
 }
