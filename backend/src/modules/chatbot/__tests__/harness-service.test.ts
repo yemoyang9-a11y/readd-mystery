@@ -155,11 +155,33 @@ describe('챗봇 하네스 (FR-QNA-004 🚦, NFR-AI-005)', () => {
     };
     answers('12쪽을 다시 읽어 보세요.');
     await run('내 가설이 맞는지 확인해줘', notesReader);
-    expect(notesReader.listNotes).toHaveBeenCalledWith(DEVICE_ID, BOOK_ID);
+    // FR-SPL-002: 노트 조회에도 같은 cutoff가 인자로 간다
+    expect(notesReader.listNotes).toHaveBeenCalledWith(DEVICE_ID, BOOK_ID, K);
     const prompt = (llmStream as jest.Mock).mock.calls[0][1] as string;
     expect(prompt).toContain('내 메모 하나');
     expect(prompt).not.toContain('범위 밖 메모');
     expect(prompt).not.toContain('남의 메모');
+  });
+
+  test('FR-SPL-002: 노트가 20개를 넘어도 질문과 낱말이 겹치는 노트와 가장 최근 노트가 프롬프트에 들어간다', async () => {
+    const stamp = (minute: number) => new Date(Date.UTC(2026, 10, 1, 0, minute)).toISOString();
+    const notesReader: NotesReader = {
+      listNotes: async () => [
+        { page_no: 1, kind: 'clue' as const, body: '장갑 안쪽에 얼룩', created_at: stamp(0) },
+        ...Array.from({ length: 29 }, (_, i) => ({
+          page_no: i + 2,
+          kind: 'clue' as const,
+          body: `메모 ${i + 2}번`,
+          created_at: stamp(i + 1),
+        })),
+      ],
+    };
+    answers('12쪽에 나와요.');
+    await run('장갑은 어디 나와?', notesReader);
+    const prompt = (llmStream as jest.Mock).mock.calls[0][1] as string;
+    expect(prompt).toContain('장갑 안쪽에 얼룩');
+    expect(prompt).toContain('"메모 30번"');
+    expect(prompt.split('\n').filter((line) => line.startsWith('- p.'))).toHaveLength(20);
   });
 
   test('FR-SPL-002: buildNotesSection은 cutoff 인자를 받아 초과 노트를 거른다', () => {

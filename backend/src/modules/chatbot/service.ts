@@ -240,11 +240,12 @@ export async function* handleQuery(
     }
     let notes: Awaited<ReturnType<NotesReader['listNotes']>> = [];
     try {
-      notes = await notesReader.listNotes(deviceId, bookId);
+      // FR-SPL-002 🚦: 노트 조회도 같은 스냅샷의 K를 상한으로 건다
+      notes = await notesReader.listNotes(deviceId, bookId, K);
     } catch (error) {
       console.error('[Chatbot] notes lookup failed', { bookId, error });
     }
-    fullPrompt += buildNotesSection(notes, K);
+    fullPrompt += buildNotesSection(notes, K, query);
     fullPrompt += HARNESS_GUIDANCE[intent] ?? '';
     fullPrompt += `\n\n# 사용자 질문\n\n${query}`;
     fullPrompt = fullPrompt.replace(/^\n+/, '');
