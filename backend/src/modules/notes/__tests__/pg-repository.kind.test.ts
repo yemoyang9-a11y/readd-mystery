@@ -71,10 +71,10 @@ describe('pg notes repository — 종류와 풀림 표시', () => {
     expect(db.calls[0].params).toEqual([NOTE, READER, BOOK]);
   });
 
-  test('챗봇용 읽기 경로는 쪽수·종류·내용만 넘긴다', async () => {
+  test('챗봇용 읽기 경로는 쪽수·종류·내용·쓴 시각만 넘긴다 — 풀림 여부는 넘기지 않는다', async () => {
     const db = fakeDb([row({ kind: 'question', resolved: true })]);
-    expect(await createPgNotesRepository(db).listNotes(READER, BOOK)).toEqual([
-      { page_no: 12, kind: 'question', body: '메모' },
+    expect(await createPgNotesRepository(db).listNotes(READER, BOOK, 40)).toEqual([
+      { page_no: 12, kind: 'question', body: '메모', created_at: '2026-11-17T00:00:00.000Z' },
     ]);
   });
 });
