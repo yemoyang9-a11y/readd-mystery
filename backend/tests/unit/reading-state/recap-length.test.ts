@@ -78,7 +78,7 @@ describe('리캡 출력 문장 수 — countRecapSentences (로그용)', () => {
 
 describe('017 마이그레이션 — recap_call_log 길이 컬럼 (NFR-OBS-002 🚦)', () => {
   const sql = readFileSync(
-    join(__dirname, '../../../migrations/017_recap_call_log_length.sql'),
+    join(__dirname, '../../../migrations/018_recap_call_log_length.sql'),
     'utf8'
   );
 

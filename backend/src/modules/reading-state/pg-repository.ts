@@ -4,7 +4,7 @@
  * @see repository.ts — 이 파일이 구현하는 계약과 cutoff 인자 유무의 근거 전체
  * @see migrations/002_reading_state.sql — R2 소유 테이블(진도·세션·저장 리캡·세션 캐시·대화 이력)
  * @see migrations/004_recap_call_log.sql — 리캡 호출 로그
- * @see migrations/017_recap_call_log_length.sql — 리캡 호출 로그 길이 컬럼(2026-11-17)
+ * @see migrations/018_recap_call_log_length.sql — 리캡 호출 로그 길이 컬럼(2026-11-17)
  * @see (R1 소유, 읽기 전용) migrations/001_content_store.sql — books·chapters·chapter_summaries·pages
  *
  * R1의 register.ts와 같은 패턴을 따른다 — 실제 `pg.Pool`을 직접 import하지 않고 최소
@@ -355,7 +355,7 @@ export function createPgRecapCallLogger(db: QueryClient): RecapCallLogger {
   return {
     async record(entry: RecapCallLog): Promise<void> {
       await db.query(
-        // 길이 컬럼 3개는 017_recap_call_log_length.sql (2026-11-17 C안, NULL 허용 — 이전 행은 NULL)
+        // 길이 컬럼 3개는 018_recap_call_log_length.sql (2026-11-17 C안, NULL 허용 — 이전 행은 NULL)
         `INSERT INTO recap_call_log
            (created_at, device_id, book_id, cutoff_page, input_chapter_summary_ids,
             current_chapter_cutoff, output_ref, model, input_tokens, output_tokens, trigger,
