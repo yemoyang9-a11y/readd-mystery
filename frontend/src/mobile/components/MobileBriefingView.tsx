@@ -56,6 +56,7 @@ export default function MobileBriefingView({
   onOpenCommunity,
   lastReadAt = null,
   introduction = null,
+  background = null,
 }: {
   briefing: BriefingResponse;
   /** GET /info 목차 — 전체 상시 노출 (FR-NAV-001) */
@@ -78,6 +79,8 @@ export default function MobileBriefingView({
   lastReadAt?: string | null;
   /** 서버가 준 작품 소개(GET /info introduction, 상한 예외 R5). 없으면 그 칸을 그리지 않는다 */
   introduction?: string | null;
+  /** 서버가 준 배경지식(GET /info background, 상한 예외 R5). 없으면 그 칸을 그리지 않는다 */
+  background?: string | null;
 }) {
   const view = resolveBriefingView(briefing);
   const firstVisit = view.kind === 'empty';
@@ -95,6 +98,7 @@ export default function MobileBriefingView({
   const sinceLabel = firstVisit ? null : formatSinceLastRead(lastReadAt);
   const greeting = firstVisit ? FIRST_VISIT_GREETING_LINES : GREETING_LINES;
   const intro = introduction?.trim() ? introduction.trim() : null;
+  const backgroundText = background?.trim() ? background.trim() : null;
 
   return (
     <div
@@ -173,6 +177,20 @@ export default function MobileBriefingView({
                 <div className="rounded-brief-panel bg-brief-card p-5 shadow-brief-soft-sm">
                   <p className="m-0 whitespace-pre-wrap break-keep font-dashSerif text-[15px] leading-[1.85]">
                     {intro}
+                  </p>
+                </div>
+              </section>
+            ) : null}
+
+            {/* FR-BGK-002 🚦 R5 — 배경지식은 1쪽 시점에도 안전한 고정 콘텐츠 (2026-11-17 대표 결정) */}
+            {backgroundText ? (
+              <section aria-label="배경지식" className="mt-6">
+                <h3 className="mb-3 font-dashSerif text-lg font-semibold tracking-[-.02em] text-brief-ink">
+                  배경지식
+                </h3>
+                <div className="rounded-brief-panel bg-brief-card p-5 shadow-brief-soft-sm">
+                  <p className="m-0 whitespace-pre-wrap break-keep font-dashSerif text-[15px] leading-[1.85]">
+                    {backgroundText}
                   </p>
                 </div>
               </section>

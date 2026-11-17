@@ -224,6 +224,39 @@ describe('처음 펼친 독자(진도 기록 없음, applied_cutoff 0)', () => {
     expect(screen.queryByRole('region', { name: '작품 소개' })).toBeNull();
   });
 
+  // 2026-11-17 대표 결정 — 첫 방문 브리핑에 배경지식도 보여 준다
+  test('FR-BGK-002 R5: 서버가 준 배경지식이 있으면 작품 소개 아래에 보여 주고, 없으면 그 칸을 그리지 않는다', () => {
+    const { rerender } = render(
+      <MobileBriefingView
+        {...baseProps}
+        briefing={first()}
+        introduction="경성의 극장 해왕좌에서 벌어진 일."
+        background="1930년대 경성의 극장가."
+      />
+    );
+    const intro = screen.getByRole('region', { name: '작품 소개' });
+    const background = screen.getByRole('region', { name: '배경지식' });
+    expect(background).toHaveTextContent('1930년대 경성의 극장가.');
+    expect(intro.compareDocumentPosition(background) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    rerender(<MobileBriefingView {...baseProps} briefing={first()} introduction="소개" background={null} />);
+    expect(screen.queryByRole('region', { name: '배경지식' })).toBeNull();
+    rerender(<MobileBriefingView {...baseProps} briefing={first()} introduction="소개" background="  " />);
+    expect(screen.queryByRole('region', { name: '배경지식' })).toBeNull();
+    rerender(<MobileBriefingView {...baseProps} briefing={first()} introduction="소개" />);
+    expect(screen.queryByRole('region', { name: '배경지식' })).toBeNull();
+  });
+
+  test('배경지식은 작품 소개가 없어도 보이고, 첫 방문이 아니면 보이지 않는다', () => {
+    const { rerender } = render(
+      <MobileBriefingView {...baseProps} briefing={first()} background="1930년대 경성의 극장가." />
+    );
+    expect(screen.getByRole('region', { name: '배경지식' })).toHaveTextContent('1930년대 경성의 극장가.');
+
+    rerender(<MobileBriefingView {...baseProps} briefing={briefing()} background="1930년대 경성의 극장가." />);
+    expect(screen.queryByRole('region', { name: '배경지식' })).toBeNull();
+  });
+
   test('목차는 첫 방문에도 보이고 지금 장 표시는 없다', async () => {
     render(<MobileBriefingView {...baseProps} briefing={first()} />);
     await userEvent.click(screen.getByRole('button', { name: /목차/ }));
