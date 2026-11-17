@@ -6,6 +6,7 @@ jest.mock('../repository', () => ({
   findAliases: jest.fn(),
   lexicalSearch: jest.fn(),
   vectorSearch: jest.fn(),
+  findAdjacentPages: jest.fn(),
 }));
 jest.mock('../../llm-gateway/embedding', () => ({
   embedQuery: jest.fn(),
@@ -23,6 +24,7 @@ describe('grounded retrieval recovery', () => {
     ]);
     (repo.vectorSearch as jest.Mock).mockResolvedValue([]);
     (repo.lexicalSearch as jest.Mock).mockResolvedValue([]);
+    (repo.findAdjacentPages as jest.Mock).mockResolvedValue([]);
     (embedQuery as jest.Mock).mockResolvedValue([0.1]);
   });
   afterEach(() => jest.restoreAllMocks());

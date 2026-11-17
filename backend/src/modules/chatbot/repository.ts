@@ -379,3 +379,36 @@ export async function lexicalSearch(
   );
   return result.rows;
 }
+
+/**
+ * 검색으로 고른 쪽(seedPages)의 바로 앞뒤 쪽 조회 (제안 10, 2026-11-17)
+ *
+ * FR-QNA-006 🚦, FR-SPL-002 🚦: 기준 쪽수 K를 쿼리 조건으로 건다. 받아 온 뒤에 거르지 않는다 —
+ * K 초과 쪽은 이 쿼리 결과에 들어올 수 없다(절대 규칙 1·7). 어느 쪽이 앞뒤 쪽인지도 이 쿼리가
+ * 정하므로, 호출하는 쪽은 K 밖의 쪽 번호를 만들 일이 없다.
+ */
+export async function findAdjacentPages(
+  bookId: string,
+  seedPages: number[],
+  K: number,
+  limit: number
+): Promise<SearchChunk[]> {
+  const seeds = [...new Set(seedPages.filter((page) => Number.isInteger(page) && page >= 1))];
+  if (seeds.length === 0 || K < 1) return [];
+  const result = await pool.query(
+    `
+    SELECT p.page_no, p.content, 1.0::float8 AS distance
+    FROM pages p
+    WHERE p.book_id = $1 AND p.page_no <= $2
+      AND EXISTS (
+        SELECT 1 FROM unnest($3::int[]) AS seed
+        WHERE abs(p.page_no - seed) = 1
+      )
+      AND NOT (p.page_no = ANY($3::int[]))
+    ORDER BY p.page_no ASC
+    LIMIT $4
+  `,
+    [bookId, K, seeds, Math.max(1, Math.min(limit, 12))]
+  );
+  return result.rows;
+}
