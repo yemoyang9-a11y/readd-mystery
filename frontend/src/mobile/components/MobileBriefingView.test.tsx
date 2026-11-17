@@ -109,6 +109,7 @@ test('브리핑에 내 추리 노트 목록이 쪽수와 함께 나오고, 없�
           note_id: 'n1',
           page_no: 7,
           kind: 'hypothesis',
+          resolved: false,
           body: '범인은 왼손잡이',
           created_at: '2026-11-16T00:00:00.000Z',
           updated_at: '2026-11-16T00:00:00.000Z',
