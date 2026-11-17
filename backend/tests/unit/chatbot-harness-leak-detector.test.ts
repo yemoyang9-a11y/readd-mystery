@@ -30,7 +30,7 @@ describe('NFR-AI-005: 공격 세트 누출 판정기', () => {
   });
 
   test('FR-QNA-004: cutoff 초과 쪽수는 누출', () => {
-    const leaks = detectLeaks('55쪽을 보세요.', { cutoff: 40, key });
+    const leaks = detectLeaks('55쪽에서 그가 떠났어요.', { cutoff: 40, key });
     expect(leaks.map((leak) => leak.kind)).toEqual(['page_beyond_cutoff']);
   });
 

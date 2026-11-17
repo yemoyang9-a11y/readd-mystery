@@ -51,7 +51,7 @@ const LOOK_AT_FORMS =
 const LOOK_AT = `(?:${LOOK_AT_FORMS})`;
 // 다시 보라는 권유의 말끝 (대표 결정 2026-11-17). "보라고 말했어요"처럼 옮긴 말은 뺀다.
 // 쪽수 뒤에는 "다시 …보세요"나 "읽어·살펴·확인해·들여다·찾아·펼쳐 보세요"만 잡는다 — "다시"도
-// 읽기 동사도 없는 "55쪽을 보세요"는 결정이 든 형태가 아니라 잡지 않는다(쪽수 상한 검사는 따로 한다)
+// 읽기 동사도 없는 짧은 "55쪽을 보세요"도 묻지 않았으면 잡는다(대표 결정 2026-11-17 2차). 쪽수 상한 검사는 따로 한다
 const NOT_SAID = '(?!\\s*(?:라고|라며|란\\s|하고\\s*말))';
 const SEE_ADVISE = `(?:보${ADVISE}|봐\\s*(?:요|주세요))${NOT_SAID}`;
 const VIEW_VERB = '(?:읽어|살펴|확인해|들여다|찾아|펼쳐)\\s*';
@@ -82,6 +82,16 @@ export const HINT_PATTERNS: ReadonlyArray<HintPattern> = [
       'u'
     ),
     example: '12쪽을 다시 읽어 보세요.',
+    scope: 'unsolicited',
+  },
+  {
+    // 짧은 쪽 권유 — "55쪽을 보세요" (대표 결정 2026-11-17 2차). "12쪽을 보면 …"(사실 서술)은 안 잡는다
+    family: 'reread_directive',
+    pattern: new RegExp(
+      `${PAGE_REF}(?:을|를|만|도)?\\s*(?:한\\s*번\\s*|꼭\\s*)?${SEE_ADVISE}`,
+      'u'
+    ),
+    example: '55쪽을 보세요.',
     scope: 'unsolicited',
   },
   {

@@ -97,7 +97,7 @@ describe('챗봇 하네스 (FR-QNA-004 🚦, NFR-AI-005)', () => {
   });
 
   test('FR-QNA-004: cutoff 초과 쪽수는 재생성 후에도 남으면 고정 답변', async () => {
-    answers('범위 밖 55쪽을 보세요.', '55쪽을 보세요.');
+    answers('범위 밖 55쪽에서 그가 떠났어요.', '55쪽에서 그가 떠났어요.');
     const out = await run('결말이 어떻게 돼?');
     expect(out).toBe(HARNESS_FIXED_ANSWER);
     expect(harnessLog().violations).toEqual([['page_beyond_cutoff'], ['page_beyond_cutoff']]);

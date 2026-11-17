@@ -1,6 +1,8 @@
 import { noteKindLabel, type ReaderNote } from '../notes-reader';
 
 const MAX_NOTES_IN_PROMPT = 20;
+/** 질문과 상관없이 늘 넣는 최근 노트 수 (대표 결정 2026-11-17) */
+const RECENT_NOTES_ALWAYS = 5;
 const MAX_NOTE_BODY_LENGTH = 300;
 
 function tokens(text: string): string[] {
@@ -27,7 +29,8 @@ function writtenAt(note: ReaderNote): number {
 /**
  * FR-SPL-002 🚦 R4 — 챗봇에 넣을 독자 노트를 고른다.
  * 1) 기준 쪽수 K 이하만 남긴다(조회 쿼리에도 같은 조건이 있고, 여기서 한 번 더 건다).
- * 2) 그 안에서만 질문과 낱말이 겹치는 노트를 먼저, 나머지는 최근에 쓴 순으로 20개까지 채운다.
+ * 2) 그 안에서 가장 최근에 쓴 5개는 늘 넣고, 나머지 자리는 질문과 낱말이 겹치는 노트를 먼저,
+ *    그다음 최근에 쓴 순으로 20개까지 채운다(대표 결정 2026-11-17).
  * 3) 쪽 순서로 적는다.
  * 질문은 K 이하 노트 사이의 순서에만 쓰이며 범위(K)에는 관여하지 않는다.
  */
@@ -43,13 +46,19 @@ export function buildNotesSection(notes: ReaderNote[], K: number, question = '')
     }));
   if (ranked.length === 0) return '';
 
-  const selected = [...ranked]
+  const recent = [...ranked]
+    .sort((a, b) => b.at - a.at || b.note.page_no - a.note.page_no || b.order - a.order)
+    .slice(0, RECENT_NOTES_ALWAYS);
+  const rest = ranked
+    .filter((item) => !recent.includes(item))
     .sort(
       (a, b) =>
         b.score - a.score || b.at - a.at || b.note.page_no - a.note.page_no || b.order - a.order
     )
-    .slice(0, MAX_NOTES_IN_PROMPT)
-    .sort((a, b) => a.note.page_no - b.note.page_no || a.at - b.at || a.order - b.order);
+    .slice(0, MAX_NOTES_IN_PROMPT - recent.length);
+  const selected = [...recent, ...rest].sort(
+    (a, b) => a.note.page_no - b.note.page_no || a.at - b.at || a.order - b.order
+  );
 
   const lines = selected.map(
     ({ note }) =>
