@@ -17,8 +17,22 @@ test('홈·검색: 작은 화면에서도 탐색하고 미검수 도서를 숨�
   await expect(page.getByText('찾는 작품이 없습니다')).toBeVisible();
 });
 
-test('읽기·확인 창: 기준점 변경은 명시적 선택 뒤에만 적용된다', async ({ page }, info) => {
+test('읽기·확인 창: 이동만 하기는 읽음 확인을 전송하지 않는다', async ({ page }, info) => {
   const log = await installMockApi(page);
+  const sent: Array<{ page: number; claim?: string | null }> = [];
+  // 기존 공용 fixture는 이동 쪽을 cutoff로 쓰므로 이 시험에서는 현재 계약을 고정한다.
+  await page.route(`**/books/${BOOK_ID}/progress`, async (route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    const event = route.request().postDataJSON() as { page: number; claim?: string | null };
+    sent.push(event);
+    log.progress.push(event.page);
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' },
+      body: JSON.stringify({ success: true, applied_cutoff: 15, confirm: null }),
+    });
+  });
   await page.goto(`/books/${BOOK_ID}/read`);
   await expect(page.getByRole('article')).toContainText('15쪽.');
   await expect.poll(() => log.progress.length).toBeGreaterThan(0);
@@ -40,6 +54,7 @@ test('읽기·확인 창: 기준점 변경은 명시적 선택 뒤에만 적용�
   await dialog.getByRole('button', { name: '이동만 하기' }).click();
   await expect(page.getByRole('article')).toContainText('21쪽.');
   await expect.poll(() => log.progress.at(-1)).toBe(21);
+  expect(sent.at(-1)?.claim ?? null).toBeNull();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 

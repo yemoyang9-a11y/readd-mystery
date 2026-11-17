@@ -74,7 +74,7 @@ jobs:
         run: npm run e2e:smoke
 
       - name: Upload browser diagnostics
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: frontend-browser-diagnostics
