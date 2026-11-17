@@ -2,11 +2,29 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalLayer } from '../../hooks/useModalLayer';
 import type { NoteDraft, NoteKind, ReadingNote } from '../../types';
+import {
+  canResolve,
+  CheckIcon,
+  NOTE_KIND_LABELS,
+  NOTE_KIND_ORDER,
+  NoteKindBadge,
+  ResolvedMark,
+} from './noteKind';
 
-export const NOTE_KIND_LABELS: Record<NoteKind, string> = {
-  clue: '단서',
-  hypothesis: '가설',
-};
+export { NOTE_KIND_LABELS };
+
+// 메모 창의 종류 선택지 — 기본은 일반(null)
+const KIND_CHOICES: { value: NoteKind | null; label: string }[] = [
+  { value: null, label: '일반' },
+  ...NOTE_KIND_ORDER.map((value) => ({ value, label: NOTE_KIND_LABELS[value] })),
+];
+
+type KindFilter = 'all' | NoteKind;
+
+const KIND_FILTERS: { value: KindFilter; label: string }[] = [
+  { value: 'all', label: '전체' },
+  ...NOTE_KIND_ORDER.map((value) => ({ value, label: NOTE_KIND_LABELS[value] })),
+];
 
 const MAX_BODY_LENGTH = 1000;
 
@@ -27,7 +45,7 @@ function NoteEditor({
   );
   useModalLayer({ active: true, dialogRef, returnFocusRef, onClose });
 
-  const [kind, setKind] = useState<NoteKind>(initial.kind);
+  const [kind, setKind] = useState<NoteKind | null>(initial.kind);
   const [body, setBody] = useState(initial.body);
   const [pageText, setPageText] = useState(String(initial.page_no));
   const [saving, setSaving] = useState(false);
@@ -81,21 +99,21 @@ function NoteEditor({
           </button>
         </div>
 
-        <div role="radiogroup" aria-label="종류" className="mt-2 flex gap-2">
-          {(Object.keys(NOTE_KIND_LABELS) as NoteKind[]).map((it) => (
+        <div role="radiogroup" aria-label="종류" className="mt-2 flex flex-wrap gap-2">
+          {KIND_CHOICES.map(({ value, label }) => (
             <button
-              key={it}
+              key={label}
               type="button"
               role="radio"
-              aria-checked={kind === it}
-              onClick={() => setKind(it)}
-              className={`min-h-11 rounded-full border px-4 text-sm font-bold transition-colors ${
-                kind === it
+              aria-checked={kind === value}
+              onClick={() => setKind(value)}
+              className={`min-h-11 rounded-full border px-3.5 text-sm font-bold transition-colors ${
+                kind === value
                   ? 'border-brief-accent bg-brief-accent-soft text-brief-accent'
                   : 'border-brief-rule text-brief-muted'
               }`}
             >
-              {NOTE_KIND_LABELS[it]}
+              {label}
             </button>
           ))}
         </div>
@@ -187,7 +205,9 @@ export default function NotesTab({
   const [editing, setEditing] = useState<ReadingNote | 'new' | null>(quoteDraft ? 'new' : null);
   const [prefill, setPrefill] = useState(quoteDraft?.text ?? '');
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [kindFilter, setKindFilter] = useState<KindFilter>('all');
   const maxPage = totalPages && totalPages > 0 ? totalPages : null;
+  const shown = kindFilter === 'all' ? notes : notes.filter((note) => note.kind === kindFilter);
 
   useEffect(() => {
     if (!quoteDraft) return;
@@ -206,17 +226,46 @@ export default function NotesTab({
         {!failed && notes.length === 0 ? (
           <p className="m-0 text-sm text-brief-muted">아직 적은 게 없어요.</p>
         ) : null}
+        {notes.length > 0 ? (
+          <div
+            role="group"
+            aria-label="종류별로 보기"
+            data-no-track
+            className="mb-3 flex flex-wrap gap-1.5 font-dashSans"
+          >
+            {KIND_FILTERS.map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={kindFilter === value}
+                onClick={() => setKindFilter(value)}
+                className={`min-h-11 rounded-full border px-3.5 text-[13px] font-bold transition-colors ${
+                  kindFilter === value
+                    ? 'border-brief-accent bg-brief-accent-soft text-brief-accent'
+                    : 'border-brief-rule text-brief-muted'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {notes.length > 0 && shown.length === 0 ? (
+          <p className="m-0 text-sm text-brief-muted">이 종류로 적은 노트가 없어요.</p>
+        ) : null}
         <ul data-no-track className="m-0 flex list-none flex-col gap-2.5 p-0">
-          {notes.map((note) => (
+          {shown.map((note) => (
             <li
               key={note.note_id}
+              data-resolved={note.resolved ? 'true' : undefined}
               className="rounded-brief-card border border-brief-rule bg-white p-3.5 font-dashSans"
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="rounded-full bg-brief-accent-soft px-2.5 py-0.5 text-[11px] font-bold text-brief-accent">
-                  {NOTE_KIND_LABELS[note.kind]}
+                <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+                  <NoteKindBadge kind={note.kind} />
+                  {note.resolved ? <ResolvedMark /> : null}
                 </span>
-                <span className="flex items-center">
+                <span className="flex shrink-0 items-center">
                   <button
                     type="button"
                     onClick={() => setEditing(note)}
@@ -258,17 +307,39 @@ export default function NotesTab({
                   )}
                 </span>
               </div>
-              <p className="my-2 whitespace-pre-wrap break-words text-[15px] leading-relaxed text-brief-ink">
+              <p
+                className={`my-2 whitespace-pre-wrap break-words text-[15px] leading-relaxed ${
+                  note.resolved ? 'text-brief-muted' : 'text-brief-ink'
+                }`}
+              >
                 {note.body}
               </p>
-              <button
-                type="button"
-                onClick={() => onJump(note.page_no)}
-                aria-label={`${note.page_no}쪽으로 이동`}
-                className="min-h-11 rounded-full border border-brief-rule px-3.5 text-[13px] font-bold text-brief-accent"
-              >
-                {note.page_no}쪽
-              </button>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => onJump(note.page_no)}
+                  aria-label={`${note.page_no}쪽으로 이동`}
+                  className="min-h-11 rounded-full border border-brief-rule px-3.5 text-[13px] font-bold text-brief-accent"
+                >
+                  {note.page_no}쪽
+                </button>
+                {/* 풀림 표시는 독자만 켜고 끈다 — 궁금한 점·가설에만 */}
+                {canResolve(note.kind) ? (
+                  <button
+                    type="button"
+                    aria-pressed={note.resolved}
+                    onClick={() => void onEdit(note.note_id, { resolved: !note.resolved })}
+                    className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-bold transition-colors ${
+                      note.resolved
+                        ? 'border-brief-accent bg-brief-accent-soft text-brief-accent'
+                        : 'border-brief-rule text-brief-muted'
+                    }`}
+                  >
+                    {note.resolved ? <CheckIcon /> : null}
+                    풀림
+                  </button>
+                ) : null}
+              </div>
             </li>
           ))}
         </ul>
@@ -290,7 +361,7 @@ export default function NotesTab({
         <NoteEditor
           initial={
             editing === 'new'
-              ? { page_no: currentPage ?? 1, kind: 'clue', body: prefill }
+              ? { page_no: currentPage ?? 1, kind: null, body: prefill }
               : { page_no: editing.page_no, kind: editing.kind, body: editing.body }
           }
           maxPage={maxPage}

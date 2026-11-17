@@ -387,17 +387,35 @@ export function mockListNotes(): ReadingNote[] {
   return [...mockNotes].sort((a, b) => a.page_no - b.page_no);
 }
 
+// 2026-11-17 추리 노트 종류 — 서버(notes/service.ts)와 같은 규칙: 풀림 표시는 궁금한 점·가설에만
+function mockCanResolve(kind: ReadingNote['kind']): boolean {
+  return kind === 'question' || kind === 'hypothesis';
+}
+
 export function mockCreateNote(draft: NoteDraft): ReadingNote {
+  const kind = draft.kind ?? null;
+  if (draft.resolved && !mockCanResolve(kind)) throw new Error('NOTE_INVALID');
   const now = new Date().toISOString();
-  const note: ReadingNote = { note_id: crypto.randomUUID(), ...draft, created_at: now, updated_at: now };
+  const note: ReadingNote = {
+    note_id: crypto.randomUUID(),
+    page_no: draft.page_no,
+    kind,
+    resolved: draft.resolved === true,
+    body: draft.body,
+    created_at: now,
+    updated_at: now,
+  };
   mockNotes.push(note);
-  return note;
+  return { ...note };
 }
 
 export function mockUpdateNote(noteId: string, draft: Partial<NoteDraft>): ReadingNote {
   const note = mockNotes.find((n) => n.note_id === noteId);
   if (!note) throw new Error('NOTE_NOT_FOUND');
+  const nextKind = draft.kind !== undefined ? draft.kind : note.kind;
+  if (draft.resolved === true && !mockCanResolve(nextKind)) throw new Error('NOTE_INVALID');
   Object.assign(note, draft, { updated_at: new Date().toISOString() });
+  if (!mockCanResolve(nextKind)) note.resolved = false;
   return { ...note };
 }
 

@@ -248,6 +248,7 @@ describe('싸비 사이드창', () => {
       note_id: 'n1',
       page_no: 7,
       kind: 'clue' as const,
+      resolved: false,
       body: '장갑이 한 짝 없다',
       created_at: '2026-11-16T00:00:00.000Z',
       updated_at: '2026-11-16T00:00:00.000Z',
