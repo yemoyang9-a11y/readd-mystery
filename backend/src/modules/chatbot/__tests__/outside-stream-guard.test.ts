@@ -130,7 +130,9 @@ describe('작품 밖 질문(outside) — 문장 단위로 검사한 뒤에만 �
   });
 
   test('FR-QNA-004: K=130에서는 같은 답변이 그대로 나간다 (positive 쌍)', async () => {
-    const text = '영화 이야기는 제가 잘 몰라요. 그 장면은 95쪽에 나와요. 다시 읽어 보세요.';
+    // 대표 결정 2026-11-17: 묻지 않은 "다시 읽어 보세요"는 이제 steering_hint라, 쪽수 상한만 보는
+    // 이 쌍에서는 사실 서술 문장으로 바꿨다
+    const text = '영화 이야기는 제가 잘 몰라요. 그 장면은 95쪽에 나와요. 거기서 그는 장갑을 벗어요.';
     streamInChunks(text);
     const chunks = await runChunks(130);
     expect(chunks.join('')).toBe(text);

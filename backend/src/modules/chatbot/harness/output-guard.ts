@@ -1,6 +1,6 @@
 import type { QuestionIntent } from './question-intent';
 import { findSteeringHints } from './steering-hint';
-import { INTENT_POLICY } from './behavior-ladder';
+import { INTENT_POLICY, permitsSceneRetrieval } from './behavior-ladder';
 
 export const GUARD_VIOLATIONS = [
   'page_beyond_cutoff',
@@ -25,6 +25,11 @@ export interface GuardOptions {
   rawText?: ReadonlyArray<string>;
   /** 독자가 쓴 노트 본문(K 이하로 이미 고른 것). 암시 검사에서 독자 자신의 글을 빼는 데만 쓴다. */
   readerNotes?: ReadonlyArray<string>;
+  /**
+   * 독자 질문이 장면 위치 요청인지(`isSceneLocationRequest`). 없으면 묻지 않은 것으로 본다.
+   * 대표 결정 2026-11-17: 다시 보기 권유는 이 값과 행동 단계표가 함께 허용할 때만 통과한다.
+   */
+  sceneLocationRequested?: boolean;
 }
 
 /** 2026-11-17 대표 결정: 답변 하나에 책 원문을 그대로 옮기는 양은 합계 200자까지 */
@@ -157,7 +162,15 @@ function measureVerbatim(answer: string, grams: Set<string>, excluded: Set<strin
 }
 
 export function guardAnswer(answer: string, options: GuardOptions): GuardResult {
-  const { cutoff, pages, intent, echoedUserText = [], rawText = [], readerNotes = [] } = options;
+  const {
+    cutoff,
+    pages,
+    intent,
+    echoedUserText = [],
+    rawText = [],
+    readerNotes = [],
+    sceneLocationRequested = false,
+  } = options;
   const violations: GuardViolation[] = [];
 
   // FR-QNA-004 🚦 R4
@@ -189,7 +202,13 @@ export function guardAnswer(answer: string, options: GuardOptions): GuardResult 
   if (patterns.some((pattern) => pattern.test(answer))) violations.push('verdict_phrase');
 
   // NFR-AI-005, 결정 23: 판정 낱말 없이 추리를 이끄는 암시(다시 보라·주목하라·중요한 단서·칭찬 확인)
-  if (findSteeringHints(answer, { strict, trusted: [...trusted, ...readerNotes] }).length > 0) {
+  // 대표 결정 2026-11-17: 다시 보기 권유는 장면 위치를 물었을 때(retrieve_scene)만 허용
+  const hints = findSteeringHints(answer, {
+    strict,
+    trusted: [...trusted, ...readerNotes],
+    sceneRetrievalAllowed: permitsSceneRetrieval(intent, sceneLocationRequested),
+  });
+  if (hints.length > 0) {
     violations.push('steering_hint');
   }
 

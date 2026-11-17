@@ -10,9 +10,13 @@
  * 오탐을 줄이는 기준
  * - 아모가 독자에게 권하는 말끝(…보세요, …할 만해요, …두세요)만 잡는다. 읽은 범위의 사실을
  *   그대로 옮긴 서술("12쪽에서 A는 편지를 눈여겨보았어요", "…라고 말했어요")은 잡지 않는다.
- * - 쪽수로 장면 위치를 알려 주는 말("12쪽을 다시 읽어 보세요")은 결정 23의 '관련 장면 되찾기'라
- *   잡지 않는다. "그 장면을 다시 보세요"처럼 특정 장면을 짚어 다시 보라고 하거나, "다시 꼼꼼히"처럼
- *   강조해서 권하는 말만 잡는다.
+ * - 쪽수를 출처로 붙인 사실 서술("12쪽에서 A는 장갑을 주웠어요", "그 장면은 12쪽에 나와요")은
+ *   언제나 잡지 않는다.
+ * - 대표 결정 2026-11-17: 다시 보라는 권유("12쪽을 다시 읽어 보세요", "15쪽에 그 장면이 있어요,
+ *   다시 보세요", 쪽수 없는 "다시 읽어 보세요", "그 장면을 다시 보세요")는 독자가 장면·대목의 위치를
+ *   물었을 때만 결정 23의 '관련 장면 되찾기'(retrieve_scene)로 허용한다. 묻지 않았으면 위반이다
+ *   (scope 'unsolicited'). 허용 여부는 호출자가 행동 단계표로 정해 `sceneRetrievalAllowed`로 넘긴다.
+ * - "다시 꼼꼼히"처럼 강조하거나 "되짚어 보세요"처럼 다시 생각하라는 권유는 위치를 물었어도 잡는다.
  * - 따옴표 안의 글이 K 이하 원문이나 독자가 직접 쓴 글(질문·선택 문장·노트)에 그대로 있으면
  *   그 부분은 빼고 검사한다(`stripTrustedQuotes`). 독자가 적은 단서를 가리키는 말도 뺀다.
  */
@@ -34,8 +38,10 @@ export interface HintPattern {
    * always: 모든 질문 유형에서 막는다.
    * strict: 가설·범인 질문에서만 막는다 — 사실 질문의 "잘 보셨어요"는 사실 확인이다
    * (verdict_phrase의 "맞아요"와 같은 기준).
+   * unsolicited: 독자가 장면 위치를 묻지 않았을 때(retrieve_scene이 허용되지 않을 때)만 막는다
+   * (대표 결정 2026-11-17).
    */
-  scope: 'always' | 'strict';
+  scope: 'always' | 'strict' | 'unsolicited';
 }
 
 const ADVISE = '(?:세요|시길|셔야|시는\\s*(?:게|것)|시면\\s*(?:좋|어떨)|시죠|십시오)';
@@ -43,6 +49,15 @@ const LOOK = '(?:읽어\\s*보|살펴\\s*보|떠올려\\s*보|확인해\\s*보|�
 const LOOK_AT_FORMS =
   '보세요|봐요|보시(?:길|면\\s*(?:좋|어떨))|볼\\s*(?:만|필요)|봐야|봐\\s*두|보는\\s*게|읽어\\s*보세요|살펴\\s*보세요';
 const LOOK_AT = `(?:${LOOK_AT_FORMS})`;
+// 다시 보라는 권유의 말끝 (대표 결정 2026-11-17). "보라고 말했어요"처럼 옮긴 말은 뺀다.
+// 쪽수 뒤에는 "다시 …보세요"나 "읽어·살펴·확인해·들여다·찾아·펼쳐 보세요"만 잡는다 — "다시"도
+// 읽기 동사도 없는 "55쪽을 보세요"는 결정이 든 형태가 아니라 잡지 않는다(쪽수 상한 검사는 따로 한다)
+const NOT_SAID = '(?!\\s*(?:라고|라며|란\\s|하고\\s*말))';
+const SEE_ADVISE = `(?:보${ADVISE}|봐\\s*(?:요|주세요))${NOT_SAID}`;
+const VIEW_VERB = '(?:읽어|살펴|확인해|들여다|찾아|펼쳐)\\s*';
+const AGAIN = '다시\\s*(?:한\\s*번\\s*)?';
+const REREAD_ACT = `(?:${VIEW_VERB}${SEE_ADVISE}|(?:읽으|확인하)${ADVISE}${NOT_SAID})`;
+const PAGE_REF = '\\d{1,5}\\s*(?:쪽|페이지)';
 const CLUE = '(?:단서|힌트|실마리|열쇠|복선|증거)';
 // 인물·독자가 한 말로 옮긴 경우와, 무엇이 단서인지 말하지 않겠다는 문장은 뺀다
 const NOT_REPORTED =
@@ -50,6 +65,7 @@ const NOT_REPORTED =
 
 export const HINT_PATTERNS: ReadonlyArray<HintPattern> = [
   // ── 다시 보라고 권하기 ─────────────────────────────────────────────
+  // 장면 위치를 묻지 않았을 때만 막는 권유 (대표 결정 2026-11-17)
   {
     family: 'reread_directive',
     pattern: new RegExp(
@@ -57,8 +73,27 @@ export const HINT_PATTERNS: ReadonlyArray<HintPattern> = [
       'u'
     ),
     example: '그 장면을 다시 보세요.',
-    scope: 'always',
+    scope: 'unsolicited',
   },
+  {
+    family: 'reread_directive',
+    pattern: new RegExp(
+      `${PAGE_REF}[^.?!\\n]{0,30}?(?:${AGAIN}(?:${VIEW_VERB})?${SEE_ADVISE}|${REREAD_ACT})`,
+      'u'
+    ),
+    example: '12쪽을 다시 읽어 보세요.',
+    scope: 'unsolicited',
+  },
+  {
+    family: 'reread_directive',
+    pattern: new RegExp(
+      `${AGAIN}(?:(?:${VIEW_VERB})?${SEE_ADVISE}|(?:읽으|확인하)${ADVISE}${NOT_SAID})`,
+      'u'
+    ),
+    example: '다시 읽어 보세요.',
+    scope: 'unsolicited',
+  },
+  // 위치를 물었어도 막는 강조·재고 권유
   {
     family: 'reread_directive',
     pattern: new RegExp(
@@ -233,12 +268,18 @@ export function stripTrustedQuotes(answer: string, trusted: ReadonlyArray<string
 
 export function findSteeringHints(
   answer: string,
-  options: { strict: boolean; trusted?: ReadonlyArray<string> }
+  options: {
+    strict: boolean;
+    trusted?: ReadonlyArray<string>;
+    /** 행동 단계표가 retrieve_scene을 허용했는지(장면 위치 요청 + 유형). 없으면 허용하지 않는다 */
+    sceneRetrievalAllowed?: boolean;
+  }
 ): HintFamily[] {
   const text = stripTrustedQuotes(answer, options.trusted ?? []);
   const families = new Set<HintFamily>();
   for (const entry of HINT_PATTERNS) {
     if (entry.scope === 'strict' && !options.strict) continue;
+    if (entry.scope === 'unsolicited' && options.sceneRetrievalAllowed === true) continue;
     if (entry.pattern.test(text)) families.add(entry.family);
   }
   return [...families];
