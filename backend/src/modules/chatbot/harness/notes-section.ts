@@ -1,4 +1,4 @@
-import type { ReaderNote } from '../notes-reader';
+import { noteKindLabel, type ReaderNote } from '../notes-reader';
 
 const MAX_NOTES_IN_PROMPT = 20;
 const MAX_NOTE_BODY_LENGTH = 300;
@@ -11,7 +11,7 @@ export function buildNotesSection(notes: ReaderNote[], K: number): string {
   if (visible.length === 0) return '';
   const lines = visible.map(
     (note) =>
-      `- p.${note.page_no} [${note.kind === 'clue' ? '단서' : '가설'}] ${JSON.stringify(
+      `- p.${note.page_no} [${noteKindLabel(note.kind)}] ${JSON.stringify(
         note.body.slice(0, MAX_NOTE_BODY_LENGTH)
       )}`
   );
