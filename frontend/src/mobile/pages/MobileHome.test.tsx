@@ -239,3 +239,57 @@ describe('모바일 홈 3D 책 캐러셀', () => {
     expect(title.className).toContain('text-white');
   });
 });
+
+describe('작은 화면에서 이어 읽기 카드가 있으면 입체 책 영역만 줄인다', () => {
+  const original = { w: window.innerWidth, h: window.innerHeight };
+  function screenSize(w: number, h: number) {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: w });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: h });
+  }
+  const stageHeight = () => parseFloat(screen.getByTestId('book-carousel').style.height);
+  afterEach(() => screenSize(original.w, original.h));
+
+  test('390×664에서 카드가 있으면 입체 책 영역이 카드 없을 때보다 50px 이상 낮다', () => {
+    screenSize(390, 664);
+    catalog.books = [{ ...readingBook, progress: undefined }];
+    const { unmount } = renderHome();
+    const withoutCard = stageHeight();
+    unmount();
+
+    catalog.books = [readingBook];
+    renderHome();
+    expect(screen.getByTestId('home-continue-card')).toBeInTheDocument();
+    expect(withoutCard - stageHeight()).toBeGreaterThanOrEqual(50);
+  });
+
+  test('카드가 없으면 작은 화면이어도 입체 책 영역 높이는 지금과 같다', () => {
+    screenSize(390, 664);
+    catalog.books = [];
+    renderHome();
+    expect(stageHeight()).toBeCloseTo(300 * (664 / 760), 5);
+  });
+
+  test('큰 화면(430×932)은 카드가 있어도 입체 책 영역 높이가 줄지 않는다', () => {
+    screenSize(430, 932);
+    catalog.books = [];
+    const { unmount } = renderHome();
+    const withoutCard = stageHeight();
+    unmount();
+
+    catalog.books = [readingBook];
+    renderHome();
+    expect(stageHeight()).toBe(withoutCard);
+  });
+
+  test('430×739은 카드가 있어도 10px 넘게 줄지 않는다', () => {
+    screenSize(430, 739);
+    catalog.books = [];
+    const { unmount } = renderHome();
+    const withoutCard = stageHeight();
+    unmount();
+
+    catalog.books = [readingBook];
+    renderHome();
+    expect(withoutCard - stageHeight()).toBeLessThanOrEqual(10);
+  });
+});

@@ -56,14 +56,29 @@ function Arrow({ direction, onClick }: { direction: -1 | 1; onClick: () => void 
 
 const STAGE_HEIGHT = 300;
 
-function useStageScale(): number {
-  const read = () => Math.min(Math.max(Math.min(window.innerHeight / 760, window.innerWidth / 390), 0.85), 1.25);
+/** reserve 를 줘도 책이 이보다 작아지지는 않는다 (표지 글자가 뭉개지지 않는 선) */
+const MIN_RESERVED_SCALE = 0.6;
+
+/**
+ * 무대 배율. 기본은 화면 높이·너비 비례(0.85~1.25).
+ * reserve 가 있으면 무대 높이를 "화면 높이 - reserve" 이하로 줄인다 — 위에 이어 읽기 카드가
+ * 있을 때 작은 화면에서 작품 보기 버튼이 하단 메뉴에 가려지지 않게(2026-11-17 대표 결정).
+ * 화면이 충분히 크면 기본 배율이 더 작으므로 그대로다.
+ */
+function useStageScale(reserve?: number): number {
+  const read = () => {
+    const base = Math.min(Math.max(Math.min(window.innerHeight / 760, window.innerWidth / 390), 0.85), 1.25);
+    if (reserve === undefined) return base;
+    return Math.min(base, Math.max((window.innerHeight - reserve) / STAGE_HEIGHT, MIN_RESERVED_SCALE));
+  };
   const [scale, setScale] = useState(read);
   useEffect(() => {
     const onResize = () => setScale(read());
+    onResize();
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reserve]);
   return scale;
 }
 
@@ -72,16 +87,19 @@ export default function BookCarousel3D({
   index,
   onChange,
   onOpen,
+  reserve,
 }: {
   books: ShowcaseBook[];
   index: number;
   onChange: (next: number) => void;
   onOpen: (book: ShowcaseBook) => void;
+  /** 무대 밖 요소가 차지하는 세로 px. 주면 무대 높이 ≤ 화면 높이 - reserve */
+  reserve?: number;
 }) {
   const count = books.length;
   const startX = useRef<number | null>(null);
   const moved = useRef(false);
-  const scale = useStageScale();
+  const scale = useStageScale(reserve);
 
   function relative(i: number): number {
     let d = (((i - index) % count) + count) % count;

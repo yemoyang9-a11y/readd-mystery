@@ -85,6 +85,13 @@ function ContinueCard({ book }: { book: BookSummary }) {
   );
 }
 
+/**
+ * 이어 읽기 카드가 있을 때 입체 책 무대 밖 요소가 차지하는 세로 px.
+ * 390×664 실측(카드 없을 때 작품 보기 버튼 아래 끝 580px, 무대 262px → 무대 밖 318px)에
+ * 카드 70px·하단 메뉴 56px·여유 12px 를 더했다. 무대 높이 ≤ 화면 높이 - 456.
+ */
+const CONTINUE_CARD_RESERVE = 456;
+
 const CTA_CLASS =
   'mx-5 flex min-h-[50px] items-center justify-center rounded-full border border-white/15 bg-white/[0.07] text-base font-semibold text-[#e8e8ed] backdrop-blur-xl transition-colors';
 
@@ -113,6 +120,7 @@ export default function MobileHome() {
           index={index}
           onChange={setIndex}
           onOpen={(book) => book.bookId && navigate(briefingPath(book.bookId), { state: FROM_HOME })}
+          reserve={continueBook ? CONTINUE_CARD_RESERVE : undefined}
         />
 
         <div className="px-4">
