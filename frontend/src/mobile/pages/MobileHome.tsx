@@ -1,13 +1,89 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { HOME_SHOWCASE } from '../../data/homeShowcase';
 import { useCatalog } from '../../hooks/useCatalog';
+import { fetchBriefing } from '../../services/recapService';
 import { pickContinueBook } from '../../utils/homeRows';
 import { listableBooks } from '../../utils/listableBooks';
 import { briefingPath } from '../../utils/routes';
+import ProgressBar from '../../components/Reader/ProgressBar';
 import BookCarousel3D from '../components/BookCarousel3D';
+import type { BookSummary, BriefingResponse } from '../../types';
 
 const FROM_HOME = { fromHome: true };
+
+/**
+ * 홈 이어 읽기 카드 (2026-11-17 대표 결정 — 화면 채우기 우선순위 1)
+ *
+ * 진도 기록이 있는 책(GET /books 에 progress 가 온 책)이 있을 때만 그린다. 머리 줄의 작은
+ * "이어서 읽기 · 13p" 버튼과 같은 곳으로 가므로 그 버튼을 대신한다.
+ *
+ * 값은 전부 서버 응답 그대로다 — 쪽(progress.current_page)·진도 바(progress.percent)는
+ * GET /books, 장 이름은 GET /briefing 의 current_chapter. 프론트는 목차에서 장을 찾거나
+ * 퍼센트를 나누지 않는다 (절대 규칙 2, FR-BRF-005 🚦). 퍼센트는 숫자로 쓰지 않는다
+ * (e25408b — 이어서 읽기에는 퍼센트 대신 쪽).
+ *
+ * 장 이름 조회가 실패하면 장 이름만 빠지고 카드는 그대로 뜬다(FR-SPL-005 🚦 — 실패 = 미노출).
+ * GET /briefing 은 읽기 전용 조회라 진도·세션을 바꾸지 않는다.
+ */
+// FR-BRF-001 FR-BRF-005 🚦
+function ContinueCard({ book }: { book: BookSummary }) {
+  const [chapter, setChapter] = useState<BriefingResponse['current_chapter'] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setChapter(null);
+    Promise.resolve()
+      .then(() => fetchBriefing(book.book_id))
+      .then((briefing) => {
+        if (!cancelled) setChapter(briefing.current_chapter);
+      })
+      .catch(() => {
+        if (!cancelled) setChapter(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [book.book_id]);
+
+  const progress = book.progress!;
+  const where = chapter ? `제${chapter.chapter_no}장 ${chapter.title} · ${progress.current_page}p` : `${progress.current_page}p`;
+
+  return (
+    <Link
+      to={briefingPath(book.book_id)}
+      state={FROM_HOME}
+      data-track="이어 읽기"
+      data-testid="home-continue-card"
+      aria-label={`이어서 읽기, ${book.title}, ${where}`}
+      className="mx-5 mt-2 flex items-center gap-3 rounded-brief-panel border border-white/15 bg-white/[0.07] p-2.5 pr-4 backdrop-blur-xl transition-colors active:bg-white/[0.14]"
+    >
+      {/* 캐러셀·작품 보기 버튼이 첫 화면 밖으로 밀리지 않게 카드 높이를 표지 62px 에 맞춘다 */}
+      <span className="h-[62px] w-11 shrink-0 overflow-hidden rounded-[6px]">
+        {book.cover_url ? (
+          <img src={book.cover_url} alt={`${book.title} 표지`} className="size-full object-cover" />
+        ) : (
+          <span
+            aria-hidden="true"
+            className="flex size-full items-center justify-center bg-brief-card px-1 text-center font-dashSerif text-[10px] font-bold leading-tight text-brief-ink [overflow-wrap:anywhere]"
+          >
+            {book.title}
+          </span>
+        )}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-baseline justify-between gap-2">
+          <b className="min-w-0 truncate font-dashSerif text-base font-bold leading-snug text-white">{book.title}</b>
+          <span className="shrink-0 text-xs font-semibold text-dash-muted">이어서 읽기 ›</span>
+        </span>
+        <span className="mt-0.5 block truncate text-[13px] text-[#d2d2d7]">{where}</span>
+        <span className="mt-2 block">
+          <ProgressBar percent={progress.percent} tone="night" />
+        </span>
+      </span>
+    </Link>
+  );
+}
 
 const CTA_CLASS =
   'mx-5 flex min-h-[50px] items-center justify-center rounded-full border border-white/15 bg-white/[0.07] text-base font-semibold text-[#e8e8ed] backdrop-blur-xl transition-colors';
@@ -28,18 +104,8 @@ export default function MobileHome() {
       <h1 className="sr-only">홈</h1>
       <div className="flex items-center justify-between px-5 pt-3">
         <span className="font-dashSans text-[17px] font-bold tracking-[0.04em]">RE:ADD</span>
-        {continueBook ? (
-          <Link
-            to={briefingPath(continueBook.book_id)}
-            state={FROM_HOME}
-            data-track="이어 읽기"
-            className="flex min-h-11 items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] py-1.5 pl-1.5 pr-3 text-xs text-[#d2d2d7]"
-          >
-            <i aria-hidden="true" className="h-7 w-5 rounded-[2px] bg-gradient-to-br from-[#8f1d35] to-[#3a0a15]" />
-            {continueBook.progress ? `이어서 읽기 · ${continueBook.progress.percent}%` : '이어서 읽기'}
-          </Link>
-        ) : null}
       </div>
+      {continueBook ? <ContinueCard book={continueBook} /> : null}
 
       <div className="flex flex-1 flex-col justify-center">
         <BookCarousel3D
@@ -51,7 +117,7 @@ export default function MobileHome() {
 
         <div className="px-4">
           <div className="text-center text-xs tracking-[0.02em] text-dash-muted">
-            <b className="mb-0.5 block text-[17px] font-bold tracking-[-0.01em] text-dash-ink">{active.title}</b>
+            <b className="mb-1 block text-[26px] font-extrabold leading-[1.2] tracking-[-0.02em] text-white">{active.title}</b>
             {`${active.author} · ${active.meta}`}
           </div>
           <div data-testid="home-hook" className="mt-2 text-center font-hand text-[#e9e2d3]">

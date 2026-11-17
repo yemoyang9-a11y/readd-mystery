@@ -7,6 +7,7 @@ import { splitHighlighted } from '../components/Ssabi/highlightNames';
 import ProgressBar from '../components/Reader/ProgressBar';
 import TypographicCover from '../components/common/TypographicCover';
 import BriefingNotes from '../components/Ssabi/BriefingNotes';
+import { formatSinceLastRead } from '../utils/sinceLastRead';
 
 /**
  * 브리핑 화면 — S6 (FR-BRF-002~005, D12, D13 ①) — 재설계 2026-08-23
@@ -24,12 +25,10 @@ import BriefingNotes from '../components/Ssabi/BriefingNotes';
  */
 
 /**
- * TODO(mock): 마지막 방문 시각을 주는 엔드포인트가 없어 고정값이다.
- *   `BriefingResponse` 에 마지막 방문 시각 필드가 생기면 그 값으로 계산해 교체한다.
- *   사용자 결정(2026-08-20): 시안의 자리를 만들어 두고 지금은 mock 으로 채운다.
+ * 경과 안내("N일 만이에요")는 2026-11-17 대표 결정으로 고정 문구(MOCK_DAYS_SINCE_LABEL,
+ * "3일 만이에요")를 없앴다. 서버의 마지막 읽은 시각(lastReadAt)이 있을 때만 그린다
+ * (utils/sinceLastRead.ts).
  */
-export const MOCK_DAYS_SINCE_LABEL = '3일 만이에요';
-
 export const GREETING_LINES = ['다시 오셨네요.', '여기서부터 기억을 맞춰볼게요.'];
 
 export default function BriefingView({
@@ -47,6 +46,7 @@ export default function BriefingView({
   recapStreaming = false,
   characterNames = [],
   notes = [],
+  lastReadAt = null,
 }: {
   briefing: BriefingResponse;
   chapters: ChapterSummary[];
@@ -65,8 +65,11 @@ export default function BriefingView({
   /** 리캡 인물명 강조(RecapTab.tsx와 동일) — 이미 K 이하로 걸러진 /ssabi/graph 이름 목록 */
   characterNames?: string[];
   notes?: ReadingNote[];
+  /** 서버의 마지막 읽은 시각(GET /books progress.last_read_at). 없으면 경과 안내를 그리지 않는다 */
+  lastReadAt?: string | null;
 }) {
   const view = resolveBriefingView(briefing);
+  const sinceLabel = view.kind === 'empty' ? null : formatSinceLastRead(lastReadAt);
   const requested = useRef(false);
   const [tocOpen, setTocOpen] = useState(false);
 
@@ -109,10 +112,12 @@ export default function BriefingView({
         <TypographicCover size="brief" title={title} author={author} coverUrl={coverUrl} />
         <div>
           {/* 2026-08-26, 사용자 요청 — 초록 액센트 대신 대시보드와 같은 회색(#555)으로 */}
-          <p className="m-0 font-dashSans text-base font-bold text-[#555]">
-            {MOCK_DAYS_SINCE_LABEL}
-          </p>
-          <h2 className="mt-3 font-dashSerif text-[28px] font-semibold leading-[1.35] tracking-[-.03em] text-brief-ink">
+          {sinceLabel ? (
+            <p data-testid="since-last-read" className="m-0 mb-3 font-dashSans text-base font-bold text-[#555]">
+              {sinceLabel}
+            </p>
+          ) : null}
+          <h2 className="m-0 font-dashSerif text-[28px] font-semibold leading-[1.35] tracking-[-.03em] text-brief-ink">
             {GREETING_LINES.map((line) => (
               <span key={line} className="block">
                 {line}

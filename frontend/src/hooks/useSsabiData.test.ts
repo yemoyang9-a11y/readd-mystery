@@ -182,3 +182,34 @@ describe('FR-SVB-003: 패널이 열렸을 때만 조회한다', () => {
     expect(fetchGraph).not.toHaveBeenCalled();
   });
 });
+
+describe('사건 정리 조회 (FR-SPL-002 🚦)', () => {
+  const timeline = { chapters: [], events: [], applied_cutoff: 13 };
+
+  it('사건 정리가 선택됐을 때만 조회하고 내 노트에서는 조회하지 않는다', async () => {
+    const fetchTimeline = vi.fn().mockResolvedValue(timeline);
+    const { result, rerender } = renderHook(
+      (view: 'mine' | 'events') =>
+        useSsabiData({ panelOpen: true, bookId: 'book', tab: 'notes', currentPage: 13, notesView: view, fetchTimeline }),
+      { initialProps: 'mine' as 'mine' | 'events' }
+    );
+    await act(async () => {});
+    expect(fetchTimeline).not.toHaveBeenCalled();
+    rerender('events');
+    await waitFor(() => expect(fetchTimeline).toHaveBeenCalledWith('book', 13, expect.any(Number)));
+    await waitFor(() => expect(result.current.timeline).toEqual(timeline));
+  });
+
+  it('FR-SPL-005: 조회가 실패하면 옛 사건 정리를 남기지 않는다', async () => {
+    const fetchTimeline = vi.fn().mockResolvedValueOnce(timeline).mockRejectedValueOnce(new Error('x'));
+    const { result, rerender } = renderHook(
+      (page: number) =>
+        useSsabiData({ panelOpen: true, bookId: 'book', tab: 'notes', currentPage: page, notesView: 'events', fetchTimeline }),
+      { initialProps: 13 }
+    );
+    await waitFor(() => expect(result.current.timeline).not.toBeNull());
+    rerender(14);
+    await waitFor(() => expect(result.current.timelineFailed).toBe(true));
+    expect(result.current.timeline).toBeNull();
+  });
+});

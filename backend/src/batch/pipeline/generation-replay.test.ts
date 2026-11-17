@@ -53,8 +53,7 @@ test('fresh generation and cache replay apply the same validation without replay
     .mockResolvedValueOnce(JSON.stringify({ summary: '요약' }))
     .mockResolvedValueOnce(JSON.stringify({ characters: [character, invalid] }))
     .mockResolvedValueOnce(JSON.stringify({ relationships: [] }))
-    .mockResolvedValueOnce(JSON.stringify({ terms: [] }))
-    .mockResolvedValueOnce(JSON.stringify({ events: [] }));
+    .mockResolvedValueOnce(JSON.stringify({ terms: [] }));
   const generated = await loadOrGenerateChapter(chapter, pages, []);
   expect(generated.characters.map((c) => c.name)).toEqual(['전봇대']);
   expect(generated.review.map((r) => r.candidate)).toEqual([invalid]);
@@ -86,8 +85,7 @@ test('partial and null model candidates reach the review boundary before page re
       JSON.stringify({ characters: [{ ...character, aliases: undefined, notes: undefined }, null] })
     )
     .mockResolvedValueOnce(JSON.stringify({ relationships: [null] }))
-    .mockResolvedValueOnce(JSON.stringify({ terms: [] }))
-    .mockResolvedValueOnce(JSON.stringify({ events: [] }));
+    .mockResolvedValueOnce(JSON.stringify({ terms: [] }));
   const out = await loadOrGenerateChapter(chapter, pages, []);
   expect(out.characters).toHaveLength(1);
   expect(out.review.map((r) => r.kind)).toEqual(['character', 'relationship']);
@@ -101,11 +99,10 @@ test('JSON 파싱 실패는 그 호출만 최대 2회 재시도하고, 3회째�
     .mockResolvedValueOnce(JSON.stringify({ summary: '요약' }))
     .mockResolvedValueOnce(JSON.stringify({ characters: [character] }))
     .mockResolvedValueOnce(JSON.stringify({ relationships: [] }))
-    .mockResolvedValueOnce(JSON.stringify({ terms: [] }))
-    .mockResolvedValueOnce(JSON.stringify({ events: [] }));
+    .mockResolvedValueOnce(JSON.stringify({ terms: [] }));
   const out = await loadOrGenerateChapter(chapter, pages, []);
   expect(out.summary).toBe('요약');
-  expect(call).toHaveBeenCalledTimes(6);
+  expect(call).toHaveBeenCalledTimes(5);
   expect(warn).toHaveBeenCalledWith('[JSON 재시도] task=generate_summary 장=1 시도=2');
 
   (call as jest.Mock).mockReset().mockResolvedValue('{"summary": 깨진}');
@@ -123,8 +120,7 @@ test('NFR-AI-012: JSON 재시도 때만 프롬프트 끝에 JSON 단독 출력 �
     .mockResolvedValueOnce(JSON.stringify({ summary: '요약' }))
     .mockResolvedValueOnce(JSON.stringify({ characters: [character] }))
     .mockResolvedValueOnce(JSON.stringify({ relationships: [] }))
-    .mockResolvedValueOnce(JSON.stringify({ terms: [] }))
-    .mockResolvedValueOnce(JSON.stringify({ events: [] }));
+    .mockResolvedValueOnce(JSON.stringify({ terms: [] }));
   await loadOrGenerateChapter(chapter, pages, []);
   const [firstPrompt, retryPrompt] = (call as jest.Mock).mock.calls.map(([, prompt]) => prompt);
   expect(retryPrompt.startsWith(firstPrompt)).toBe(true);
@@ -139,11 +135,10 @@ test('NFR-AI-012: 첫 시도에 JSON이 파싱되면 지시 문장 없이 호출
     .mockResolvedValueOnce(JSON.stringify({ summary: '요약' }))
     .mockResolvedValueOnce(JSON.stringify({ characters: [character] }))
     .mockResolvedValueOnce(JSON.stringify({ relationships: [] }))
-    .mockResolvedValueOnce(JSON.stringify({ terms: [] }))
-    .mockResolvedValueOnce(JSON.stringify({ events: [] }));
+    .mockResolvedValueOnce(JSON.stringify({ terms: [] }));
   await loadOrGenerateChapter(chapter, pages, []);
   const prompts: string[] = (call as jest.Mock).mock.calls.map(([, prompt]) => prompt);
-  expect(call).toHaveBeenCalledTimes(5);
+  expect(call).toHaveBeenCalledTimes(4);
   expect(prompts.some((p) => p.includes('직전 응답은 JSON이 아니었다'))).toBe(false);
 });
 

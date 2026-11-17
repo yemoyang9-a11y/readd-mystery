@@ -28,6 +28,7 @@ vi.mock('../services/chatbotService', () => ({
 vi.mock('../hooks/useHeartbeat', () => ({ useHeartbeat: vi.fn() }));
 vi.mock('../services/ssabiService', () => ({
   fetchGraph: vi.fn(async () => ({ nodes: [], edges: [] })),
+  fetchTimeline: vi.fn(async () => ({ chapters: [], events: [], applied_cutoff: 0 })),
 }));
 vi.mock('../components/common/SsabiToggleButton', () => ({
   default: ({ onToggle }: { onToggle: () => void }) => <button onClick={onToggle}>panel</button>,

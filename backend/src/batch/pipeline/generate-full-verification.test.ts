@@ -56,13 +56,44 @@ const characters = [
   person('에도가와 란포', '에도가와 란포의 소설이다.', { story_presence: 'mentioned_only' }),
 ];
 
-function setup(options: { second: unknown[]; supports: boolean }) {
+const sceneEvent = (patch: Record<string, unknown> = {}) => ({
+  agent: '박영민',
+  action: '박영민이 손님을 맞았다',
+  mode: 'narration',
+  realis: 'actual',
+  flashback: false,
+  evidence: [{ source_page: 1, quote: '박영민은 해왕좌의 좌장이다.' }],
+  ...patch,
+});
+
+function setup(options: {
+  second: unknown[];
+  supports: boolean;
+  events?: unknown[];
+  eventReaderText?: string;
+}) {
   let relationshipCalls = 0;
   (call as jest.Mock).mockImplementation(async (task: string, prompt: string) => {
     if (task === 'generate_summary') return JSON.stringify({ summary: '요약' });
     if (task === 'generate_character') return JSON.stringify({ characters });
     if (task === 'generate_term') return JSON.stringify({ terms: [] });
-    if (task === 'generate_event') return JSON.stringify({ events: [] });
+    if (task === 'generate_event')
+      return JSON.stringify(
+        prompt.includes('장면 경계')
+          ? { boundaries: [] }
+          : { events: options.events ?? [sceneEvent()] }
+      );
+    if (task === 'rewrite_reader_text') {
+      const keys = [...prompt.matchAll(/"key": "([^"]+)"/g)].map((m) => m[1]);
+      return JSON.stringify({
+        items: keys.map((key) => ({
+          key,
+          text: key.startsWith('rel:')
+            ? '박영민과 이몽란은 부부예요.'
+            : (options.eventReaderText ?? '박영민이 손님을 맞아요.'),
+        })),
+      });
+    }
     if (task === 'generate_background') return JSON.stringify({ background: 'b', intro: 'i' });
     if (prompt.includes('반대 검토자'))
       return JSON.stringify({ supports: options.supports, why: '판단 이유' });
@@ -142,5 +173,86 @@ describe('FR-CHR-001: 인물 정리와 관계 검증이 생성 경로에 들어 
       expect.anything(),
       expect.anything()
     );
+  });
+});
+
+describe('R9: 독자용 쉬운 문장이 생성 경로에 들어 있다', () => {
+  test('R9: 관계는 semantics.reader_summary, 사건은 reader_description에 담는다', async () => {
+    const args = setup({ second: [relationship()], supports: true });
+    const book = await generateFullBook(args);
+    expect(book.relationships[0].semantics?.reader_summary).toBe('박영민과 이몽란은 부부예요.');
+    expect(book.relationships[0].semantics?.summary).toBe('박영민은 이몽란의 남편이다.');
+    expect(book.events).toHaveLength(1);
+    expect(book.events[0].reader_description).toBe('박영민이 손님을 맞아요.');
+  });
+
+  test('R9: 다시 실행해도 이미 만든 쉬운 문장은 모델에 다시 묻지 않는다', async () => {
+    const args = setup({ second: [relationship()], supports: true });
+    await generateFullBook(args);
+    fs.rmSync(path.join(args.fullDir, 'all-resolved.json'));
+    (call as jest.Mock).mockClear();
+    const book = await generateFullBook(args);
+    expect(call).not.toHaveBeenCalledWith(
+      'rewrite_reader_text',
+      expect.anything(),
+      expect.anything()
+    );
+    expect(book.relationships[0].semantics?.reader_summary).toBe('박영민과 이몽란은 부부예요.');
+  });
+});
+
+describe('FR-DAT-008: 사건은 장면 단위로 뽑고 원문 근거로 검증한다', () => {
+  const eventCalls = () =>
+    (call as jest.Mock).mock.calls.filter(([task]) => task === 'generate_event');
+  const reviewOf = (book: unknown) =>
+    JSON.stringify((book as { review_candidates: unknown }).review_candidates);
+
+  test('FR-DAT-008: 장당 경계 1회 + 장면당 1회 호출하고 발생 쪽은 장면 끝 쪽이다', async () => {
+    const args = setup({ second: [relationship()], supports: true });
+    const book = await generateFullBook(args);
+    expect(eventCalls()).toHaveLength(2);
+    expect(book.events).toHaveLength(1);
+    expect(book.events[0]).toMatchObject({
+      event: '박영민이 손님을 맞았다',
+      description: '박영민이 손님을 맞았다',
+      occurrence_page: 1,
+      agent: '박영민',
+      mode: 'narration',
+      flashback: false,
+    });
+  });
+
+  test('NFR-AI-004: 인용이 원문에 없는 사건은 0건 저장하고 검수 후보에 남긴다', async () => {
+    const args = setup({
+      second: [relationship()],
+      supports: true,
+      events: [sceneEvent({ evidence: [{ source_page: 1, quote: '박영민이 손님을 맞았다.' }] })],
+    });
+    const book = await generateFullBook(args);
+    expect(book.events).toHaveLength(0);
+    expect(reviewOf(book)).toContain('event_evidence_not_in_source');
+  });
+
+  test('NFR-AI-004: 독자용 문장에 원래 없던 인물명이 생기면 쓰지 않고 검수 후보로 보낸다', async () => {
+    const args = setup({
+      second: [relationship()],
+      supports: true,
+      eventReaderText: '유불란이 손님을 맞아요.',
+    });
+    const book = await generateFullBook(args);
+    expect(book.events).toHaveLength(1);
+    expect(book.events[0].reader_description).toBeUndefined();
+    expect(reviewOf(book)).toContain('reader_text_new_proper_noun');
+    expect(reviewOf(book)).toContain('유불란');
+  });
+
+  test('FR-DAT-008: 다시 실행하면 사건 캐시를 재생하고 사건 추출을 다시 부르지 않는다', async () => {
+    const args = setup({ second: [relationship()], supports: true });
+    const first = await generateFullBook(args);
+    fs.rmSync(path.join(args.fullDir, 'all-resolved.json'));
+    (call as jest.Mock).mockClear();
+    const again = await generateFullBook(args);
+    expect(eventCalls()).toHaveLength(0);
+    expect(again.events).toEqual(first.events);
   });
 });

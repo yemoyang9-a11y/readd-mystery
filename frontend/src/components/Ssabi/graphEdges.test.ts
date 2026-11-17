@@ -158,6 +158,52 @@ describe('makeEdgePaths', () => {
   });
 });
 
+describe('makeEdgePaths 곡선 회피 (FR-CHR-001)', () => {
+  const nodes = [{ id: 'a' }, { id: 'c' }, { id: 'b' }];
+  const positions = [
+    { x: 0, y: 0 },
+    { x: 100, y: 0 },
+    { x: 200, y: 0 },
+  ];
+
+  it('다른 인물 카드 위를 지나는 선은 휘고 이름표는 곡선 중간점에 놓인다', () => {
+    const edge: GraphEdge = { ...legacy, source: 'a', target: 'b' };
+    const [entry] = makeEdgePaths(nodes, [edge], positions, () => 10, 38);
+    expect(entry.path).toContain('Q');
+    expect(entry.label.y).not.toBe(0);
+    // 곡선이 가운데 카드(반지름 10 + 여백 6)를 비켜 간다
+    expect(Math.abs(entry.label.y)).toBeGreaterThan(16);
+  });
+
+  it('카드를 지나지 않는 선은 곧게 남고 이름표는 선분 중간에 놓인다', () => {
+    const edge: GraphEdge = { ...legacy, source: 'a', target: 'c' };
+    const [entry] = makeEdgePaths(nodes, [edge], positions, () => 10, 38);
+    expect(entry.label).toEqual({ x: 50, y: 0 });
+    expect(entry.path).toBe('M 10 0 Q 50 0 90 0');
+  });
+
+  it('선분 양 끝 8% 안에 있는 카드는 피하지 않는다', () => {
+    const near = [{ id: 'a' }, { id: 'n' }, { id: 'b' }];
+    const pos = [
+      { x: 0, y: 0 },
+      { x: 10, y: 0 }, // 선분의 5% 지점
+      { x: 200, y: 0 },
+    ];
+    const edge: GraphEdge = { ...legacy, source: 'a', target: 'b' };
+    const [entry] = makeEdgePaths(near, [edge], pos, () => 5, 38);
+    expect(entry.label.y).toBe(0);
+  });
+
+  it('카드가 선 위쪽에 있으면 아래쪽으로, 아래쪽에 있으면 위쪽으로 휜다', () => {
+    const edge: GraphEdge = { ...legacy, source: 'a', target: 'b' };
+    const above = makeEdgePaths(nodes, [edge], [positions[0], { x: 100, y: -4 }, positions[2]], () => 10, 38)[0];
+    const below = makeEdgePaths(nodes, [edge], [positions[0], { x: 100, y: 4 }, positions[2]], () => 10, 38)[0];
+    expect(above.label.y * below.label.y).toBeLessThan(0);
+    // 카드가 y=-4(위쪽 = 음수 y)면 선은 양수 y로 휜다
+    expect(above.label.y).toBeGreaterThan(0);
+  });
+});
+
 describe('graphEdgeLabel', () => {
   it.each([
     ['belief', '믿음'],

@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { fetchGraph as defaultFetchGraph } from '../services/ssabiService';
+import {
+  fetchGraph as defaultFetchGraph,
+  fetchTimeline as defaultFetchTimeline,
+} from '../services/ssabiService';
 import { nextSeq } from '../utils/seq';
-import type { GraphResponse, SsabiTab } from '../types';
+import type { GraphResponse, NotesView, SsabiTab, TimelineResponse } from '../types';
 
 /**
  * 싸비 탭 데이터 — 열려 있는 탭만 조회하고, 페이지가 바뀌면 다시 조회한다 (FR-SVB-003).
@@ -15,16 +18,28 @@ export function useSsabiData({
   bookId,
   tab,
   currentPage,
+  notesView = 'mine',
   fetchGraph = defaultFetchGraph,
+  fetchTimeline = defaultFetchTimeline,
 }: {
   panelOpen: boolean;
   bookId: string;
   tab: SsabiTab;
   currentPage: number | null;
+  /** 추리 노트 탭에서 '사건 정리'가 선택됐을 때만 사건 정리를 조회한다 */
+  notesView?: NotesView;
   fetchGraph?: (bookId: string, page: number, seq: number) => Promise<GraphResponse>;
-}): { graph: GraphResponse | null; failed: boolean } {
+  fetchTimeline?: (bookId: string, page: number, seq: number) => Promise<TimelineResponse>;
+}): {
+  graph: GraphResponse | null;
+  failed: boolean;
+  timeline: TimelineResponse | null;
+  timelineFailed: boolean;
+} {
   const [graph, setGraph] = useState<GraphResponse | null>(null);
   const [failed, setFailed] = useState(false);
+  const [timeline, setTimeline] = useState<TimelineResponse | null>(null);
+  const [timelineFailed, setTimelineFailed] = useState(false);
   const generation = useRef(0);
   const [position, setPosition] = useState({ bookId, currentPage });
   if (position.bookId !== bookId || position.currentPage !== currentPage) {
@@ -32,6 +47,8 @@ export function useSsabiData({
     setPosition({ bookId, currentPage });
     setGraph(null);
     setFailed(false);
+    setTimeline(null);
+    setTimelineFailed(false);
   }
 
   useEffect(() => {
@@ -58,5 +75,28 @@ export function useSsabiData({
     // 열려 있는 탭을 다시 조회해야 한다 (FR-SVB-003).
   }, [panelOpen, bookId, tab, currentPage, fetchGraph]);
 
-  return { graph, failed };
+  // FR-SPL-002 🚦: 사건 정리도 같은 규칙 — 서버가 K 이하만 주고, 실패하면 옛 데이터를 남기지 않는다
+  useEffect(() => {
+    if (!panelOpen || tab !== 'notes' || notesView !== 'events' || currentPage === null) return;
+
+    let cancelled = false;
+    const token = generation.current;
+    setTimelineFailed(false);
+
+    void fetchTimeline(bookId, currentPage, nextSeq())
+      .then((response) => {
+        if (!cancelled && token === generation.current) setTimeline(response);
+      })
+      .catch(() => {
+        if (cancelled || token !== generation.current) return;
+        setTimeline(null);
+        setTimelineFailed(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [panelOpen, bookId, tab, notesView, currentPage, fetchTimeline]);
+
+  return { graph, failed, timeline, timelineFailed };
 }

@@ -20,7 +20,13 @@ export interface ResolvedBookData {
   characters: AccumulatedCharacter[];
   relationships: AccumulatedRelationship[];
   terms: AccumulatedTerm[];
-  events: { id: string; event: string; description: string; occurrence_page: number }[];
+  events: {
+    id: string;
+    event: string;
+    description: string;
+    reader_description?: string;
+    occurrence_page: number;
+  }[];
   background_and_intro: { background: string; intro: string };
 }
 

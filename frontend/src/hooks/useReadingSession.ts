@@ -10,7 +10,7 @@ import { useChatConversation } from './useChatConversation';
 import { nextSeq } from '../utils/seq';
 import { takePendingJump } from '../utils/pendingJump';
 import { DEFAULT_SSABI_TAB } from '../utils/constants';
-import type { ChapterSummary, EntryResponse, PageResponse, SsabiTab } from '../types';
+import type { ChapterSummary, EntryResponse, NotesView, PageResponse, SsabiTab } from '../types';
 
 export interface ReadingSessionState {
   entryError: boolean;
@@ -170,6 +170,24 @@ export function useReadingSession(bookId: string): ReadingSessionState {
   );
 
   /**
+   * 추리 노트 안 `내 노트 | 사건 정리` 기억 — 위 tabMemory와 같은 이유·구조다. 세션이 바뀌면
+   * (session_epoch 변화, FR-SVB-004) 기본인 `내 노트`로 돌아간다.
+   */
+  const [notesViewMemory, setNotesViewMemory] = useState<{ view: NotesView; epoch: number } | null>(
+    null
+  );
+  const handleNotesViewChange = useCallback(
+    (view: NotesView) => {
+      setNotesViewMemory({ view, epoch: session?.session_epoch ?? 0 });
+    },
+    [session?.session_epoch]
+  );
+  const notesView: NotesView =
+    notesViewMemory && notesViewMemory.epoch === (session?.session_epoch ?? 0)
+      ? notesViewMemory.view
+      : 'mine';
+
+  /**
    * 진입 판정 실패 상태. 실패 시 무한 로딩 대신 재시도 UI를 보여준다 —
    * 크리틱 P0: 이전에는 `.catch` 가 없어 백엔드 장애 시 "불러오는 중"에서 영원히 멈췄다.
    */
@@ -256,11 +274,17 @@ export function useReadingSession(bookId: string): ReadingSessionState {
     selectConversation: selectChatConversation,
     deleteConversation: deleteChatConversation,
   } = useChatConversation(bookId, currentPage, ensureHistoryPosition, invalidateHistoryPosition);
-  const { graph, failed: graphFailed } = useSsabiData({
+  const {
+    graph,
+    failed: graphFailed,
+    timeline,
+    timelineFailed,
+  } = useSsabiData({
     panelOpen,
     bookId,
     tab,
     currentPage,
+    notesView,
   });
 
   /**
@@ -395,8 +419,12 @@ export function useReadingSession(bookId: string): ReadingSessionState {
       initialCharacterMode: characterModeMemory?.mode ?? null,
       initialCharacterModeEpoch: characterModeMemory?.epoch ?? null,
       onCharacterModeChange: handleCharacterModeChange,
+      initialNotesView: notesView,
+      onNotesViewChange: handleNotesViewChange,
       graph,
       graphFailed,
+      timeline,
+      timelineFailed,
       totalPages,
       notes: notesState.notes,
       notesFailed: notesState.failed,

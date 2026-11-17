@@ -84,8 +84,10 @@ const markdownComponents = {
  * 보여주고, 다음 질문에 조용히 딸려 보낼 원문을 `attachedQuote`에 둔다. 인용문은 챗봇의
  * 자유 텍스트 질문(query)의 일부일 뿐이라 cutoff 필터링 대상이 아니고(기존에도 query는
  * 필터링하지 않았다), 이미 화면에 떠 있는 본문/리캡이라 R3와도 충돌하지 않는다.
- * "추천 질문 칩"은 여전히 만들지 않았다 — CLAUDE.md 9장이 **미결(데모 시연 시나리오)**
- * 로 둔 항목이라 지어내면 잘못된 결정이 코드에 굳는다.
+ * "추천 질문 칩"은 2026-11-17 대표 결정으로 만들었다(그 전에는 미결이라 두지 않았다).
+ * 문장은 아래 SUGGESTED_QUESTIONS 세 개로 고정이다 — 작품 내용으로 만들지 않고, 범인·정답
+ * 판정을 유도하는 질문은 넣지 않는다(NFR-AI-005). 누르면 입력칸에 넣기만 하고 보내지 않는다 —
+ * 보내는 것은 독자가 고른다.
  *
  * 지난 대화 삭제 (2026-08-25, 사용자 요청) — 목록 각 항목에 휴지통 버튼을 둔다.
  * 클릭 시 onSelectConversation으로 안 새지 않게 stopPropagation한다. 실제 삭제·목록
@@ -138,6 +140,15 @@ const markdownComponents = {
  * 삭제되던 예전 동작은 되돌릴 방법이 없어 실수로 누르기 쉬웠다.
  */
 const DEFAULT_GREETING = '안녕하세요, 아모예요. 지금까지 읽은 내용 안에서 궁금한 걸 물어보세요.';
+
+/** 빈 화면 추천 질문 — 고정 문장 (2026-11-17 대표 결정, NFR-AI-005 🚦 판정 유도 금지) */
+export const SUGGESTED_QUESTIONS = [
+  '지금까지 나온 인물 정리해 줘',
+  '방금 읽은 장면 다시 찾아 줘',
+  '내 노트랑 관련된 장면 있어?',
+] as const;
+
+export const NO_VERDICT_NOTE = '아모는 추리가 맞는지 판정하지 않아요';
 
 export default function ChatbotTab({
   answer = '',
@@ -464,12 +475,34 @@ export default function ChatbotTab({
             ) : null}
 
             {bubbles.length === 0 ? (
-              <div className="flex items-end gap-2">
-                <AmoSherlock className="h-11 w-auto shrink-0 translate-y-3" />
-                <p className="w-fit max-w-[76%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink">
-                  {DEFAULT_GREETING}
-                </p>
-              </div>
+              <>
+                <div className="flex items-end gap-2">
+                  <AmoSherlock className="h-11 w-auto shrink-0 translate-y-3" />
+                  <p className="w-fit max-w-[76%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink">
+                    {DEFAULT_GREETING}
+                  </p>
+                </div>
+                {/* 2026-11-17 대표 결정 — 고정 추천 질문. 누르면 입력칸만 채운다(전송 안 함) */}
+                <div className="pt-5">
+                  <div role="group" aria-label="추천 질문" className="flex flex-wrap gap-2">
+                    {SUGGESTED_QUESTIONS.map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        data-track="chat-suggestion"
+                        onClick={() => {
+                          setQuery(suggestion);
+                          inputRef.current?.focus();
+                        }}
+                        className="rounded-full border border-brief-rule bg-white px-3 py-1.5 text-left font-dashSans text-[11px] font-bold text-brief-muted mobile:min-h-11 mobile:text-[13px]"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mb-0 mt-3 font-dashSans text-[11px] text-brief-muted mobile:text-xs">{NO_VERDICT_NOTE}</p>
+                </div>
+              </>
             ) : (
               bubbles.map((turn, i) =>
                 turn.role === 'user' ? (

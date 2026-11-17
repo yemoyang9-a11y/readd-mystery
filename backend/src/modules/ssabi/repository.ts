@@ -16,6 +16,25 @@ import type {
   CharacterDetail,
 } from '../../shared/types';
 
+export interface TimelineChapter {
+  chapter_no: number;
+  title: string;
+  start_page: number;
+  end_page: number;
+}
+
+export interface TimelineEvent {
+  id: string;
+  event: string;
+  description: string | null;
+  occurrence_page: number;
+}
+
+export interface Timeline {
+  chapters: TimelineChapter[];
+  events: TimelineEvent[];
+}
+
 /**
  * 싸비 조회 리포지토리 포트
  *
@@ -96,6 +115,14 @@ export interface SsabiRepository {
     characterId: string,
     cutoff: number
   ): Promise<CharacterDetail | null>;
+
+  /**
+   * 타임라인(장 + 사건) 조회
+   *
+   * FR-SPL-002 🚦: 장 시작 페이지·사건 발생 페이지 <= cutoff
+   * 사건 description은 독자용 문장(reader_description)만 내보낸다
+   */
+  findTimeline(bookId: string, cutoff: number): Promise<Timeline>;
 }
 
 /**

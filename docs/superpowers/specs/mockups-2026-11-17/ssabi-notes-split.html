@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>추리 노트 나누기</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{--bg:#050505;--panel:#141416;--line:#262628;--text:#f2f2f3;--muted:#8d8d93;--acc:#c4475f;--acc-text:#ec8fa2;--acc-soft:rgba(196,71,95,.16)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#141416;color:var(--text);font-family:Pretendard,system-ui,sans-serif;padding:28px 20px 60px}
+h1{font-size:22px;font-weight:800;margin-bottom:6px}
+.sub{color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:26px}
+.row{display:flex;gap:28px;flex-wrap:wrap;justify-content:center}
+.col{display:flex;flex-direction:column;align-items:center;gap:14px}
+.tag{display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 14px;border:1px solid var(--line);border-radius:999px;font-size:14px}
+.tag b{width:24px;height:24px;border-radius:50%;background:#26262a;display:grid;place-items:center;font-size:13px}
+.tag.selected{border-color:var(--acc);background:#2a1218}
+.desc{width:340px;font-size:13px;line-height:1.6;color:#b9b9be}
+.phone{width:340px;height:700px;border-radius:40px;border:8px solid #000;background:var(--bg);position:relative;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.hd{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 6px}
+.cb{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;color:#c9c9cd;cursor:pointer}
+.ttl{text-align:center}.ttl b{display:block;font-size:15px}.ttl small{font-size:11px;color:var(--acc-text)}
+.tabs{display:flex;gap:4px;background:#161618;border:1px solid var(--line);border-radius:999px;padding:4px;margin:10px auto 0;width:max-content}
+.tabs span{padding:8px 15px;border-radius:999px;font-size:13.5px;color:#a9a9ae}
+.tabs span.on{background:#f2f2f3;color:#111;font-weight:700}
+.seg{display:flex;gap:18px;padding:0 20px;margin-top:16px;border-bottom:1px solid var(--line)}
+.seg span{padding:0 2px 10px;font-size:15px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.seg span.on{color:var(--text);font-weight:700;border-color:var(--acc)}
+.body{padding:16px 20px;height:520px;overflow:auto}
+.q{font-size:19px;font-weight:800;margin-bottom:14px}
+.note{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px}
+.note .h{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.lb{font-size:11.5px;font-weight:700;color:var(--acc-text);background:var(--acc-soft);border-radius:6px;padding:2px 7px}
+.pg{margin-left:auto;font-size:11.5px;color:var(--muted)}
+.note p{font-size:14px;line-height:1.6;color:#dcdce0}
+.add{position:absolute;left:20px;right:20px;bottom:22px;height:48px;border-radius:999px;border:1px solid #3a3a3e;background:#141416;display:grid;place-items:center;font-weight:700;font-size:15px}
+.tl{position:relative;padding-left:26px}
+.tl:before{content:"";position:absolute;left:6px;top:8px;bottom:30px;width:2px;background:#3a3a3e}
+.ev{position:relative;margin-bottom:22px}
+.ev:before{content:"";position:absolute;left:-26px;top:4px;width:10px;height:10px;border-radius:50%;border:2px solid #9a9aa0;background:var(--bg)}
+.ev.now:before{background:var(--acc);border-color:var(--acc);box-shadow:0 0 0 4px rgba(196,71,95,.3)}
+.ev small{display:block;font-size:11px;color:var(--muted);margin-bottom:2px}
+.ev h4{font-size:15.5px;margin-bottom:4px}
+.ev p{font-size:13.5px;line-height:1.6;color:#d6d6da}
+.ev p b{color:#fff}
+.pick{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;cursor:pointer}
+.card h3{font-size:18px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.card h3 i{font-style:normal;color:var(--muted);font-size:18px}
+.card p{font-size:13.5px;color:#b9b9be;line-height:1.55}
+.card .cnt{margin-top:10px;font-size:12.5px;color:var(--acc-text);font-weight:700}
+.back{display:flex;align-items:center;gap:6px;font-size:14px;color:#c9c9cd;cursor:pointer;margin-bottom:12px}
+.notes{max-width:720px;margin:30px auto 0;font-size:13px;line-height:1.7;color:#b9b9be}
+.notes b{color:#f2f2f3}
+</style>
+</head>
+<body>
+<h1>추리 노트 안에 "내 노트"와 "사건 정리" 두기</h1>
+<p class="sub">싸비 탭은 다시 세 개(추리 노트 · 인물관계도 · AI 챗봇)가 되고, 사건 정리는 추리 노트 안으로 들어갑니다. 어떻게 고르게 할지 두 가지입니다. 폰 화면 안에서 눌러 보세요.</p>
+<div class="row">
+ <div class="col">
+  <div class="tag" data-choice="A" onclick="toggleSelect(this)"><b>A</b>위에서 바로 바꾸기</div>
+  <div class="phone" id="A"></div>
+  <p class="desc">추리 노트를 누르면 바로 내용이 나오고, 위의 "내 노트 | 사건 정리"를 눌러 오갑니다. 마지막에 보던 쪽을 기억합니다. 한 번에 바꿀 수 있어 읽다가 오가기 편합니다. <b style="color:#ec8fa2">제 추천</b></p>
+ </div>
+ <div class="col">
+  <div class="tag" data-choice="B" onclick="toggleSelect(this)"><b>B</b>먼저 고르고 들어가기</div>
+  <div class="phone" id="B"></div>
+  <p class="desc">추리 노트를 누르면 두 카드가 먼저 나오고, 하나를 골라 들어갑니다. 카드에 개수가 보여 무엇이 있는지 한눈에 알 수 있지만, 오갈 때마다 뒤로 갔다 다시 들어가야 합니다.</p>
+ </div>
+</div>
+<div class="notes"><b>시안 흔적</b> — 노트 3개와 사건 문장 4개는 「가상범인」 30쪽까지를 바탕으로 제가 쉬운 말로 쓴 예시입니다. 실제 사건 문장은 계획대로 파이프라인이 해요체로 다시 써서 넣습니다. 어두운 화면은 지난 인물관계도 시안과 맞췄습니다(지금 배포된 싸비는 밝은 화면).</div>
+<script>
+const HEAD=`<div class="hd"><div class="cb">‹</div><div class="ttl"><b>가상범인</b><small>읽은 30쪽까지만 보여 드려요</small></div><div class="cb">✕</div></div>
+<div class="tabs"><span class="on">추리 노트</span><span>인물관계도</span><span>AI 챗봇</span></div>`;
+const NOTES=`<div class="note"><div class="h"><span class="lb">단서</span><span class="pg">7쪽</span></div><p>나용귀가 박영민 목소리를 너무 똑같이 흉내 낸다.</p></div>
+<div class="note"><div class="h"><span class="lb">가설</span><span class="pg">20쪽</span></div><p>자백이 너무 빠르다. 누군가를 감싸는 것 아닐까?</p></div>
+<div class="note"><div class="h"><span class="lb">단서</span><span class="pg">26쪽</span></div><p>이몽란은 사건 당일 밤 극장에 있었다고 말하지 않았다.</p></div>`;
+const EVENTS=`<div class="q">지금까지, 네 장면이에요</div><div class="tl">
+<div class="ev"><h4>무대에 올려진 살인 사건</h4><p>좌장 <b>박영민</b>이 살해되고 아내 <b>이몽란</b>이 범인으로 붙잡혀요.</p></div>
+<div class="ev"><h4>무대 위의 자백</h4><p>공연 넷째 날, <b>나용귀</b>가 대본에 없던 말로 범행을 자백해요.</p></div>
+<div class="ev"><h4>7년 만의 재회</h4><p><b>유불란</b>과 <b>이몽란</b>이 옛사랑을 떠올려요.</p></div>
+<div class="ev now"><small>지금 읽는 곳</small><h4>새로운 수수께끼</h4><p><b>유불란</b>이 서점에서 누군가 남긴 암호 쪽지를 발견해요.</p></div></div>`;
+let aSeg='notes';
+function renderA(){
+ document.getElementById('A').innerHTML=HEAD+`<div class="seg"><span class="${aSeg==='notes'?'on':''}" onclick="aSeg='notes';renderA()">내 노트</span><span class="${aSeg==='events'?'on':''}" onclick="aSeg='events';renderA()">사건 정리</span></div>
+ <div class="body">${aSeg==='notes'?NOTES:EVENTS}</div>${aSeg==='notes'?'<div class="add">단서·가설 적기</div>':''}`;
+}
+let bView='pick';
+function renderB(){
+ let body;
+ if(bView==='pick')body=`<div class="pick">
+  <div class="card" onclick="bView='notes';renderB()"><h3>내 노트<i>›</i></h3><p>읽으면서 찾은 단서와 내 가설을 쪽수와 함께 적어요.</p><div class="cnt">3개 적었어요</div></div>
+  <div class="card" onclick="bView='events';renderB()"><h3>사건 정리<i>›</i></h3><p>지금까지 일어난 일을 장면 순서대로 정리해 드려요.</p><div class="cnt">4개 장면</div></div></div>`;
+ else body=`<div class="back" onclick="bView='pick';renderB()">‹ 추리 노트</div>${bView==='notes'?NOTES:EVENTS}`;
+ document.getElementById('B').innerHTML=HEAD+`<div class="body" style="margin-top:14px">${body}</div>${bView==='notes'?'<div class="add">단서·가설 적기</div>':''}`;
+}
+renderA();renderB();
+</script>
+</body>
+</html>
