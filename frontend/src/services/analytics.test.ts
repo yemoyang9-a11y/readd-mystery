@@ -1,8 +1,8 @@
-import { clickLabel, createCollector, isAdminPath } from './analytics';
+import { clickLabel, createCollector, isAdminPath, type TrackedEvent } from './analytics';
 
 function setup() {
-  const sent: any[] = [];
-  const beacons: any[] = [];
+  const sent: { device_id: string; events: TrackedEvent[] }[] = [];
+  const beacons: { device_id: string; events: TrackedEvent[] }[] = [];
   let time = 1_000;
   const collector = createCollector({
     deviceId: () => 'dev-1',
@@ -39,7 +39,7 @@ describe('collector', () => {
   });
 
   it('FR-ADM-005: 같은 사이트 referrer는 싣지 않는다', () => {
-    const sent: any[] = [];
+    const sent: { device_id: string; events: TrackedEvent[] }[] = [];
     const c = createCollector({
       deviceId: () => 'd',
       send: (b) => sent.push(JSON.parse(b)),
@@ -78,7 +78,7 @@ describe('collector', () => {
     collector.sessionEnd('/');
     expect(sent).toHaveLength(0);
     expect(beacons).toHaveLength(1);
-    const types = beacons[0].events.map((e: any) => e.type);
+    const types = beacons[0].events.map((e) => e.type);
     expect(types).toEqual(['page_view', 'session_end']);
     expect(beacons[0].events[1].duration_ms).toBe(4000);
   });

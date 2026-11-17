@@ -14,7 +14,9 @@ export function saveAdminToken(token: string | null): void {
   try {
     if (token) localStorage.setItem(ADMIN_TOKEN_KEY, token);
     else localStorage.removeItem(ADMIN_TOKEN_KEY);
-  } catch {}
+  } catch {
+    // 저장소가 차단되어도 현재 세션의 관리자 요청은 계속 사용할 수 있다.
+  }
 }
 
 export class AdminApiError extends Error {
@@ -22,14 +24,14 @@ export class AdminApiError extends Error {
     readonly status: number,
     readonly code: string,
     message: string,
-    readonly body: Record<string, any> = {}
+    readonly body: Record<string, unknown> = {}
   ) {
     super(message);
   }
 }
 
 // FR-ADM-006 🚦
-export async function adminRequest<T = any>(
+export async function adminRequest<T = unknown>(
   token: string,
   path: string,
   init: { method?: string; json?: unknown; text?: string } = {}

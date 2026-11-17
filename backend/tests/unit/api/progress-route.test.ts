@@ -5,6 +5,8 @@
  * 기준점 숫자는 받지 않는다 (절대 규칙 8번, FR-PRG-003 🚦).
  */
 
+import { InvalidProgressError } from '../../../src/modules/reading-state/progress.service';
+
 const mockState = {
   findReadiness: jest.fn(),
   acceptProgressEvent: jest.fn(),
@@ -59,6 +61,13 @@ beforeEach(() => {
 });
 
 describe('POST /books/:bookId/progress', () => {
+  test('도서 범위를 벗어난 진도는 500 대신 400으로 응답한다', async () => {
+    mockState.acceptProgressEvent.mockRejectedValueOnce(new InvalidProgressError('도서의 마지막 쪽을 넘을 수 없습니다'));
+    const res = await post('/books/:bookId/progress', { page: 999999, seq: 4, claim: 'read_through' });
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(mockState.touchActivity).not.toHaveBeenCalled();
+    expect(mockState.getCutoffSnapshot).not.toHaveBeenCalled();
+  });
   test('FR-PRG-003: from_page·claim 을 그대로 넘기고, 응답에 기준점과 확인 카드를 싣는다', async () => {
     const res = await post('/books/:bookId/progress', {
       page: 200,

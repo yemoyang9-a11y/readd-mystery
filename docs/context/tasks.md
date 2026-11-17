@@ -1,6 +1,6 @@
 # 작업 문서 — 남은 작업과 미결 사항
 
-마지막 갱신: 2026-11-17 (작업 브랜치 `work/remaining-tasks`)
+마지막 갱신: 2026-11-18 (종합 리뷰 반영, 최신 대표 결정 유지)
 
 **남은 작업, 진행 상태, 아직 정하지 않은 것은 이 문서 한 곳에서만 관리한다.** `CLAUDE.md`에는 규칙만 두고 할 일·진행 상태를 적지 않는다. `handoff-*.md`는 그날 세션의 인수인계 기록이며, 할 일 목록의 원본은 이 문서다.
 
@@ -17,6 +17,9 @@
 
 | # | 작업 | 상태 | 막힌 곳 · 다음 행동 | 관련 |
 | --- | --- | --- | --- | --- |
+| R1 | 마이그레이션 재실행 안전성 | 진행 가능 (운영 적용은 별도) | 이력 없이 019를 재실행하면 비어 있는 read_pages가 current_page까지 채워짐. 기존 적용 이력 확정·ledger·트랜잭션·재실행 통합 시험 필요 | [종합 리뷰](../reviews/2026-11-18-repository-review.md) |
+| R2 | 업로드 원문 영속 보관·다중 worker 점유 | 진행 가능 (설계 필요) | 이번 수정은 비루트 쓰기 권한·같은 프로세스 중복 retry만 해결. 저장소/DB lease와 재시작·머신 교체 복구 시험 필요 | `modules/ingest/`, `fly.toml` |
+| R3 | 실제 브라우저·PostgreSQL 통합 검증 | 진행 중 | PR에 12개 Chromium smoke·Docker 비루트 검사 추가. 실제 iOS/VoiceOver·가상 키보드·DB 경합은 별도 검증 필요. 실제 AI 실측은 기존 대표 직접 실행 결정 유지 | [종합 리뷰](../reviews/2026-11-18-repository-review.md) |
 | T8 | 로컬 DB 적용과 실데이터 확인 | 로컬 필요 | ① 마이그레이션 017(reader_text)·018(recap 길이 로그)·019(차례 읽기 기준점)·020(리캡 이름 검사 로그)·021(노트 종류) — **2026-11-17 Supabase `readd-mystery`에 적용 완료**(대표 승인). 다른 DB(로컬 등)를 쓰면 거기에도 적용 ② 「가상범인」 독자용 문장 백필 dry-run ③ 장면 단위 사건 추출 1장 실행(`run-generate-sample.ts --chapter 1`)으로 장면 수·검수 후보 수·비용 확인 ④ 휴대폰 화면으로 실제 동작 확인(목차 확인 창·싸비 확인 카드 포함) | `docs/superpowers/handoff/2026-11-17-ssabi-notes-home3d.md` |
 | T9 | 장면 단위 사건 추출 비용 | 결정 필요 (T8 ③ 뒤) | 장면마다 장 처음부터 다시 읽혀 입력이 장면 수에 비례해 늘어난다(1장 20장면 가정 시 약 23만 자). 실측 뒤 "앞 장면 1~2개 + 대상 장면"으로 줄일지 정한다(스포일러 측면은 같음, 맥락은 줄어듦). **비교 방법** — `run-generate-sample.ts --chapter 1`(또는 `run-generate-full.ts`, 사건 캐시 재생이면 AI 호출 없음)을 돌리면 `[사건 입력]` 로그에 창별 원문 입력 글자 수(`full`·`recent:1`·`recent:2`)가 함께 찍히고, 실제로 줄여서 돌려 보려면 `--scene-window recent:1`(또는 환경 변수 `EVENT_SCENE_WINDOW`)을 준다 — 기본은 `full` 그대로다 | `batch/pipeline/event-scenes.ts` |
 | T10 | 리캡 길이 실측 | 로컬 필요 (대표가 직접 실행, 2026-11-17) | 018 적용 후 `recap_call_log`로 목표 문장 수 대비 실제 길이 분포를 본다(쿼리는 4장). 여전히 흔들리면 다음 단계로 누적 리캡 사전 생성·검수(A안) 설계 | `reading-state/recap-length.ts` |
@@ -46,9 +49,11 @@
 | 항목 | 메모 |
 | --- | --- |
 | 백엔드 jest 종료 경고 | 전체 실행 시 "worker process has failed to exit gracefully". 시험은 모두 통과 |
-| 남은 린트 오류 | 백엔드 `npx eslint src --ext .ts` 기준으로 서식(prettier) 오류가 `chatbot/harness/question-intent.ts`·`community/router.ts`·`ingest/admin-router.ts`(특수 공백 1건 포함)·`llm-gateway/retry.ts`에 남아 있다(동작과 무관, 이번 작업 범위 밖). 백엔드 `src` 안의 테스트 파일은 tsconfig에 없어 린트가 "Parsing error"를 낸다. 프론트 `mocks/pages.ts`의 `pageNo - 1`은 린트 대상(`src`) 밖이다 |
+| 잔여 린트 경고 | 2026-11-18 생산 소스 린트 오류 0. 백엔드 115개(any·console 등), 프론트 2개(hook 의존성) 경고는 남음. 테스트 타입은 Jest/Vitest·TypeScript로 검증 |
 
 ## 5. 완료
+
+2026-11-18 종합 리뷰 수정은 이 PR에 포함한다(병합 커밋은 병합 후 기록). 인용량 Unicode·진도 입력 검증·중복 retry·컨테이너 쓰기 권한·모달/확인 실패·메모 경합·SSE 중단·라우트 분리·CI 검증·현행 문서 동기화. 근거와 한계는 [종합 리뷰](../reviews/2026-11-18-repository-review.md).
 
 | 날짜 | 작업 | 커밋 |
 | --- | --- | --- |

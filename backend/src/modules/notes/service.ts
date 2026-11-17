@@ -1,4 +1,10 @@
-import { NOTE_KINDS, type Note, type NoteInput, type NoteKind, type NotesRepository } from './repository';
+import {
+  NOTE_KINDS,
+  type Note,
+  type NoteInput,
+  type NoteKind,
+  type NotesRepository,
+} from './repository';
 
 const MAX_BODY_LENGTH = 1000;
 
@@ -63,7 +69,12 @@ export function createNotesService(notes: NotesRepository) {
       return { ok: true, note: await notes.create(readerId, bookId, full) };
     },
 
-    async update(readerId: string, bookId: string, noteId: string, raw: unknown): Promise<NoteResult> {
+    async update(
+      readerId: string,
+      bookId: string,
+      noteId: string,
+      raw: unknown
+    ): Promise<NoteResult> {
       const input = parseNoteInput(raw, true);
       if (typeof input === 'string') return { ok: false, reason: 'invalid', message: input };
       const existing = await notes.find(readerId, bookId, noteId);

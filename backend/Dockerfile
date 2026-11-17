@@ -46,9 +46,9 @@ COPY public ./public
 # 비밀값이 아니라 공개 루트 인증서이므로 이미지에 구워도 된다.
 COPY certs ./certs
 
-# ⚠️ backend/data/ 는 넣지 않는다 (.dockerignore) — 「탁류」 원문 970KB 는 배치
-#    파이프라인(장 요약·임베딩 생성)에서만 쓰고 API 서버 런타임에는 필요 없다.
-#    배치는 로컬에서 Supabase 를 향해 돌린다.
+# 원문은 이미지에 포함하지 않는다. 관리자 업로드·생성 파이프라인의 작업 디렉터리는
+# 비루트 런타임이 쓸 수 있어야 한다(FR-ADM-005). 영속 보관은 별도 볼륨/스토리지 필요.
+RUN mkdir -p /app/data && chown node:node /app/data
 
 # 비루트 사용자로 실행 — node 이미지에 이미 있는 계정을 쓴다
 USER node

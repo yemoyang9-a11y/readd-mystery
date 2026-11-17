@@ -113,3 +113,13 @@ describe('싸비 패널의 확인 카드', () => {
     expect(screen.queryByRole('region', { name: '읽은 범위 확인' })).not.toBeInTheDocument();
   });
 });
+
+test.each(['false', 'reject'])('FR-SPL-005: 읽은 범위 확인 실패(%s)를 알리고 재시도할 수 있다', async (failure) => {
+  const onAnswer = failure === 'false'
+    ? vi.fn().mockResolvedValue(false)
+    : vi.fn().mockRejectedValue(new Error('offline'));
+  render(<FrontierConfirmCard prompt={PROMPT} onAnswer={onAnswer} />);
+  await userEvent.click(screen.getByRole('button', { name: '200쪽까지 읽었어요' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('다시 시도');
+  expect(screen.getByRole('button', { name: '200쪽까지 읽었어요' })).toBeEnabled();
+});

@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
+import { useModalLayer } from '../../hooks/useModalLayer';
 
 const BUTTON_BASE =
   'min-h-11 w-full rounded-full px-5 font-dashSans text-[14px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brief-accent sm:w-auto';
@@ -29,22 +30,21 @@ export default function TocJumpDialog({
 }) {
   const cancelRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    cancelRef.current?.focus();
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') onCancel();
-    }
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onCancel]);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(
+    document.activeElement instanceof HTMLElement ? document.activeElement : null
+  );
+  useModalLayer({ active: true, dialogRef, returnFocusRef, initialFocusRef: cancelRef, onClose: onCancel });
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 px-4">
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="toc-jump-message"
-        className="w-full max-w-sm rounded-2xl border border-brief-rule bg-brief-page p-5 shadow-brief-soft-sm"
+        className="max-h-[calc(100dvh-2rem)] overflow-y-auto w-full max-w-sm rounded-2xl border border-brief-rule bg-brief-page p-5 shadow-brief-soft-sm"
       >
         <p id="toc-jump-message" className="font-dashSans text-[15px] leading-relaxed text-brief-ink">
           {targetPage}쪽으로 이동합니다. 앞부분을 이미 읽으셨다면 관계도와 챗봇이 이 쪽까지 다룹니다.

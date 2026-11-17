@@ -20,12 +20,20 @@ export function createJobRunner(deps: {
   const contextFor = deps.contextFor ?? ((job: IngestJob) => ({ job, args: argsFromJob(job) }));
   const active = new Set<string>();
 
-  async function startJob(jobId: string): Promise<void> {
+  async function runJob(jobId: string, retry = false): Promise<void> {
     if (active.has(jobId)) return;
     active.add(jobId);
     try {
       const found = await jobs.findById(jobId);
       if (!found || found.status === 'review_ready' || found.status === 'published') return;
+      if (retry) {
+        if (found.status !== 'failed') return;
+        // FR-ADM-005 🚦 — 캐시 삭제도 실행 잠금 안에 있어야 중복 재시도가 생성물을 지우지 않는다.
+        if (found.step === 'generate' || found.step === 'integrity') {
+          deps.invalidateFailedOutput?.(contextFor(found));
+          await jobs.update(jobId, { step: 'generate' });
+        }
+      }
       let job = (await jobs.update(jobId, { status: 'running', error: null })) ?? found;
       for (let i = STEP_ORDER.indexOf(job.step); i < STEP_ORDER.length - 1; i++) {
         const step = STEP_ORDER[i];
@@ -56,13 +64,11 @@ export function createJobRunner(deps: {
 
   // FR-ADM-005 🚦
   async function retryJob(jobId: string): Promise<void> {
-    const job = await jobs.findById(jobId);
-    if (!job || job.status !== 'failed') return;
-    if (job.step === 'generate' || job.step === 'integrity') {
-      deps.invalidateFailedOutput?.(contextFor(job));
-      await jobs.update(jobId, { step: 'generate' });
-    }
-    await startJob(jobId);
+    await runJob(jobId, true);
+  }
+
+  async function startJob(jobId: string): Promise<void> {
+    await runJob(jobId);
   }
 
   async function resumeRunningJobs(): Promise<void> {

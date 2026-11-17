@@ -3,7 +3,13 @@ import express, { Request, Response, Router } from 'express';
 import type { ContentRepository } from '../content/repository';
 import type { CutoffService } from '../reading-state/cutoff.service';
 import { attachReaderIdentity, resolveReaderId, UUID_PATTERN } from '../auth/reader-id.middleware';
-import type { CommentRow, CommunityRepository, PostKind, PostRow, ReportTarget } from './repository';
+import type {
+  CommentRow,
+  CommunityRepository,
+  PostKind,
+  PostRow,
+  ReportTarget,
+} from './repository';
 
 const MAX_POST_LENGTH = 2000;
 const MAX_COMMENT_LENGTH = 1000;

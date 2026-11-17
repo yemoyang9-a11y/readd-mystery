@@ -19,7 +19,7 @@ function setup() {
   books.set(BOOK_ID, { total_pages: 350, chapters: CHAPTERS });
   return {
     positions,
-    progress: createProgressService({ positions }),
+    progress: createProgressService({ positions, books }),
     cutoff: createCutoffService({ positions, books }),
   };
 }

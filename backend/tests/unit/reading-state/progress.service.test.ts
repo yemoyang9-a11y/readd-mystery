@@ -10,9 +10,10 @@ import { createProgressService } from '../../../src/modules/reading-state/progre
 import { SEED_BOOK_ID, SEED_DEVICE_ID, makeSeededFakes } from './fakes';
 
 function serviceWith(currentPage: number, seq: number) {
-  const { positions } = makeSeededFakes();
+  const { positions, books } = makeSeededFakes();
+  books.set(SEED_BOOK_ID, { total_pages: 100, chapters: [{ chapter_no: 1, title: '시험', start_page: 1, end_page: 100 }] });
   positions.set(SEED_DEVICE_ID, SEED_BOOK_ID, { current_page: currentPage, event_seq: seq });
-  return { positions, service: createProgressService({ positions }) };
+  return { positions, service: createProgressService({ positions, books }) };
 }
 
 describe('진도 이벤트 — acceptProgressEvent', () => {
@@ -75,8 +76,8 @@ describe('진도 이벤트 — acceptProgressEvent', () => {
   });
 
   test('첫 진입(저장 위치 없음)은 seq 무관하게 수용된다', async () => {
-    const { positions } = makeSeededFakes();
-    const service = createProgressService({ positions });
+    const { positions, books } = makeSeededFakes();
+    const service = createProgressService({ positions, books });
 
     await service.acceptProgressEvent(SEED_DEVICE_ID, SEED_BOOK_ID, { page: 3, seq: 1 });
 

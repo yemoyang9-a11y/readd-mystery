@@ -178,3 +178,15 @@ describe('ingest job runner', () => {
     expect(calls).toEqual([]);
   });
 });
+
+test('FR-ADM-005: 동시에 재시도해도 생성 캐시는 한 번만 무효화한다', async () => {
+  const jobs = new MemoryJobRepository();
+  await seed(jobs, 'generate');
+  await jobs.update(JOB_ID, { status: 'failed' });
+  const calls: string[] = [];
+  const invalidate = jest.fn();
+  const runner = createJobRunner({ jobs, steps: fakeSteps(calls), invalidateFailedOutput: invalidate });
+  await Promise.all([runner.retryJob(JOB_ID), runner.retryJob(JOB_ID)]);
+  expect(invalidate).toHaveBeenCalledTimes(1);
+  expect(calls.filter((step) => step === 'generate')).toHaveLength(1);
+});

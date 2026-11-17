@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RouterProvider } from 'react-router-dom';
 import { createAppRouter } from './App';
@@ -28,9 +28,9 @@ describe.each([
   });
 });
 
-test('FR-BRF-001: 모바일에서 작품 페이지 주소를 직접 열면 브리핑 화면 주소로 바뀐다', () => {
+test('FR-BRF-001: 모바일에서 작품 페이지 주소를 직접 열면 브리핑 화면 주소로 바뀐다', async () => {
   renderAt('/books/takryu', true);
-  expect(window.location.pathname).toBe('/books/takryu/briefing');
+  await waitFor(() => expect(window.location.pathname).toBe('/books/takryu/briefing'));
   expect(screen.queryByRole('navigation', { name: '주 메뉴' })).not.toBeInTheDocument();
 });
 
@@ -60,7 +60,7 @@ test('PC 검색 화면이 아니면 위 줄에 검색 입력이 있다', () => {
 
 test('브리핑과 읽기 주소는 틀 없이 지금 화면을 그린다', async () => {
   const mobileRead = renderAt('/books/takryu/read', true);
-  expect(screen.getByTestId('mobile-reader')).toBeInTheDocument();
+  expect(await screen.findByTestId('mobile-reader')).toBeInTheDocument();
   expect(screen.queryByRole('navigation', { name: '주 메뉴' })).not.toBeInTheDocument();
   mobileRead.unmount();
 

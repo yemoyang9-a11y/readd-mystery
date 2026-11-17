@@ -3,7 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { AdminApiError, adminRequest, loadAdminToken, saveAdminToken } from './adminApi';
 
 interface AdminContextValue {
-  call: <T = any>(
+  call: <T = unknown>(
     path: string,
     init?: { method?: string; json?: unknown; text?: string }
   ) => Promise<T>;
@@ -105,9 +105,9 @@ export default function AdminLayout() {
     if (!token) return null;
     return {
       token,
-      call: async (path, init) => {
+      call: async <T,>(path: string, init?: { method?: string; json?: unknown; text?: string }) => {
         try {
-          return await adminRequest(token, path, init);
+          return await adminRequest<T>(token, path, init);
         } catch (err) {
           if (err instanceof AdminApiError && err.status === 401) signOut();
           throw err;

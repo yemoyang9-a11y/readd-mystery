@@ -147,7 +147,11 @@ export default function ReviewPage() {
       await load();
     } catch (err) {
       if (err instanceof AdminApiError && err.code === 'REVIEW_INCOMPLETE') {
-        setMissing(err.body.missing ?? []);
+        setMissing(Array.isArray(err.body.missing) ? err.body.missing.filter(
+          (item): item is MissingItem => item !== null && typeof item === 'object' &&
+            typeof item.target_type === 'string' && typeof item.target_id === 'string' &&
+            Array.isArray(item.missing_criteria) && item.missing_criteria.every((value: unknown) => typeof value === 'string')
+        ) : []);
         setNotice('검수가 끝나지 않아 승인하지 못했습니다.');
       } else {
         setNotice(err instanceof Error ? err.message : '승인하지 못했습니다');

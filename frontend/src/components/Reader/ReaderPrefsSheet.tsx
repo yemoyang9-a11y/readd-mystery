@@ -32,9 +32,10 @@ export default function ReaderPrefsSheet({
       <div
         ref={dialogRef}
         role="dialog"
+        aria-modal="true"
         aria-label="보기 설정"
         tabIndex={-1}
-        className={`bg-brief-paper text-brief-ink shadow-brief-soft outline-none ${
+        className={`max-h-[calc(100dvh-2rem)] overflow-y-auto bg-brief-paper text-brief-ink shadow-brief-soft outline-none ${
           sheet
             ? 'absolute inset-x-0 bottom-0 rounded-t-brief-panel px-5 pt-2'
             : 'absolute right-6 top-[68px] w-[340px] rounded-brief-panel border border-brief-rule px-5 pb-2 pt-3'

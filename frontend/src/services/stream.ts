@@ -15,14 +15,21 @@ export async function* readSseStream(body: ReadableStream<Uint8Array>): AsyncGen
   try {
     for (;;) {
       const { done, value } = await reader.read();
-      if (done) return;
+      // FR-SPL-005 🚦 — EOF는 성공 신호가 아니다. 일부 답을 완성본처럼 남기지 않는다.
+      if (done) throw new Error('응답이 완료되기 전에 연결이 끊겼습니다');
 
       for (const frame of parser.push(decoder.decode(value, { stream: true }))) {
         yield frame;
-        if (frame.type === 'done') return;
+        if (frame.type === 'done' || frame.type === 'error') return;
       }
     }
   } finally {
-    reader.releaseLock();
+    try {
+      await reader.cancel();
+    } catch {
+      // 취소 실패가 원래의 네트워크 오류를 덮지 않게 한다.
+    } finally {
+      reader.releaseLock();
+    }
   }
 }

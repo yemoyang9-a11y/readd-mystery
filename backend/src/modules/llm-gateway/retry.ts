@@ -54,9 +54,14 @@ function isRetryableError(error: any): boolean {
 
   // 상태 코드가 없는 연결 단계 오류 — 이름/코드로 판별한다
   const errorName = String(error?.name || error?.code || '');
-  return ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'EAI_AGAIN', 'TimeoutError', 'APIConnectionError'].some(
-    (name) => errorName.includes(name)
-  );
+  return [
+    'ECONNRESET',
+    'ETIMEDOUT',
+    'ENOTFOUND',
+    'EAI_AGAIN',
+    'TimeoutError',
+    'APIConnectionError',
+  ].some((name) => errorName.includes(name));
 }
 
 /**

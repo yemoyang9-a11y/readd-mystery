@@ -15,11 +15,14 @@
  */
 
 import type { FrontierConfirmChoice, ProgressEvent } from '../../shared/types';
-import type { ReadingPositionRepository } from './repository';
+import type { BookMetaReader, ReadingPositionRepository } from './repository';
 
 export interface ProgressServiceDeps {
   positions: ReadingPositionRepository;
+  books: Pick<BookMetaReader, 'findTotalPages'>;
 }
+
+export class InvalidProgressError extends Error {}
 
 export interface ProgressService {
   /**
@@ -70,7 +73,17 @@ export function pagesReadByEvent(event: ProgressEvent): number[] {
 }
 
 export function createProgressService(deps: ProgressServiceDeps): ProgressService {
-  const { positions } = deps;
+  const { positions, books } = deps;
+
+  async function validatePage(bookId: string, page: number): Promise<number> {
+    if (!Number.isSafeInteger(page) || page < 1)
+      throw new InvalidProgressError('page는 1 이상의 정수여야 합니다');
+    const total = await books.findTotalPages(bookId);
+    if (total === null || !Number.isSafeInteger(total) || total < 1)
+      throw new Error('도서의 전체 쪽수를 확인할 수 없습니다');
+    if (page > total) throw new InvalidProgressError('도서의 마지막 쪽을 넘을 수 없습니다');
+    return total;
+  }
 
   return {
     async acceptProgressEvent(
@@ -79,6 +92,16 @@ export function createProgressService(deps: ProgressServiceDeps): ProgressServic
       event: ProgressEvent,
       writerDeviceId: string | null = null
     ): Promise<void> {
+      // FR-PRG-003 🚦 — 저장과 read_through 배열 생성 전에 도서 메타데이터로 범위를 검증한다.
+      if (!Number.isSafeInteger(event.seq) || event.seq < 0)
+        throw new InvalidProgressError('seq는 0 이상의 안전한 정수여야 합니다');
+      const total = await validatePage(bookId, event.page);
+      if (
+        event.from_page != null &&
+        (!Number.isSafeInteger(event.from_page) || event.from_page < 1 || event.from_page > total)
+      ) {
+        throw new InvalidProgressError('from_page가 도서 범위를 벗어났습니다');
+      }
       // FR-PRG-002, FR-PRG-003
       await positions.savePosition(
         deviceId,
@@ -104,6 +127,7 @@ export function createProgressService(deps: ProgressServiceDeps): ProgressServic
         return;
       }
       const upTo = choice === 'current' ? stored.current_page : stored.max_page;
+      await validatePage(bookId, upTo);
       await positions.addReadPages(deviceId, bookId, throughPage(upTo));
     },
   };
