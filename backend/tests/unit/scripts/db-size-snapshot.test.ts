@@ -26,3 +26,5 @@ test.each([
 test('DATABASE_URL이 없으면 거부한다', () => {
   expect(() => assertMeasurementDb(undefined)).toThrow(/DATABASE_URL/);
 });
+
+export {};

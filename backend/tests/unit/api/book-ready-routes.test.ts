@@ -289,3 +289,5 @@ describe('DELETE /books/:bookId/chat/conversations/:conversationId', () => {
     expect(mockState.findReadiness).not.toHaveBeenCalled();
   });
 });
+
+export {};

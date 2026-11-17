@@ -1,4 +1,4 @@
-# 프론트엔드 CI — 빌드·테스트만 한다. 배포는 하지 않는다.
+# 프론트엔드 CI — 빌드·테스트만 한다. 배포는 deploy-frontend.yml 이 한다(2026-11-17부터).
 #
 # 2026-08-29 이전: S3 + CloudFront → Cloudflare Pages
 #

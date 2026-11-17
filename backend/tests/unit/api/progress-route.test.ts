@@ -132,3 +132,5 @@ describe('POST /books/:bookId/progress/confirm', () => {
     }
   );
 });
+
+export {};

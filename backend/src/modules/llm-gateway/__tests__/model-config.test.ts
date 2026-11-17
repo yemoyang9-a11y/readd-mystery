@@ -168,3 +168,5 @@ describe('NFR-AI-001: provider and model configuration', () => {
     expect(() => load({ MOCK_MODE: 'true', LLM_PROVIDER: 'typo' })).toThrow('Invalid LLM_PROVIDER');
   });
 });
+
+export {};
