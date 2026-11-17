@@ -73,10 +73,24 @@ function setup(options: {
   eventReaderText?: string;
   relationshipReaderText?: string;
   summary?: string;
+  /** 장 요약 근거 확인 응답 — 없으면 요약 문장마다 원문에 있는 인용을 돌려준다 */
+  summaryGrounding?: unknown | Error;
 }) {
   let relationshipCalls = 0;
   (call as jest.Mock).mockImplementation(async (task: string, prompt: string) => {
     if (task === 'generate_summary') return JSON.stringify({ summary: options.summary ?? '요약' });
+    if (task === 'generate_summary_grounding') {
+      if (options.summaryGrounding instanceof Error) throw options.summaryGrounding;
+      if (options.summaryGrounding !== undefined) return JSON.stringify(options.summaryGrounding);
+      const count = [...prompt.split('--- 원문 ---')[0].matchAll(/^\d+\. /gm)].length;
+      return JSON.stringify({
+        sentences: Array.from({ length: count }, (_, i) => ({
+          index: i + 1,
+          source_page: 1,
+          quote: '박영민은 해왕좌의 좌장이다.',
+        })),
+      });
+    }
     if (task === 'generate_character') return JSON.stringify({ characters });
     if (task === 'generate_term') return JSON.stringify({ terms: [] });
     if (task === 'generate_event_scene_boundary') return JSON.stringify({ boundaries: [] });
@@ -306,5 +320,117 @@ describe('해석·평가어 검사가 생성 경로에 들어 있다', () => {
     expect(book.events[0].reader_description).toBe('박영민이 손님을 맞아요.');
     expect(book.relationships[0].semantics?.reader_summary).toBe('박영민과 이몽란은 부부예요.');
     expect(reviewOf(book)).not.toContain('evaluative_word');
+  });
+});
+
+describe('FR-DAT-003: 장 요약 문장별 근거 확인이 생성 경로에 들어 있다', () => {
+  const groundingCalls = () =>
+    (call as jest.Mock).mock.calls.filter(([task]) => task === 'generate_summary_grounding');
+  const summaryCandidates = (book: unknown) =>
+    (
+      book as {
+        review_candidates: { chapters: { candidates: { reason: string; candidate: unknown }[] }[] };
+      }
+    ).review_candidates.chapters
+      .flatMap((c) => c.candidates)
+      .filter((c) => c.reason === 'summary_sentence_ungrounded');
+  const S1 = '박영민은 해왕좌의 좌장이다.';
+  const S2 = '유불란이 범인을 쫓았다.';
+  const grounded = { index: 1, source_page: 1, quote: '박영민은 해왕좌의 좌장이다.' };
+
+  test('NFR-AI-004: 모든 문장의 인용이 그 장 원문에 있으면 근거 검수 후보 0건, 장당 1회 호출', async () => {
+    const args = setup({ second: [relationship()], supports: true, summary: `${S1} ${S2}` });
+    const book = await generateFullBook(args);
+    expect(groundingCalls()).toHaveLength(1);
+    expect(summaryCandidates(book)).toEqual([]);
+  });
+
+  test('NFR-AI-004: 인용이 원문에 없는 문장만 검수 후보에 적히고 요약은 그대로 남는다', async () => {
+    const summary = `${S1} ${S2}`;
+    const args = setup({
+      second: [relationship()],
+      supports: true,
+      summary,
+      summaryGrounding: {
+        sentences: [grounded, { index: 2, source_page: 1, quote: '유불란이 범인을 쫓아 달렸다.' }],
+      },
+    });
+    const book = await generateFullBook(args);
+    expect(book.chapter_summaries.map((s) => s.summary)).toEqual([summary]);
+    expect(summaryCandidates(book)).toEqual([
+      {
+        kind: 'summary',
+        reason: 'summary_sentence_ungrounded',
+        candidate: {
+          chapter_no: 1,
+          summary,
+          sentences: [{ index: 2, sentence: S2, detail: 'quote_not_in_chapter' }],
+        },
+      },
+    ]);
+  });
+
+  test('FR-SPL-002: 근거 확인 호출의 입력은 그 장 원문과 요약 문장뿐이다', async () => {
+    const args = setup({ second: [relationship()], supports: true, summary: `${S1} ${S2}` });
+    await generateFullBook(args);
+    const prompt = groundingCalls()[0][1] as string;
+    expect(prompt).toContain(TEXT);
+    expect(prompt).toContain(`1. ${S1}`);
+    expect(prompt).toContain(`2. ${S2}`);
+    expect(prompt).not.toContain('[페이지 2]');
+  });
+
+  test('FR-SPL-005: 근거 확인 호출이 실패하면 실행이 실패하고 산출물을 만들지 않는다', async () => {
+    const args = setup({
+      second: [relationship()],
+      supports: true,
+      summaryGrounding: new Error('gateway down'),
+    });
+    await expect(generateFullBook(args)).rejects.toThrow('gateway down');
+    expect(fs.existsSync(path.join(args.fullDir, 'all-resolved.json'))).toBe(false);
+    expect(fs.existsSync(path.join(args.fullDir, 'chapter-1.summary-grounding.json'))).toBe(false);
+  });
+
+  test('FR-SPL-005: 근거 확인 응답이 JSON이 아니면 다시 묻고, 끝내 아니면 실행이 실패한다', async () => {
+    const args = setup({ second: [relationship()], supports: true });
+    const base = (call as jest.Mock).getMockImplementation()!;
+    (call as jest.Mock).mockImplementation(async (task: string, prompt: string) =>
+      task === 'generate_summary_grounding' ? '근거를 찾았습니다' : base(task, prompt)
+    );
+    await expect(generateFullBook(args)).rejects.toThrow();
+    expect(groundingCalls()).toHaveLength(3);
+    expect(fs.existsSync(path.join(args.fullDir, 'all-resolved.json'))).toBe(false);
+  });
+
+  test('FR-DAT-003: 다시 실행하면 근거 확인 캐시를 재생하고 같은 검수 후보를 낸다', async () => {
+    const args = setup({
+      second: [relationship()],
+      supports: true,
+      summary: `${S1} ${S2}`,
+      summaryGrounding: { sentences: [grounded] },
+    });
+    const first = await generateFullBook(args);
+    expect(summaryCandidates(first)).toHaveLength(1);
+    fs.rmSync(path.join(args.fullDir, 'all-resolved.json'));
+    (call as jest.Mock).mockClear();
+    const again = await generateFullBook(args);
+    expect(groundingCalls()).toHaveLength(0);
+    expect(summaryCandidates(again)).toEqual(summaryCandidates(first));
+  });
+
+  test('FR-DAT-003: 근거 확인 캐시가 손으로 고쳐졌으면 재생하지 않고 멈춘다', async () => {
+    const args = setup({
+      second: [relationship()],
+      supports: true,
+      summary: `${S1} ${S2}`,
+      summaryGrounding: { sentences: [grounded] },
+    });
+    await generateFullBook(args);
+    fs.rmSync(path.join(args.fullDir, 'all-resolved.json'));
+    const file = path.join(args.fullDir, 'chapter-1.summary-grounding.json');
+    const cached = JSON.parse(fs.readFileSync(file, 'utf-8'));
+    cached.response = { sentences: [grounded, { ...grounded, index: 2 }] };
+    fs.writeFileSync(file, JSON.stringify(cached), 'utf-8');
+    await expect(generateFullBook(args)).rejects.toThrow(/Stale\/unverified/);
   });
 });

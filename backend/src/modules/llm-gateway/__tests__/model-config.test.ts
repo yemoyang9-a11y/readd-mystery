@@ -67,6 +67,18 @@ describe('NFR-AI-001: provider and model configuration', () => {
     warn.mockRestore();
   });
 
+  test('NFR-OBS-004: 장 요약 근거 확인 작업 이름은 장 요약과 같은 모델을 쓰고 경고 없이 통과한다', () => {
+    const config = load({ LLM_PROVIDER: 'openai', OPENAI_MODEL: 'test-openai-model' });
+    const warn = jest.spyOn(console, 'warn').mockImplementation();
+    expect(config.getModelForTask('generate_summary_grounding')).toBe(
+      config.MODEL_CONFIG.generate_summary
+    );
+    expect(warn).not.toHaveBeenCalled();
+    // 장 캐시 계약이 MODEL_CONFIG 를 통째로 담으므로 키를 늘리지 않는다 (기존 생성 결과 재사용)
+    expect(Object.keys(config.MODEL_CONFIG)).not.toContain('generate_summary_grounding');
+    warn.mockRestore();
+  });
+
   test('unknown task warns and uses the same selected provider model', () => {
     const config = load({ LLM_PROVIDER: 'openai', OPENAI_MODEL: 'test-openai-model' });
     const warn = jest.spyOn(console, 'warn').mockImplementation();

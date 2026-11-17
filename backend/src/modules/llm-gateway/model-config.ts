@@ -58,6 +58,8 @@ export const MODEL_CONFIG = {
  */
 const METRIC_TASK_ALIASES: Record<string, keyof typeof MODEL_CONFIG> = {
   generate_event_scene_boundary: 'generate_event',
+  // FR-DAT-003 — 장 요약 문장별 근거 확인 (batch/pipeline/summary-grounding.ts)
+  generate_summary_grounding: 'generate_summary',
 };
 
 export function getModelForTask(task: string): string {

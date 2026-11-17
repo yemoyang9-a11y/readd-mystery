@@ -66,6 +66,12 @@ import {
 } from './grounding';
 import { evaluativeWord } from './semantic-guards';
 import {
+  SUMMARY_GROUNDING_VERSION,
+  buildSummaryGroundingPrompt,
+  requestSummaryGrounding,
+  summaryGroundingCandidates,
+} from './summary-grounding';
+import {
   BookArgs,
   DEFAULT_BOOK_ID,
   bookArgsFromCli,
@@ -144,6 +150,16 @@ const EVENT_EXTRACTION_CONTRACT = JSON.stringify({
   version: EVENT_EXTRACTION_VERSION,
   sceneBoundaryPrompt: buildSceneBoundaryPrompt.toString(),
   sceneEventPrompt: buildSceneEventPrompt.toString(),
+  provider: LLM_PROVIDER,
+  models: MODEL_CONFIG,
+  effort: DEFAULT_EFFORT,
+});
+
+// FR-DAT-003 — 장 요약 근거 확인 계약. 장 캐시·사건 캐시와 따로 봉인해, 이 규칙이 바뀌어도
+// 요약·인물·관계·사건을 다시 부르지 않는다. 바뀌면 근거 확인 캐시만 Stale로 멈춘다.
+const SUMMARY_GROUNDING_CONTRACT = JSON.stringify({
+  version: SUMMARY_GROUNDING_VERSION,
+  prompt: buildSummaryGroundingPrompt.toString(),
   provider: LLM_PROVIDER,
   models: MODEL_CONFIG,
   effort: DEFAULT_EFFORT,
@@ -400,6 +416,50 @@ export async function loadOrGenerateChapterEvents(
   return result;
 }
 
+/**
+ * 장 요약 문장별 근거 확인 — FR-DAT-003 🚦 · NFR-AI-004
+ * 원본 LLM 응답만 chapter-{N}.summary-grounding.json에 봉인해 두고, 새 실행과 재생 모두
+ * summaryGroundingCandidates로 같은 검증을 거친다. 재생 때는 LLM을 부르지 않는다.
+ * 호출·파싱 실패는 잡지 않는다 — 실행이 멈추고 산출물이 만들어지지 않는다(FR-SPL-005 🚦).
+ * 요약이 바뀌면(봉인에 요약을 넣는다) 캐시가 Stale로 멈춘다.
+ */
+export async function loadOrGenerateSummaryGrounding(
+  chapter: Chapter,
+  pages: Page[],
+  summary: string,
+  outDir: string = DEFAULT_OUT_DIR
+): Promise<ReviewCandidate[]> {
+  const filePath = path.join(outDir, `chapter-${chapter.chapter_no}.summary-grounding.json`);
+  let response: unknown;
+  if (fs.existsSync(filePath)) {
+    console.log(`[재생] ${chapter.chapter_no}장 요약 근거 확인 — 기존 결과 재사용`);
+    const cached = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as { response: unknown };
+    assertGroundingCache(cached, chapter, pages, [summary], SUMMARY_GROUNDING_CONTRACT);
+    response = cached.response;
+  } else {
+    // 게이트웨이 경유만 — 4.3절. 배치 전용이라 런타임 호출 수(R9)와 무관하다
+    response = await requestSummaryGrounding(chapter, pages, summary, (prompt, task) =>
+      callJson<unknown>(task, prompt, chapter.chapter_no)
+    );
+    const sealed = sealChapterCache(
+      { chapter_no: chapter.chapter_no, response },
+      chapter,
+      pages,
+      [summary],
+      SUMMARY_GROUNDING_CONTRACT
+    );
+    fs.writeFileSync(filePath, JSON.stringify(sealed, null, 2), 'utf-8');
+  }
+  const candidates = summaryGroundingCandidates(chapter.chapter_no, summary, pages, response);
+  const count = candidates.flatMap(
+    (c) => (c.candidate as { sentences: unknown[] }).sentences
+  ).length;
+  console.log(
+    `  [요약 근거] ${chapter.chapter_no}장 근거 미확인 문장 ${count}개${candidates.length > 0 ? ' — 검수 후보' : ''}`
+  );
+  return candidates;
+}
+
 // NFR-AI-004
 export function cachedRelationshipVerifier(
   chapterNo: number,
@@ -637,12 +697,19 @@ export async function generateFullBook(args: BookArgs): Promise<ResolvedBookData
       PIPELINE_MODE
     );
     const chapterEvents = await loadOrGenerateChapterEvents(chapter, pages, OUT_DIR);
+    const summaryGrounding = await loadOrGenerateSummaryGrounding(
+      chapter,
+      pages,
+      output.summary,
+      OUT_DIR
+    );
     chapterReviews.push({
       chapter_no: chapter.chapter_no,
       candidates: [
         ...output.review,
         ...chapterEvents.review,
         ...summaryReviewCandidates(output.chapter_no, output.summary), // FR-DAT-003
+        ...summaryGrounding, // FR-DAT-003 — 근거 미확인 문장
       ],
     });
 
