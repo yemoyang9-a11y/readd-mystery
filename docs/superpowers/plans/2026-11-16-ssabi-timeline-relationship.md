@@ -8,7 +8,7 @@
 
 **Tech Stack:** backend Express + pg + jest, frontend React + Vite + vitest + @testing-library/react.
 
-**Spec:** 사용자 승인 시안 `docs/business/ui-redesign/readd-relationship-simple.html`(2026-11-16 최종본), 홈 `docs/business/ui-redesign/home-3d-c-v6.html`, 추리 노트 `docs/business/ui-redesign/ssabi-notes-split.html` A안(2026-11-17, 모두 git 제외)과 이 대화의 결정(아래 Global Constraints).
+**Spec:** 사용자 승인 시안 `docs/superpowers/specs/mockups-2026-11-17/readd-relationship-simple.html`(2026-11-16 최종본), 홈 `docs/superpowers/specs/mockups-2026-11-17/home-3d-c-v6.html`, 추리 노트 `docs/superpowers/specs/mockups-2026-11-17/ssabi-notes-split.html` A안(2026-11-17)과 이 대화의 결정(아래 Global Constraints).
 
 ## Global Constraints
 

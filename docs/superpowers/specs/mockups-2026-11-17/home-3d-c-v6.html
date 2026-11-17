@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C안 제목 강조</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap">
+<style>
+@property --b{syntax:"<number>";inherits:true;initial-value:1}
+@property --o{syntax:"<number>";inherits:true;initial-value:1}
+:root{--bg:#0b0b0c;--text:#f2f2f3;--muted:#8d8d93;--line:#2a2a2d;--acc:#c4475f}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#141416;color:var(--text);font-family:Pretendard,system-ui,sans-serif;padding:28px 20px 60px}
+h1{font-size:22px;font-weight:800;margin-bottom:6px}
+.sub{color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:26px}
+.row{display:flex;gap:36px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+.phone{width:360px;height:740px;border-radius:42px;border:9px solid #000;background:var(--bg);position:relative;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.6);user-select:none}
+.top{position:absolute;top:0;left:0;right:0;height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;z-index:5}
+.logo{font-weight:700;font-size:17px;letter-spacing:.04em}
+.pill{display:flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.04);border-radius:999px;padding:6px 12px 6px 6px;font-size:12px;color:#d2d2d7}
+.pill i{width:20px;height:28px;border-radius:2px;background:linear-gradient(135deg,#8f1d35,#3a0a15)}
+.stage{position:absolute;z-index:1;left:0;right:0;top:66px;height:320px;perspective:1100px;touch-action:pan-y;cursor:grab}
+.floor{position:absolute;left:0;right:0;top:320px;height:120px;background:linear-gradient(rgba(255,255,255,.035),transparent)}
+.arrow{position:absolute;top:196px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;cursor:pointer;z-index:6;font-size:18px;color:#e8e8ea}
+.dots{position:absolute;top:392px;left:0;right:0;display:flex;gap:6px;justify-content:center}
+.dots span{width:6px;height:6px;border-radius:3px;background:#3a3a3e;transition:width .3s}
+.dots span.on{width:18px;background:var(--acc)}
+.info{position:absolute;top:410px;left:0;right:0;text-align:center;padding:0 16px}
+.info b{display:block;font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.2;color:#fff;margin-bottom:4px}
+.info .meta{font-size:12px;color:var(--muted)}
+.hook{margin-top:8px;font-family:'Nanum Pen Script',cursive;color:#e9e2d3}
+.hook span{display:block;white-space:nowrap;font-size:25px;line-height:1.25}
+.hook span:nth-child(3){font-size:31px;color:#fff}
+.cta{position:absolute;left:20px;right:20px;bottom:78px;height:50px;border-radius:999px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);display:grid;place-items:center;font-weight:700;font-size:16px}
+.cta.dim{color:var(--muted)}
+.tabbar{position:absolute;bottom:0;left:0;right:0;height:62px;border-top:1px solid var(--line);display:flex;justify-content:space-around;align-items:center;font-size:11px;color:var(--muted);background:var(--bg);z-index:5}
+.tabbar span.on{color:var(--text)}
+
+.book{--w:164px;--h:240px;--d:42px;position:absolute;left:calc(50% - var(--w)/2);top:24px;width:var(--w);height:var(--h);transform-style:preserve-3d;transition:transform .6s cubic-bezier(.2,.8,.2,1),--b .6s,--o .6s}
+.f{position:absolute;backface-visibility:hidden;filter:brightness(var(--b));opacity:var(--o)}
+.front{inset:0;transform:translateZ(calc(var(--d)/2));background-size:cover;background-position:center;border-radius:1px 3px 3px 1px}
+.front:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.35) 0,rgba(255,255,255,.14) 3%,rgba(0,0,0,0) 7%,rgba(255,255,255,.05) 60%,rgba(0,0,0,.1));border-radius:inherit}
+.back{inset:0;transform:rotateY(180deg) translateZ(calc(var(--d)/2));background:var(--sp)}
+.spine{top:0;width:var(--d);height:var(--h);left:calc((var(--w) - var(--d))/2);transform:rotateY(-90deg) translateZ(calc(var(--w)/2));background:linear-gradient(90deg,rgba(0,0,0,.35),rgba(255,255,255,.1) 40%,rgba(0,0,0,.3)),var(--sp);display:flex;align-items:center;justify-content:center}
+.spine i{writing-mode:vertical-rl;font-style:normal;font-size:11px;font-weight:700;letter-spacing:3px;color:var(--spt)}
+.pages{top:4px;width:calc(var(--d) - 2px);height:calc(var(--h) - 8px);left:calc((var(--w) - var(--d))/2 + 1px);transform:rotateY(90deg) translateZ(calc(var(--w)/2 - 3px));background:repeating-linear-gradient(90deg,#efe9dc 0 1px,#d6cfbf 1px 2px)}
+.topf{left:0;width:calc(var(--w) - 3px);height:calc(var(--d) - 2px);top:calc((var(--h) - var(--d))/2 + 1px);transform:rotateX(90deg) translateZ(calc(var(--h)/2 - 4px));background:repeating-linear-gradient(0deg,#efe9dc 0 1px,#d6cfbf 1px 2px)}
+.shadow{position:absolute;left:calc(50% - 100px);top:270px;width:200px;height:34px;border-radius:50%;background:radial-gradient(rgba(0,0,0,.8),transparent 70%);filter:blur(6px)}
+
+.notes{width:400px;font-size:14px;line-height:1.65}
+.notes h3{font-size:16px;margin:0 0 10px}
+.notes table{width:100%;border-collapse:collapse;margin-bottom:18px}
+.notes td{border-top:1px solid var(--line);padding:8px 6px;vertical-align:top}
+.notes td:first-child{width:112px;color:#d6d6da;font-weight:600}
+.y{color:#7fd1a0}.n{color:#f0a35e}
+.notes p{color:#b9b9be;font-size:13px}
+</style>
+</head>
+<body>
+<h1>C안 — 제목 강조 · 이어서 읽기 쪽수 표시</h1>
+<p class="sub">셜록 홈즈 · 데미안 · 파친코 · 가상범인 4권. 화살표를 누르거나 책을 좌우로 끌어 넘겨 보세요. 옆 책을 눌러도 가운데로 옵니다.</p>
+<div class="row">
+ <div class="phone" id="P">
+  <div class="top"><span class="logo">RE:ADD</span><span class="pill"><i></i>이어서 읽기 · 13쪽</span></div>
+  <div class="floor"></div>
+  <div class="stage" id="stage"><div class="shadow"></div></div>
+  <div class="arrow" style="left:12px" onclick="go(-1)">‹</div>
+  <div class="arrow" style="right:12px" onclick="go(1)">›</div>
+  <div class="dots" id="dots"></div>
+  <div class="info" id="info"></div>
+  <div class="cta" id="cta"></div>
+  <div class="tabbar"><span class="on">홈</span><span>피드백</span><span>MY</span></div>
+ </div>
+ <div class="notes">
+  <h3>이 시안이 실제 화면 구조와 같은가</h3>
+  <table>
+   <tr><td>윗줄</td><td><span class="n">바뀌는 부분</span> — "이어서 읽기 · 19.1%" → "이어서 읽기 · 13쪽"(마지막으로 펼친 쪽)</td></tr>
+   <tr><td>책 넘김 영역</td><td><span class="n">바뀌는 부분</span> — 지금은 표지가 납작한 판이고, 시안은 책등·종이 두께가 있는 입체 책</td></tr>
+   <tr><td>좌우 화살표 · 점</td><td><span class="y">같음</span></td></tr>
+   <tr><td>제목 · 정보 줄</td><td><span class="n">바뀌는 부분</span> — 제목을 17px → 26px 굵게. 정보 줄은 그대로</td></tr>
+   <tr><td>손글씨 세 줄</td><td><span class="y">같음</span> — 나눔펜 글꼴, 셋째 줄이 더 크고 흰색</td></tr>
+   <tr><td>아래 버튼</td><td><span class="y">같음</span> — 작품 보기 / 곧 공개</td></tr>
+   <tr><td>하단 탭</td><td><span class="y">같음</span> — 홈 · 피드백 · MY</td></tr>
+  </table>
+  <p><b style="color:#f2f2f3">시안 흔적</b><br>
+  · 셜록 홈즈 · 데미안 · 파친코는 지금 서비스에 없는 책입니다. 저장소에 남아 있던 실제 출판사 표지를 비교용으로만 입혔습니다. 실제 서비스에 쓰려면 표지 사용 권리를 확인해야 합니다.<br>
+  · 세 책의 손글씨 소개 문구와 책등 색은 제가 임시로 썼습니다.<br>
+  · "13쪽"은 어제 점검 값(68쪽 중 19.1%)을 쪽으로 바꾼 것입니다.<br>
+  · 이건 HTML 시안이고 앱 코드가 아닙니다. 고르시면 실제 홈의 책 넘김 부분(BookCarousel3D)만 이 모양으로 바꿉니다.</p>
+ </div>
+</div>
+<script>
+const BOOKS=[
+ {t:'셜록 홈즈 전집',a:'아서 코난 도일 · 1887 · 미스터리',h:['베이커가 221B번지.','의뢰인은 늘 밤에 찾아온다.','단서는 이미 눈앞에 있다.'],img:'/files/sherlock-holmes.webp',sp:'#2f2f31',spt:'#d8323c',open:true},
+ {t:'데미안',a:'헤르만 헤세 · 1919 · 성장소설',h:['열 살 소년 싱클레어.','밝은 세계와 어두운 세계 사이.','그 앞에 나타난 데미안.'],img:'/files/demian.jpg',sp:'#2f63b5',spt:'#f4efe6',open:true},
+ {t:'파친코',a:'이민진 · 2017 · 장편소설',h:['부산 영도의 하숙집 딸 선자.','바다를 건너 오사카로.','네 세대에 걸친 이야기.'],img:'/files/pachinko.jpg',sp:'#efe7da',spt:'#a5865a',open:true},
+ {t:'가상범인',a:'김내성 · 1937 · 미스터리 · 68쪽',h:['경성의 극장, 해왕좌.','무대 위에서 살인이 재연된다.','범인으로 지목된 배우도 함께.'],img:'/files/gasangbeomin.webp',sp:'#7a1c22',spt:'#f1e4cf',open:true},
+];
+let idx=0;
+const stage=document.getElementById('stage');
+stage.insertAdjacentHTML('beforeend',BOOKS.map((b,i)=>`<div class="book" data-i="${i}" style="--sp:${b.sp};--spt:${b.spt}">
+ <div class="f front" style="background-image:url(${b.img})"></div><div class="f back"></div>
+ <div class="f spine"><i>${b.t}</i></div><div class="f pages"></div><div class="f topf"></div></div>`).join(''));
+stage.querySelectorAll('.book').forEach(el=>el.addEventListener('click',()=>{if(!dragged){idx=+el.dataset.i;render()}}));
+function go(d){idx=(idx+d+BOOKS.length)%BOOKS.length;render()}
+function render(){
+ const n=BOOKS.length;
+ stage.querySelectorAll('.book').forEach(el=>{let off=+el.dataset.i-idx;if(off>n/2)off-=n;if(off<-n/2)off+=n;
+  const s=el.style;
+  if(off===0){s.transform='translateX(8px) translateZ(30px) rotateY(24deg) rotateX(4deg)';s.setProperty('--b',1);s.setProperty('--o',1);s.zIndex=3}
+  else if(Math.abs(off)===1){s.transform=`translateX(${off>0?150:-158}px) translateZ(-190px) rotateY(${off>0?44:52}deg) rotateX(4deg) scale(.86)`;s.setProperty('--b',.45);s.setProperty('--o',1);s.zIndex=2}
+  else{s.transform=`translateX(${Math.sign(off)*200}px) translateZ(-260px) rotateY(50deg) rotateX(4deg) scale(.8)`;s.setProperty('--o',0);s.zIndex=1}
+ });
+ const b=BOOKS[idx];
+ document.getElementById('dots').innerHTML=BOOKS.map((_,i)=>`<span class="${i===idx?'on':''}"></span>`).join('');
+ document.getElementById('info').innerHTML=`<b>${b.t}</b><div class="meta">${b.a}</div><div class="hook">${b.h.map(x=>`<span>${x}</span>`).join('')}</div>`;
+ const c=document.getElementById('cta');c.textContent=b.open?'작품 보기':'곧 공개';c.className='cta'+(b.open?'':' dim');
+}
+let sx=null,dragged=false;
+stage.addEventListener('pointerdown',e=>{sx=e.clientX;dragged=false});
+stage.addEventListener('pointermove',e=>{if(sx!==null&&Math.abs(e.clientX-sx)>8)dragged=true});
+stage.addEventListener('pointerup',e=>{if(sx===null)return;const dx=e.clientX-sx;sx=null;if(Math.abs(dx)>40)go(dx<0?1:-1);setTimeout(()=>dragged=false,0)});
+render();
+</script>
+</body>
+</html>
