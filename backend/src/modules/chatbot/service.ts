@@ -5,6 +5,7 @@ import {
   HARNESS_GUIDANCE,
   HARNESS_RETRY_NOTICE,
   VERBATIM_RETRY_NOTICE,
+  HINT_RETRY_NOTICE,
 } from './response-policy';
 import type { ChatbotQueryLog } from '../../shared/types';
 import { assembleContext, buildStableContextParts } from './context-assembly';
@@ -38,6 +39,7 @@ const OUTSIDE_BLOCKING: ReadonlySet<GuardViolation> = new Set<GuardViolation>([
   'verdict_phrase',
   'page_beyond_cutoff',
   'verbatim_over_limit',
+  'steering_hint',
 ]);
 
 export interface ChatbotDeps {
@@ -302,6 +304,10 @@ export async function* handleQuery(
         intent,
         echoedUserText: quote ? [query, quote] : [query],
         rawText: context.current_chapter_text ? [context.current_chapter_text] : [],
+        // 독자 자신의 글은 암시·출처 없는 인용으로 세지 않는다. K 이하 노트만 넘긴다 (FR-SPL-002 🚦)
+        readerNotes: notes
+          .filter((note) => note.page_no >= 1 && note.page_no <= K)
+          .map((note) => note.body),
       }).violations;
 
     let responseText = '';
@@ -334,7 +340,8 @@ export async function* handleQuery(
         attemptPrompt =
           fullPrompt +
           HARNESS_RETRY_NOTICE +
-          (violations.includes('verbatim_over_limit') ? VERBATIM_RETRY_NOTICE : '');
+          (violations.includes('verbatim_over_limit') ? VERBATIM_RETRY_NOTICE : '') +
+          (violations.includes('steering_hint') ? HINT_RETRY_NOTICE : '');
       }
       yield responseText;
     } else {

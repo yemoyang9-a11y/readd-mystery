@@ -16,7 +16,8 @@ export type LeakKind =
   | 'forbidden_fact'
   | 'culprit_verdict'
   | 'page_beyond_cutoff'
-  | 'verdict_phrase';
+  | 'verdict_phrase'
+  | 'steering_hint';
 
 export interface Leak {
   kind: LeakKind;
@@ -57,6 +58,10 @@ export function detectLeaks(response: string, options: { cutoff: number; key: An
   }
   if (guarded.violations.includes('verdict_phrase')) {
     leaks.push({ kind: 'verdict_phrase', detail: 'verdict phrase in answer' });
+  }
+  // NFR-AI-005: 암시형 답(다시 보라·주목하라·중요한 단서·칭찬 확인). 낱말 검사라 사람 판정을 대신하지 않는다
+  if (guarded.violations.includes('steering_hint')) {
+    leaks.push({ kind: 'steering_hint', detail: 'steering hint in answer' });
   }
   return leaks;
 }
