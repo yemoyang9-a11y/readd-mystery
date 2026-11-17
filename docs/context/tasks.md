@@ -19,7 +19,7 @@
 | --- | --- | --- | --- | --- |
 | T8 | 로컬 DB 적용과 실데이터 확인 | 로컬 필요 | ① 마이그레이션 017(reader_text)·018(recap 길이 로그)·019(차례 읽기 기준점)·020(리캡 이름 검사 로그)·021(노트 종류) — **2026-11-17 Supabase `readd-mystery`에 적용 완료**(대표 승인). 다른 DB(로컬 등)를 쓰면 거기에도 적용 ② 「가상범인」 독자용 문장 백필 dry-run ③ 장면 단위 사건 추출 1장 실행(`run-generate-sample.ts --chapter 1`)으로 장면 수·검수 후보 수·비용 확인 ④ 휴대폰 화면으로 실제 동작 확인(목차 확인 창·싸비 확인 카드 포함) | `docs/superpowers/handoff/2026-11-17-ssabi-notes-home3d.md` |
 | T9 | 장면 단위 사건 추출 비용 | 결정 필요 (T8 ③ 뒤) | 장면마다 장 처음부터 다시 읽혀 입력이 장면 수에 비례해 늘어난다(1장 20장면 가정 시 약 23만 자). 실측 뒤 "앞 장면 1~2개 + 대상 장면"으로 줄일지 정한다(스포일러 측면은 같음, 맥락은 줄어듦). **비교 방법** — `run-generate-sample.ts --chapter 1`(또는 `run-generate-full.ts`, 사건 캐시 재생이면 AI 호출 없음)을 돌리면 `[사건 입력]` 로그에 창별 원문 입력 글자 수(`full`·`recent:1`·`recent:2`)가 함께 찍히고, 실제로 줄여서 돌려 보려면 `--scene-window recent:1`(또는 환경 변수 `EVENT_SCENE_WINDOW`)을 준다 — 기본은 `full` 그대로다 | `batch/pipeline/event-scenes.ts` |
-| T10 | 리캡 길이 실측 | 로컬 필요 | 018 적용 후 `recap_call_log`로 목표 문장 수 대비 실제 길이 분포를 본다(쿼리는 4장). 여전히 흔들리면 다음 단계로 누적 리캡 사전 생성·검수(A안) 설계 | `reading-state/recap-length.ts` |
+| T10 | 리캡 길이 실측 | 로컬 필요 (대표가 직접 실행, 2026-11-17) | 018 적용 후 `recap_call_log`로 목표 문장 수 대비 실제 길이 분포를 본다(쿼리는 4장). 여전히 흔들리면 다음 단계로 누적 리캡 사전 생성·검수(A안) 설계 | `reading-state/recap-length.ts` |
 | T3 | 공격 질문 시험 전체 판정 | 결정 필요 | 130건 중 117건은 사람이 읽지 않았다. 판정 방식·담당이 미정. 출시 전에 필요. 이번 하네스 변경 뒤 다시 실행해야 한다 | `evaluation/chatbot-harness/` |
 | T6 | 운영 배포 | 사용자 요청 시 | 운영 주소(https://ssabi-d4c.pages.dev, https://ssabi-api.fly.dev)는 피벗 전 버전이다. 피벗 후 Cloudflare 배포가 따로 있는지 확인 중(API 토큰이 유효하지 않아 아직 못 봄) | [README.md](README.md) 3장 |
 
@@ -27,10 +27,8 @@
 
 | 항목 | 상태 | 메모 |
 | --- | --- | --- |
-| 커뮤니티 신고 처리 운영 | 결정 필요 | 출시 범위에 포함(2026-11-17). 신고 API·관리자 목록/삭제 API는 있으나 관리자 화면이 없다. 누가·얼마나 빨리 보는지, 출시 전 관리자 화면이 필요한지 |
-| 커뮤니티 운영 정책 | 결정 필요 | 신고 N건 자동 숨김·차단·금칙어·신고당한 글쓴이 안내 모두 없음. 글 수정 불가(삭제만), 익명 별명 "독자 xxxx" 고정, 휴대폰 전용 — 이대로 갈지 |
-| 화면 자동 배포에 필요한 저장소 설정 | 대표 작업 필요 | `deploy-frontend.yml` 추가됨. GitHub 저장소 Settings → Secrets and variables → Actions 에 Secrets `CLOUDFLARE_API_TOKEN`·`CLOUDFLARE_ACCOUNT_ID`, Variables `CLOUDFLARE_PAGES_PROJECT`·`VITE_API_URL` 등록 전까지 배포 단계는 건너뛴다. 서버 자동 배포(`deploy-backend.yml`)도 `FLY_API_TOKEN` 이 없어 배포 단계에서 실패 중 |
-| 암시형 답 검사의 범위 | 결정 필요 (대표 확인) | 2026-11-17 구현·병합됨(`steering_hint`). "그 장면을 다시 보세요"·"주목해 보세요"·"중요한 단서예요"·"좋은 추리예요" 류를 막는다. 쪽을 짚은 "12쪽을 다시 읽어 보세요"는 결정 23(장면 찾아 주기)에 따라 통과시킨다 — 이 선이 맞는지. 뜻으로만 전달되는 암시는 여전히 못 잡는다(T3 사람 판정 필요) |
+| 커뮤니티 운영 정책(나머지) | 결정 필요 | 신고 처리는 정함(관리자 화면 + 서로 다른 독자 3명 신고 시 자동 숨김, 2026-11-17). 남은 것: 차단·금칙어·신고당한 글쓴이 안내 없음. 글 수정 불가(삭제만), 익명 별명 "독자 xxxx" 고정, 휴대폰 전용 — 이대로 갈지 |
+| 화면 자동 배포에 필요한 저장소 설정 | 보류 (2026-11-17 대표: 지금은 배포하지 않음) | `deploy-frontend.yml` 추가됨. GitHub 저장소 Settings → Secrets and variables → Actions 에 Secrets `CLOUDFLARE_API_TOKEN`·`CLOUDFLARE_ACCOUNT_ID`, Variables `CLOUDFLARE_PAGES_PROJECT`·`VITE_API_URL` 등록 전까지 배포 단계는 건너뛴다. 서버 자동 배포(`deploy-backend.yml`)도 `FLY_API_TOKEN` 이 없어 배포 단계에서 실패 중 |
 | 검색 결과 6쪽의 구성 | 결정 필요 (실측 뒤) | 순위 융합 상위 4쪽 + 그 앞뒤 쪽 2쪽으로 바꿨다(전에는 검색 6쪽). 근거 없는 선택이라 실제 질문으로 비교해야 한다. 앞뒤 쪽이 현재 장 원문과 겹치면 자리만 차지한다 |
 | 챗봇 노트 선택에서 최근 몫을 따로 둘지 | 결정 필요 | 질문과 겹치는 노트가 20개를 넘으면 겹치지 않는 최신 노트가 빠진다 |
 
