@@ -1,17 +1,42 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import MobileHome from './MobileHome';
+import type { BriefingResponse } from '../../types';
 
 const catalog = vi.hoisted(() => ({ books: [] as unknown[] }));
+const briefingApi = vi.hoisted(() => ({ fetchBriefing: vi.fn() }));
 
 vi.mock('../../hooks/useCatalog', () => ({
   useCatalog: () => ({ books: catalog.books, status: 'ready', reload: () => {} }),
 }));
 
+vi.mock('../../services/recapService', () => briefingApi);
+
 beforeEach(() => {
   catalog.books = [];
+  briefingApi.fetchBriefing.mockReset();
+  briefingApi.fetchBriefing.mockRejectedValue(new Error('no briefing in this test'));
 });
+
+const readingBook = {
+  book_id: 'bk-95898cdf13',
+  title: '가상범인',
+  author: '김내성',
+  cover_url: '/covers/gasangbeomin.webp',
+  intro_summary: null,
+  ssabi_ready: true,
+  genre: '미스터리',
+  registered_at: '2026-11-01',
+  progress: { current_page: 13, percent: 19.1, is_complete: false, last_read_at: '2026-11-17T00:00:00Z' },
+};
+
+const serverBriefing: BriefingResponse = {
+  applied_cutoff: 13,
+  recap: null,
+  current_chapter: { chapter_no: 2, title: '해왕좌의 밤' },
+  progress: { current_page: 13, total_pages: 68, percent: 19.1 },
+};
 
 function Where() {
   return <p data-testid="where">{useLocation().pathname}</p>;
@@ -127,24 +152,51 @@ describe('모바일 홈 3D 책 캐러셀', () => {
     covers.forEach((face) => expect(face.textContent).toBe(''));
   });
 
-  test('FR-BRF-005: 이어서 읽기에는 퍼센트 대신 마지막으로 펼친 쪽이 p로 보인다', () => {
-    catalog.books = [
-      {
-        book_id: 'bk-95898cdf13',
-        title: '가상범인',
-        author: '김내성',
-        cover_url: '',
-        intro_summary: null,
-        ssabi_ready: true,
-        genre: '미스터리',
-        registered_at: '2026-11-01',
-        progress: { current_page: 13, percent: 19.1, is_complete: false, last_read_at: '2026-11-17T00:00:00Z' },
-      },
-    ];
+  // 2026-11-17 대표 결정 — 작은 "이어서 읽기 · 13p" 버튼 자리를 큰 이어 읽기 카드가 대신한다
+  test('FR-BRF-005: 이어서 읽기 카드에는 퍼센트 글자 대신 마지막으로 펼친 쪽이 p로 보인다', async () => {
+    catalog.books = [readingBook];
+    briefingApi.fetchBriefing.mockResolvedValue(serverBriefing);
     renderHome();
     const link = screen.getByRole('link', { name: /이어서 읽기/ });
-    expect(link).toHaveTextContent('이어서 읽기 · 13p');
+    expect(link).toHaveTextContent('13p');
     expect(link.textContent).not.toContain('%');
+    expect(link.textContent).not.toContain('19');
+    await waitFor(() => expect(link).toHaveTextContent('제2장 해왕좌의 밤 · 13p'));
+  });
+
+  test('FR-BRF-005: 진도 기록이 있으면 홈에 큰 이어 읽기 카드 — 표지·제목·서버의 장 이름·쪽·진도 바, 누르면 브리핑', async () => {
+    catalog.books = [readingBook];
+    briefingApi.fetchBriefing.mockResolvedValue(serverBriefing);
+    renderHome();
+    const card = screen.getByTestId('home-continue-card');
+    expect(card.tagName).toBe('A');
+    expect(card).toHaveAttribute('href', '/books/bk-95898cdf13/briefing');
+    expect(within(card).getByRole('img', { name: '가상범인 표지' })).toHaveAttribute('src', '/covers/gasangbeomin.webp');
+    expect(card).toHaveTextContent('가상범인');
+    // 진도 바 폭은 GET /books 가 준 percent 그대로 (프론트 재계산 없음)
+    expect(within(card).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '19.1');
+    // 장 이름은 서버 브리핑 응답의 current_chapter 그대로
+    await waitFor(() => expect(card).toHaveTextContent('제2장 해왕좌의 밤'));
+    expect(briefingApi.fetchBriefing).toHaveBeenCalledWith('bk-95898cdf13');
+    // 작은 이어서 읽기 버튼과 중복되지 않는다 — 이어 읽기 링크는 카드 하나
+    expect(screen.getAllByRole('link', { name: /이어서 읽기/ })).toHaveLength(1);
+  });
+
+  test('FR-SPL-005: 장 이름을 못 받아도 카드는 서버의 쪽·진도 바로 뜨고 장 이름만 빠진다', async () => {
+    catalog.books = [readingBook];
+    renderHome();
+    const card = screen.getByTestId('home-continue-card');
+    await waitFor(() => expect(briefingApi.fetchBriefing).toHaveBeenCalled());
+    expect(card).toHaveTextContent('13p');
+    expect(card).not.toHaveTextContent('제');
+  });
+
+  test('진도 기록이 있는 책이 없으면 이어 읽기 카드가 없다', () => {
+    catalog.books = [{ ...readingBook, progress: undefined }];
+    renderHome();
+    expect(screen.queryByTestId('home-continue-card')).toBeNull();
+    expect(screen.queryByRole('link', { name: /이어서 읽기/ })).toBeNull();
+    expect(briefingApi.fetchBriefing).not.toHaveBeenCalled();
   });
 
   test('책마다 책등에 제목이 있다', () => {
