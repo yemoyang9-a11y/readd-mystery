@@ -8,6 +8,8 @@
  *      · NFR-OBS-002 🚦 (리캡 호출 로그) · NFR-PERF-002 🚦 (스트리밍)
  *      · FR-RCP-001 🚦 (환각 금지 지시) · NFR-AI-004 🚦 (프롬프트에 상한 지시 없음)
  *      · 2026-11-17 C안 — 목표 문장 수 N 코드 계산(recap-length.ts)과 길이 로그
+ *      · 2026-11-17 고유명사 검사 — 출력에 사전(K 이하)·입력 자료에 없는 이름꼴 낱말이
+ *        생겼는지 세어 로그에만 남긴다(recap-names.ts). 리캡은 막거나 고치지 않는다
  *
  * ⚠️ LLM 호출은 `llmStream` 의존성을 통해서만 이뤄진다 — 실제 게이트웨이(⑥) 연결은
  *    라우트 계층(CP3 실데이터 전환 범위)에서 `import { stream } from '../llm-gateway/gateway'`를
@@ -27,6 +29,7 @@ import {
   computeRecapTargetSentences,
   countRecapSentences,
 } from './recap-length';
+import { findUnknownNames } from './recap-names';
 import { getModelForTask } from '../llm-gateway/model-config';
 import type {
   RecapCallLogger,
@@ -184,7 +187,6 @@ async function* generateAndPersist(
   const prompt = buildRecapPrompt(input, targetSentences);
 
   let fullText = '';
-  let usage: LLMUsage | undefined;
   const gen = io.llmStream('recap', prompt, { maxTokens: RECAP_MAX_TOKENS_SAFETY });
   let step = await gen.next();
   while (!step.done) {
@@ -211,7 +213,7 @@ async function* generateAndPersist(
     }
     step = { done: true, value: undefined };
   }
-  usage = step.value ?? undefined; // gen.next()의 마지막 호출 — TReturn 값 (for await로는 못 받는다)
+  const usage: LLMUsage | undefined = step.value ?? undefined; // gen.next()의 마지막 호출 — TReturn 값 (for await로는 못 받는다)
 
   if (trigger === 'realtime') {
     await io.sessionCache.saveCached(
@@ -225,9 +227,55 @@ async function* generateAndPersist(
     await io.savedRecap.upsertSavedRecap(deviceId, bookId, cutoff, fullText); // FR-DAT-009
   }
 
-  await io.recapLog.record(
-    buildRecapCallLog(deviceId, bookId, input, fullText, trigger, usage, targetSentences)
-  ); // NFR-OBS-002 🚦
+  const unknownNames = await measureUnknownNames(assemblyDeps, bookId, cutoff, input, fullText);
+  try {
+    await io.recapLog.record(
+      buildRecapCallLog(
+        deviceId,
+        bookId,
+        input,
+        fullText,
+        trigger,
+        usage,
+        targetSentences,
+        unknownNames
+      )
+    ); // NFR-OBS-002 🚦
+  } catch (error) {
+    // 리캡은 이미 다 나갔고 캐시·저장도 끝났다. 여기서 던지면 로그는 어차피 못 살리고 완성된
+    // 리캡만 오류로 바뀐다. 삼키지 않고 서버 오류 로그로 남긴다 — 로그 유실은 게이트 판정
+    // 근거의 유실이라 운영에서 바로 보여야 한다.
+    console.error('[recap] 호출 로그 적재 실패', { bookId, cutoff, trigger, error });
+  }
+}
+
+/**
+ * 리캡 출력의 이름꼴 낱말 중 허용 사전·입력 자료에 없는 것 (FR-RCP-001 🚦). LLM 호출 없음(R9).
+ *
+ * 사전은 cutoff를 실어 조회한다 — K를 넘는 이름은 비교용으로도 읽지 않는다(FR-SPL-002 🚦,
+ * 절대 규칙 1·7번). 비교 대상인 입력 자료도 조립 단계에서 이미 K로 잘린 것이다.
+ *
+ * 측정에 실패하면 null을 돌려준다(로그 컬럼 NULL). 측정은 부가 기능이라 실패가 리캡이나
+ * 기본 로그를 깨지 않아야 한다.
+ */
+async function measureUnknownNames(
+  deps: RecapAssemblyDeps,
+  bookId: string,
+  cutoff: number,
+  input: RecapInput,
+  outputText: string
+): Promise<string[] | null> {
+  try {
+    const dictionary = await deps.content.findIntroducedNames(bookId, cutoff);
+    const source = [
+      ...input.chapter_summaries.map((s) => `${s.title}\n${s.content}`),
+      input.current_chapter_text ?? '',
+    ].join('\n');
+    return findUnknownNames(outputText, dictionary, source);
+  } catch (error) {
+    console.error('[recap] 고유명사 측정 실패', { bookId, cutoff, error });
+    return null;
+  }
 }
 
 /**
@@ -310,7 +358,8 @@ function buildRecapCallLog(
   outputText: string,
   trigger: RecapTrigger,
   usage: LLMUsage | undefined,
-  targetSentences: number
+  targetSentences: number,
+  unknownNames: string[] | null
 ): RecapCallLog {
   return {
     timestamp: new Date(),
@@ -329,6 +378,9 @@ function buildRecapCallLog(
     target_sentences: targetSentences,
     output_chars: outputText.length, // 하드 상한과 같은 기준: 공백·소제목 포함, 잘린 뒤 길이
     output_sentences: countRecapSentences(outputText),
+    // 고유명사 측정(020 마이그레이션) — null은 측정 못 함, 0은 걸린 것 없음
+    unknown_name_count: unknownNames === null ? null : unknownNames.length,
+    unknown_names: unknownNames,
   };
 }
 

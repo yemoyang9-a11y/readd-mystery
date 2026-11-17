@@ -248,6 +248,34 @@ describe('공개 콘텐츠 스토어 읽기 — createPgBookContentReader', () =
   });
 });
 
+describe('리캡 고유명사 사전 — findIntroducedNames', () => {
+  test('FR-SPL-002 🚦: 인물명·별칭 모두 first_appearance_page <= cutoff를 WHERE에 걸고 cutoff를 파라미터로 받는다', async () => {
+    const { client, calls } = mockClient([{ label: '유불란' }, { label: '박 군' }]);
+    const reader = createPgBookContentReader(client);
+
+    const names = await reader.findIntroducedNames('gasang', 40);
+
+    expect(names).toEqual(['유불란', '박 군']);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].params).toEqual(['gasang', 40]);
+    const sql = calls[0].sql.replace(/\s+/g, ' ');
+    // 인물 대표명 — 최초 등장 쪽 <= K
+    expect(sql).toMatch(/FROM characters WHERE book_id = \$1 AND first_appearance_page <= \$2/);
+    // 별칭 — 별칭의 최초 등장 쪽과 그 인물의 최초 등장 쪽 둘 다 <= K
+    expect(sql).toMatch(/a\.first_appearance_page <= \$2/);
+    expect(sql).toMatch(/c\.first_appearance_page <= \$2/);
+    // 상한 없는 조회 조각이 없다 — characters·aliases가 나오는 횟수만큼 <= $2가 걸린다
+    expect(sql.match(/first_appearance_page <= \$2/g)).toHaveLength(3);
+  });
+
+  test('FR-SPL-002 🚦: positive — K=130이면 cutoff 130이 그대로 파라미터로 간다', async () => {
+    const { client, calls } = mockClient([{ label: '장준호' }]);
+    const names = await createPgBookContentReader(client).findIntroducedNames('gasang', 130);
+    expect(names).toEqual(['장준호']);
+    expect(calls[0].params).toEqual(['gasang', 130]);
+  });
+});
+
 describe('세션 — createPgReadingSessionRepository', () => {
   test('findSession은 session_epoch(bigint)를 number로 변환한다', async () => {
     const lastActivity = new Date('2026-08-20T00:00:00Z');
@@ -416,6 +444,8 @@ describe('리캡 호출 로그 — NFR-OBS-002 🚦', () => {
       target_sentences: 2,
       output_chars: 6,
       output_sentences: 1,
+      unknown_name_count: 1,
+      unknown_names: ['장준호'],
     };
 
     await logger.record(entry);
@@ -438,6 +468,32 @@ describe('리캡 호출 로그 — NFR-OBS-002 🚦', () => {
       2,
       6,
       1,
+      1,
+      ['장준호'],
     ]);
+    // 020 마이그레이션 — 리캡 고유명사 측정 컬럼
+    expect(calls[0].sql).toMatch(/unknown_name_count,\s*unknown_names/);
+  });
+
+  test('NFR-OBS-002: 고유명사 측정에 실패한 호출은 두 컬럼을 NULL로 적재한다', async () => {
+    const { client, calls } = mockClient();
+    await createPgRecapCallLogger(client).record({
+      timestamp: new Date('2026-11-17T00:00:00Z'),
+      device_id: 'dev-1',
+      book_id: 'book-1',
+      cutoff_page: 15,
+      input_chapter_summary_ids: [],
+      current_chapter_cutoff: 15,
+      output_ref: '리캡',
+      model: 'recap',
+      tokens: { input: 1, output: 1 },
+      trigger: 'realtime',
+      target_sentences: 2,
+      output_chars: 2,
+      output_sentences: 1,
+      unknown_name_count: null,
+      unknown_names: null,
+    });
+    expect(calls[0].params!.slice(-2)).toEqual([null, null]);
   });
 });

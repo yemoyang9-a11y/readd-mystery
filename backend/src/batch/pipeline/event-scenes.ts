@@ -20,6 +20,7 @@
 import { Chapter, Page } from '../../shared/types';
 import { buildPageTaggedText } from './generate';
 import { ReviewCandidate, SourceEvidence, validEvidence } from './grounding';
+import { evaluativeWord } from './semantic-guards';
 
 /** 대표 결정 — 장면당 최대 사건 수 */
 export const MAX_EVENTS_PER_SCENE = 2;
@@ -33,10 +34,6 @@ export const EVENT_EXTRACTION_VERSION = 'scene-events-v1';
 
 const MODES = ['narration', 'dialogue', 'document'] as const;
 export type EventMode = (typeof MODES)[number];
-
-/** 해석·평가어 — 중요도·추리 판정이 섞인 서술은 자동 공개하지 않는다 */
-const EVALUATIVE_WORDS =
-  /(단서|결정적|수상(?:한|하|해|했|쩍|스러)|중요(?:한|하|해|했|성)|알고\s*보니|복선)/u;
 
 /** 대사 사건은 "A가 ~라고 말했다/진술했다"처럼 발화 행위로 적혀야 한다 */
 const SPEECH_ACT =
@@ -347,7 +344,7 @@ export function validateSceneEvents(
       continue;
     }
     // (e) 해석·평가어
-    if (EVALUATIVE_WORDS.test(`${agent} ${action}`)) {
+    if (evaluativeWord(`${agent} ${action}`)) {
       hold(item, 'event_evaluative_word');
       continue;
     }

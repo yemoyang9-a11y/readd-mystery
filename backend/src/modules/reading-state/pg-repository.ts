@@ -5,6 +5,7 @@
  * @see migrations/002_reading_state.sql — R2 소유 테이블(진도·세션·저장 리캡·세션 캐시·대화 이력)
  * @see migrations/004_recap_call_log.sql — 리캡 호출 로그
  * @see migrations/018_recap_call_log_length.sql — 리캡 호출 로그 길이 컬럼(2026-11-17)
+ * @see migrations/020_recap_call_log_names.sql — 리캡 호출 로그 고유명사 측정 컬럼(2026-11-17)
  * @see (R1 소유, 읽기 전용) migrations/001_content_store.sql — books·chapters·chapter_summaries·pages
  *
  * R1의 register.ts와 같은 패턴을 따른다 — 실제 `pg.Pool`을 직접 import하지 않고 최소
@@ -202,6 +203,24 @@ export function createPgBookContentReader(db: QueryClient): BookMetaReader & Rec
       );
       return rows.map((row) => row.content);
     },
+
+    async findIntroducedNames(bookId: string, cutoff: number): Promise<string[]> {
+      // FR-SPL-002 🚦 — 인물은 최초 등장 쪽 <= cutoff, 별칭은 별칭과 그 인물 둘 다 <= cutoff.
+      // 싸비 조회(ssabi/pg-repository.ts)와 같은 필터식이다. cutoff를 넘는 이름은 읽지 않는다.
+      const { rows } = await db.query(
+        `SELECT name AS label FROM characters
+          WHERE book_id = $1 AND first_appearance_page <= $2
+         UNION
+         SELECT a.alias AS label
+           FROM aliases a
+           JOIN characters c ON c.id = a.character_id AND c.book_id = a.book_id
+          WHERE a.book_id = $1
+            AND a.first_appearance_page <= $2
+            AND c.first_appearance_page <= $2`,
+        [bookId, cutoff]
+      );
+      return rows.map((row) => row.label);
+    },
   };
 }
 
@@ -382,11 +401,13 @@ export function createPgRecapCallLogger(db: QueryClient): RecapCallLogger {
     async record(entry: RecapCallLog): Promise<void> {
       await db.query(
         // 길이 컬럼 3개는 018_recap_call_log_length.sql (2026-11-17 C안, NULL 허용 — 이전 행은 NULL)
+        // 고유명사 컬럼 2개는 020_recap_call_log_names.sql (NULL = 측정 못 함)
         `INSERT INTO recap_call_log
            (created_at, device_id, book_id, cutoff_page, input_chapter_summary_ids,
             current_chapter_cutoff, output_ref, model, input_tokens, output_tokens, trigger,
-            target_sentences, output_chars, output_sentences)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+            target_sentences, output_chars, output_sentences,
+            unknown_name_count, unknown_names)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
         [
           entry.timestamp,
           entry.device_id,
@@ -402,6 +423,8 @@ export function createPgRecapCallLogger(db: QueryClient): RecapCallLogger {
           entry.target_sentences,
           entry.output_chars,
           entry.output_sentences,
+          entry.unknown_name_count,
+          entry.unknown_names,
         ]
       );
     },

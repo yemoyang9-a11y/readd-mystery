@@ -3,6 +3,7 @@ import { Chapter, Page, RelationshipSemantics } from '../../shared/types';
 import {
   aliasReviewReason,
   characterNameReviewReason,
+  evaluativeWord,
   labelMentions,
   relationshipReviewReason,
 } from './semantic-guards';
@@ -60,7 +61,7 @@ export interface GroundedRelationship {
 }
 
 export interface ReviewCandidate {
-  kind: 'character' | 'alias' | 'note' | 'relationship' | 'identity' | 'event';
+  kind: 'character' | 'alias' | 'note' | 'relationship' | 'identity' | 'event' | 'summary';
   reason: string;
   candidate: unknown;
 }
@@ -267,6 +268,11 @@ export function validateGroundedChapter(
         hold('note', item, 'Exact dated subject evidence and rationale required');
         continue;
       }
+      // FR-DAT-004 — 노트가 해석·평가를 대신 말하면 공개하지 않고 원문 그대로 검수로 보낸다
+      if (evaluativeWord(n.note)) {
+        hold('note', item, 'note_evaluative_word');
+        continue;
+      }
       notes.push({ ...n, evidence: noteEvidence } as unknown as GroundedNote);
     }
     characters.push({
@@ -388,6 +394,11 @@ export function validateGroundedChapter(
       );
       continue;
     }
+    // FR-DAT-005 — 독자에게 보이는 라벨·설명에 해석·평가어가 있으면 검수로 보낸다
+    if (evaluativeWord(`${r.label} ${semantics?.summary ?? ''}`)) {
+      hold('relationship', item, 'relationship_evaluative_word');
+      continue;
+    }
     const source = pages.find((p) => p.page_no === relationshipEvidence.source_page)!;
     const following = source.content.slice(
       relationshipEvidence.end_char,
@@ -421,6 +432,23 @@ export function validateGroundedChapter(
     } as unknown as GroundedRelationship);
   }
   return { characters, relationships, review };
+}
+
+/**
+ * 장 요약의 해석·평가어 — FR-DAT-003. 요약은 리캡·타임라인의 입력이라 빼거나 고치지 않고,
+ * 사람 검수가 볼 수 있게 후보만 남긴다.
+ */
+export function summaryReviewCandidates(chapterNo: number, summary: string): ReviewCandidate[] {
+  const matched = evaluativeWord(summary);
+  return matched
+    ? [
+        {
+          kind: 'summary',
+          reason: 'summary_evaluative_word',
+          candidate: { chapter_no: chapterNo, summary, matched },
+        },
+      ]
+    : [];
 }
 
 /** Includes split content/positions, chapter metadata and extraction contract version. */

@@ -473,6 +473,16 @@ export interface RecapCallLog {
 
   /** 실제 출력 문장 수 — 소제목 줄 제외 (recap-length.ts `countRecapSentences`) */
   output_sentences: number;
+
+  /**
+   * 리캡 출력의 이름꼴 낱말 중 허용 사전(기준 쪽수 이하 인물명·별칭)에도 입력 자료에도 없는
+   * 것의 수 (recap-names.ts). 측정용이며 리캡을 막지 않는다. null = 측정 못 함(사전 조회 실패).
+   * DB 컬럼은 020 마이그레이션에서 NULL 허용으로 추가했다(그 전 행은 NULL). FR-RCP-001 🚦
+   */
+  unknown_name_count: number | null;
+
+  /** 위에서 센 낱말 목록 — 사람이 오탐 여부를 확인하는 용도. null = 측정 못 함 */
+  unknown_names: string[] | null;
 }
 
 /**

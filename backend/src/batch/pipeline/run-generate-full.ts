@@ -62,7 +62,9 @@ import {
   sealResolvedOutput,
   assertResolvedGrounding,
   sealChapterCache,
+  summaryReviewCandidates,
 } from './grounding';
+import { evaluativeWord } from './semantic-guards';
 import {
   BookArgs,
   DEFAULT_BOOK_ID,
@@ -558,13 +560,25 @@ async function applyReaderTexts(
     if (cache[key]?.source !== source) return undefined;
     const text = cache[key].text;
     const added = introducedNames(source, text, lexicon);
-    if (added.length === 0) return text;
-    state.review.push({
-      kind,
-      reason: 'reader_text_new_proper_noun',
-      candidate: { id, source, reader_text: text, introduced_names: added },
-    });
-    return undefined;
+    if (added.length > 0) {
+      state.review.push({
+        kind,
+        reason: 'reader_text_new_proper_noun',
+        candidate: { id, source, reader_text: text, introduced_names: added },
+      });
+      return undefined;
+    }
+    // R9 — 쉬운 문장에 해석·평가어가 생기면 쓰지 않고 검수로 (원래 문장은 그대로 남는다)
+    const matched = evaluativeWord(text);
+    if (matched) {
+      state.review.push({
+        kind,
+        reason: 'reader_text_evaluative_word',
+        candidate: { id, source, reader_text: text, matched },
+      });
+      return undefined;
+    }
+    return text;
   };
   state.relationships = state.relationships.map((r) => {
     const text =
@@ -624,7 +638,11 @@ export async function generateFullBook(args: BookArgs): Promise<ResolvedBookData
     const chapterEvents = await loadOrGenerateChapterEvents(chapter, pages, OUT_DIR);
     chapterReviews.push({
       chapter_no: chapter.chapter_no,
-      candidates: [...output.review, ...chapterEvents.review],
+      candidates: [
+        ...output.review,
+        ...chapterEvents.review,
+        ...summaryReviewCandidates(output.chapter_no, output.summary), // FR-DAT-003
+      ],
     });
 
     mergeCharacters(state, output.characters);

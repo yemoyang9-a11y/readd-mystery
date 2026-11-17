@@ -59,6 +59,19 @@ NODE_PATH=/tmp/ssabi-relation-tools/node_modules node evaluation/relationships/c
 
 `probe-validator.cjs`는 의미 반례를 검출하면 종료 코드 1을 반환한다. 현재 11개 잘못된 후보가 구조 검증을 통과하는 잔여 한계를 보여준다. 이를 모델 정확도 점수로 사용하지 않는다. SQL 명령은 별도 검증용 `@electric-sql/pglite` 설치 경로를 `NODE_PATH`로 받으며 원격 DB 환경변수를 사용하지 않는다.
 
+### 확립 페이지 비대칭 지표 (2026-11-17 추가)
+
+```bash
+node evaluation/relationships/check-established-page.cjs <추출 결과.json> [정답.json] [--out <결과.json>]
+```
+
+추출 결과의 확립 페이지를 정답과 비교해 **정답보다 이른 관계**와 **늦은 관계**를 따로 센다. 이른 오류는 독자가 아직 읽지 않은 쪽의 관계가 미리 보이는 스포일러 방향이라 1건이라도 있으면 종료 코드 1이다. 늦은 오류는 경고로만 남긴다. 정답과 맞춰 비교한 관계가 0건이어도 실패다(빈 결과는 통과가 아니다).
+
+- 정답 파일을 생략하면 `reviewed-source-candidates.json`을 쓴다. 이 정답 표는 5개 관계뿐이라 통과가 작품 전체의 정확도를 뜻하지 않는다.
+- 같은 두 인물·같은 `relation_key`를 한 관계로 맞춘다(저장 순서 무관). 이력형 복수 행은 가장 이른 확립 페이지로 비교한다.
+- 정답에만 있는 관계(`missing`)와 추출에만 있는 관계(`unmatched`)는 수만 센다. 정답 표에 없는 관계는 이른지 늦은지 판정하지 못한다.
+- 이 스크립트는 LLM·DB를 부르지 않는다. 지표 함수(`established-page-metric.ts`)의 단위 시험은 `backend/tests/unit/relationship-established-page.test.ts`에 있다. 실제 추출 결과에 대한 실행은 아직 하지 않았다.
+
 UI harness는 frontend 디렉터리에서 `node node_modules/vite/bin/vite.js ../evaluation/relationships/ui-harness --config ../evaluation/relationships/ui-harness/vite.config.mjs --host 127.0.0.1 --port 5186 --strictPort`로 시작한다. 이후 루트에서 `node evaluation/relationships/check-ui.cjs`, `node evaluation/relationships/check-source-flow-ui.cjs`, `node evaluation/relationships/check-control-overlap.cjs`를 실행한다. source-flow 검사는 `/workspace/relationship-validation/source-flow/*.graph.json`의 실제 로컬 SQL 출력 파일을 읽는다. 이 출력의 증거 사본은 `results/source-flow/`에도 보존했다.
 
 최종 판정과 정확한 검증 범위는 [final-evaluation.md](final-evaluation.md)에 있다.

@@ -71,10 +71,12 @@ function setup(options: {
   supports: boolean;
   events?: unknown[];
   eventReaderText?: string;
+  relationshipReaderText?: string;
+  summary?: string;
 }) {
   let relationshipCalls = 0;
   (call as jest.Mock).mockImplementation(async (task: string, prompt: string) => {
-    if (task === 'generate_summary') return JSON.stringify({ summary: '요약' });
+    if (task === 'generate_summary') return JSON.stringify({ summary: options.summary ?? '요약' });
     if (task === 'generate_character') return JSON.stringify({ characters });
     if (task === 'generate_term') return JSON.stringify({ terms: [] });
     if (task === 'generate_event')
@@ -89,7 +91,7 @@ function setup(options: {
         items: keys.map((key) => ({
           key,
           text: key.startsWith('rel:')
-            ? '박영민과 이몽란은 부부예요.'
+            ? (options.relationshipReaderText ?? '박영민과 이몽란은 부부예요.')
             : (options.eventReaderText ?? '박영민이 손님을 맞아요.'),
         })),
       });
@@ -254,5 +256,52 @@ describe('FR-DAT-008: 사건은 장면 단위로 뽑고 원문 근거로 검증�
     const again = await generateFullBook(args);
     expect(eventCalls()).toHaveLength(0);
     expect(again.events).toEqual(first.events);
+  });
+});
+
+describe('해석·평가어 검사가 생성 경로에 들어 있다', () => {
+  const reviewOf = (book: unknown) =>
+    JSON.stringify((book as { review_candidates: unknown }).review_candidates);
+
+  test('FR-DAT-003: 장 요약에 평가어가 있으면 요약은 그대로 두고 검수 후보로 남긴다', async () => {
+    const summary = '박영민이 결정적 증거를 찾았다.';
+    const args = setup({ second: [relationship()], supports: true, summary });
+    const book = await generateFullBook(args);
+    expect(book.chapter_summaries.map((s) => s.summary)).toEqual([summary]);
+    expect(reviewOf(book)).toContain('summary_evaluative_word');
+  });
+
+  test('R9: 사건의 독자용 문장에 평가어가 생기면 쓰지 않고 검수 후보로 보낸다', async () => {
+    const args = setup({
+      second: [relationship()],
+      supports: true,
+      eventReaderText: '박영민이 수상한 손님을 맞아요.',
+    });
+    const book = await generateFullBook(args);
+    expect(book.events).toHaveLength(1);
+    expect(book.events[0].description).toBe('박영민이 손님을 맞았다');
+    expect(book.events[0].reader_description).toBeUndefined();
+    expect(reviewOf(book)).toContain('reader_text_evaluative_word');
+  });
+
+  test('R9: 관계의 독자용 문장에 평가어가 생기면 쓰지 않고 검수 후보로 보낸다', async () => {
+    const args = setup({
+      second: [relationship()],
+      supports: true,
+      relationshipReaderText: '박영민과 이몽란은 중요한 부부예요.',
+    });
+    const book = await generateFullBook(args);
+    expect(book.relationships).toHaveLength(1);
+    expect(book.relationships[0].semantics?.summary).toBe('박영민은 이몽란의 남편이다.');
+    expect(book.relationships[0].semantics?.reader_summary).toBeUndefined();
+    expect(reviewOf(book)).toContain('reader_text_evaluative_word');
+  });
+
+  test('positive — 평가어가 없으면 요약·독자용 문장 모두 평가어 검수 후보 0건', async () => {
+    const args = setup({ second: [relationship()], supports: true });
+    const book = await generateFullBook(args);
+    expect(book.events[0].reader_description).toBe('박영민이 손님을 맞아요.');
+    expect(book.relationships[0].semantics?.reader_summary).toBe('박영민과 이몽란은 부부예요.');
+    expect(reviewOf(book)).not.toContain('evaluative_word');
   });
 });
