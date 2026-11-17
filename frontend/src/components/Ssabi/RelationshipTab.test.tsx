@@ -40,7 +40,7 @@ describe('RelationshipTab', () => {
     fireEvent.click(screen.getByRole('button', { name: '정주사' }));
 
     const details = screen.getByRole('region', { name: '관계 설명' });
-    expect(within(details).getByText('정주사와 이어진 사람')).toBeInTheDocument();
+    expect(within(details).getByText('정주사 (정 주사)와 이어진 사람')).toBeInTheDocument();
     expect(within(details).getByText('초봉')).toBeInTheDocument();
     expect(within(details).getByText('부녀')).toBeInTheDocument();
   });
@@ -450,7 +450,7 @@ describe('인물관계도 선 선택', () => {
     const { container } = render(<RelationshipTab graph={graph} failed={false} />);
     fireEvent.click(container.querySelector('[data-edge-id]') as SVGElement);
     const details = screen.getByRole('region', { name: '관계 설명' });
-    expect(within(details).getByText('정주사 · 초봉')).toBeInTheDocument();
+    expect(within(details).getByText('정주사 (정 주사) · 초봉')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '초봉' }));
     expect(container.querySelector('[data-edge-id]')).toHaveAttribute('data-selected', 'false');

@@ -1,11 +1,16 @@
 import type { GraphEdge, GraphResponse } from '../../types';
 import { currentGraphEdges, graphEdgeKey } from './graphEdges';
 
-/** 받침 있는 이름은 '과', 없으면 '와'. 한글이 아닌 끝 글자는 '와'. */
-function withParticle(name: string): string {
+/** 받침 있는 이름은 '과', 없으면 '와'. 한글이 아닌 끝 글자는 '와'. 조사는 괄호 앞 이름에 맞추고 `shown` 뒤에 붙인다. */
+function withParticle(name: string, shown: string = name): string {
   const last = name.charCodeAt(name.length - 1);
   const hasFinal = last >= 0xac00 && last <= 0xd7a3 && (last - 0xac00) % 28 !== 0;
-  return `${name}${hasFinal ? '과' : '와'}`;
+  return `${shown}${hasFinal ? '과' : '와'}`;
+}
+
+/** 별칭이 있으면 `이름 (별칭1·별칭2)`, 없으면 이름만. 별칭은 서버가 기준점 K로 걸러 준 것 그대로 쓴다 (FR-SPL-002 🚦, FR-CHR-001). */
+function withAliases(name: string, aliases: string[]): string {
+  return aliases.length > 0 ? `${name} (${aliases.join('·')})` : name;
 }
 
 /** `사실` = assertion_status === 'fact', 그 외 전부 `의심·주장`. 옛 관계(semantics 없음)는 표시하지 않는다. */
@@ -31,6 +36,7 @@ export default function RelationDetails({
   selectedEdgeKey: string | null;
 }) {
   const names = new Map(graph.nodes.map((node) => [node.id, node.name]));
+  const titles = new Map(graph.nodes.map((node) => [node.id, withAliases(node.name, node.aliases)]));
   const edges = currentGraphEdges(graph.edges);
 
   const selectedEdge = selectedEdgeKey
@@ -43,7 +49,7 @@ export default function RelationDetails({
     return (
       <section aria-label="관계 설명" data-no-track className="font-dashSans text-brief-ink">
         <h4 className="m-0 mb-2.5 text-[15px] font-bold">
-          {names.get(selectedEdge.source)} · {names.get(selectedEdge.target)}
+          {titles.get(selectedEdge.source)} · {titles.get(selectedEdge.target)}
         </h4>
         <ul className="m-0 list-none p-0">
           <li className="rounded-brief-card border border-[#ff5c7d] bg-white p-3">
@@ -74,7 +80,9 @@ export default function RelationDetails({
 
   return (
     <section aria-label="관계 설명" data-no-track className="font-dashSans text-brief-ink">
-      <h4 className="m-0 mb-2.5 text-[15px] font-bold">{withParticle(selectedName)} 이어진 사람</h4>
+      <h4 className="m-0 mb-2.5 text-[15px] font-bold">
+        {withParticle(selectedName, titles.get(selectedId) ?? selectedName)} 이어진 사람
+      </h4>
       {mine.length > 0 ? (
         <ul className="m-0 flex list-none flex-col gap-2 p-0">
           {mine.map((edge) => {

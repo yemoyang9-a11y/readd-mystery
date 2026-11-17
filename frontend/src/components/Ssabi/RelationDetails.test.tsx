@@ -101,6 +101,31 @@ describe('관계 설명 칸', () => {
     expect(screen.queryAllByRole('listitem')).toHaveLength(0);
   });
 
+  describe('제목의 별칭 — 서버가 기준점으로 걸러 준 aliases만 쓴다 (FR-CHR-001)', () => {
+    const withAliases: GraphResponse = {
+      ...graph,
+      nodes: graph.nodes.map((node) =>
+        node.id === 'a' ? { ...node, aliases: ['유선생', '탐정'] } : node
+      ),
+    };
+
+    it('인물을 고르면 제목이 이름 (별칭1·별칭2)이고 조사는 이름에 맞춘다', () => {
+      renderDetails({ selectedId: 'a', graph: withAliases });
+      expect(screen.getByRole('heading')).toHaveTextContent(/^유불란 \(유선생·탐정\)과 이어진 사람$/);
+    });
+
+    it('선을 고르면 양쪽 이름에 각자 별칭이 붙고, 별칭 없는 쪽은 이름만', () => {
+      renderDetails({ selectedEdgeKey: graphEdgeKey(suspect), graph: withAliases });
+      expect(screen.getByRole('heading')).toHaveTextContent(/^유불란 \(유선생·탐정\) · 나용귀$/);
+    });
+
+    it('별칭이 없으면 이름만 — 괄호가 없다', () => {
+      renderDetails({ selectedId: 'b', graph: withAliases });
+      expect(screen.getByRole('heading')).toHaveTextContent(/^나용귀와 이어진 사람$/);
+      expect(screen.getByRole('heading').textContent).not.toMatch(/[()]/);
+    });
+  });
+
   it('아무것도 고르지 않으면 아무것도 그리지 않는다', () => {
     const { container } = renderDetails({});
     expect(container.textContent).toBe('');
