@@ -28,8 +28,10 @@ export interface NotesRepository {
 }
 
 export interface NotesReader {
+  // FR-SPL-002 🚦: 챗봇용 조회는 cutoff 인자가 필수이며 page_no <= cutoff만 돌려준다
   listNotes(
     readerId: string,
-    bookId: string
-  ): Promise<{ page_no: number; kind: 'clue' | 'hypothesis'; body: string }[]>;
+    bookId: string,
+    cutoff: number
+  ): Promise<{ page_no: number; kind: NoteKind; body: string; created_at: string }[]>;
 }

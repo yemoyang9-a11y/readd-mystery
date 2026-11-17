@@ -64,9 +64,21 @@ export function createPgNotesRepository(db: QueryClient): NotesRepository & Note
       return rows.length > 0;
     },
 
-    async listNotes(readerId, bookId) {
-      const notes = await repository.list(readerId, bookId);
-      return notes.map(({ page_no, kind, body }) => ({ page_no, kind, body }));
+    // FR-SPL-002 🚦 R4 — 챗봇용 조회. 상한은 쿼리 조건이며, cutoff 초과 노트는 읽어 오지 않는다
+    async listNotes(readerId, bookId, cutoff) {
+      if (!Number.isInteger(cutoff) || cutoff < 1) return [];
+      const { rows } = await db.query(
+        `SELECT page_no, kind, body, created_at FROM reading_notes
+          WHERE reader_id = $1 AND book_id = $2 AND page_no >= 1 AND page_no <= $3
+          ORDER BY page_no, created_at`,
+        [readerId, bookId, cutoff]
+      );
+      return rows.map((row) => ({
+        page_no: row.page_no,
+        kind: row.kind,
+        body: row.body,
+        created_at: new Date(row.created_at).toISOString(),
+      }));
     },
   };
   return repository;
