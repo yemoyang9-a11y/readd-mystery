@@ -220,6 +220,13 @@ export interface RecapContentReader {
    * `findChapterContaining(bookId, cutoff)`로 먼저 구해 넘긴다. 페이지 번호 순으로 반환한다.
    */
   findCurrentChapterPageTexts(bookId: string, cutoff: number, fromPage: number): Promise<string[]>;
+
+  /**
+   * 리캡 고유명사 검사의 허용 사전 — `최초 등장 페이지 <= cutoff`인 인물 대표명과 별칭
+   * (FR-SPL-002 🚦). cutoff를 넘는 이름은 비교용으로도 불러오지 않는다(절대 규칙 7번) —
+   * 이 조회에 cutoff 없는 변형을 만들지 않는다.
+   */
+  findIntroducedNames(bookId: string, cutoff: number): Promise<string[]>;
 }
 
 // ============================================================================

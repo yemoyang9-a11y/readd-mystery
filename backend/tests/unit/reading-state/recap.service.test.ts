@@ -576,3 +576,153 @@ describe('리캡 호출 로그 — 목표 문장 수·실제 길이 (NFR-OBS-002
     expect(entry.output_sentences).toBe(Math.floor(500 / sentence.length));
   });
 });
+
+describe('리캡 고유명사 검사 — 사전은 K 이하만, 결과는 로그에만 (FR-RCP-001 · FR-SPL-002 🚦)', () => {
+  const BOOK = 'names-book';
+  const CLEAN = '이전 이야기 요약\n\n유불란은 박영민을 만났다.';
+  const WITH_UNKNOWN = '이전 이야기 요약\n\n유불란은 박영민을 만났다. 그때 장준호가 나타났다.';
+
+  /** 150쪽 · 장 3개(1~50, 51~100, 101~150). 장준호는 41쪽에 처음 나온다 */
+  function buildNames(output: string) {
+    const { books } = makeSeededFakes();
+    const pageTexts: Record<number, string> = {};
+    for (let p = 1; p <= 150; p++) pageTexts[p] = `p.${p} 유불란은 박영민을 만났다.`;
+    books.set(BOOK, {
+      total_pages: 150,
+      chapters: [
+        { chapter_no: 1, title: '1장', start_page: 1, end_page: 50, summary: '1장 요약' },
+        { chapter_no: 2, title: '2장', start_page: 51, end_page: 100, summary: '2장 요약' },
+        { chapter_no: 3, title: '3장', start_page: 101, end_page: 150, summary: '3장 요약' },
+      ],
+      pageTexts,
+      names: [
+        { label: '유불란', first_appearance_page: 1 },
+        { label: '박영민', first_appearance_page: 3 },
+        { label: '장준호', first_appearance_page: 41 },
+      ],
+    });
+    const recapLog = new FakeRecapCallLogger();
+    const sessionCache = new FakeSessionRecapCacheRepository();
+    const service = createRecapService({
+      content: books,
+      books,
+      savedRecap: new FakeSavedRecapRepository(),
+      sessionCache,
+      recapLog,
+      llmStream: async function* (_task: string, _prompt: string) {
+        yield output;
+      },
+    });
+    return { books, recapLog, sessionCache, service };
+  }
+
+  async function run(output: string, cutoff: number) {
+    const ctx = buildNames(output);
+    const result = await ctx.service.getRecap(SEED_DEVICE_ID, BOOK, cutoff, 'realtime');
+    const text = result.kind === 'generated' ? await drain(result.chunks) : '';
+    return { ...ctx, text };
+  }
+
+  test('FR-SPL-002 🚦: K=40 → 사전 조회는 cutoff 40으로 1회, 41쪽에 처음 나오는 이름은 사전에 0건', async () => {
+    const { books, recapLog } = await run(WITH_UNKNOWN, 40);
+
+    expect(books.nameLookupCutoffs).toEqual([40]);
+    expect(await books.findIntroducedNames(BOOK, 40)).not.toContain('장준호');
+    // 사전에 없으므로 리캡의 "장준호"는 모르는 이름으로 잡힌다
+    expect(recapLog.records[0].unknown_names).toEqual(['장준호']);
+  });
+
+  test('FR-SPL-002 🚦: positive — K=130 → 사전 조회는 cutoff 130, 같은 이름이 사전에 있어 0건', async () => {
+    const { books, recapLog } = await run(WITH_UNKNOWN, 130);
+
+    expect(books.nameLookupCutoffs).toEqual([130]);
+    expect(await books.findIntroducedNames(BOOK, 130)).toContain('장준호');
+    expect(recapLog.records[0].unknown_name_count).toBe(0);
+    expect(recapLog.records[0].unknown_names).toEqual([]);
+  });
+
+  test('FR-RCP-001: 사전 밖 이름이 든 리캡 → 로그 unknown_name_count >= 1', async () => {
+    const { recapLog } = await run(WITH_UNKNOWN, 40);
+
+    expect(recapLog.records).toHaveLength(1);
+    expect(recapLog.records[0].unknown_name_count).toBeGreaterThanOrEqual(1);
+  });
+
+  test('FR-RCP-001: positive — 깨끗한 리캡 → 로그 unknown_name_count = 0', async () => {
+    const { recapLog } = await run(CLEAN, 40);
+
+    expect(recapLog.records).toHaveLength(1);
+    expect(recapLog.records[0].unknown_name_count).toBe(0);
+    expect(recapLog.records[0].unknown_names).toEqual([]);
+  });
+
+  test('걸려도 리캡은 막거나 고치지 않는다 — 스트림·캐시·로그 출력이 모델 출력 그대로다', async () => {
+    const { text, recapLog, sessionCache } = await run(WITH_UNKNOWN, 40);
+
+    expect(text).toBe(WITH_UNKNOWN);
+    expect(await sessionCache.findCached(SEED_DEVICE_ID, BOOK, 40)).toBe(WITH_UNKNOWN);
+    expect(recapLog.records[0].output_ref).toBe(WITH_UNKNOWN);
+  });
+
+  test('R9: 고유명사 검사는 LLM을 더 부르지 않는다 — 호출 1회', async () => {
+    const { books } = makeSeededFakes();
+    const llm = makeFakeLlm();
+    const service = createRecapService({
+      content: books,
+      books,
+      savedRecap: new FakeSavedRecapRepository(),
+      sessionCache: new FakeSessionRecapCacheRepository(),
+      recapLog: new FakeRecapCallLogger(),
+      llmStream: llm.llmStream,
+    });
+    const result = await service.getRecap(SEED_DEVICE_ID, SEED_BOOK_ID, 15, 'realtime');
+    if (result.kind === 'generated') await drain(result.chunks);
+
+    expect(llm.callCount()).toBe(1);
+  });
+
+  test('사전 조회가 실패해도 리캡은 끝까지 나가고, 로그는 측정값 NULL로 1건 남는다', async () => {
+    const ctx = buildNames(WITH_UNKNOWN);
+    ctx.books.failNameLookup = true;
+    const errors = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const result = await ctx.service.getRecap(SEED_DEVICE_ID, BOOK, 40, 'realtime');
+    const text = result.kind === 'generated' ? await drain(result.chunks) : '';
+
+    expect(text).toBe(WITH_UNKNOWN);
+    expect(await ctx.sessionCache.findCached(SEED_DEVICE_ID, BOOK, 40)).toBe(WITH_UNKNOWN);
+    expect(ctx.recapLog.records).toHaveLength(1);
+    expect(ctx.recapLog.records[0].unknown_name_count).toBeNull();
+    expect(ctx.recapLog.records[0].unknown_names).toBeNull();
+    expect(errors).toHaveBeenCalled();
+    errors.mockRestore();
+  });
+
+  test('로그 적재가 실패해도 리캡 스트림은 오류 없이 끝나고 캐시에 남는다', async () => {
+    const { books } = makeSeededFakes();
+    const sessionCache = new FakeSessionRecapCacheRepository();
+    const errors = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const service = createRecapService({
+      content: books,
+      books,
+      savedRecap: new FakeSavedRecapRepository(),
+      sessionCache,
+      recapLog: {
+        record: async () => {
+          throw new Error('column "unknown_name_count" does not exist');
+        },
+      },
+      llmStream: async function* (_task: string, _prompt: string) {
+        yield CLEAN;
+      },
+    });
+
+    const result = await service.getRecap(SEED_DEVICE_ID, SEED_BOOK_ID, 15, 'realtime');
+    const text = result.kind === 'generated' ? await drain(result.chunks) : '';
+
+    expect(text).toBe(CLEAN);
+    expect(await sessionCache.findCached(SEED_DEVICE_ID, SEED_BOOK_ID, 15)).toBe(CLEAN);
+    // 조용히 삼키지 않는다 — 로그 유실은 서버 오류 로그에 남긴다
+    expect(errors).toHaveBeenCalled();
+    errors.mockRestore();
+  });
+});

@@ -132,6 +132,13 @@ interface FakeBook {
   chapters: FakeChapter[];
   /** 장 경계 안의 각 페이지 원문. 키 = 페이지 번호. */
   pages: Map<number, string>;
+  /** 인물 대표명·별칭과 최초 등장 쪽 — 리캡 고유명사 사전 조회용 */
+  names: FakeName[];
+}
+
+export interface FakeName {
+  label: string;
+  first_appearance_page: number;
 }
 
 /** 공개 콘텐츠 스토어(도서·장 경계·장 요약·본문) 읽기 페이크 — R1 소유 테이블의 스텁 */
@@ -145,6 +152,7 @@ export class FakeBookMetaReader implements BookMetaReader, RecapContentReader {
       ready?: boolean;
       chapters: FakeChapter[];
       pageTexts?: Record<number, string>;
+      names?: FakeName[];
     }
   ): void {
     const pages = new Map<number, string>(
@@ -155,7 +163,21 @@ export class FakeBookMetaReader implements BookMetaReader, RecapContentReader {
       ready: book.ready ?? true,
       chapters: book.chapters,
       pages,
+      names: book.names ?? [],
     });
+  }
+
+  /** findIntroducedNames가 받은 cutoff 기록 — 사전 조회에 K가 실렸는지 검증용 */
+  readonly nameLookupCutoffs: number[] = [];
+  /** true면 사전 조회가 실패한다 — 측정 실패가 리캡을 깨지 않는지 검증용 */
+  failNameLookup = false;
+
+  async findIntroducedNames(bookId: string, cutoff: number): Promise<string[]> {
+    this.nameLookupCutoffs.push(cutoff);
+    if (this.failNameLookup) throw new Error('name lookup failed');
+    return (this.books.get(bookId)?.names ?? [])
+      .filter((n) => n.first_appearance_page <= cutoff)
+      .map((n) => n.label);
   }
 
   async findTotalPages(bookId: string): Promise<number | null> {
