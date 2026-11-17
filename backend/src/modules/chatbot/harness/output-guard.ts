@@ -101,11 +101,25 @@ export function verbatimLength(
   sources: ReadonlyArray<string>,
   echoed: ReadonlyArray<string> = []
 ): number {
+  return createVerbatimMeter(sources, echoed)(answer);
+}
+
+/**
+ * 원문·독자 문장의 조각 집합을 한 번만 만들고 답변마다 재는 측정기.
+ * 스트리밍 중 청크마다 재야 하는 경로(FR-QNA-004 🚦 outside)에서 쓴다.
+ */
+export function createVerbatimMeter(
+  sources: ReadonlyArray<string>,
+  echoed: ReadonlyArray<string> = []
+): (answer: string) => number {
   const grams = new Set<string>();
   sources.forEach((source) => ngrams(source, grams));
   const excluded = new Set<string>();
   echoed.forEach((text) => ngrams(text, excluded));
+  return (answer: string) => measureVerbatim(answer, grams, excluded);
+}
 
+function measureVerbatim(answer: string, grams: Set<string>, excluded: Set<string>): number {
   const chars: string[] = [];
   const index: number[] = [];
   Array.from(answer).forEach((ch, i) => {

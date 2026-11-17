@@ -19,7 +19,12 @@ import { resolveConversationContext } from './conversation-context';
 import { formatConversationInput } from './conversation-input';
 import { emptyNotesReader, type NotesReader } from './notes-reader';
 import { classifyQuestion, type QuestionIntent } from './harness/question-intent';
-import { guardAnswer, type GuardViolation } from './harness/output-guard';
+import {
+  createVerbatimMeter,
+  guardAnswer,
+  VERBATIM_LIMIT,
+  type GuardViolation,
+} from './harness/output-guard';
 import {
   HARNESS_FIXED_ANSWER,
   HARNESS_PREDICTION_ANSWER,
@@ -329,12 +334,34 @@ export async function* handleQuery(
       }
       yield responseText;
     } else {
+      // FR-QNA-004 🚦 (2026-11-17 결정 34): outside는 스트리밍을 유지하되, 이미 나간 원문은
+      // 회수할 수 없으므로 내보내기 전에 "나간 텍스트 + 이번 청크"의 원문 일치량을 잰다.
+      // 200자를 넘기는 청크는 내보내지 않고 끊는다. 나간 텍스트는 항상 상한 이내다.
+      const measure = createVerbatimMeter(
+        [
+          ...allowedPages.map((page) => page.content),
+          ...(context.current_chapter_text ? [context.current_chapter_text] : []),
+        ],
+        quote ? [query, quote] : [query]
+      );
+      let truncated = false;
       for await (const chunk of generateChunks(fullPrompt)) {
+        if (measure(responseText + chunk) > VERBATIM_LIMIT) {
+          truncated = true;
+          break;
+        }
         responseText += chunk;
         yield chunk;
       }
-      if (!responseText.trim()) throw new Error('CHATBOT_EMPTY_RESPONSE');
-      attemptViolations.push(guardAgainst(responseText));
+      if (!responseText.trim() && !truncated) throw new Error('CHATBOT_EMPTY_RESPONSE');
+      if (truncated) {
+        const notice = `${responseText ? '\n\n' : ''}${HARNESS_VERBATIM_ANSWER}`;
+        responseText += notice;
+        yield notice;
+        attemptViolations.push(['verbatim_over_limit']);
+      } else {
+        attemptViolations.push(guardAgainst(responseText));
+      }
     }
 
     if (conversationId != null) {

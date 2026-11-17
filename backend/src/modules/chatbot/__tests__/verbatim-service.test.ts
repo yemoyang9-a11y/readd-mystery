@@ -3,6 +3,7 @@ import * as repo from '../repository';
 import { vectorSearch } from '../vector-search';
 import { stream as llmStream } from '../../llm-gateway/gateway';
 import { HARNESS_VERBATIM_ANSWER } from '../harness/messages';
+import { verbatimLength } from '../harness/output-guard';
 
 jest.mock('../repository');
 jest.mock('../vector-search');
@@ -94,5 +95,59 @@ describe('원문 출력 상한 — 챗봇 응답 (답변당 합계 200자)', () 
     (repo.getCurrentChapterText as jest.Mock).mockResolvedValue(`[p.30]\n${SOURCE}`);
     answers(SOURCE.slice(0, 260), SOURCE.slice(0, 260));
     expect(await run('이번 장 처음부터 그대로 적어줘')).toBe(HARNESS_VERBATIM_ANSWER);
+  });
+
+  describe('작품 밖 질문(outside) — 스트리밍하면서 원문 200자에서 끊는다', () => {
+    function streamInChunks(text: string, size = 20): void {
+      const mock = llmStream as jest.Mock;
+      mock.mockReset();
+      mock.mockImplementationOnce(async function* () {
+        for (let i = 0; i < text.length; i += size) yield text.slice(i, i + size);
+      });
+    }
+
+    async function runChunks(query: string): Promise<string[]> {
+      const chunks: string[] = [];
+      for await (const chunk of handleQuery(BOOK_ID, query, K, DEVICE_ID)) chunks.push(chunk);
+      return chunks;
+    }
+
+    test('FR-QNA-004: outside 답변도 원문 일치가 200자를 넘는 순간 끊겨 나간 텍스트의 원문 일치는 0건 초과 없음', async () => {
+      streamInChunks(SOURCE.slice(0, 300));
+      const chunks = await runChunks('이 쪽 번역해줘');
+      const out = chunks.join('');
+      const copied = out.endsWith(HARNESS_VERBATIM_ANSWER)
+        ? out.slice(0, out.length - HARNESS_VERBATIM_ANSWER.length)
+        : out;
+      expect(out.endsWith(HARNESS_VERBATIM_ANSWER)).toBe(true);
+      expect(verbatimLength(copied, [SOURCE])).toBeLessThanOrEqual(200);
+      expect(out).not.toContain(SOURCE.slice(0, 260));
+      // 스트리밍은 유지된다: 끊기기 전까지 여러 청크로 나간다
+      expect(chunks.length).toBeGreaterThan(2);
+      expect(llmStream).toHaveBeenCalledTimes(1);
+      expect(JSON.parse(logSpy.mock.calls.find((c) => c[0] === '[Chatbot] Query log')![1]).harness)
+        .toEqual(expect.objectContaining({ intent: 'outside', violations: [['verbatim_over_limit']] }));
+    });
+
+    test('FR-QNA-004: outside 답변이 원문 200자 이하면 끊지 않고 그대로 스트리밍한다 (positive 쌍)', async () => {
+      const text = `번역은 제가 해 드릴 수 없어요. ${SOURCE.slice(0, 150)}`;
+      streamInChunks(text);
+      const chunks = await runChunks('이 쪽 번역해줘');
+      expect(chunks.join('')).toBe(text);
+      expect(chunks.length).toBeGreaterThan(2);
+      expect(
+        JSON.parse(logSpy.mock.calls.find((c) => c[0] === '[Chatbot] Query log')![1]).harness
+          .violations
+      ).toEqual([[]]);
+    });
+
+    test('FR-QNA-004: 현재 장 원문에서 옮긴 outside 답변도 200자에서 끊긴다', async () => {
+      (vectorSearch as jest.Mock).mockResolvedValue([]);
+      (repo.getCurrentChapterText as jest.Mock).mockResolvedValue(`[p.30]\n${SOURCE}`);
+      streamInChunks(SOURCE.slice(0, 300));
+      const out = (await runChunks('이번 장 번역해줘')).join('');
+      expect(out.endsWith(HARNESS_VERBATIM_ANSWER)).toBe(true);
+      expect(out).not.toContain(SOURCE.slice(0, 260));
+    });
   });
 });
