@@ -163,3 +163,22 @@ export interface Decision {
   target_id: string;
   verdict: 'approve' | 'reject';
 }
+
+// 커뮤니티 신고 관리 — 대표 결정 2026-11-17 (신고 3명 자동 숨김 + 관리자 복구·삭제)
+export interface ModerationItem {
+  target_type: 'post' | 'comment';
+  target_id: string;
+  book_id: string;
+  book_title: string | null;
+  body: string | null;
+  /** 지금까지 신고한 서로 다른 독자 수 */
+  report_count: number;
+  /** 마지막 복구 뒤에 신고한 서로 다른 독자 수 */
+  reports_since_review: number;
+  reasons: string[];
+  hidden: boolean;
+  deleted: boolean;
+  hidden_at: string | null;
+  reviewed_at: string | null;
+  last_reported_at: string;
+}

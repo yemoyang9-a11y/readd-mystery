@@ -132,6 +132,9 @@ export default function AdminLayout() {
                 <NavLink to="/admin/books" className={NAV_CLASS}>
                   도서 관리
                 </NavLink>
+                <NavLink to="/admin/community" className={NAV_CLASS}>
+                  커뮤니티 신고
+                </NavLink>
               </nav>
             </div>
             <button
