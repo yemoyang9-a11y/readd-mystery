@@ -6,17 +6,28 @@ import './book3d.css';
 const SWIPE_MIN = 40;
 const MOVE_MIN = 8;
 
-const SPINE_COLORS: Record<string, string> = {
-  gasangbeomin: '#6e1414',
-  tawonhyeong: '#1f3527',
-  main: '#1c2333',
-};
-
-const POSES: Record<string, string> = {
-  '0': 'translate3d(0,0,60px) rotateY(0deg)',
-  '-1': 'translate3d(-166px,4px,-40px) rotateY(34deg)',
-  '1': 'translate3d(166px,4px,-40px) rotateY(-34deg)',
-};
+/**
+ * 입체 책 자세 (2026-11-17 시안 home-3d-c-v6). 회전 방향은 모두 양수라 넘길 때 0도를 지나지 않는다.
+ * 어둡게(--b3d-b)·숨기기(--b3d-o)는 책 상자가 아니라 면마다 걸린다 — preserve-3d 상자에
+ * filter/opacity가 걸리면 3D가 납작해진다(lessons.md 2026-11-17).
+ */
+function poseOf(d: number): { transform: string; brightness: number; opacity: number } {
+  if (d === 0) {
+    return { transform: 'translateX(8px) translateZ(30px) rotateY(24deg) rotateX(4deg)', brightness: 1, opacity: 1 };
+  }
+  if (Math.abs(d) === 1) {
+    return {
+      transform: `translateX(${d > 0 ? 150 : -158}px) translateZ(-190px) rotateY(${d > 0 ? 44 : 52}deg) rotateX(4deg) scale(.86)`,
+      brightness: 0.45,
+      opacity: 1,
+    };
+  }
+  return {
+    transform: `translateX(${Math.sign(d) * 200}px) translateZ(-260px) rotateY(50deg) rotateX(4deg) scale(.8)`,
+    brightness: 0.45,
+    opacity: 0,
+  };
+}
 
 function Cover({ book }: { book: ShowcaseBook }) {
   return (
@@ -43,7 +54,7 @@ function Arrow({ direction, onClick }: { direction: -1 | 1; onClick: () => void 
   );
 }
 
-const STAGE_HEIGHT = 268;
+const STAGE_HEIGHT = 300;
 
 function useStageScale(): number {
   const read = () => Math.min(Math.max(Math.min(window.innerHeight / 760, window.innerWidth / 390), 0.85), 1.25);
@@ -128,11 +139,12 @@ export default function BookCarousel3D({
         className="b3d-stage focus-visible:outline-none"
         style={{ height: STAGE_HEIGHT * scale }}
       >
-        <div className="b3d-spot" style={{ top: 178 * scale, transform: `scaleX(${scale})` }} />
+        <div className="b3d-spot" style={{ top: 226 * scale, transform: `scaleX(${scale})` }} />
         <div className="b3d-world" style={{ transform: `scale(${scale})`, transformOrigin: '50% 0' }}>
           {books.map((book, i) => {
             const d = relative(i);
             const centered = d === 0;
+            const pose = poseOf(d);
             const label = centered
               ? book.bookId
                 ? `${book.title} 작품 보기`
@@ -154,28 +166,31 @@ export default function BookCarousel3D({
                 }}
                 style={
                   {
-                    transform: POSES[String(d)] ?? 'translate3d(0,0,-400px)',
-                    zIndex: 10 - Math.abs(d),
-                    '--b3d-b': centered ? 1 : 0.55,
-                    '--b3d-s': centered ? 1 : 0.8,
+                    transform: pose.transform,
+                    zIndex: 3 - Math.min(Math.abs(d), 2),
+                    '--b3d-b': pose.brightness,
+                    '--b3d-o': pose.opacity,
+                    '--sp': book.spine,
+                    '--spt': book.spineText,
                   } as CSSProperties
                 }
               >
                 <div className="b3d-face b3d-front">
                   <Cover book={book} />
                 </div>
-                <div className="b3d-face b3d-spine" style={{ background: SPINE_COLORS[book.slug] ?? '#151515' }}>
+                <div className="b3d-face b3d-back" />
+                <div className="b3d-face b3d-spine">
                   <span aria-hidden="true" className="b3d-spine-title">
                     {book.title}
                   </span>
                 </div>
                 <div className="b3d-face b3d-pages" />
-                <div className="b3d-face b3d-back" />
+                <div className="b3d-face b3d-topface" />
               </div>
             );
           })}
         </div>
-        <div className="pointer-events-none absolute inset-x-1 flex justify-between" style={{ top: 107 * scale }}>
+        <div className="pointer-events-none absolute inset-x-1 flex justify-between" style={{ top: 122 * scale }}>
           <Arrow direction={-1} onClick={() => step(-1)} />
           <Arrow direction={1} onClick={() => step(1)} />
         </div>

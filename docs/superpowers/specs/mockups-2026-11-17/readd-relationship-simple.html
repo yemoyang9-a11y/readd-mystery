@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관계도 쉬운 시안</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{--raised2:#212124;--acc-soft:rgba(196,71,95,.16);--marker:rgba(196,71,95,.55);--bg:#000;--panel:#0d0d0e;--raised:#18181a;--line:#262628;--text:#f2f2f3;--muted:#9a9aa0;--faint:#6a6a70;
+  --acc:#c4475f;--acc-text:#ef9aac;--acc-soft:rgba(196,71,95,.16)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#050505;color:var(--text);font-family:Pretendard,system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding:36px 16px 70px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;gap:40px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+.side{flex:1;min-width:300px;max-width:520px;font-size:14px;line-height:1.75;color:var(--muted)}
+.side h1{font-size:24px;font-weight:800;color:var(--text)}
+.side h2{font-size:14.5px;color:var(--text);margin:24px 0 8px}
+.side p{margin-top:8px}
+.side b{color:var(--text)}
+.rule{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:10px}
+.rule .k{color:var(--acc-text);font-weight:700;font-size:13px}
+.rule .src{display:block;font-size:12px;color:var(--faint);margin-top:4px}
+.bad{text-decoration:line-through;color:var(--faint)}
+.mock{color:#e2a640;font-size:12.5px}
+a{color:var(--acc-text)}
+
+.phone{width:390px;height:844px;border-radius:46px;background:var(--bg);border:1px solid #2a2a2c;overflow:hidden;position:relative;flex-shrink:0}
+.top{display:flex;align-items:center;justify-content:space-between;padding:22px 20px 6px}
+.ib{width:38px;height:38px;border-radius:50%;background:var(--raised);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted)}
+.ttl{text-align:center}.ttl b{font-size:15px;display:block}.ttl span{font-size:11px;color:var(--acc-text)}
+.tabs{position:relative;display:flex;margin:10px auto 0;width:max-content;background:var(--raised);border:1px solid var(--line);border-radius:999px;padding:4px}
+.tabs button{position:relative;z-index:1;background:none;border:0;color:var(--muted);font:600 13.5px Pretendard;padding:9px 18px;border-radius:999px;cursor:pointer;transition:color .3s}
+.tabs button.on{color:#0a0a0a}
+.pill{position:absolute;top:4px;bottom:4px;border-radius:999px;background:#f5f5f6;transition:left .45s cubic-bezier(.3,1.3,.5,1),width .45s cubic-bezier(.3,1.3,.5,1)}
+.view{position:absolute;inset:122px 0 0;overflow-y:auto;padding:8px 20px 40px;opacity:0;transform:translateY(10px);transition:opacity .35s,transform .35s;pointer-events:none;scrollbar-width:none}
+.view.on{opacity:1;transform:none;pointer-events:auto}
+.q{font-size:21px;font-weight:800;letter-spacing:-.02em;line-height:1.35;margin:6px 0 4px}
+.sub{font-size:13px;color:var(--muted);margin-bottom:18px}
+b.n{color:var(--text);font-weight:800}
+.acc{color:var(--acc-text);font-weight:700}
+
+/* A: story so far */
+.act{position:relative;padding:0 0 22px 26px}
+.act:before{content:"";position:absolute;left:6px;top:10px;bottom:-4px;width:2px;background:var(--line)}
+.act:last-child:before{display:none}
+.act .dot{position:absolute;left:0;top:5px;width:14px;height:14px;border-radius:50%;background:var(--bg);border:2px solid var(--muted)}
+.act.now .dot{border-color:var(--acc);background:var(--acc);box-shadow:0 0 0 5px var(--acc-soft)}
+.act .pp{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
+.act h3{font-size:17px;font-weight:800;margin:2px 0 6px;letter-spacing:-.01em}
+.act p{font-size:14.5px;line-height:1.65;color:#d6d6da}
+.act .ch{margin-top:8px;font-size:13px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.act .ch .acc{font-weight:700}
+
+/* B: relationships */
+.who{display:flex;gap:8px;margin:0 0 14px;flex-wrap:wrap}
+.who button{border:1px solid var(--line);background:var(--raised);color:var(--muted);border-radius:999px;padding:8px 14px;font:600 13px Pretendard;cursor:pointer}
+.who button.on{border-color:var(--acc);background:var(--acc-soft);color:var(--acc-text)}
+.map{height:226px;background:var(--panel);border:1px solid var(--line);border-radius:20px;margin-bottom:16px}
+.rel{display:flex;gap:12px;align-items:flex-start;padding:13px 0;border-top:1px solid var(--line)}
+.rel:first-of-type{border-top:0}
+.rel .tag{flex-shrink:0;min-width:58px;text-align:center;font-size:12px;font-weight:700;border-radius:8px;padding:5px 8px;background:var(--raised);color:var(--text);border:1px solid var(--line)}
+.rel .tag.love{background:var(--acc-soft);border-color:var(--acc);color:var(--acc-text)}
+.rel .tag.doubt{border-style:dashed;color:var(--muted)}
+.rel p{font-size:14.5px;line-height:1.6;color:#d6d6da}
+.rel small{display:block;font-size:12px;color:var(--faint);margin-top:2px}
+
+/* graph */
+.gwrap{position:relative;height:330px;background:var(--panel);border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.gwrap svg{position:absolute;inset:0}
+.node{cursor:pointer;transition:opacity .3s}
+.edge{cursor:pointer;transition:opacity .3s,stroke .3s}
+.dim{opacity:.18}
+.legend{display:flex;gap:14px;font-size:11.5px;color:var(--muted);margin:10px 2px}
+.pr{margin-top:14px}
+.pr h4{font-size:15px;font-weight:700;color:var(--text);margin-bottom:10px}
+.pr .it{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px}
+.pr .it.sel{border-color:#ff5c7d}
+.pr .hd{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.pr .nm{font-size:14px;font-weight:700;color:var(--text)}
+.pr .lb{font-size:12px;font-weight:700;color:var(--acc-text);background:var(--acc-soft);border-radius:6px;padding:2px 7px}
+.pr .kd{margin-left:auto;font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
+.pr .ds{font-size:13.5px;line-height:1.6;color:#d6d6da}
+.pr .ds b{color:var(--text)}
+.grp{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-top:8px;overflow:hidden}
+.grp .r{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;font-size:12.5px;border-top:1px solid var(--line)}
+.grp .r:first-child{border-top:0}
+.grp .r span{color:var(--muted)}
+.new{font-size:10px;font-weight:800;color:#fff;background:var(--acc);border-radius:5px;padding:1px 5px;margin-left:6px}
+.log{font-size:13.5px;line-height:2.1;color:var(--text);margin:2px 0 8px}
+.log .c{display:inline-block;line-height:1.5;padding:1px 8px;border-radius:6px;background:var(--raised2);border:1px solid #333;font-weight:700;font-size:12.5px;margin:0 2px}
+.log .c.me{border-color:var(--acc);color:var(--acc-text)}
+.log .u{display:inline-block;line-height:1.5;padding:1px 10px;border-radius:6px;font-size:12px;color:var(--faint);border:1px dashed #3a3a3e;background:repeating-linear-gradient(135deg,#141416 0 4px,#1b1b1e 4px 8px)}
+/* C: events */
+.li{cursor:pointer;border-radius:10px;transition:background .2s}
+.li:hover{background:var(--raised)}
+.li.on{color:var(--acc-text);font-weight:700}
+.feat{transition:opacity .25s}
+.feat.swap{opacity:0}
+
+.feat{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px}
+.feat .pp{font-size:12px;color:var(--acc-text);font-weight:700}
+.feat h3{font-size:20px;font-weight:800;margin:6px 0 10px;letter-spacing:-.02em}
+.feat p{font-size:15px;line-height:1.7;color:#dcdce0}
+.q{margin-bottom:16px}
+.list{margin-top:22px}
+.list h4{font-size:15px;color:var(--text);font-weight:700;margin-bottom:8px}
+.li{display:flex;justify-content:space-between;align-items:center;padding:12px 2px;border-top:1px solid var(--line);font-size:14.5px}
+.li span{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
+.more{display:block;width:100%;margin-top:6px;background:none;border:1px solid var(--line);border-radius:12px;color:var(--muted);padding:11px;font:600 13px Pretendard}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="phone">
+    <div class="top"><div class="ib">‹</div><div class="ttl"><b>가상범인</b><span>읽은 30쪽까지만 보여 드려요</span></div><div class="ib">✕</div></div>
+    <div class="tabs" id="tabs"><span class="pill" id="pill"></span>
+      <button class="on" data-v="a">타임라인</button><button data-v="b">관계도</button><button data-v="c">사건</button>
+    </div>
+
+    <!-- A -->
+    <div class="view on" id="v-a">
+      <div class="q">지금까지, 네 장면이에요</div>
+      <div class="act"><i class="dot"></i><h3>무대에 올려진 살인 사건</h3>
+        <p>좌장 <b class="n">박영민</b>이 살해되고 아내 <b class="n">이몽란</b>이 범인으로 붙잡혀요. 탐정소설가 <b class="n">유불란</b>은 그 사건을 그대로 연극으로 만들어요.</p></div>
+      <div class="act"><i class="dot"></i><h3>무대 위의 자백</h3>
+        <p>공연 넷째 날, <b class="n">나용귀</b>가 대본에 없던 말을 해요. "내가 죽였소." 그리고 경찰에 붙잡혀요.</p></div>
+      <div class="act"><i class="dot"></i><h3>7년 만의 재회</h3>
+        <p><b class="n">유불란</b>과 <b class="n">이몽란</b>이 옛사랑을 떠올리고, 몽란이 다시 마음을 고백해요.</p></div>
+      <div class="act now"><i class="dot"></i><div class="pp">지금 읽는 곳</div><h3>새로운 수수께끼</h3>
+        <p><b class="n">유불란</b>이 서점에서 누군가 남긴 암호 쪽지를 발견해요.</p></div>
+    </div>
+
+    <!-- B -->
+    <div class="view" id="v-b">
+      <div class="q">지금 누가 누구와 엮여 있을까요</div>
+      <div class="gwrap" id="gwrap">
+        <svg id="gsvg" viewBox="0 0 354 330"></svg>
+      </div>
+      <div class="legend"><span>━ 사실</span><span>┅ 의심·주장</span><span style="color:var(--acc-text)">● 지난번 이후 새로</span></div>
+      <div class="pr" id="ppanel"></div>
+    </div>
+
+    <!-- C -->
+    <div class="view" id="v-c">
+      <div class="q" id="cq">가장 최근에 일어난 일</div>
+      <div class="feat" id="feat"></div>
+      <div class="list"><h4>다른 사건</h4><div id="evlist"></div>
+        <button class="more" id="evmore">전체 사건 보기</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="side">
+    <h1>"읽자마자 이해되게" 다시 만든 시안</h1>
+    <p>디자인 언어(검정 바탕, 흰 알약 탭, 버건디 하나)는 그대로 두고, <b>담는 양과 말하는 방식</b>만 바꿨습니다. 이전 시안은 정보는 많았지만 독자가 해석해야 할 기호가 많았습니다. 이번에는 모든 내용을 이름이 들어간 문장으로 말하고, 한 화면에 한 가지 질문만 답합니다.</p>
+    <p class="mock">문장 내용은 「가상범인」 30쪽까지의 실제 생성 사건을 바탕으로 제가 쉬운 말로 다시 쓴 것입니다. 실제 앱에서는 이 문장을 파이프라인이 생성해야 합니다.</p>
+
+    <h2>무엇을 뺐고 왜</h2>
+    <div class="rule"><span class="k">기호 대신 문장</span><br><span class="bad">"유" "나" 머리글자 칩, 실선·점선 범례, → 화살표</span> → "이때부터 유불란은 나용귀를 범인으로 의심해요."<span class="src">독자는 주석이 충분한 차트를 가장 선호했고, 관계를 설명하는 문장을 붙이면 관계에 대한 이해가 늘었습니다. 제목과 데이터 옆 등 어디에 쓰느냐도 중요했습니다. — <a href="https://content.ieeevis.org/year/2022/paper_v-full-1024.html">Stokes 외, Striking a Balance (IEEE VIS 2022, 참가자 302명)</a></span></div>
+    <div class="rule"><span class="k">화면마다 질문 하나, 답은 제목에</span><br>"지금까지, 네 장면이에요" · "유불란은 누구와 어떤 사이일까요" · "가장 최근에 일어난 일". 제목만 읽어도 그 화면이 무엇을 말하는지 알 수 있게 했습니다.<span class="src">같은 연구에서, 어떤 정보는 제목에 두는 것이 가장 효과적이었습니다.</span></div>
+    <div class="rule"><span class="k">한 번에 4개 안팎</span><br>사건 12개를 <b>네 장면</b>으로 묶고, 사건 화면은 가장 최근 하나를 크게, 나머지는 세 줄만 보여 줍니다. 관계도는 한 사람의 관계만 보여 줍니다.<span class="src">사람이 한 번에 붙잡는 단위는 평균 약 4개입니다. — <a href="https://www.cambridge.org/core/services/aop-cambridge-core/content/view/44023F1147D4A1D44BDC0AD226838496/S0140525X01003922a.pdf/magical_number_4_in_shortterm_memory_a_reconsideration_of_mental_storage_capacity.pdf">Cowan, The magical number 4 (Behavioral and Brain Sciences 2001)</a></span></div>
+    <div class="rule"><span class="k">먼저 요약해 주고, 원하면 더 보기</span><br>처음에는 앱이 정리한 이야기를 보여 주고(네 장면), 독자가 원할 때 사건 전체나 다른 인물로 들어갑니다. "줄거리 → 인물 사이 → 사건" 순서도 큰 그림에서 세부로 갑니다.<span class="src">작성자가 이끄는 흐름으로 시작해 독자가 탐색하는 흐름으로 넓히는 구조. 주석 달린 차트는 이 연구가 정리한 서사 시각화 장르 중 하나입니다. — <a href="https://idl.uw.edu/papers/narrative">Segel &amp; Heer, Narrative Visualization (IEEE InfoVis 2010)</a></span></div>
+    <div class="rule"><span class="k">숫자와 장식 빼기</span><br><span class="bad">CASE 12, 등장 1명, 바뀐 관계 0, 새로 드러남 배지</span> → 쪽수 하나만. 판단에 쓰이지 않는 숫자는 뺐습니다.<span class="src">눈에 띄고 기억에 남는 그림이 곧 이해하기 쉬운 그림은 아니라는 점을 연구진이 직접 구분했습니다. — <a href="https://vcg.seas.harvard.edu/publications/20130101-what-makes-a-visualization-memorable">Borkin 외, What Makes a Visualization Memorable? (IEEE InfoVis 2013)</a></span></div>
+    <div class="rule"><span class="k">"모름"은 말로</span><br>점선이나 빗금 칸 대신 "사실인지는 아직 몰라요", "쪽지를 남긴 사람은 아직 몰라요"처럼 씁니다. 자백 같은 주장을 사실처럼 보이게 하지 않으면서도 해석할 기호가 없습니다.</div>
+
+    <h2>이름 바꾼 탭</h2>
+    <p>타임라인 → <b>줄거리</b>, 관계도 → <b>인물 사이</b>. 기능 이름이 아니라 독자가 궁금한 것으로 불렀습니다. 시점 되감기 막대는 처음 화면에서 뺐습니다. 필요하면 설정 안으로 옮기겠습니다.</p>
+  </div>
+</div>
+<script>
+const tabs=[...document.querySelectorAll('#tabs button')],pill=document.getElementById('pill');
+const place=b=>{pill.style.left=b.offsetLeft+'px';pill.style.width=b.offsetWidth+'px'};
+tabs.forEach(b=>b.onclick=()=>{tabs.forEach(x=>x.classList.toggle('on',x===b));place(b);document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on',v.id==='v-'+b.dataset.v))});
+requestAnimationFrame(()=>place(tabs[0]));
+
+const PEOPLE = {유:'유불란',이:'이몽란',나:'나용귀',박:'박영민',경:'경찰',운:'운전수'};
+const EVENTS = [
+ {p:1,t:'탐정극 〈가상범인〉 공연',w:['유','나'],c:[{a:'유',b:'나',l:'공개적으로 범인 지목',claim:true}]},
+ {p:4,t:'좌장 박영민 피살',w:['박','이','경'],c:[{a:'경',b:'이',l:'범인으로 체포',claim:true}]},
+ {p:7,t:'목소리 흉내 가설',w:['유','나'],c:[{a:'유',b:'나',l:'범인으로 의심',claim:true}]},
+ {p:9,t:'나용귀의 출연 승낙',w:['나','유'],c:[{a:'나',b:'유',l:'각본 출연을 받아들임'}]},
+ {p:14,t:'무대 위 범행 재현',w:['나','유','경'],c:[{a:'나',b:'박',l:'범행 장면을 연기'}]},
+ {p:18,t:'경찰, 구인을 미루다',w:['경','유','나'],c:[{a:'유',b:'경',l:'수사에 항의'}]},
+ {p:20,t:'무대 위의 자백',w:['나','이','경'],c:[{a:'나',b:'박',l:'"내가 죽였소" 자백',claim:true},{a:'나',b:'이',l:'사랑과 후회 고백'},{a:'경',b:'나',l:'체포'}]},
+ {p:21,t:'7년 만의 재회',w:['유','이'],c:[{a:'유',b:'이',l:'옛 연인을 회상'}],flash:'7년 전 회상'},
+ {p:22,t:'나용귀 범인설 논쟁',w:['유','이'],c:[{a:'이',b:'나',l:'희생했을 가능성 제기',claim:true}]},
+ {p:25,t:'몽란의 고백',w:['이','유'],c:[{a:'이',b:'유',l:'사랑을 고백'}],isNew:true},
+ {p:26,t:'운전수의 떠보기',w:['운','유','이'],c:[{a:'운',b:'유',l:'정체를 알아봄'}],isNew:true},
+ {p:30,t:'서점의 암호 쪽지',w:['유'],c:[],isNew:true},
+];
+const REL = [
+ {a:'유',b:'박',l:'친구',p:1,d:'<b>유불란</b>과 <b>박영민</b>은 오랜 친구예요.'},
+ {a:'유',b:'나',l:'범인으로 의심',p:7,claim:true,d:'<b>유불란</b>은 <b>나용귀</b>가 목소리를 흉내 내 범행을 꾸몄다고 의심해요.'},
+ {a:'이',b:'박',l:'부부',p:1,d:'<b>이몽란</b>은 <b>박영민</b>의 아내예요.'},
+ {a:'유',b:'이',l:'연인',p:5,isNew:true,d:'7년 전 연인이었던 두 사람. <b>이몽란</b>이 <b>유불란</b>에게 다시 마음을 고백했어요.'},
+ {a:'나',b:'이',l:'짝사랑',p:6,d:'<b>나용귀</b>는 <b>이몽란</b>을 마음에 두고 있어요.'},
+ {a:'경',b:'나',l:'체포',p:20,d:'<b>경찰</b>이 <b>나용귀</b>를 체포했어요.'},
+ {a:'나',b:'박',l:'살해를 자백',p:20,claim:true,d:'<b>나용귀</b>는 무대에서 <b>박영민</b>을 죽였다고 자백했어요.'},
+];
+const POS = {유:[177,170],이:[292,92],나:[68,250],박:[78,82],경:[286,262],운:[180,312]};
+let page = 30, ego='유';
+let selEdge=null;
+function edgeGeom(a,b,ppl){
+ const [x1,y1]=POS[a],[x2,y2]=POS[b];const dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy);
+ let block=null;
+ ppl.forEach(k=>{if(k===a||k===b)return;const [px,py]=POS[k];const t=((px-x1)*dx+(py-y1)*dy)/(len*len);if(t<=.08||t>=.92)return;
+  const cross=((px-x1)*dy-(py-y1)*dx)/len;const dist=Math.abs(cross);if(dist<38&&(!block||dist<block.dist))block={t,dist,side:Math.sign(cross)||1}});
+ if(!block)return {d:`M${x1} ${y1}L${x2} ${y2}`,mx:(x1+x2)/2,my:(y1+y2)/2};
+ const need=Math.min(130,(44+block.dist)/(2*block.t*(1-block.t)));const nx=-dy/len*block.side,ny=dx/len*block.side;
+ const cx=(x1+x2)/2-nx*need,cy=(y1+y2)/2-ny*need;
+ return {d:`M${x1} ${y1}Q${cx} ${cy} ${x2} ${y2}`,mx:.25*x1+.5*cx+.25*x2,my:.25*y1+.5*cy+.25*y2};
+}
+function renderGR(){
+ const rels=REL.filter(r=>r.p<=page);
+ const ppl=new Set();rels.forEach(r=>{ppl.add(r.a);ppl.add(r.b)});
+ const focus=ego;
+ let s='';
+ let selLabel='';
+ rels.forEach((r,i)=>{const sel=selEdge===i;const on=selEdge===null?(r.a===focus||r.b===focus):sel;const g=edgeGeom(r.a,r.b,ppl);
+  s+=`<path d="${g.d}" fill="none" stroke="${sel?'#ff5c7d':(r.isNew&&on?'#c4475f':(on?'#8b8b90':'#6a6a70'))}" stroke-width="${sel?3.6:(on?1.8:1.3)}" ${r.claim?'stroke-dasharray="6 5"':''} ${on?'marker-end="url(#ar)"':''}/>`;
+  s+=`<path class="edge" data-i="${i}" d="${g.d}" fill="none" stroke="transparent" stroke-width="20" style="cursor:pointer"/>`;
+  if(sel){selLabel=`<g pointer-events="none"><rect x="${g.mx-r.l.length*6.2-8}" y="${g.my-11}" width="${r.l.length*12.4+16}" height="22" rx="11" fill="#2a1218" stroke="#ff5c7d"/><text x="${g.mx}" y="${g.my+4}" text-anchor="middle" fill="#ffd0da" font-size="11" font-weight="700" font-family="Pretendard">${r.l}</text></g>`}
+  else if(on){s+=`<g pointer-events="none"><rect x="${g.mx-r.l.length*6.2-8}" y="${g.my-11}" width="${r.l.length*12.4+16}" height="22" rx="11" fill="#18181a" stroke="#262628"/><text x="${g.mx}" y="${g.my+4}" text-anchor="middle" fill="${r.isNew?'#ec8fa2':'#b9b9be'}" font-size="11" font-family="Pretendard">${r.l}</text></g>`}
+ });
+ [...ppl].forEach(k=>{const [x,y]=POS[k];const me=k===focus;
+  const pres=EVENTS.filter(e=>e.p<=page&&e.w.includes(k)).length;const sz=Math.min(52,30+pres*3);const x0=x-sz/2,y0=y-sz/2-6;
+  s+=`<g class="node" data-k="${k}">
+   ${me?`<rect x="${x0-5}" y="${y0-5}" width="${sz+10}" height="${sz+10}" rx="12" fill="none" stroke="rgba(196,71,95,.35)" stroke-width="4"/>`:''}
+   <rect x="${x0}" y="${y0}" width="${sz}" height="${sz}" rx="9" fill="${me?'#2a1218':'#141416'}" stroke="${me?'#c4475f':'#3a3a3e'}" stroke-width="1.2"/>
+   <text x="${x}" y="${y0+sz/2+6}" text-anchor="middle" fill="${me?'#ec8fa2':'#e8e8ea'}" font-size="${sz*0.42}" font-weight="800" font-family="Pretendard">${PEOPLE[k][0]}</text>
+   <text x="${x}" y="${y0+sz+14}" text-anchor="middle" fill="#9a9aa0" font-size="9.5" letter-spacing="2" font-family="Pretendard">${PEOPLE[k]}</text></g>`});
+ s+=selLabel;
+ const svg=document.getElementById('gsvg');svg.innerHTML='<defs><marker id="ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L8 4L0 8z" fill="#8b8b90"/></marker></defs>'+s;
+ svg.querySelectorAll('.node').forEach(n=>n.onclick=()=>{ego=n.dataset.k;selEdge=null;render()});
+ svg.querySelectorAll('.edge').forEach(l=>l.onclick=e=>{e.stopPropagation();const i=+l.dataset.i;selEdge=selEdge===i?null:i;render()});
+ const panel=document.getElementById('ppanel');
+ if(selEdge!==null){const r=rels[selEdge];
+  panel.innerHTML=`<h4>${PEOPLE[r.a]} · ${PEOPLE[r.b]}</h4><div class="it sel"><div class="hd"><span class="lb">${r.l}</span><span class="kd">${r.claim?'의심·주장':'사실'}</span></div><div class="ds">${r.d}</div></div>`;return}
+ const mine=rels.filter(r=>r.a===focus||r.b===focus);
+ panel.innerHTML=`<h4>${PEOPLE[focus]}${((PEOPLE[focus].charCodeAt(PEOPLE[focus].length-1)-0xAC00)%28)?'과':'와'} 이어진 사람</h4>`+mine.map(r=>{const other=r.a===focus?r.b:r.a;
+  return `<div class="it"><div class="hd"><span class="nm">${PEOPLE[other]}</span><span class="lb">${r.l}</span><span class="kd">${r.claim?'의심·주장':'사실'}</span></div><div class="ds">${r.d}</div></div>`}).join('');
+}
+function render(){renderGR()}
+renderGR();
+
+const EVD=[
+ [30,'서점의 암호 쪽지','<b class="n">유불란</b>이 서점에서 책 사이에 끼워진 암호 쪽지를 발견해요. 복면을 쓴 남자가 두고 간 것이에요.','쪽지를 받을 사람과 보낸 사람'],
+ [28,'유불란의 불안','몽란과 헤어진 뒤 <b class="n">유불란</b>은 그녀를 다시 잃을까 두려워해요.',''],
+ [26,'운전수가 두 사람을 알아봄','택시 운전수가 <b class="n">이몽란</b>과 <b class="n">유불란</b>을 알아보고, 유불란이 실제 살인 현장을 봤을지 모른다고 떠봐요.','운전수가 왜 그런 말을 했는지'],
+ [25,'몽란의 고백','<b class="n">이몽란</b>이 자신이 사모하는 사람은 <b class="n">유불란</b>뿐이라고 고백하고 택시로 떠나요.',''],
+ [22,'나용귀 범인설 논쟁','<b class="n">유불란</b>은 나용귀가 범인이라고 확신하지만, <b class="n">이몽란</b>은 그가 자신을 위해 희생했을지 모른다고 말해요.','누구 말이 맞는지'],
+ [21,'7년 만의 재회','<b class="n">유불란</b>과 <b class="n">이몽란</b>이 7년 전 대동강의 첫사랑을 떠올려요.',''],
+ [20,'무대 위의 자백','공연 넷째 날 <b class="n">나용귀</b>가 대본에 없던 말을 해요. "내가 죽였소." 그리고 경찰에 붙잡혀요.','자백이 사실인지'],
+ [18,'경찰, 구인을 미루다','경찰은 <b class="n">나용귀</b>를 의심하면서도 증거가 없어 풀어 두고, <b class="n">유불란</b>은 이에 항의해요.',''],
+ [14,'무대 위 범행 재현','<b class="n">나용귀</b>가 무대에서 범행 장면을 연기하고 총의 지문을 닦은 뒤 퇴장해요.',''],
+ [9,'나용귀의 출연 승낙','자신을 범인으로 지목한 각본인데도 <b class="n">나용귀</b>는 출연을 받아들여요.','왜 받아들였는지'],
+ [7,'목소리 흉내 가설','<b class="n">유불란</b>은 <b class="n">나용귀</b>가 사람의 목소리를 흉내 내 범행 현장을 꾸몄다고 의심해요.',''],
+ [4,'좌장 박영민 피살','<b class="n">박영민</b>이 서재에서 총에 맞아 숨지고, 아내 <b class="n">이몽란</b>이 범인으로 붙잡혀요.','진짜 범인'],
+];
+let evSel=0, evAll=false;
+function renderC(){
+ const e=EVD[evSel], f=document.getElementById('feat');
+ document.getElementById('cq').textContent = evSel===0?'가장 최근에 일어난 일':'고른 사건';
+ f.classList.add('swap');
+ setTimeout(()=>{f.innerHTML=`<div class="pp">${e[0]}쪽${evSel===0?' · 가장 최근':''}</div><h3>${e[1]}</h3><p>${e[2]}</p>`;f.classList.remove('swap')},120);
+ const items=EVD.map((x,i)=>[x,i]).filter(([x,i])=>evAll||i<4);
+ document.getElementById('evlist').innerHTML=items.map(([x,i])=>`<div class="li ${i===evSel?'on':''}" data-i="${i}">${x[1]}<span>${x[0]}쪽</span></div>`).join('');
+ document.querySelectorAll('#evlist .li').forEach(el=>el.onclick=()=>{evSel=+el.dataset.i;renderC();document.getElementById('v-c').scrollTo({top:0,behavior:'smooth'})});
+ document.getElementById('evmore').textContent=evAll?'최근 사건만 보기':'전체 사건 보기 ('+EVD.length+')';
+}
+document.getElementById('evmore').onclick=()=>{evAll=!evAll;renderC()};
+renderC();
+</script>
+</body>
+</html>

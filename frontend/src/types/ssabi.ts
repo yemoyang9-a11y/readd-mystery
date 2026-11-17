@@ -30,6 +30,8 @@ export interface RelationshipSemantics {
   kind: 'family' | 'social' | 'emotion' | 'action';
   relation_key: string;
   summary: string;
+  /** 독자용 쉬운 문장(해요체). 검증을 통과한 것만 있다 — 없으면 문장 없이 관계 이름만 보인다. */
+  reader_summary?: string;
   assertion_status: 'fact' | 'belief' | 'claim' | 'rumor' | 'uncertain' | 'negated';
   attribution?: string;
   temporal_scope: 'ongoing' | 'event';
@@ -76,3 +78,28 @@ export interface CharacterResponse {
 
 /** 싸비 사이드창 3탭. 최초 열기 기본값은 관계도 (FR-SVB-002) */
 export type SsabiTab = 'notes' | 'relationship' | 'chatbot';
+
+/** GET /books/:bookId/ssabi/timeline — 장 시작 쪽·사건 발생 쪽 <= K 로 이미 걸러져 온다 (FR-SPL-002 🚦) */
+export interface TimelineChapter {
+  chapter_no: number;
+  title: string;
+  start_page: number;
+  end_page: number;
+}
+
+export interface TimelineEvent {
+  id: string;
+  event: string;
+  /** 독자용 문장. 검증을 통과하지 못했으면 null */
+  description: string | null;
+  occurrence_page: number;
+}
+
+export interface TimelineResponse {
+  chapters: TimelineChapter[];
+  events: TimelineEvent[];
+  applied_cutoff: number;
+}
+
+/** 추리 노트 탭 안의 전환 */
+export type NotesView = 'mine' | 'events';

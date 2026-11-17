@@ -285,6 +285,7 @@ export interface RelationshipSemantics {
   kind: 'family' | 'social' | 'emotion' | 'action';
   relation_key: string;
   summary: string;
+  reader_summary?: string;
   assertion_status: 'fact' | 'belief' | 'claim' | 'rumor' | 'uncertain' | 'negated';
   attribution?: string;
   temporal_scope: 'ongoing' | 'event';

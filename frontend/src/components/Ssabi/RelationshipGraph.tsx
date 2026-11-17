@@ -3,6 +3,11 @@ import { createPortal } from 'react-dom';
 import { useModalLayer } from '../../hooks/useModalLayer';
 import type { GraphResponse } from '../../types';
 import { graphEdgeLabel, makeEdgePaths } from './graphEdges';
+
+/** 선택한 선의 색·굵기 (2026-11-17 시안). 강조는 색·굵기로만 하고 다른 것을 흐리게 하지 않는다. */
+const SELECTED_EDGE_COLOR = '#ff5c7d';
+const SELECTED_EDGE_WIDTH = 3.6;
+const EDGE_HIT_WIDTH = 20;
 import {
   boundingBox,
   computeDegrees,
@@ -93,10 +98,15 @@ export default function RelationshipGraph({
   graph,
   selectedId,
   onSelect,
+  selectedEdgeKey = null,
+  onSelectEdge,
 }: {
   graph: GraphResponse;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  /** 선택한 선 = `graphEdgeKey(edge)`. 같은 선을 다시 누르면 해제된다. */
+  selectedEdgeKey?: string | null;
+  onSelectEdge?: (key: string | null) => void;
 }) {
   const markerId = `relationship-arrow-${useId().replace(/:/g, '')}`;
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -406,7 +416,13 @@ export default function RelationshipGraph({
 
   function handleNodeClick(id: string) {
     if (wasDragged()) return;
+    onSelectEdge?.(null);
     onSelect(validSelectedId === id ? null : id);
+  }
+
+  function handleEdgeClick(key: string) {
+    if (wasDragged()) return;
+    onSelectEdge?.(validSelectedEdgeKey === key ? null : key);
   }
 
   function fitView() {
@@ -467,6 +483,11 @@ export default function RelationshipGraph({
     [graph.nodes, graph.edges, positions, degree, nodeScale, k, labelScale]
   );
 
+  const validSelectedEdgeKey =
+    selectedEdgeKey && edgePaths.some((entry) => entry.key === selectedEdgeKey)
+      ? selectedEdgeKey
+      : null;
+
   // 인물명 라벨 박스 — 겹치면 연결 수 적은 쪽을 숨긴다. 선택·인접 인물은 최우선.
   // 관계 라벨(아래)이 이 중 실제로 보이는 라벨과 안 겹치게 하려면 살아남은 박스
   // 자체가 필요하다 — id 집합만으론 위치·크기를 다시 못 얻는다.
@@ -502,9 +523,13 @@ export default function RelationshipGraph({
    * 보였다(2026-08-25 피드백).
    */
   const edgeLabels = useMemo(() => {
-    if (!validSelectedId) return [];
+    if (!validSelectedId && !validSelectedEdgeKey) return [];
     const candidates = edgePaths
-      .filter(({ edge }) => edge.source === validSelectedId || edge.target === validSelectedId)
+      .filter(
+        ({ edge, key }) =>
+          key === validSelectedEdgeKey ||
+          (validSelectedId !== null && (edge.source === validSelectedId || edge.target === validSelectedId))
+      )
       .map(({ edge, key, label: anchor, length }) => {
         const label = graphEdgeLabel(edge);
         const width = estimateTextWidth(label, EDGE_LABEL_CHAR_PX * k * labelScale) + 10 * k;
@@ -540,7 +565,7 @@ export default function RelationshipGraph({
     }));
     const kept = new Set(pickNonOverlapping([...blockerBoxes, ...edgeBoxes]).map((b) => b.key));
     return candidates.filter((c) => kept.has(c.key));
-  }, [validSelectedId, edgePaths, k, labelScale, nameLabelBoxes, neighborIds]);
+  }, [validSelectedId, validSelectedEdgeKey, edgePaths, k, labelScale, nameLabelBoxes, neighborIds]);
 
   const graphBox = (
     <div
@@ -580,7 +605,10 @@ export default function RelationshipGraph({
         className="min-h-0 w-full flex-1 cursor-grab select-none active:cursor-grabbing"
         onClick={(event) => {
           if (wasDragged()) return;
-          if (!(event.target as SVGElement).closest('[data-node-id]')) onSelect(null);
+          if (!(event.target as SVGElement).closest('[data-node-id], [data-edge-group]')) {
+            onSelect(null);
+            onSelectEdge?.(null);
+          }
         }}
       >
         <defs>
@@ -600,56 +628,88 @@ export default function RelationshipGraph({
         <g>
           {edgePaths.map(({ edge, key, path }) => {
             const touches = validSelectedId === edge.source || validSelectedId === edge.target;
-            const dimmed = validSelectedId !== null && !touches;
+            const isSelectedEdge = key === validSelectedEdgeKey;
             const direction = edge.semantics?.direction;
             const qualified =
               edge.semantics &&
               (edge.semantics.assertion_status !== 'fact' || edge.semantics.state === 'ended');
             return (
-              <path
+              <g
                 key={key}
-                data-edge-id={edge.id ?? key}
-                d={path}
-                fill="none"
-                markerStart={
-                  direction === 'b_to_a' || direction === 'mutual' ? `url(#${markerId})` : undefined
-                }
-                markerEnd={
-                  direction === 'a_to_b' || direction === 'mutual' ? `url(#${markerId})` : undefined
-                }
-                strokeDasharray={qualified ? `${5 * k} ${4 * k}` : undefined}
-                className={touches ? 'stroke-brief-accent' : 'stroke-brief-rule'}
-                strokeWidth={(touches ? 2.4 : 1.2) * k}
-                // 실데이터(간선 54개, 핵심 인물군에 몰림)로 확인: 선택 전 기본 상태에서
-                // 전부 opacity 1이면 얽힌 간선이 서로 겹쳐 빽빽해 보인다("선이 겹치고
-                // 빽빽해 보인다" 피드백, 2026-08-25). 아무것도 선택 안 했을 때도 옅게
-                // 낮춰 겹치는 선끼리 서로 잡아먹는 인상을 줄인다 — 선택하면 그대로 1로
-                // 돌아온다(반대편 dimmed 분기는 원래도 0.15).
-                opacity={dimmed ? 0.15 : validSelectedId ? 1 : 0.55}
+                data-edge-group
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleEdgeClick(key);
+                }}
+                className="cursor-pointer"
               >
-                <title>{graphEdgeLabel(edge)}</title>
-              </path>
+                {/* 클릭 영역 — 얇은 선도 누르기 쉽게 20px. 이름표는 pointer-events 없음이라 가리지 않는다. */}
+                <path
+                  d={path}
+                  fill="none"
+                  stroke="transparent"
+                  strokeWidth={EDGE_HIT_WIDTH * k}
+                  pointerEvents="stroke"
+                />
+                <path
+                  data-edge-id={edge.id ?? key}
+                  data-selected={isSelectedEdge ? 'true' : 'false'}
+                  d={path}
+                  fill="none"
+                  markerStart={
+                    direction === 'b_to_a' || direction === 'mutual' ? `url(#${markerId})` : undefined
+                  }
+                  markerEnd={
+                    direction === 'a_to_b' || direction === 'mutual' ? `url(#${markerId})` : undefined
+                  }
+                  strokeDasharray={qualified ? `${5 * k} ${4 * k}` : undefined}
+                  className={
+                    isSelectedEdge ? undefined : touches ? 'stroke-brief-accent' : 'stroke-brief-rule'
+                  }
+                  stroke={isSelectedEdge ? SELECTED_EDGE_COLOR : undefined}
+                  strokeWidth={
+                    (isSelectedEdge ? SELECTED_EDGE_WIDTH : touches ? 2.4 : 1.2) * k
+                  }
+                  // 선택과 무관한 선도 흐리게 하지 않는다 — 강조는 색·굵기로만 (2026-11-17)
+                  opacity={1}
+                  pointerEvents="none"
+                >
+                  <title>{graphEdgeLabel(edge)}</title>
+                </path>
+              </g>
             );
           })}
         </g>
 
         <g>
           {edgeLabels.map((label) => (
-            <g key={label.key} pointerEvents="none">
+            <g
+              key={label.key}
+              data-edge-label
+              data-selected={label.key === validSelectedEdgeKey ? 'true' : 'false'}
+              pointerEvents="none"
+            >
               <rect
                 x={label.cx - label.width / 2}
                 y={label.cy - label.height / 2}
                 width={label.width}
                 height={label.height}
                 rx={label.height / 2}
-                className="fill-white stroke-brief-accent/40"
+                className={
+                  label.key === validSelectedEdgeKey
+                    ? 'stroke-[#ff5c7d]'
+                    : 'fill-white stroke-brief-accent/40'
+                }
+                fill={label.key === validSelectedEdgeKey ? '#ff5c7d' : undefined}
               />
               <text
                 x={label.cx}
                 y={label.cy}
                 textAnchor="middle"
                 dominantBaseline="central"
-                className="fill-brief-accent font-dashSans"
+                className={`${
+                  label.key === validSelectedEdgeKey ? 'fill-white' : 'fill-brief-accent'
+                } font-dashSans`}
                 style={{ fontSize: EDGE_LABEL_FONT_PX * k * labelScale }}
               >
                 {label.label}
@@ -664,7 +724,6 @@ export default function RelationshipGraph({
             const r = nodeRadius(degree.get(node.id) ?? 0) * nodeScale;
             const isSelected = node.id === validSelectedId;
             const isNeighbor = neighborIds.has(node.id);
-            const dimmed = validSelectedId !== null && !isSelected && !isNeighbor;
             return (
               <g
                 key={node.id}
@@ -684,7 +743,7 @@ export default function RelationshipGraph({
                   }
                 }}
                 className="cursor-pointer outline-none"
-                opacity={dimmed ? 0.2 : 1}
+                opacity={1}
               >
                 <circle cx={p.x} cy={p.y} r={r + 13 * k} fill="transparent" />
                 {/* 2026-08-25 — 그냥 회색 원이라 "성의없어 보인다"는 피드백. 브랜드 액센트

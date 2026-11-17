@@ -764,6 +764,40 @@ router.get('/books/:bookId/ssabi/graph', async (req: Request, res: Response) => 
   }
 });
 
+router.get('/books/:bookId/ssabi/timeline', async (req: Request, res: Response) => {
+  const { bookId } = req.params;
+  const deviceId = requireDeviceId(req, res);
+  if (!deviceId) return;
+
+  // FR-BRW-002 🚦: 미완비 도서 거절
+  const isReady = await ensureBookReady(contentServices.content, bookId, res);
+  if (!isReady) return;
+
+  try {
+    const page = Number(req.query.page);
+    const seq = Number(req.query.seq);
+    if (Number.isFinite(page) && Number.isFinite(seq)) {
+      await acceptProgress(req, deviceId, bookId, { page, seq });
+    }
+    await readingState.sessionService.touchActivity(deviceId, bookId);
+
+    const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
+    const K = snapshot.cutoff;
+
+    // FR-SPL-002 🚦: cutoff 적용
+    const timeline = await ssabiServices.timeline.getTimeline(bookId, K);
+
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json({ ...timeline, applied_cutoff: K });
+  } catch (error) {
+    console.error('[API] ssabi/timeline error', { bookId, error });
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Internal server error',
+    });
+  }
+});
+
 /**
  * GET /books/:bookId/ssabi/characters/:characterId
  *

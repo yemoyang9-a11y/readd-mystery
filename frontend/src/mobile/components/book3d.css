@@ -1,6 +1,22 @@
+/*
+ * 입체 책 (2026-11-17 시안 home-3d-c-v6).
+ * ⚠️ 책 상자(.b3d-book)는 preserve-3d 라서 filter·opacity 를 걸지 않는다 — 걸면 3D 가 납작해진다
+ *    (lessons.md 2026-11-17). 어둡게·숨기기는 면(.b3d-face)마다 --b3d-b / --b3d-o 로 건다.
+ */
+@property --b3d-b {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 1;
+}
+@property --b3d-o {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 1;
+}
+
 .b3d-stage {
   position: relative;
-  perspective: 900px;
+  perspective: 1100px;
   perspective-origin: 50% 38%;
   touch-action: pan-y;
   overflow-x: clip;
@@ -10,7 +26,7 @@
 .b3d-spot {
   position: absolute;
   left: 50%;
-  top: 178px;
+  top: 226px;
   width: 340px;
   height: 90px;
   margin-left: -170px;
@@ -24,31 +40,49 @@
   pointer-events: none;
 }
 .b3d-book {
+  --w: 164px;
+  --h: 240px;
+  --d: 42px;
   position: absolute;
-  left: 50%;
-  top: 18px;
-  width: 146px;
-  height: 216px;
-  margin-left: -73px;
+  left: calc(50% - var(--w) / 2);
+  top: 24px;
+  width: var(--w);
+  height: var(--h);
   transform-style: preserve-3d;
   pointer-events: auto;
   cursor: pointer;
-  transition: transform 0.8s cubic-bezier(0.2, 0.75, 0.2, 1);
+  transition:
+    transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
+    --b3d-b 0.6s,
+    --b3d-o 0.6s;
 }
 .b3d-face {
   position: absolute;
   backface-visibility: hidden;
-  filter: brightness(var(--b3d-b, 1)) saturate(var(--b3d-s, 1));
-  transition: filter 0.8s;
+  filter: brightness(var(--b3d-b));
+  opacity: var(--b3d-o);
 }
 .b3d-front {
   inset: 0;
-  transform: translateZ(13px);
-  border-radius: 2px 5px 5px 2px;
+  transform: translateZ(calc(var(--d) / 2));
+  border-radius: 1px 3px 3px 1px;
   overflow: hidden;
   background: #111;
-  -webkit-box-reflect: below 6px linear-gradient(transparent 72%, rgba(255, 255, 255, 0.1));
-  box-shadow: inset 4px 0 6px rgba(0, 0, 0, 0.35);
+}
+.b3d-front::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.35) 0,
+    rgba(255, 255, 255, 0.14) 3%,
+    rgba(0, 0, 0, 0) 7%,
+    rgba(255, 255, 255, 0.05) 60%,
+    rgba(0, 0, 0, 0.1)
+  );
 }
 .b3d-front img {
   display: block;
@@ -60,38 +94,48 @@
 }
 .b3d-back {
   inset: 0;
-  transform: rotateY(180deg) translateZ(13px);
-  background: #111;
+  transform: rotateY(180deg) translateZ(calc(var(--d) / 2));
+  background: var(--sp);
 }
 .b3d-spine {
   top: 0;
-  left: 0;
-  width: 26px;
-  height: 100%;
-  transform-origin: left center;
-  transform: translateZ(13px) rotateY(90deg);
+  width: var(--d);
+  height: var(--h);
+  left: calc((var(--w) - var(--d)) / 2);
+  transform: rotateY(-90deg) translateZ(calc(var(--w) / 2));
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.35), rgba(255, 255, 255, 0.1) 40%, rgba(0, 0, 0, 0.3)),
+    var(--sp);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .b3d-spine-title {
-  display: block;
   writing-mode: vertical-rl;
-  margin: 14px auto 0;
   font-size: 11px;
-  letter-spacing: 2px;
-  color: rgba(243, 239, 230, 0.8);
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--spt);
   white-space: nowrap;
 }
 .b3d-pages {
-  top: 2px;
-  right: 0;
-  width: 26px;
-  height: calc(100% - 4px);
-  transform-origin: right center;
-  transform: translateZ(13px) rotateY(-90deg);
-  background: repeating-linear-gradient(90deg, #e9e3d6 0 1px, #d6cfbf 1px 2px);
+  top: 4px;
+  width: calc(var(--d) - 2px);
+  height: calc(var(--h) - 8px);
+  left: calc((var(--w) - var(--d)) / 2 + 1px);
+  transform: rotateY(90deg) translateZ(calc(var(--w) / 2 - 3px));
+  background: repeating-linear-gradient(90deg, #efe9dc 0 1px, #d6cfbf 1px 2px);
+}
+.b3d-topface {
+  left: 0;
+  width: calc(var(--w) - 3px);
+  height: calc(var(--d) - 2px);
+  top: calc((var(--h) - var(--d)) / 2 + 1px);
+  transform: rotateX(90deg) translateZ(calc(var(--h) / 2 - 4px));
+  background: repeating-linear-gradient(0deg, #efe9dc 0 1px, #d6cfbf 1px 2px);
 }
 @media (prefers-reduced-motion: reduce) {
-  .b3d-book,
-  .b3d-face {
+  .b3d-book {
     transition: none;
   }
 }

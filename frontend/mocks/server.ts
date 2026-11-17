@@ -33,6 +33,7 @@ import type {
   EntryResponse,
   BookInfoResponse,
   GraphResponse,
+  TimelineResponse,
   PageResponse,
 } from '../src/types';
 
@@ -269,6 +270,25 @@ export function mockGraphResponse(page?: number): GraphResponse {
     }));
 
   return { nodes, edges };
+}
+
+/** 서버 쿼리의 대역 — 사건 정리 (장 시작 쪽·사건 발생 쪽 <= K) */
+const mockTimelineEvents = [
+  { id: 'mock-event-3', event: '정 주사가 미두장에 가요', description: '정 주사가 쌀 시세에 돈을 걸어요.', occurrence_page: 3 },
+  { id: 'mock-event-14', event: '딸의 혼담이 나와요', description: '정 주사의 딸에게 혼담이 들어와요.', occurrence_page: 14 },
+  { id: 'mock-event-24', event: '살림이 기울어요', description: null, occurrence_page: 24 },
+];
+
+export function mockTimelineResponse(page?: number): TimelineResponse {
+  if (page !== undefined) currentPage = page;
+  const { cutoff: k } = snapshot(page);
+  return {
+    chapters: mockChapters
+      .filter((c) => c.start_page <= k)
+      .map(({ chapter_no, title, start_page, end_page }) => ({ chapter_no, title, start_page, end_page })),
+    events: mockTimelineEvents.filter((e) => e.occurrence_page <= k),
+    applied_cutoff: k,
+  };
 }
 
 export function mockCharacterResponse(

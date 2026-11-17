@@ -210,10 +210,11 @@ export async function registerGeneratedContent(
     await writeOwnedRow(
       client,
       'events',
-      `INSERT INTO events (id, book_id, event, description, occurrence_page)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (id) DO UPDATE SET event = $3, description = $4, occurrence_page = $5`,
-      [e.id, book_id, e.event, e.description, e.occurrence_page]
+      `INSERT INTO events (id, book_id, event, description, occurrence_page, reader_description)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (id) DO UPDATE SET event = $3, description = $4, occurrence_page = $5,
+         reader_description = COALESCE($6, events.reader_description)`,
+      [e.id, book_id, e.event, e.description, e.occurrence_page, e.reader_description ?? null]
     );
   }
 

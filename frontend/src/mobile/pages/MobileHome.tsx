@@ -36,7 +36,8 @@ export default function MobileHome() {
             className="flex min-h-11 items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] py-1.5 pl-1.5 pr-3 text-xs text-[#d2d2d7]"
           >
             <i aria-hidden="true" className="h-7 w-5 rounded-[2px] bg-gradient-to-br from-[#8f1d35] to-[#3a0a15]" />
-            {continueBook.progress ? `이어서 읽기 · ${continueBook.progress.percent}%` : '이어서 읽기'}
+            {/* FR-BRF-005 🚦: 서버가 준 마지막으로 펼친 쪽을 그대로 표시한다 — 퍼센트 재계산 없음 */}
+            {continueBook.progress ? `이어서 읽기 · ${continueBook.progress.current_page}p` : '이어서 읽기'}
           </Link>
         ) : null}
       </div>
@@ -51,7 +52,7 @@ export default function MobileHome() {
 
         <div className="px-4">
           <div className="text-center text-xs tracking-[0.02em] text-dash-muted">
-            <b className="mb-0.5 block text-[17px] font-bold tracking-[-0.01em] text-dash-ink">{active.title}</b>
+            <b className="mb-1 block text-[26px] font-extrabold leading-[1.2] tracking-[-0.02em] text-white">{active.title}</b>
             {`${active.author} · ${active.meta}`}
           </div>
           <div data-testid="home-hook" className="mt-2 text-center font-hand text-[#e9e2d3]">

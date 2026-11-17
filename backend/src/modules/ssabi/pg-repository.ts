@@ -16,7 +16,7 @@ import type {
   RelationshipGraph,
   CharacterDetail,
 } from '../../shared/types';
-import type { SsabiRepository } from './repository';
+import type { SsabiRepository, Timeline } from './repository';
 import { latestRelationshipVersions, relationshipToEdge } from './relationship-versions';
 
 const GENERIC_ALIASES = [
@@ -202,6 +202,32 @@ export function createPgSsabiRepository(db: QueryClient): SsabiRepository {
       );
       if (rows.length === 0) return null;
       return rows[0];
+    },
+
+    async findTimeline(bookId: string, cutoff: number): Promise<Timeline> {
+      // FR-SPL-002 🚦
+      const chapters = await db.query(
+        `SELECT chapter_no, title, start_page, end_page
+           FROM chapters
+          WHERE book_id = $1
+            AND start_page <= $2
+          ORDER BY chapter_no`,
+        [bookId, cutoff]
+      );
+      // FR-SPL-002 🚦 결정 31: 다 읽은 장(장 end_page <= cutoff)의 사건만
+      const events = await db.query(
+        `SELECT e.id, e.event, e.reader_description AS description, e.occurrence_page
+           FROM events e
+           JOIN chapters c ON c.book_id = e.book_id
+            AND c.start_page <= e.occurrence_page
+            AND c.end_page >= e.occurrence_page
+          WHERE e.book_id = $1
+            AND e.occurrence_page <= $2
+            AND c.end_page <= $2
+          ORDER BY e.occurrence_page, e.id`,
+        [bookId, cutoff]
+      );
+      return { chapters: chapters.rows, events: events.rows };
     },
 
     async getGraph(bookId: string, cutoff: number): Promise<RelationshipGraph> {
