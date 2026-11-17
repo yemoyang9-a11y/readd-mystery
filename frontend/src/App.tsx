@@ -25,6 +25,7 @@ import AdminLayout from './admin/AdminLayout';
 import AnalyticsPage from './admin/AnalyticsPage';
 import BooksPage from './admin/BooksPage';
 import ReviewPage from './admin/ReviewPage';
+import CommunityReportsPage from './admin/CommunityReportsPage';
 import { initAnalytics } from './services/analytics';
 
 /**
@@ -72,6 +73,7 @@ export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
         { index: true, element: <AnalyticsPage /> },
         { path: 'books', element: <BooksPage /> },
         { path: 'books/:bookId/review', element: <ReviewPage /> },
+        { path: 'community', element: <CommunityReportsPage /> },
       ],
     },
     { path: '*', element: <RouteFade>{isMobile ? <MobileNotFound /> : <NotFound />}</RouteFade> },
