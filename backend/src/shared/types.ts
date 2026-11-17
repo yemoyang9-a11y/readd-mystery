@@ -433,6 +433,18 @@ export interface RecapCallLog {
 
   /** 트리거 유형 */
   trigger: 'realtime' | 'session_end';
+
+  /**
+   * 프롬프트에 넣은 목표 문장 수 N (2~5). 2026-11-17 C안 — 리캡 길이 분포 분석용.
+   * DB 컬럼은 017 마이그레이션에서 NULL 허용으로 추가했다(그 전 행은 NULL).
+   */
+  target_sentences: number;
+
+  /** 실제 출력 문자 수 — 공백·소제목 포함, 500자 하드 상한과 같은 기준(잘린 뒤 길이) */
+  output_chars: number;
+
+  /** 실제 출력 문장 수 — 소제목 줄 제외 (recap-length.ts `countRecapSentences`) */
+  output_sentences: number;
 }
 
 /**

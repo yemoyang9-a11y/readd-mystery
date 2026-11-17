@@ -362,3 +362,217 @@ describe('리캡 호출 로그 — NFR-OBS-002 🚦', () => {
     expect(entry.current_chapter_cutoff).toBeNull();
   });
 });
+
+/**
+ * 2026-11-17 C안(대표 승인) — 리캡 분량 제어
+ *
+ * 목표 문장 수 N을 코드가 계산해 프롬프트에 "정확히 N문장"으로 넣는다. "자료가 적으면 짧게"
+ * 같은 판단 위임 문구는 뺀다. 환각 금지(FR-RCP-001 🚦)는 유지하고, 상한 지시는 여전히
+ * 프롬프트에 없다(NFR-AI-004 🚦 — 상한은 입력 조립에서만).
+ *
+ * 시드: 장 3개(1~10 / 11~20 / 21~30).
+ */
+function buildCapturing(llmText = '정주사는') {
+  const { books } = makeSeededFakes();
+  const savedRecap = new FakeSavedRecapRepository();
+  const sessionCache = new FakeSessionRecapCacheRepository();
+  const recapLog = new FakeRecapCallLogger();
+  const prompts: string[] = [];
+  const llmStream = async function* (_task: string, prompt: string) {
+    prompts.push(prompt);
+    yield llmText;
+  };
+  const service = createRecapService({
+    content: books,
+    books,
+    savedRecap,
+    sessionCache,
+    recapLog,
+    llmStream,
+  });
+  return { service, prompts, recapLog };
+}
+
+async function promptAt(cutoff: number): Promise<string> {
+  const { service, prompts } = buildCapturing();
+  const result = await service.getRecap(SEED_DEVICE_ID, SEED_BOOK_ID, cutoff, 'realtime');
+  if (result.kind === 'generated') await drain(result.chunks);
+  expect(prompts).toHaveLength(1);
+  return prompts[0];
+}
+
+describe('리캡 분량 제어 C안 — 프롬프트의 목표 문장 수', () => {
+  test.each([
+    // [K, 기대 N, 설명]
+    [5, 2, '완결 0장 + 1장 원문 → 하한 2'],
+    [15, 2, '완결 1장 + 2장 원문 → 2'],
+    [25, 3, '완결 2장 + 3장 원문 → 3'],
+    [10, 2, '장 끝(원문 없음), 완결 1장 → 하한 2'],
+    [20, 2, '장 끝(원문 없음), 완결 2장 → 2'],
+    [30, 3, '장 끝(원문 없음), 완결 3장 → 3'],
+  ])('K=%i → 프롬프트에 "정확히 %i문장" (%s)', async (cutoff, n) => {
+    const prompt = await promptAt(cutoff);
+    expect(prompt).toContain(`정확히 ${n}문장`);
+    // 다른 N 값이 섞여 있지 않다
+    for (const other of [2, 3, 4, 5].filter((x) => x !== n)) {
+      expect(prompt).not.toContain(`정확히 ${other}문장`);
+    }
+  });
+
+  test('각 문장 90자 이내 지시가 들어 있다', async () => {
+    const prompt = await promptAt(15);
+    expect(prompt).toMatch(/각 문장은 90자 이내/);
+  });
+
+  test('판단 위임 문구("자료가 적으면 … 짧게 말해라")는 삭제됐다', async () => {
+    for (const cutoff of [5, 15, 25, 30]) {
+      const prompt = await promptAt(cutoff);
+      expect(prompt).not.toMatch(/짧게 말해라/);
+      expect(prompt).not.toMatch(/자료가 적으면/);
+    }
+  });
+
+  test('FR-RCP-001 🚦: "자료에 없는 내용을 지어내지 마라" 지시는 유지된다', async () => {
+    for (const cutoff of [5, 15, 25, 30]) {
+      const prompt = await promptAt(cutoff);
+      expect(prompt).toMatch(/자료에 없는 내용을 지어내지 마라/);
+    }
+  });
+
+  test('기존 형식 지시(소제목 고정·마크다운 금지·자료만으로 요약) 유지', async () => {
+    const prompt = await promptAt(25);
+    expect(prompt).toContain('"이전 이야기 요약"');
+    expect(prompt).toMatch(/마크다운 기호를 쓰지 말고/);
+    expect(prompt).toMatch(/아래 자료만으로/);
+  });
+
+  test('문단 수 지시 — N이 2~3이면 1~2문단', async () => {
+    for (const cutoff of [15, 25]) {
+      const prompt = await promptAt(cutoff); // N=2, N=3
+      expect(prompt).toMatch(/1~2개의 짧은 문단/);
+      expect(prompt).not.toMatch(/2~3개의 짧은 문단/);
+    }
+  });
+
+  test('NFR-AI-004 🚦: 분량 지시를 바꿔도 프롬프트에 상한 지시가 없다', async () => {
+    for (const cutoff of [5, 15, 25, 30]) {
+      const prompt = await promptAt(cutoff);
+      expect(prompt).not.toMatch(/기준점|cutoff|이후.*(쓰지|말)/i);
+    }
+  });
+});
+
+describe('리캡 분량 제어 C안 — 장이 많은 책(N=4·5)의 문단 지시', () => {
+  /** 장 8개(각 5쪽, 1~40쪽) 책 — N 상한(5)과 N=4 경계를 서비스 경유로 확인한다 */
+  function buildLongBook() {
+    const { books } = makeSeededFakes();
+    const chapters = Array.from({ length: 8 }, (_, i) => ({
+      chapter_no: i + 1,
+      title: `제${i + 1}장`,
+      start_page: i * 5 + 1,
+      end_page: i * 5 + 5,
+      summary: `${i + 1}장 요약`,
+    }));
+    const pageTexts: Record<number, string> = {};
+    for (let p = 1; p <= 40; p++) pageTexts[p] = `p.${p} 원문`;
+    books.set('long-book', { total_pages: 40, chapters, pageTexts });
+    const prompts: string[] = [];
+    const service = createRecapService({
+      content: books,
+      books,
+      savedRecap: new FakeSavedRecapRepository(),
+      sessionCache: new FakeSessionRecapCacheRepository(),
+      recapLog: new FakeRecapCallLogger(),
+      llmStream: async function* (_task: string, prompt: string) {
+        prompts.push(prompt);
+        yield '정주사는';
+      },
+    });
+    return { service, prompts };
+  }
+
+  test.each([
+    [17, 4], // 완결 3장 + 4장 원문 → 4
+    [40, 5], // 완결 8장, 원문 없음 → 상한 5
+    [38, 5], // 완결 7장 + 8장 원문 → 상한 5
+  ])('K=%i → 정확히 %i문장, 2~3문단 지시', async (cutoff, n) => {
+    const { service, prompts } = buildLongBook();
+    const result = await service.getRecap(SEED_DEVICE_ID, 'long-book', cutoff, 'realtime');
+    if (result.kind === 'generated') await drain(result.chunks);
+    expect(prompts[0]).toContain(`정확히 ${n}문장`);
+    expect(prompts[0]).toMatch(/2~3개의 짧은 문단/);
+  });
+});
+
+describe('FR-SPL-003 🚦 회귀 — 분량 지시를 바꿔도 프롬프트에 K 이후 자료 0건', () => {
+  /** 프롬프트에 들어간 원문 페이지 번호 목록 */
+  function pagesIn(prompt: string): number[] {
+    return Array.from(prompt.matchAll(/p\.(\d+) 원문/g)).map((m) => Number(m[1]));
+  }
+
+  test('negative: K=15 → 16쪽 이후 원문 0건, 2장·3장 요약 0건', async () => {
+    const prompt = await promptAt(15);
+    expect(pagesIn(prompt).filter((p) => p > 15)).toHaveLength(0);
+    expect(prompt).not.toContain('2장 요약');
+    expect(prompt).not.toContain('3장 요약');
+  });
+
+  test('positive: K=25 → 2장 요약과 21~25쪽 원문은 들어간다 (26쪽 이후 0건)', async () => {
+    const prompt = await promptAt(25);
+    expect(prompt).toContain('1장 요약');
+    expect(prompt).toContain('2장 요약');
+    expect(pagesIn(prompt)).toEqual([21, 22, 23, 24, 25]);
+    expect(prompt).not.toContain('3장 요약');
+  });
+});
+
+describe('리캡 호출 로그 — 목표 문장 수·실제 길이 (NFR-OBS-002 🚦)', () => {
+  const OUTPUT = '이전 이야기 요약\n\n첫 문장이다. 둘째 문장이다.\n\n셋째 문장이다.';
+
+  test.each([
+    [15, 2],
+    [25, 3],
+    [30, 3],
+  ])('K=%i → 로그 target_sentences = %i', async (cutoff, n) => {
+    const { service, recapLog } = buildCapturing(OUTPUT);
+    const result = await service.getRecap(SEED_DEVICE_ID, SEED_BOOK_ID, cutoff, 'realtime');
+    if (result.kind === 'generated') await drain(result.chunks);
+
+    expect(recapLog.records).toHaveLength(1);
+    expect(recapLog.records[0].target_sentences).toBe(n);
+  });
+
+  test('로그에 실제 출력 문자 수(공백·소제목 포함)와 문장 수(소제목 제외)가 남는다', async () => {
+    const { service, recapLog } = buildCapturing(OUTPUT);
+    const result = await service.getRecap(SEED_DEVICE_ID, SEED_BOOK_ID, 25, 'session_end');
+    if (result.kind === 'generated') await drain(result.chunks);
+
+    expect(recapLog.records).toHaveLength(1);
+    const [entry] = recapLog.records;
+    expect(entry.output_ref).toBe(OUTPUT);
+    expect(entry.output_chars).toBe(OUTPUT.length);
+    expect(entry.output_sentences).toBe(3);
+  });
+
+  test('하드 상한(500자)으로 잘린 경우 로그 길이는 잘린 뒤 텍스트 기준이다', async () => {
+    const { books } = makeSeededFakes();
+    const recapLog = new FakeRecapCallLogger();
+    const { llmStream, sentence } = makeFakeLlmOverLength();
+    const service = createRecapService({
+      content: books,
+      books,
+      savedRecap: new FakeSavedRecapRepository(),
+      sessionCache: new FakeSessionRecapCacheRepository(),
+      recapLog,
+      llmStream,
+    });
+
+    const result = await service.getRecap(SEED_DEVICE_ID, SEED_BOOK_ID, 15, 'realtime');
+    const text = result.kind === 'generated' ? await drain(result.chunks) : '';
+
+    const [entry] = recapLog.records;
+    expect(entry.output_chars).toBe(text.length);
+    expect(entry.output_chars).toBeLessThanOrEqual(500);
+    expect(entry.output_sentences).toBe(Math.floor(500 / sentence.length));
+  });
+});

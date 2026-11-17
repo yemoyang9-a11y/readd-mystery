@@ -6,6 +6,8 @@
  *
  * 조항: FR-DAT-009 (저장 리캡 1건) · FR-DAT-010 (세션 캐시, 영구 저장 없음) · R7·R8
  *      · NFR-OBS-002 🚦 (리캡 호출 로그) · NFR-PERF-002 🚦 (스트리밍)
+ *      · FR-RCP-001 🚦 (환각 금지 지시) · NFR-AI-004 🚦 (프롬프트에 상한 지시 없음)
+ *      · 2026-11-17 C안 — 목표 문장 수 N 코드 계산(recap-length.ts)과 길이 로그
  *
  * ⚠️ LLM 호출은 `llmStream` 의존성을 통해서만 이뤄진다 — 실제 게이트웨이(⑥) 연결은
  *    라우트 계층(CP3 실데이터 전환 범위)에서 `import { stream } from '../llm-gateway/gateway'`를
@@ -20,6 +22,11 @@
 
 import { assembleRecapInput } from './recap-assembly';
 import type { RecapAssemblyDeps } from './recap-assembly';
+import {
+  RECAP_SENTENCE_MAX_CHARS,
+  computeRecapTargetSentences,
+  countRecapSentences,
+} from './recap-length';
 import { getModelForTask } from '../llm-gateway/model-config';
 import type {
   RecapCallLogger,
@@ -85,9 +92,12 @@ export interface RecapService {
 
 const DEFAULT_CACHE_TTL_MS = 24 * 60 * 60_000;
 
-/** 리캡 목표 분량 — 사용자 확정(2026-08-24): 500자 / 5문장 내외. 프롬프트 지시로 유도한다. */
+/**
+ * 리캡 분량 — 사용자 확정(2026-08-24): 500자 / 5문장 내외.
+ * 2026-11-17 C안부터 프롬프트는 글자 수 대신 코드가 계산한 목표 문장 수 N(2~5)과 문장당
+ * 길이(RECAP_SENTENCE_MAX_CHARS)로 지시한다(recap-length.ts). 500자는 아래 하드 상한으로만 남는다.
+ */
 const RECAP_TARGET_CHARS = 500;
-const RECAP_TARGET_SENTENCES = 5;
 
 /**
  * 목표 분량을 넘겨도 스트림이 끝없이 늘어나지 않게 하는 안전망. 한글은 토큰당 글자수가
@@ -97,10 +107,13 @@ const RECAP_TARGET_SENTENCES = 5;
 const RECAP_MAX_TOKENS_SAFETY = 2048;
 
 /**
- * 500자 실측 강제 상한 (2026-08-24, 이슈 대응) — RECAP_TARGET_CHARS는 프롬프트 "부탁"일
+ * 500자 실측 강제 상한 (2026-08-24, 이슈 대응) — 프롬프트 분량 지시는 "부탁"일
  * 뿐이라 모델이 지키지 않으면(실측 800자+ 확인됨) 그대로 새어나간다. 이 값은 스트리밍
  * 도중에 실제로 잘라내는 하드 상한이라, 공백 포함 결과 길이가 이 값을 넘는 경우가 없다.
- * RECAP_TARGET_CHARS와 값을 맞춰 둔다 — 목표를 지키면 이 상한에 걸리지 않는다.
+ * 목표(최대 5문장 × 90자 = 450자 + 소제목)를 지키면 이 상한에 걸리지 않는다.
+ *
+ * 2026-11-17 C안에서도 그대로 둔다 — 사용자 확정값이고, 다 받은 뒤 앞 문장을 빼는 버퍼링
+ * 방식은 스트리밍(NFR-PERF-002 🚦)을 깨므로 쓰지 않는다. 재생성 호출도 하지 않는다(LLM 1회).
  */
 const RECAP_HARD_LIMIT_CHARS = RECAP_TARGET_CHARS;
 
@@ -162,8 +175,13 @@ async function* generateAndPersist(
     cacheTtlMs: number;
   }
 ): AsyncGenerator<string> {
-  const input = await assembleRecapInput(assemblyDeps, bookId, cutoff);
-  const prompt = buildRecapPrompt(input);
+  const input = await assembleRecapInput(assemblyDeps, bookId, cutoff); // FR-SPL-003 🚦 상한은 여기서만
+  // 2026-11-17 C안 — 목표 문장 수는 이미 K로 절단된 조립 결과에서만 계산한다(NFR-AI-004 🚦)
+  const targetSentences = computeRecapTargetSentences(
+    input.chapter_summaries.length,
+    hasCurrentChapterText(input)
+  );
+  const prompt = buildRecapPrompt(input, targetSentences);
 
   let fullText = '';
   let usage: LLMUsage | undefined;
@@ -207,7 +225,17 @@ async function* generateAndPersist(
     await io.savedRecap.upsertSavedRecap(deviceId, bookId, cutoff, fullText); // FR-DAT-009
   }
 
-  await io.recapLog.record(buildRecapCallLog(deviceId, bookId, input, fullText, trigger, usage)); // NFR-OBS-002 🚦
+  await io.recapLog.record(
+    buildRecapCallLog(deviceId, bookId, input, fullText, trigger, usage, targetSentences)
+  ); // NFR-OBS-002 🚦
+}
+
+/**
+ * 조립 결과에 읽는 중인 장 원문이 실제로 들어갔는지. 프롬프트가 빈 원문을 "(없음)"으로
+ * 쓰는 기준과 맞춘다 — 빈 문자열은 원문 없음으로 본다.
+ */
+function hasCurrentChapterText(input: RecapInput): boolean {
+  return input.current_chapter_text !== null && input.current_chapter_text.trim().length > 0;
 }
 
 /**
@@ -216,31 +244,41 @@ async function* generateAndPersist(
  *
  * 분량 지시 추가(2026-08-24, 이슈 대응, PR #16과 병합) — 예전 프롬프트는 분량을 정하지
  * 않아 K가 작을 때(자료 적음)와 클 때(완결 장 요약이 여러 개 누적)의 출력 길이가 크게
- * 벌어졌다. RECAP_TARGET_SENTENCES·RECAP_TARGET_CHARS 로 목표를 고정한다 — 이건
- * "무엇을 보여줄지"(상한)가 아니라 "얼마나 길게 말할지"(종합 방식)라 데이터 선택 단계의
- * 책임을 침범하지 않는다.
- * 마지막 줄(분량 채우기 금지)은 그 위와 별개 문제를 막는다 — 목표 문장 수를 채우려고 자료가
- * 적을 때도 없는 내용을 지어내 늘릴 수 있다. 목표(위 3줄)와 과장 금지(이 줄)는 서로 다른
- * 실패 모드를 겨눈다.
+ * 벌어졌다. 분량 지시는 "무엇을 보여줄지"(상한)가 아니라 "얼마나 길게 말할지"(종합 방식)라
+ * 데이터 선택 단계의 책임을 침범하지 않는다.
+ *
+ * 분량 지시 교체(2026-11-17 C안, 대표 승인) — "5문장 내외, 500자 이내 … 자료가 적으면 있는
+ * 것만 짧게"는 ① '적다' 판단을 모델에 맡기고 ② 글자 수(모델이 가장 못 지키는 단위)로만
+ * 상한을 걸어 길이가 들쭉날쭉했다. 이제 코드가 계산한 N(recap-length.ts)으로 "정확히 N문장,
+ * 각 문장 90자 이내"를 지시하고, 판단 위임 문구는 뺐다.
+ * 환각 금지 줄("자료에 없는 내용을 지어내지 마라")은 그대로 둔다 — 정확히 N문장을 채우려고
+ * 자료에 없는 내용을 지어낼 수 있다. 목표 문장 수와 지어내기 금지는 서로 다른 실패 모드를
+ * 겨눈다(FR-RCP-001 🚦).
  *
  * 소제목 문구 고정(2026-08-24, 사용자 요청) — 모델이 지시 없이도 종종 "# 줄거리 요약"
  * 같은 마크다운 제목을 앞에 붙였다(프론트는 마크다운을 파싱하지 않아 "#" 기호가 그대로
  * 노출됨). 제목 자체를 금지하는 대신, 정확히 이 문구("이전 이야기 요약")로 고정해 어느
  * 쪽이 나와도 일관되게 만든다.
  */
-function buildRecapPrompt(input: RecapInput): string {
+function buildRecapPrompt(input: RecapInput, targetSentences: number): string {
   const summaries = input.chapter_summaries
     .map((s) => `[${s.chapter_no}장 ${s.title}] ${s.content}`)
     .join('\n');
   const currentChapter = input.current_chapter_text ?? '';
+  // N이 2~3이면 문단을 억지로 쪼개지 않는다
+  const paragraphs =
+    targetSentences <= 3
+      ? '1~2개의 짧은 문단으로 써라. 문단을 나눌 때는 빈 줄로 구분해라.'
+      : '한 문단으로 몰아쓰지 말고 2~3개의 짧은 문단으로 나눠라. 문단 사이는 빈 줄로 구분해라.';
 
   return [
     '아래 자료만으로 독자가 지금까지 읽은 줄거리를 이어서 요약해라.',
     '첫 줄에 정확히 "이전 이야기 요약"이라는 소제목만 쓰고, 빈 줄로 구분한 뒤 본문을 이어서 써라.',
-    `${RECAP_TARGET_SENTENCES}문장 내외, 공백 포함 ${RECAP_TARGET_CHARS}자 이내로 간결하게 써라.`,
-    '한 문단으로 몰아쓰지 말고 2~3개의 짧은 문단으로 나눠라. 문단 사이는 빈 줄로 구분해라.',
+    `소제목을 뺀 본문은 정확히 ${targetSentences}문장으로 써라. 각 문장은 ${RECAP_SENTENCE_MAX_CHARS}자 이내로 써라.`,
+    paragraphs,
     '소제목 외에는 "#" 같은 마크다운 기호를 쓰지 말고 본문 문단만 써라.',
-    '분량을 채우려고 없는 내용을 늘리지 마라 — 자료가 적으면 있는 것만 짧게 말해라.',
+    '자료에 없는 내용을 지어내지 마라.', // FR-RCP-001 🚦 환각 금지 — 문장 수를 채우려 지어내는 것도 포함
+    // ⚠️ 상한("기준점 이후는 쓰지 마")류 지시는 넣지 않는다 — NFR-AI-004 🚦, 절대 규칙 3번
     '완결된 장 요약:',
     summaries || '(없음)',
     '현재 장에서 읽은 부분:',
@@ -271,7 +309,8 @@ function buildRecapCallLog(
   input: RecapInput,
   outputText: string,
   trigger: RecapTrigger,
-  usage: LLMUsage | undefined
+  usage: LLMUsage | undefined,
+  targetSentences: number
 ): RecapCallLog {
   return {
     timestamp: new Date(),
@@ -286,6 +325,10 @@ function buildRecapCallLog(
       ? { input: usage.inputTokens, output: usage.outputTokens } // 게이트웨이 실사용량 (커밋 410f558)
       : estimateTokens(input, outputText), // llmStream이 usage를 안 주는 경우(예: 테스트 페이크)의 대체
     trigger,
+    // 2026-11-17 C안 — 목표 대비 실제 길이 분포를 보려고 남긴다(NFR-OBS-002 🚦, 017 마이그레이션)
+    target_sentences: targetSentences,
+    output_chars: outputText.length, // 하드 상한과 같은 기준: 공백·소제목 포함, 잘린 뒤 길이
+    output_sentences: countRecapSentences(outputText),
   };
 }
 
