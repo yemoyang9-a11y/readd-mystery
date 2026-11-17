@@ -147,3 +147,17 @@ export function relationshipReviewReason(
   }
   return undefined;
 }
+
+/**
+ * 해석·평가어 — 중요도·추리 판정이 섞인 생성 문장은 자동 공개하지 않는다. 무엇이 단서이고
+ * 무엇이 수상한지는 독자가 정한다. 사건(FR-DAT-008)에서 쓰던 목록을 인물 노트(FR-DAT-004)·
+ * 관계 설명(FR-DAT-005)·장 요약(FR-DAT-003)·독자용 문장(R9)에도 똑같이 쓴다.
+ * 낱말 일치만 보는 보수적 검수 트리거다 — 따옴표 안 대사도 예외를 두지 않는다(사건 규칙과 같다).
+ */
+const EVALUATIVE_WORDS =
+  /(단서|결정적|수상(?:한|하|해|했|쩍|스러)|중요(?:한|하|해|했|성)|알고\s*보니|복선)/u;
+
+/** 생성 문장에서 처음 걸린 해석·평가어. 없으면 undefined. 문장은 고치지 않는다 */
+export function evaluativeWord(text: string): string | undefined {
+  return EVALUATIVE_WORDS.exec(text)?.[0];
+}
