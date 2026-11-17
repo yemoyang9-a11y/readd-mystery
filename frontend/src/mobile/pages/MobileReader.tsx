@@ -17,6 +17,7 @@ import MobileJumpBar from '../components/MobileJumpBar';
 import TocJumpDialog from '../../components/Reader/TocJumpDialog';
 import { useBackToBook } from '../../hooks/useBackToBook';
 import { BOOK_ROUTES } from '../../utils/routes';
+import { useCommunityAccess } from '../community/useCommunityAccess';
 
 const FOCUS_TOGGLE_CLASS =
   'sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-1/2 focus-visible:top-[calc(var(--safe-top)+6px)] focus-visible:z-[60] focus-visible:-translate-x-1/2 focus-visible:inline-flex focus-visible:min-h-11 focus-visible:items-center focus-visible:whitespace-nowrap focus-visible:rounded-full focus-visible:border focus-visible:border-brief-ink focus-visible:bg-white focus-visible:px-4 focus-visible:font-dashSans focus-visible:text-[13px] focus-visible:font-bold focus-visible:text-brief-ink focus-visible:shadow-brief-soft-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brief-accent focus-visible:ring-offset-2 focus-visible:aria-pressed:bg-brief-accent-soft focus-visible:aria-pressed:text-brief-accent';
@@ -37,7 +38,7 @@ export default function MobileReader() {
 // FR-PRG-003 🚦 FR-BRF-001
 function MobileReadingSession() {
   const { bookId = '' } = useParams();
-  const { entryError, retryEntry, page, pageError, retryPage, currentPage, totalPages, chapters, jumpOrigin, returnToOrigin, dismissJumpOrigin, moveTo, requestTocJump, tocJumpConfirm, confirmTocJump, cancelTocJump, highlightedQuote, panelOpen, togglePanel, ssabiPanelProps, quote } =
+  const { entryError, retryEntry, frontierConfirm, page, pageError, retryPage, currentPage, totalPages, chapters, jumpOrigin, returnToOrigin, dismissJumpOrigin, moveTo, requestTocJump, tocJumpConfirm, confirmTocJump, cancelTocJump, highlightedQuote, panelOpen, togglePanel, ssabiPanelProps, quote } =
     useReadingSession(bookId);
   const backToBook = useBackToBook(bookId);
   const navigate = useNavigate();
@@ -48,6 +49,9 @@ function MobileReadingSession() {
   const [chromeHidden, setChromeHidden] = useState(false);
   const [noteQuote, setNoteQuote] = useState<{ text: string; token: number } | null>(null);
   const viewport = useVisualViewport();
+  // FR-BRF-005 🚦 — 완독은 서버의 is_complete 로만 안다. 마지막 쪽이 화면에 떴을 때만 묻는다
+  const onLastPage = page !== null && page.page_no === currentPage && page.next_page === null;
+  const communityAccess = useCommunityAccess(bookId, onLastPage, frontierConfirm);
 
   useEffect(() => {
     if (panelOpen) setTocOpen(false);
@@ -78,7 +82,12 @@ function MobileReadingSession() {
         chromeHidden={chromeHidden}
         canToggleChrome={!panelOpen && !tocOpen && !prefsOpen}
         onToggleChrome={() => setChromeHidden((hidden) => !hidden)}
-        onOpenCommunity={() => navigate(BOOK_ROUTES.community.replace(':bookId', bookId))}
+        onOpenCommunity={
+          communityAccess === 'open'
+            ? () => navigate(BOOK_ROUTES.community.replace(':bookId', bookId))
+            : undefined
+        }
+        communityLocked={communityAccess === 'locked'}
         onBack={backToBook}
       />
     );
