@@ -14,13 +14,20 @@ import type {
   RelationshipGraph,
   CharacterDetail,
 } from '../../../shared/types';
-import type { SsabiRepository } from '../repository';
+import type { SsabiRepository, Timeline, TimelineChapter, TimelineEvent } from '../repository';
 import { latestRelationshipVersions, relationshipToEdge } from '../relationship-versions';
 
 /**
  * Fixture 데이터
  */
+export interface TimelineFixtureEvent extends TimelineEvent {
+  book_id: string;
+  original_description: string;
+}
+
 export interface SsabiFixture {
+  timelineChapters?: (TimelineChapter & { book_id: string })[];
+  timelineEvents?: TimelineFixtureEvent[];
   characters: Character[];
   relationships: Relationship[];
   aliases: Alias[];
@@ -35,6 +42,29 @@ export interface SsabiFixture {
  */
 export class FakeSsabiRepository implements SsabiRepository {
   constructor(private fixture: SsabiFixture) {}
+
+  async findTimeline(bookId: string, cutoff: number): Promise<Timeline> {
+    // FR-SPL-002 🚦: 장 시작 페이지·사건 발생 페이지 <= cutoff
+    const chapters = (this.fixture.timelineChapters ?? [])
+      .filter((c) => c.book_id === bookId && c.start_page <= cutoff)
+      .sort((a, b) => a.chapter_no - b.chapter_no)
+      .map(({ chapter_no, title, start_page, end_page }) => ({
+        chapter_no,
+        title,
+        start_page,
+        end_page,
+      }));
+    const events = (this.fixture.timelineEvents ?? [])
+      .filter((e) => e.book_id === bookId && e.occurrence_page <= cutoff)
+      .sort((a, b) => a.occurrence_page - b.occurrence_page || a.id.localeCompare(b.id))
+      .map(({ id, event, description, occurrence_page }) => ({
+        id,
+        event,
+        description,
+        occurrence_page,
+      }));
+    return { chapters, events };
+  }
 
   async findCharacters(bookId: string, cutoff: number): Promise<Character[]> {
     // FR-SPL-002 🚦: 최초 등장 페이지 <= cutoff
@@ -315,7 +345,24 @@ export function createTestFixture(): SsabiFixture {
 채만식의 대표작으로 1937-1938년 연재되었다.
   `.trim();
 
+  const timelineChapters = [
+    { book_id: 'takryu', chapter_no: 1, title: '1장', start_page: 1, end_page: 9 },
+    { book_id: 'takryu', chapter_no: 2, title: '2장', start_page: 10, end_page: 25 },
+    { book_id: 'takryu', chapter_no: 3, title: '3장', start_page: 26, end_page: 40 },
+  ];
+
+  const timelineEvents: TimelineFixtureEvent[] = [4, 9, 12, 24, 30, 38].map((page) => ({
+    id: `event-${page}`,
+    book_id: 'takryu',
+    event: `${page}쪽 사건`,
+    description: `${page}쪽 독자용 문장`,
+    original_description: `ORIGINAL ${page}쪽 원문 설명`,
+    occurrence_page: page,
+  }));
+
   return {
+    timelineChapters,
+    timelineEvents,
     characters,
     relationships,
     aliases,

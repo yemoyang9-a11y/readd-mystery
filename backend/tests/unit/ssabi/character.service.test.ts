@@ -72,6 +72,10 @@ function fakeRepo(options: FakeOptions = {}): SsabiRepository {
       record(cutoff);
       return null;
     },
+    async findTimeline(_bookId, cutoff) {
+      record(cutoff);
+      return { chapters: [], events: [] };
+    },
   };
 }
 

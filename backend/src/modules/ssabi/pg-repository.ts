@@ -16,7 +16,7 @@ import type {
   RelationshipGraph,
   CharacterDetail,
 } from '../../shared/types';
-import type { SsabiRepository } from './repository';
+import type { SsabiRepository, Timeline } from './repository';
 import { latestRelationshipVersions, relationshipToEdge } from './relationship-versions';
 
 const GENERIC_ALIASES = [
@@ -202,6 +202,28 @@ export function createPgSsabiRepository(db: QueryClient): SsabiRepository {
       );
       if (rows.length === 0) return null;
       return rows[0];
+    },
+
+    async findTimeline(bookId: string, cutoff: number): Promise<Timeline> {
+      // FR-SPL-002 🚦
+      const chapters = await db.query(
+        `SELECT chapter_no, title, start_page, end_page
+           FROM chapters
+          WHERE book_id = $1
+            AND start_page <= $2
+          ORDER BY chapter_no`,
+        [bookId, cutoff]
+      );
+      // FR-SPL-002 🚦
+      const events = await db.query(
+        `SELECT id, event, reader_description AS description, occurrence_page
+           FROM events
+          WHERE book_id = $1
+            AND occurrence_page <= $2
+          ORDER BY occurrence_page, id`,
+        [bookId, cutoff]
+      );
+      return { chapters: chapters.rows, events: events.rows };
     },
 
     async getGraph(bookId: string, cutoff: number): Promise<RelationshipGraph> {
