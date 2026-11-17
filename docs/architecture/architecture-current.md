@@ -1,9 +1,7 @@
 # architecture-current.md — 이전 후 인프라 구성
 
-> 이전 전 인프라는 [`architecture-aws.md`](architecture-aws.md), 그때의 설계 의도는
-> [`architecture-r2.md`](architecture-r2.md), 논리·앱·데이터 아키텍처는
-> [`architecture-r1.md`](architecture-r1.md)에 있다. **왜 이렇게 옮겼는가**는
-> [`migration.md`](../migration.md)가 다룬다. 이 문서는 **지금 무엇이 어떻게 떠 있는가**만 적는다.
+> 논리·앱·데이터 아키텍처는 [`architecture-r1.md`](architecture-r1.md)에 있다. 이전 전 AWS 인프라·이전 과정
+> 문서(architecture-aws·r2, migration)는 2026-11-17 정리 때 지웠다(git 기록에 있음). 이 문서는 **지금 무엇이 어떻게 떠 있는가**만 적는다.
 >
 > 인프라 실측 기준일은 2026-09-01이다. 아래 운영 계정·브랜치·시크릿 상태는 당시 기록이며
 > 현재 상태를 보증하지 않는다. 2026-10-22 코드 기본 LLM 변경은 5.1절에 별도로 기록했다.
@@ -314,7 +312,7 @@ Secrets and variables → Actions.
 
 이전 전 AWS 비용의 실측치는 확보하지 못했다 — 계정이 Organizations 멤버였고 상위 SCP 가
 `ce:GetCostAndUsage` 를 명시적으로 거부했다. **추정치를 실측치처럼 적지 않는다.**
-과금 대상 리소스 목록은 [`architecture-aws.md`](architecture-aws.md) 7장에 있다.
+과금 대상 리소스 목록은 옛 `architecture-aws.md` 7장에 있었다(git 기록).
 
 ---
 
@@ -376,6 +374,5 @@ JSON 21개)이 유일본이지만, **Supabase 가 이미 정본**이라 덤프 �
 | `fly scale count` | 재배포 시 머신이 2개로 늘어나는지 미확인 |
 | Supabase 무료 등급 한도 | 프로젝트 일시 정지 조건·백업 정책 미확인 |
 | `gen.return()` 조기 취소 | 하드 상한 도달 시 제너레이터 조기 종료가 Anthropic SDK 에서 안전한지 **미검증**. Bedrock 에서는 내부 예외로 번져 응답 전체를 500 으로 만든 전례가 있어 호출부가 try/catch 로 삼키고 있다 |
-| Elastic IP 불일치 | `architecture-aws.md` 는 EIP 2개를 기록하는데 `infra/terraform/` 에는 `aws_eip` 가 없다. 계정이 닫혀 확인 불가 |
 
 마지막 두 줄은 **확인하지 못한 것**이지 문제가 없다는 뜻이 아니다.

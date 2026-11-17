@@ -1,6 +1,6 @@
 # 싸비 백엔드 — Fly.io 배포 이미지
 #
-# @see docs/migration.md — Phase 2 (EC2 + PM2 → Fly.io 컨테이너, 2026-08-29)
+# 2026-08-29 이전: EC2 + PM2 → Fly.io 컨테이너
 #
 # 빌드 컨텍스트는 backend/ 다 (모노레포라 저장소 루트가 아니다).
 # fly.toml 이 같은 디렉터리에 있으므로 `fly deploy` 를 backend/ 에서 실행한다.

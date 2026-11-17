@@ -70,16 +70,13 @@
 | `docs/superpowers/specs/2026-11-16-*`, `plans/2026-11-16-*` | 현행 | 문서 첫 줄의 "승인 대기"는 작성 당시 상태. Task 1~6은 main에 병합됨 |
 | `docs/superpowers/specs/2026-11-06-*`, `plans/2026-11-06-*` | 현행 | 모바일 기준 |
 | `docs/superpowers/specs·plans/2026-10-2x-*` | 현행(부분) | 근거 기반 답변·관계 의미. 이후 설계가 덮어쓴 곳은 이후 설계를 따른다 |
-| `docs/superpowers/specs·plans/2026-08-*` | 이력 | 해커톤 시기 화면·조회 API 계획 |
 | `docs/architecture/architecture-current.md` | 대부분 현행 | 인프라 구성은 유효. 구성도의 LLM이 Anthropic으로 적힌 곳은 옛 표기이고 5.1절(OpenAI)이 현행 |
 | `docs/architecture/architecture-r1.md` | 이력(설계 근거) | 조항·절 번호를 참조할 때 쓴다 |
-| `docs/architecture/architecture-r2.md`, `architecture-aws.md`, `docs/migration.md` | 이력 | AWS 시기와 이전 과정 |
 | `docs/ir-v5/` | 현행 | 사업계획서 IR v5. 이 저장소는 비공개라 둠. 공개 저장소에는 올리지 않는다 |
 | `docs/validation/` | 기록 | 날짜별 화면 검증 |
-| `docs/archive/2026-08-hackathon/` | 이력 | 8월 R4 인수인계, AWS 배포 안내 |
-| `infra/terraform/` | 이력 | AWS 시기 인프라. 지금 쓰지 않는다 |
 | `evaluation/` | 현행 | 관계 평가, 챗봇 공격 시험 |
-| `backend/*.md`, `frontend/README.md` | 구현 참고 | 실행 방법은 대체로 유효. 「탁류」·Anthropic 표기가 남아 있을 수 있다 |
+| `backend/SSE_SPEC.md` | 현행 | 리캡·챗봇 스트리밍 형식. 프론트 코드가 참조 |
+| (삭제됨) | — | 2026-11-17 피벗 전 문서 정리: 8월 화면 계획·해커톤 인수인계·AWS 인프라 문서·Terraform·이전 기록(migration.md)·8월 백엔드/프론트 README·impeccable 8월 화면 평가. 필요하면 git 기록에서 본다 |
 
 ## 5. claude.ai 프로젝트 문서의 상태
 

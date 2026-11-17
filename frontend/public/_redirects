@@ -1,6 +1,6 @@
 # Cloudflare Pages — SPA 라우팅 fallback
 #
-# @see docs/migration.md — Phase 2 (S3 + CloudFront → Cloudflare Pages, 2026-08-29)
+# 2026-08-29 이전: S3 + CloudFront → Cloudflare Pages
 #
 # React Router 가 클라이언트에서 경로를 처리하므로, 서버에는 /books/takryu/read 같은
 # 파일이 없다. 이 규칙이 없으면 그 주소를 **직접 열거나 새로고침할 때 404** 가 난다

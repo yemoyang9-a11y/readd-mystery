@@ -95,9 +95,7 @@ RE:ADD는 본문을 이 사이트에서 읽는 추리소설 전용 독서 플랫
 | LLM | Amazon Bedrock | Anthropic API |
 | 임베딩 | Titan Embed v2 (1024) | Cohere embed-v4 (1024) |
 
-이전 과정에서 내린 판단과 겪은 문제는 [docs/migration.md](docs/migration.md)에
-Phase 별로 기록했다 — SSE 버퍼링, 임베딩 차원, Supabase 자체 루트 CA, 콜드스타트
-실측 같은 것들이다.
+이전 과정 기록(옛 `docs/migration.md`)은 2026-11-17 피벗 전 문서 정리 때 지웠다. 필요하면 git 기록에서 본다.
 
 ---
 
@@ -160,12 +158,9 @@ npx tsc --noEmit
 | [CLAUDE.md](CLAUDE.md) | 절대 규칙·시스템 불변식 R1~R12·용어 |
 | [PRODUCT.md](PRODUCT.md) | 제품 정의 (2026-11-17 추리 방향) |
 | [docs/architecture/architecture-r1.md](docs/architecture/architecture-r1.md) | 논리·앱·데이터 아키텍처 (설계 1회차) |
-| [docs/architecture/architecture-r2.md](docs/architecture/architecture-r2.md) | 이전 전 배포 설계 — 의도. 현재 무효이나 판단 근거로 보존 |
-| [docs/architecture/architecture-aws.md](docs/architecture/architecture-aws.md) | 이전 전 인프라 실측 기록 |
 | [docs/architecture/architecture-current.md](docs/architecture/architecture-current.md) | **현재 인프라 구성** |
-| [docs/migration.md](docs/migration.md) | 이전 과정과 판단 근거 |
 
-8월 기획 단계 산출물(PRD·유스케이스·FR/NFR·개발 명세)은 이 저장소에 없다. 8월 해커톤 시기 인수인계 문서는 [docs/archive/2026-08-hackathon/](docs/archive/2026-08-hackathon/)에 보관했다.
+8월 기획 단계 산출물(PRD·유스케이스·FR/NFR·개발 명세)은 이 저장소에 없다. 8월 해커톤 시기 문서(인수인계·화면 계획·AWS 인프라·Terraform)는 2026-11-17에 지웠다. 필요하면 git 기록에서 본다.
 
 ---
 

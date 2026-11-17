@@ -4,7 +4,7 @@
  * NFR-AI-003: 재시도 / 타임아웃 (D-2로 재정의 — 폴백 모델 없이 재시도만)
  *
  * @see dev-spec-R3-ai.md 2장
- * @see docs/migration.md — Phase 1 (Bedrock → Anthropic API 이관, 2026-08-29)
+ * 2026-08-29 이전 Phase 1 (Bedrock → Anthropic API 이관)
  *
  * ⚠️ **LLM 게이트웨이는 이제 이 파일을 쓰지 않는다.** Anthropic SDK가 재시도·타임아웃을
  *    내장하고 있어 gateway.ts는 클라이언트 옵션(maxRetries/timeout)으로 처리한다.

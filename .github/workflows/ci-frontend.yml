@@ -1,6 +1,6 @@
 # 프론트엔드 CI — 빌드·테스트만 한다. 배포는 하지 않는다.
 #
-# @see docs/migration.md — Phase 2 (S3 + CloudFront → Cloudflare Pages, 2026-08-29)
+# 2026-08-29 이전: S3 + CloudFront → Cloudflare Pages
 #
 # ⚠️ 배포는 Cloudflare Pages 의 Git 연동이 담당한다. 여기서 배포하지 않는 이유:
 #

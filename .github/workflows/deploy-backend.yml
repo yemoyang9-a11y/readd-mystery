@@ -1,6 +1,6 @@
 # 백엔드 배포 — Fly.io
 #
-# @see docs/migration.md — Phase 2 (EC2 + SSM + PM2 → Fly.io, 2026-08-29)
+# 2026-08-29 이전: EC2 + SSM + PM2 → Fly.io
 #
 # 예전 워크플로는 S3 에 tar.gz 를 올리고 SSM RunCommand 로 EC2 두 대에서 압축을 풀어
 # PM2 를 재시작했다. 그 경로가 전부 사라졌다 — Fly 가 이미지를 빌드하고 머신을 굴린다.

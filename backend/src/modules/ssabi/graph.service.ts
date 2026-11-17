@@ -2,8 +2,6 @@
  * GET /books/:bookId/ssabi/graph — 관계도 조회 (R3)
  *
  * 조항: FR-CHR-001, FR-SPL-002 🚦, A6
- *
- * @see docs/archive/2026-08-hackathon/query-endpoints-split.md Task 7
  */
 
 import type { RelationshipGraph } from '../../shared/types';
