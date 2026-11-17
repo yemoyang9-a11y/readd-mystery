@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RouterProvider } from 'react-router-dom';
 import { createAppRouter } from './App';
@@ -30,6 +30,7 @@ describe.each([
 
 test('FR-BRF-001: 모바일에서 작품 페이지 주소를 직접 열면 브리핑 화면 주소로 바뀐다', async () => {
   renderAt('/books/takryu', true);
+  await act(() => vi.dynamicImportSettled());
   await waitFor(() => expect(window.location.pathname).toBe('/books/takryu/briefing'));
   expect(screen.queryByRole('navigation', { name: '주 메뉴' })).not.toBeInTheDocument();
 });
@@ -60,16 +61,19 @@ test('PC 검색 화면이 아니면 위 줄에 검색 입력이 있다', () => {
 
 test('브리핑과 읽기 주소는 틀 없이 지금 화면을 그린다', async () => {
   const mobileRead = renderAt('/books/takryu/read', true);
+  await act(() => vi.dynamicImportSettled());
   expect(await screen.findByTestId('mobile-reader')).toBeInTheDocument();
   expect(screen.queryByRole('navigation', { name: '주 메뉴' })).not.toBeInTheDocument();
   mobileRead.unmount();
 
   const mobileBriefing = renderAt('/books/takryu/briefing', true);
+  await act(() => vi.dynamicImportSettled());
   expect(await screen.findByTestId('mobile-briefing')).toBeInTheDocument();
   expect(screen.queryByRole('navigation', { name: '주 메뉴' })).not.toBeInTheDocument();
   mobileBriefing.unmount();
 
   const pcRead = renderAt('/books/takryu/read', false);
+  await act(() => vi.dynamicImportSettled());
   expect(await screen.findByRole('article')).toBeInTheDocument();
   expect(screen.queryByTestId('mobile-reader')).not.toBeInTheDocument();
   expect(screen.queryByRole('navigation', { name: '주 메뉴' })).not.toBeInTheDocument();
@@ -77,6 +81,7 @@ test('브리핑과 읽기 주소는 틀 없이 지금 화면을 그린다', asyn
   pcRead.unmount();
 
   renderAt('/books/takryu/briefing', false);
+  await act(() => vi.dynamicImportSettled());
   expect(await screen.findByRole('list', { name: '목차' })).toBeInTheDocument();
   expect(screen.queryByRole('navigation', { name: '주 메뉴' })).not.toBeInTheDocument();
   expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
@@ -107,6 +112,7 @@ describe.each([
   test('NFR-USE: 읽기 화면에서 쪽을 넘기고 아모 패널을 열어도 페이드가 다시 돌지 않는다', async () => {
     const user = userEvent.setup();
     renderAt('/books/takryu/read', isMobile);
+    await act(() => vi.dynamicImportSettled());
     await screen.findByRole('article');
     const fade = screen.getByTestId('route-fade');
     expect(fade).toContainElement(screen.getByRole('article'));

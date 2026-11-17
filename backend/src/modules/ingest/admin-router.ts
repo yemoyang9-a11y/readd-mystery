@@ -8,7 +8,10 @@ import { IngestJob, JobRepository } from './job-repository';
 import { JobRunner } from './runner';
 import { ReviewError, ReviewService } from './review-service';
 import { createCommunityAdminRouter } from '../community/admin-router';
-import type { CommunityAdminRepository } from '../community/repository';
+import type {
+  CommunityAdminRepository,
+  CommunityModerationRepository,
+} from '../community/repository';
 import { MAX_RANGE_DAYS, rangeDays, type ReportService } from '../analytics/report-service';
 
 const UPLOAD_LIMIT = '5mb';
@@ -45,7 +48,7 @@ export function createAdminRouter(deps: {
   review: ReviewService;
   uploadDir: string;
   analytics?: ReportService;
-  community?: CommunityAdminRepository;
+  community?: CommunityAdminRepository & Partial<CommunityModerationRepository>;
   getToken?: () => string | undefined;
 }): Router {
   const { jobs, runner, review, uploadDir } = deps;

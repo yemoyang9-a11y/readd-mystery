@@ -70,6 +70,7 @@ export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
         { index: true, lazy: async () => ({ Component: (await import('./admin/AnalyticsPage')).default }) },
         { path: 'books', lazy: async () => ({ Component: (await import('./admin/BooksPage')).default }) },
         { path: 'books/:bookId/review', lazy: async () => ({ Component: (await import('./admin/ReviewPage')).default }) },
+        { path: 'community', lazy: async () => ({ Component: (await import('./admin/CommunityReportsPage')).default }) },
       ],
     },
     { path: '*', element: <RouteFade>{isMobile ? <MobileNotFound /> : <NotFound />}</RouteFade> },

@@ -39,7 +39,7 @@ export const ALLOWED_ACTION_NOTES: Record<AllowedAction, { what: string; example
     example: '12쪽에서 그는 장갑을 벗고 편지를 집어 들었어요.',
   },
   retrieve_scene: {
-    what: '독자가 물은 일과 관련된 앞 장면이 어디 있는지 쪽수로 알려 준다',
+    what: '독자가 장면 위치를 물었을 때(isSceneLocationRequest) 그 장면이 어디 있는지 쪽수로 알려 주고 다시 보라고 권할 수 있다. 묻지 않았으면 쪽수를 출처로 붙인 사실 서술만 한다 (대표 결정 2026-11-17)',
     example: '그 장면은 12쪽에 나와요. 12쪽 장면과 직접 비교해 보세요.',
   },
   show_reader_notes: {
@@ -107,7 +107,7 @@ export const FORBIDDEN_ENFORCEMENT: Record<ForbiddenAction, Enforcement> = {
     example: '장갑이 중요한 단서예요.',
   },
   steer_attention: {
-    what: '특정 장면을 주목하거나 다시 보라고 권한다',
+    what: '특정 장면을 주목하라고 하거나, 위치를 묻지 않았는데 다시 보라고 권한다 (대표 결정 2026-11-17)',
     violations: ['steering_hint'],
     example: '그 장면을 다시 보세요.',
   },
@@ -218,6 +218,21 @@ export const INTENT_POLICY: Record<QuestionIntent, IntentPolicy> = {
     allowed: ['answer_outside_book', 'ask_open_question'],
   },
 };
+
+/**
+ * 대표 결정 2026-11-17: 다시 보기 권유(retrieve_scene)는 독자가 장면 위치를 물었고, 그 질문 유형에
+ * retrieve_scene이 허용될 때만 열린다. 출력 검사는 유형 이름을 견주지 않고 이 함수를 읽는다.
+ */
+export function permitsSceneRetrieval(
+  intent: QuestionIntent | undefined,
+  sceneLocationRequested: boolean
+): boolean {
+  return (
+    sceneLocationRequested &&
+    intent !== undefined &&
+    INTENT_POLICY[intent].allowed.includes('retrieve_scene')
+  );
+}
 
 /** 재생성 뒤에도(또는 문장 단위 검사에서) 막힌 답변을 대신하는 고정 답변 */
 export function fixedAnswerFor(blocked: ReadonlyArray<GuardViolation>): string {
