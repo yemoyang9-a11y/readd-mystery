@@ -15,6 +15,7 @@ function briefing(overrides: Partial<BriefingResponse> = {}): BriefingResponse {
     current_chapter: { chapter_no: 2, title: '생활 제일과' },
     resume_chapter: { chapter_no: 2, title: '생활 제일과' },
     progress: { current_page: 15, total_pages: 20, percent: 75 },
+    last_read_at: null,
     ...overrides,
   };
 }

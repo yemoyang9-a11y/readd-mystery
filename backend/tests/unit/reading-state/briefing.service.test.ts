@@ -13,7 +13,7 @@ function build() {
   const { positions, books } = makeSeededFakes();
   const cutoffService = createCutoffService({ positions, books });
   const savedRecap = new FakeSavedRecapRepository();
-  const service = createBriefingService({ cutoffService, books, savedRecap });
+  const service = createBriefingService({ cutoffService, books, savedRecap, positions });
   return { positions, books, savedRecap, service };
 }
 
@@ -99,5 +99,24 @@ describe('브리핑 조립 — getBriefing', () => {
     expect(briefing.resume_chapter).toEqual({ chapter_no: 1, title: '제1장 인간기념물' });
     // 기준점의 장은 그대로 3장이다
     expect(briefing.current_chapter).toEqual({ chapter_no: 3, title: '제3장 생활 제일과' });
+  });
+
+  test('FR-BRF-005: last_read_at은 저장된 진도 레코드의 갱신 시각 그대로 (GET /books 의 progress.last_read_at 과 같은 원천)', async () => {
+    const { positions, service } = build();
+    positions.set(SEED_DEVICE_ID, SEED_BOOK_ID, { current_page: 16, event_seq: 1 });
+    const stored = await positions.findPosition(SEED_DEVICE_ID, SEED_BOOK_ID);
+
+    const briefing = await service.getBriefing(SEED_DEVICE_ID, SEED_BOOK_ID);
+
+    expect(stored).not.toBeNull();
+    expect(briefing.last_read_at).toBe(stored!.updated_at);
+  });
+
+  test('진도 레코드가 없으면(첫 진입) last_read_at은 null — 다른 시각으로 메우지 않는다', async () => {
+    const { service } = build();
+
+    const briefing = await service.getBriefing(SEED_DEVICE_ID, SEED_BOOK_ID);
+
+    expect(briefing.last_read_at).toBeNull();
   });
 });

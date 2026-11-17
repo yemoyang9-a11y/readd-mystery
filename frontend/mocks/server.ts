@@ -249,6 +249,7 @@ export function mockBriefingResponse(): BriefingResponse {
       total_pages: snap.total_pages,
       percent: snap.percent,
     },
+    last_read_at: lastReadAt[MOCK_BOOK_ID] ?? new Date().toISOString(),
   };
 }
 

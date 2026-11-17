@@ -74,7 +74,7 @@ export default function MobileBriefingView({
   characterNames: string[];
   notes?: ReadingNote[];
   onOpenCommunity?: () => void;
-  /** 서버의 마지막 읽은 시각(GET /books progress.last_read_at). 없으면 경과 안내를 그리지 않는다 */
+  /** 서버의 마지막 읽은 시각(GET /briefing last_read_at). 없으면 경과 안내를 그리지 않는다 */
   lastReadAt?: string | null;
   /** 서버가 준 작품 소개(GET /info introduction, 상한 예외 R5). 없으면 그 칸을 그리지 않는다 */
   introduction?: string | null;

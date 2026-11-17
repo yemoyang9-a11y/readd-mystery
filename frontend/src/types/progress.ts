@@ -109,4 +109,9 @@ export interface BriefingResponse {
     total_pages: number;
     percent: number;
   };
+  /**
+   * 마지막으로 읽은 시각(ISO 8601, GET /books 의 progress.last_read_at 과 같은 값).
+   * 진도 기록이 없으면 null — 브리핑의 "N일 만이에요" 줄을 그리지 않는다.
+   */
+  last_read_at: string | null;
 }

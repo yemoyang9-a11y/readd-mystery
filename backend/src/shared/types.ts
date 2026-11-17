@@ -151,6 +151,12 @@ export interface BriefingResponse {
     total_pages: number;
     percent: number;
   };
+
+  /**
+   * 마지막으로 읽은 시각(reading_position.updated_at, ISO 8601) — 브리핑의 "N일 만이에요"용.
+   * GET /books 의 progress.last_read_at 과 같은 값. 진도 레코드가 없으면 null
+   */
+  last_read_at: string | null;
 }
 
 // ============================================================================

@@ -38,6 +38,7 @@ const serverBriefing: BriefingResponse = {
   current_chapter: { chapter_no: 3, title: '지문' },
   resume_chapter: { chapter_no: 2, title: '해왕좌의 밤' },
   progress: { current_page: 13, total_pages: 68, percent: 19.1 },
+  last_read_at: null,
 };
 
 function Where() {
