@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import RelationshipTab from './RelationshipTab';
 import { relationshipFixture } from './relationshipFixture';
 import type { GraphResponse } from '../../types';
@@ -54,8 +54,7 @@ it('FR-CHR-001: 과거 데이터는 임의 화살표 없이 그리고 방향 미
   const path = container.querySelector('path[data-edge-id]')!;
   expect(path).not.toHaveAttribute('marker-start');
   expect(path).not.toHaveAttribute('marker-end');
-  const people = screen.getByRole('region', { name: '인물' });
-  fireEvent.click(within(people).getByText('가'));
+  fireEvent.click(screen.getByRole('button', { name: '가' }));
   expect(screen.queryByText(/방향 미검증/)).not.toBeInTheDocument();
   expect(screen.getByText(/이전 관계 이력이 없는 응답/)).toBeInTheDocument();
 });

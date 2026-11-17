@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { GraphResponse } from '../../types';
 import Loading from '../common/Loading';
 import RelationshipGraph from './RelationshipGraph';
+import RelationDetails from './RelationDetails';
 import { filterMajorCharacters, graphMilestones, graphUpTo } from './graphFilter';
 
 /**
@@ -142,15 +143,6 @@ export default function RelationshipTab({
   // 다시 앞으로 감으면 그대로 복원된다)
   const activeSelected = selected && shown?.nodes.some((n) => n.id === selected) ? selected : null;
 
-  // Hooks must run during loading/error renders as well as loaded graph renders.
-  const cardRefs = useRef(new Map<string, HTMLLIElement>());
-  const scrollTargetRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!activeSelected || scrollTargetRef.current !== activeSelected) return;
-    cardRefs.current.get(activeSelected)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    scrollTargetRef.current = null;
-  }, [activeSelected]);
-
   if (failed)
     return (
       <p role="alert" className="text-brief-muted">
@@ -186,7 +178,6 @@ export default function RelationshipTab({
     if (characterMode === 'major' && !displayed.nodes.some((node) => node.id === id)) {
       setCharacterMode('all');
     }
-    scrollTargetRef.current = id;
     setSelected(id);
     setQuery('');
     setResultsOpen(false);
@@ -202,9 +193,13 @@ export default function RelationshipTab({
         onSelectEdge={setSelectedEdgeKey}
       />
       <p className="text-[11px] leading-relaxed text-brief-muted">
-        화살표는 감정·행동의 방향이고, 점선은 주장·소문이거나 끝난 관계입니다. 인물을 선택하면 그
-        인물의 관계가 그래프에 글자로 나옵니다.
+        화살표는 감정·행동의 방향이고, 점선은 주장·소문이거나 끝난 관계입니다.
       </p>
+      <RelationDetails
+        graph={displayed}
+        selectedId={activeSelected}
+        selectedEdgeKey={selectedEdgeKey}
+      />
       {!graph?.history ? (
         <p className="text-[11px] leading-relaxed text-brief-muted">
           이전 관계 이력이 없는 응답은 되감아도 당시 관계를 모두 복원할 수 없습니다.
@@ -403,56 +398,6 @@ export default function RelationshipTab({
           <p className="text-[11px] text-brief-muted">아직 등장한 인물이 없습니다.</p>
         ) : null}
 
-        <ul data-no-track className="space-y-3">
-          {displayed.nodes.map((node) => {
-            const isOpen = node.id === activeSelected;
-            return (
-              <li
-                key={node.id}
-                ref={(el) => {
-                  if (el) cardRefs.current.set(node.id, el);
-                  else cardRefs.current.delete(node.id);
-                }}
-              >
-                <button
-                  type="button"
-                  aria-pressed={isOpen}
-                  onClick={() => setSelected(isOpen ? null : node.id)}
-                  className={`w-full rounded-xl border p-3.5 text-left transition-colors ${
-                    isOpen
-                      ? 'border-brief-accent bg-brief-accent-soft'
-                      : 'border-brief-rule bg-white'
-                  }`}
-                >
-                  {/* 이름과 별칭을 **두 개의 열**로 둔다 — 별칭이 아무리 길어도 이름의 가로
-                      범위를 침범하지 않는다 (2026-08-26, 사용자 요청).
-                      이름은 shrink-0·whitespace-nowrap 으로 항상 한 줄을 온전히 차지하고,
-                      별칭은 grow 로 **남은 폭만** 차지한 뒤 그 안에서 줄바꿈한다. 오른쪽
-                      끝 정렬은 text-right 가 맡는다.
-                      ⚠️ flex-wrap 을 쓰지 않는다. wrap 을 주면 별칭이 통째로 다음 줄로
-                         내려가 이름 아래(=이름의 가로 범위)까지 퍼진다. 그 방식은 정렬은
-                         맞출 수 있어도 "이름 밑으로 글자가 흘러 보기 안 좋다"는 문제가
-                         남았다 — 열을 고정하는 지금 방식이 그 문제까지 없앤다.
-
-                      별칭 쪽 break-keep(word-break: keep-all) — 한글은 기본값이 글자 단위로
-                      끊어서 "태수씨"가 "태수"/"씨"로 쪼개져 마지막 줄에 한 글자만 떨어졌다.
-                      keep-all 이면 공백에서만 끊겨 별칭 구분자(·) 자리에서 줄이 바뀐다.
-                      이름 쪽에 whitespace-nowrap 을 준 것과 같은 이유다. */}
-                  <div className="flex items-baseline gap-x-3">
-                    <span className="shrink-0 whitespace-nowrap font-dashSerif text-sm font-bold text-brief-ink">
-                      {node.name}
-                    </span>
-                    {node.aliases.length > 0 ? (
-                      <span className="min-w-0 grow break-keep text-right text-[11px] text-brief-muted">
-                        {node.aliases.join(' · ')}
-                      </span>
-                    ) : null}
-                  </div>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
       </section>
     </div>
   );

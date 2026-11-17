@@ -28,41 +28,39 @@ it('renders graph after loading and after a position invalidates the previous gr
 describe('RelationshipTab', () => {
   it('NFR-USE-006: 인물을 선택하면 그래프에 관계 라벨이 글자로 나온다 — 색상만으로 구분하지 않는다', () => {
     render(<RelationshipTab graph={graph} failed={false} />);
+    fireEvent.click(screen.getByRole('button', { name: '정주사' }));
 
-    const people = screen.getByRole('region', { name: '인물' });
-    fireEvent.click(within(people).getByText('정주사'));
-
-    expect(screen.getByText('부녀', { exact: false })).toBeInTheDocument();
+    expect(screen.getAllByText('부녀', { exact: false }).length).toBeGreaterThan(0);
   });
 
-  it('FR-CHR-001: 인물 카드는 인물만 보여 준다 — 선택해도 관계 카드를 펼치지 않는다', () => {
+  it('인물을 선택하면 설명 칸에 이어진 사람이 나온다 — 선택하기 전에는 설명 칸이 없다', () => {
     render(<RelationshipTab graph={graph} failed={false} />);
+    expect(screen.queryByRole('region', { name: '관계 설명' })).not.toBeInTheDocument();
 
-    const people = screen.getByRole('region', { name: '인물' });
-    fireEvent.click(within(people).getByText('정주사'));
+    fireEvent.click(screen.getByRole('button', { name: '정주사' }));
 
-    expect(within(people).queryByText('부녀', { exact: false })).not.toBeInTheDocument();
-    expect(within(people).queryByRole('list', { name: '관계' })).not.toBeInTheDocument();
+    const details = screen.getByRole('region', { name: '관계 설명' });
+    expect(within(details).getByText('정주사와 이어진 사람')).toBeInTheDocument();
+    expect(within(details).getByText('초봉')).toBeInTheDocument();
+    expect(within(details).getByText('부녀')).toBeInTheDocument();
   });
 
   it('같은 인물을 다시 선택하면 선택이 풀린다', () => {
     render(<RelationshipTab graph={graph} failed={false} />);
 
-    const people = screen.getByRole('region', { name: '인물' });
-    const card = within(people).getByText('정주사').closest('button')!;
-    fireEvent.click(card);
-    expect(card).toHaveAttribute('aria-pressed', 'true');
+    const node = screen.getByRole('button', { name: '정주사' });
+    fireEvent.click(node);
+    expect(node).toHaveAttribute('aria-pressed', 'true');
 
-    fireEvent.click(card);
-    expect(card).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(node);
+    expect(node).toHaveAttribute('aria-pressed', 'false');
   });
 
-  it('다른 인물 카드를 연달아 눌러도 누른 카드가 선택된다', () => {
+  it('다른 인물을 연달아 눌러도 누른 인물이 선택된다', () => {
     render(<RelationshipTab graph={graph} failed={false} />);
 
-    const people = screen.getByRole('region', { name: '인물' });
-    const first = within(people).getByText('정주사').closest('button')!;
-    const second = within(people).getByText('초봉').closest('button')!;
+    const first = screen.getByRole('button', { name: '정주사' });
+    const second = screen.getByRole('button', { name: '초봉' });
     fireEvent.click(first);
     fireEvent.click(second);
 
@@ -70,13 +68,11 @@ describe('RelationshipTab', () => {
     expect(second).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('인물 이름과 별칭을 카드로 렌더한다', () => {
+  it('인물은 그래프의 노드로 렌더된다', () => {
     render(<RelationshipTab graph={graph} failed={false} />);
 
-    const people = screen.getByRole('region', { name: '인물' });
-    expect(within(people).getByText('정주사')).toBeInTheDocument();
-    expect(within(people).getByText('초봉')).toBeInTheDocument();
-    expect(within(people).getByText('정 주사')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '정주사' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '초봉' })).toBeInTheDocument();
   });
 
   it('되감기 슬라이더의 오른쪽 끝이 현재 진도다 — 처음에는 받은 것 전부가 보인다', () => {
@@ -87,8 +83,7 @@ describe('RelationshipTab', () => {
     expect(scrub).toHaveValue('2');
     expect(screen.getByText('현재까지')).toBeInTheDocument();
 
-    const people = screen.getByRole('region', { name: '인물' });
-    expect(within(people).getByText('초봉')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '초봉' })).toBeInTheDocument();
   });
 
   it('되감으면 그 시점 이후에 등장한 인물·관계가 사라진다', async () => {
@@ -98,13 +93,12 @@ describe('RelationshipTab', () => {
     fireEvent.change(screen.getByLabelText('시점 되감기'), { target: { value: '0' } });
 
     expect(screen.getByText('1페이지 시점')).toBeInTheDocument();
-    const people = screen.getByRole('region', { name: '인물' });
-    expect(within(people).getByText('정주사')).toBeInTheDocument();
-    expect(within(people).queryByText('초봉')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '정주사' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '초봉' })).not.toBeInTheDocument();
 
     // 이 시점의 정주사를 선택해도 관계는 아직 확립 전이라 안 나온다
-    fireEvent.click(within(people).getByText('정주사'));
-    expect(within(people).queryByText('부녀', { exact: false })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '정주사' }));
+    expect(screen.queryByText('부녀', { exact: false })).not.toBeInTheDocument();
   });
 
   it('FR-SPL-005 🚦: 조회 실패는 부분 표시로 넘어가지 않는다', () => {
@@ -113,14 +107,6 @@ describe('RelationshipTab', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('관계도를 불러오지 못했습니다');
     expect(screen.queryByText('정주사')).not.toBeInTheDocument();
     expect(screen.queryByText('부녀')).not.toBeInTheDocument();
-  });
-
-  it('인물 카드는 brief 톤 카드 스타일을 쓴다 (미선택 상태)', () => {
-    render(<RelationshipTab graph={graph} failed={false} />);
-    const people = screen.getByRole('region', { name: '인물' });
-    const card = within(people).getByText('정주사').closest('button')!;
-    expect(card.className).toContain('bg-white');
-    expect(card.className).toContain('border-brief-rule');
   });
 
   it('되감기 슬라이더는 brief-accent 를 쓴다', () => {
@@ -173,18 +159,14 @@ describe('RelationshipTab', () => {
       expect(within(results).getByText('정주사')).toBeInTheDocument();
     });
 
-    it('검색 결과를 선택하면 그 인물 카드가 선택된다', () => {
+    it('검색 결과를 선택하면 그 인물이 선택된다', () => {
       render(<RelationshipTab graph={graph} failed={false} />);
       fireEvent.change(screen.getByLabelText('인물 검색'), { target: { value: '정주사' } });
 
       const results = screen.getByRole('listbox', { name: '인물 검색 결과' });
       fireEvent.click(within(results).getByText('정주사'));
 
-      const people = screen.getByRole('region', { name: '인물' });
-      expect(within(people).getByText('정주사').closest('button')).toHaveAttribute(
-        'aria-pressed',
-        'true'
-      );
+      expect(screen.getByRole('button', { name: '정주사' })).toHaveAttribute('aria-pressed', 'true');
     });
 
     it('선택 후에는 검색창이 비워지고 결과 목록이 닫힌다', () => {
@@ -263,9 +245,9 @@ describe('RelationshipTab', () => {
         'true'
       );
       expect(within(people).getByText('8명')).toBeInTheDocument();
-      expect(within(people).getByText('정주사')).toBeInTheDocument();
-      expect(within(people).queryByText('최차부')).not.toBeInTheDocument();
-      expect(within(people).queryByText('제중당 주인')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '정주사' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: '최차부' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: '제중당 주인' })).not.toBeInTheDocument();
     });
 
     it('연결 수(degree)가 두드러진 인물이 8명보다 많으면 8명에서 안 잘린다', () => {
@@ -324,7 +306,7 @@ describe('RelationshipTab', () => {
       fireEvent.click(within(people).getByRole('button', { name: '전체' }));
 
       expect(within(people).getByText('10명')).toBeInTheDocument();
-      expect(within(people).getByText('최차부')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '최차부' })).toBeInTheDocument();
     });
 
     it('다시 "주요인물"을 누르면 도로 걸러진다', () => {
@@ -335,14 +317,14 @@ describe('RelationshipTab', () => {
       fireEvent.click(within(people).getByRole('button', { name: '주요인물' }));
 
       expect(within(people).getByText('8명')).toBeInTheDocument();
-      expect(within(people).queryByText('최차부')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: '최차부' })).not.toBeInTheDocument();
     });
 
     it('걸러진 인물도 검색으로 찾아 선택하면 "전체"로 전환되며 보인다 — 완전히 숨기지 않는다', () => {
       render(<RelationshipTab graph={tenCharacterGraph} failed={false} />);
       const people = screen.getByRole('region', { name: '인물' });
 
-      expect(within(people).queryByText('최차부')).not.toBeInTheDocument(); // 기본값이 이미 주요인물
+      expect(screen.queryByRole('button', { name: '최차부' })).not.toBeInTheDocument(); // 기본값이 이미 주요인물
 
       fireEvent.change(screen.getByLabelText('인물 검색'), { target: { value: '최차부' } });
       fireEvent.click(
@@ -353,7 +335,7 @@ describe('RelationshipTab', () => {
         'aria-pressed',
         'true'
       );
-      expect(within(people).getByText('최차부')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '최차부' })).toBeInTheDocument();
       expect(screen.getAllByText('지인', { exact: false }).length).toBeGreaterThan(0);
     });
 
@@ -370,8 +352,8 @@ describe('RelationshipTab', () => {
         'true'
       );
       expect(within(people).getByText('2명')).toBeInTheDocument();
-      expect(within(people).getByText('정주사')).toBeInTheDocument();
-      expect(within(people).getByText('초봉')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '정주사' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '초봉' })).toBeInTheDocument();
     });
 
     it('등장한 인물 자체가 없으면(진도 최초) 그 사실을 알린다', () => {
@@ -458,11 +440,21 @@ describe('인물관계도 선 선택', () => {
       edges: [...graph.edges, { source: 'c2', target: 'c3', label: '약혼', established_page: 6 }],
     };
     const { container } = render(<RelationshipTab graph={three} failed={false} />);
-    const people = screen.getByRole('region', { name: '인물' });
-    fireEvent.click(within(people).getByText('정주사'));
+    fireEvent.click(screen.getByRole('button', { name: '정주사' }));
     for (const el of container.querySelectorAll('[data-node-id], [data-edge-id]')) {
       expect(el.getAttribute('opacity') ?? '1').toBe('1');
     }
+  });
+
+  it('선을 누르면 설명 칸이 그 관계 하나로 바뀌고, 인물을 고르면 선 선택이 풀린다', () => {
+    const { container } = render(<RelationshipTab graph={graph} failed={false} />);
+    fireEvent.click(container.querySelector('[data-edge-id]') as SVGElement);
+    const details = screen.getByRole('region', { name: '관계 설명' });
+    expect(within(details).getByText('정주사 · 초봉')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '초봉' }));
+    expect(container.querySelector('[data-edge-id]')).toHaveAttribute('data-selected', 'false');
+    expect(screen.getByText('초봉과 이어진 사람')).toBeInTheDocument();
   });
 
   it('이름표는 선 클릭을 가리지 않는다(pointer-events 없음)', () => {
