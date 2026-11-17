@@ -378,11 +378,16 @@ describe('리캡 호출 로그 — NFR-OBS-002 🚦', () => {
       model: 'recap',
       tokens: { input: 100, output: 20 },
       trigger: 'realtime',
+      target_sentences: 2,
+      output_chars: 6,
+      output_sentences: 1,
     };
 
     await logger.record(entry);
 
     expect(calls[0].sql).toMatch(/INSERT INTO recap_call_log/);
+    // 2026-11-17 C안 — 017 마이그레이션의 길이 컬럼 3개도 함께 적재한다
+    expect(calls[0].sql).toMatch(/target_sentences,\s*output_chars,\s*output_sentences/);
     expect(calls[0].params).toEqual([
       entry.timestamp,
       'dev-1',
@@ -395,6 +400,9 @@ describe('리캡 호출 로그 — NFR-OBS-002 🚦', () => {
       100,
       20,
       'realtime',
+      2,
+      6,
+      1,
     ]);
   });
 });
