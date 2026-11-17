@@ -30,3 +30,42 @@ export function classifyQuestion(text: string): QuestionIntent {
   if (OUTSIDE.test(text)) return 'outside';
   return 'fact';
 }
+
+/**
+ * NFR-AI-005, 대표 결정 2026-11-17 — 독자가 장면·대목의 위치를 찾아 달라고 물었는지(낱말 검사, R9).
+ * 이 판별이 참이고 행동 단계표가 그 유형에 retrieve_scene을 허용할 때만 "12쪽을 다시 읽어 보세요"
+ * 같은 다시 보기 권유가 출력 검사를 통과한다. 근거 범위(K)에는 관여하지 않는다(R4).
+ *
+ * 잡는 말
+ * - 장면을 가리키는 말 + 어디: "그 장면 어디였지?", "장갑 나온 데가 어디야?"
+ * - 어디 + 나오다·등장하다: "장갑은 어디 나와?", "처음 등장한 게 어디였더라?"
+ * - 몇 쪽·몇 페이지·어느 쪽(이/에/였)·어느 장면·대목: "장갑 나온 데가 몇 쪽이야?"
+ * - 장면을 가리키는 말 + 찾다: "장갑 나오는 장면 찾아줘"
+ * - 다시 보고/읽고 싶다·다시 보려면: "다시 보고 싶은데 어디야?"
+ * - 영어: which/what page, where … scene/passage/appear, find the scene
+ * 잡지 않는 말: "어디에 살아?"·"어디 출신이야?"(장면이 아닌 장소), "단서를 찾아줘"(장면을 가리키지 않음),
+ * "편지는 몇 장이야?"(장수).
+ */
+const SCENE_WORD = '(?:장면|대목|부분|구절|대사|문장|내용|데|곳|쪽|페이지)';
+const SCENE_LOCATION_REQUEST = new RegExp(
+  [
+    `${SCENE_WORD}(?:이|가|은|는|을|를|도)?\\s*[^.?!]{0,6}어디`,
+    '어디\\s*(?:였|더라)',
+    '어디(?:\\s*쯤|에서|서|에)?\\s*(?:처음\\s*)?(?:나왔|나오|나와|나온|등장|언급|적혀|쓰여)',
+    '(?:언제|어디)\\s*(?:처음\\s*)?(?:나왔|등장했|언급됐)',
+    '몇\\s*(?:쪽|페이지|챕터|번째\\s*(?:장|쪽|페이지))',
+    '어느\\s*(?:페이지|장면|대목|구절|챕터)',
+    '어느\\s*(?:쪽|장)(?:이|에|였|인)',
+    `${SCENE_WORD}[^.?!]{0,8}찾`,
+    '다시\\s*(?:보|읽|찾아\\s*보)고\\s*싶',
+    '다시\\s*(?:보|읽)(?:려면|려고)',
+    '\\b(?:which|what)\\s+page\\b',
+    '\\bwhere\\b[^?.!]{0,40}\\b(?:scene|passage|mention(?:ed)?|appear(?:s|ed)?)\\b',
+    '\\bfind\\s+(?:the|that)\\s+(?:scene|passage|part)\\b',
+  ].join('|'),
+  'iu'
+);
+
+export function isSceneLocationRequest(text: string): boolean {
+  return SCENE_LOCATION_REQUEST.test(text);
+}

@@ -11,7 +11,7 @@ import { questionFocus } from './question-focus';
 import { resolveConversationContext } from './conversation-context';
 import { formatConversationInput } from './conversation-input';
 import { emptyNotesReader, type NotesReader } from './notes-reader';
-import { classifyQuestion } from './harness/question-intent';
+import { classifyQuestion, isSceneLocationRequest } from './harness/question-intent';
 import { guardAnswer, type GuardViolation } from './harness/output-guard';
 import { takeSentences } from './harness/sentence-buffer';
 import { INTENT_POLICY, fixedAnswerFor, retryNoticeFor } from './harness/behavior-ladder';
@@ -68,6 +68,9 @@ export async function* handleQuery(
 ): AsyncGenerator<string> {
   const notesReader = deps.notesReader ?? emptyNotesReader;
   const intent = classifyQuestion(query);
+  // NFR-AI-005, 대표 결정 2026-11-17: 다시 보기 권유는 독자가 장면 위치를 물었을 때만 허용한다.
+  // guarded·outside 두 경로 모두 같은 guardAgainst로 이 값을 쓴다
+  const sceneLocationRequested = isSceneLocationRequest(query);
   // NFR-AI-005, 결정 23: 유형별 응답 방식·지침·막는 위반은 행동 단계표에서 읽는다
   const policy = INTENT_POLICY[intent];
   const blocking: ReadonlySet<GuardViolation> = new Set(policy.blocking);
@@ -284,6 +287,7 @@ export async function* handleQuery(
         cutoff: K,
         pages: allowedPages,
         intent,
+        sceneLocationRequested,
         echoedUserText: quote ? [query, quote] : [query],
         rawText: context.current_chapter_text ? [context.current_chapter_text] : [],
         // 독자 자신의 글은 암시·출처 없는 인용으로 세지 않는다. K 이하 노트만 넘긴다 (FR-SPL-002 🚦)

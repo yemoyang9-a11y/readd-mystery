@@ -153,7 +153,8 @@ describe('챗봇 하네스 (FR-QNA-004 🚦, NFR-AI-005)', () => {
           : [{ page_no: 5, kind: 'clue' as const, body: '남의 메모' }]
       ),
     };
-    answers('12쪽을 다시 읽어 보세요.');
+    // 대표 결정 2026-11-17: 묻지 않은 "12쪽을 다시 읽어 보세요"는 이제 재생성 대상이라 사실 서술로 바꿨다
+    answers('12쪽에서 그는 장갑을 벗었어요.');
     await run('내 가설이 맞는지 확인해줘', notesReader);
     // FR-SPL-002: 노트 조회에도 같은 cutoff가 인자로 간다
     expect(notesReader.listNotes).toHaveBeenCalledWith(DEVICE_ID, BOOK_ID, K);
