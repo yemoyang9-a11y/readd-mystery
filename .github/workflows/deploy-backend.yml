@@ -63,6 +63,10 @@ jobs:
         working-directory: backend
         run: npm run lint
 
+      - name: Audit production dependencies
+        working-directory: backend
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Typecheck
         working-directory: backend
         run: npx tsc --noEmit
