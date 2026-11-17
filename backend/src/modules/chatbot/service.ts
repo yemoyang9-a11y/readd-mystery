@@ -1,12 +1,4 @@
-import {
-  SYSTEM_RULES,
-  COMPLETION_STANCE,
-  buildQuoteSection,
-  HARNESS_GUIDANCE,
-  HARNESS_RETRY_NOTICE,
-  VERBATIM_RETRY_NOTICE,
-  HINT_RETRY_NOTICE,
-} from './response-policy';
+import { SYSTEM_RULES, COMPLETION_STANCE, buildQuoteSection } from './response-policy';
 import type { ChatbotQueryLog } from '../../shared/types';
 import { assembleContext, buildStableContextParts } from './context-assembly';
 import { buildNotesSection } from './harness/notes-section';
@@ -19,28 +11,14 @@ import { questionFocus } from './question-focus';
 import { resolveConversationContext } from './conversation-context';
 import { formatConversationInput } from './conversation-input';
 import { emptyNotesReader, type NotesReader } from './notes-reader';
-import { classifyQuestion, type QuestionIntent } from './harness/question-intent';
+import { classifyQuestion } from './harness/question-intent';
 import { guardAnswer, type GuardViolation } from './harness/output-guard';
 import { takeSentences } from './harness/sentence-buffer';
-import {
-  HARNESS_FIXED_ANSWER,
-  HARNESS_PREDICTION_ANSWER,
-  HARNESS_VERBATIM_ANSWER,
-} from './harness/messages';
+import { INTENT_POLICY, fixedAnswerFor, retryNoticeFor } from './harness/behavior-ladder';
 
 const MOCK_MODE = process.env.MOCK_MODE === 'true';
 
 export { CHATBOT_TASK };
-
-// outside는 전체 생성 후 검사·재생성 대신 문장 단위 검사 후 스트리밍한다 (2026-11-17 결정 34)
-const UNGUARDED_INTENTS: ReadonlySet<QuestionIntent> = new Set(['outside']);
-// outside 스트리밍을 끊는 위반. 인용 출처 불일치는 작품 밖 인용이 흔해 지금처럼 로그만 남긴다
-const OUTSIDE_BLOCKING: ReadonlySet<GuardViolation> = new Set<GuardViolation>([
-  'verdict_phrase',
-  'page_beyond_cutoff',
-  'verbatim_over_limit',
-  'steering_hint',
-]);
 
 export interface ChatbotDeps {
   notesReader?: NotesReader;
@@ -90,6 +68,9 @@ export async function* handleQuery(
 ): AsyncGenerator<string> {
   const notesReader = deps.notesReader ?? emptyNotesReader;
   const intent = classifyQuestion(query);
+  // NFR-AI-005, 결정 23: 유형별 응답 방식·지침·막는 위반은 행동 단계표에서 읽는다
+  const policy = INTENT_POLICY[intent];
+  const blocking: ReadonlySet<GuardViolation> = new Set(policy.blocking);
   // This payload is loaded by the server route; still enforce K at the final boundary.
   currentPageText =
     currentPageText &&
@@ -134,11 +115,12 @@ export async function* handleQuery(
     return;
   }
 
-  // NFR-AI-005
-  if (intent === 'prediction') {
+  // NFR-AI-005: 고정 답변 유형(예측 요청)은 모델을 부르지 않는다
+  if (policy.response === 'fixed' && policy.fixed) {
+    const { answer: fixedText, tag } = policy.fixed;
     if (conversationId != null) {
-      if (quote) await recordTurns(conversationId, query, HARNESS_PREDICTION_ANSWER, K, quote);
-      else await recordTurns(conversationId, query, HARNESS_PREDICTION_ANSWER, K);
+      if (quote) await recordTurns(conversationId, query, fixedText, K, quote);
+      else await recordTurns(conversationId, query, fixedText, K);
     }
     await logQuery({
       timestamp: new Date(),
@@ -160,12 +142,12 @@ export async function* handleQuery(
       search_selected_pages: [],
       no_evidence: false,
       is_complete: isComplete,
-      model: 'canned:harness-prediction',
+      model: `canned:harness-${tag}`,
       harness: { intent, violations: [], regenerated: false, fixed_answer: true },
-      output_ref: `chatbot-prediction-${Date.now()}`,
-      tokens: { input: 0, output: HARNESS_PREDICTION_ANSWER.length },
+      output_ref: `chatbot-${tag}-${Date.now()}`,
+      tokens: { input: 0, output: fixedText.length },
     });
-    yield HARNESS_PREDICTION_ANSWER;
+    yield fixedText;
     return;
   }
 
@@ -248,7 +230,7 @@ export async function* handleQuery(
       console.error('[Chatbot] notes lookup failed', { bookId, error });
     }
     fullPrompt += buildNotesSection(notes, K, query);
-    fullPrompt += HARNESS_GUIDANCE[intent] ?? '';
+    fullPrompt += policy.guidance;
     fullPrompt += `\n\n# 사용자 질문\n\n${query}`;
     fullPrompt = fullPrompt.replace(/^\n+/, '');
 
@@ -315,7 +297,7 @@ export async function* handleQuery(
     const attemptViolations: GuardViolation[][] = [];
     let fixedAnswer = false;
 
-    if (!UNGUARDED_INTENTS.has(intent)) {
+    if (policy.response !== 'sentence_stream') {
       // FR-QNA-004 🚦 NFR-AI-005
       let attemptPrompt = fullPrompt;
       for (let attempt = 0; ; attempt++) {
@@ -324,24 +306,17 @@ export async function* handleQuery(
         if (!text.trim()) throw new Error('CHATBOT_EMPTY_RESPONSE');
         const violations = guardAgainst(text);
         attemptViolations.push(violations);
-        if (violations.length === 0) {
+        if (!violations.some((violation) => blocking.has(violation))) {
           responseText = text;
           break;
         }
         if (attempt === 1) {
-          // 원문 분량만 넘은 경우는 추리 판정 안내가 아니라 원문 상한 안내로 대체한다
-          responseText = violations.every((v) => v === 'verbatim_over_limit')
-            ? HARNESS_VERBATIM_ANSWER
-            : HARNESS_FIXED_ANSWER;
+          responseText = fixedAnswerFor(violations.filter((v) => blocking.has(v)));
           fixedAnswer = true;
           break;
         }
         modelCalls++;
-        attemptPrompt =
-          fullPrompt +
-          HARNESS_RETRY_NOTICE +
-          (violations.includes('verbatim_over_limit') ? VERBATIM_RETRY_NOTICE : '') +
-          (violations.includes('steering_hint') ? HINT_RETRY_NOTICE : '');
+        attemptPrompt = fullPrompt + retryNoticeFor(violations);
       }
       yield responseText;
     } else {
@@ -352,7 +327,7 @@ export async function* handleQuery(
       let blocked: GuardViolation[] | undefined;
       const release = (sentence: string): boolean => {
         const violations = guardAgainst(responseText + sentence);
-        if (violations.some((violation) => OUTSIDE_BLOCKING.has(violation))) {
+        if (violations.some((violation) => blocking.has(violation))) {
           blocked = violations;
           return false;
         }
@@ -371,12 +346,7 @@ export async function* handleQuery(
       if (!blocked && pending && release(pending)) yield pending;
 
       if (blocked) {
-        // 원문 분량만 넘은 경우는 추리 판정 안내가 아니라 원문 상한 안내로 맺는다
-        const answer = blocked
-          .filter((violation) => OUTSIDE_BLOCKING.has(violation))
-          .every((violation) => violation === 'verbatim_over_limit')
-          ? HARNESS_VERBATIM_ANSWER
-          : HARNESS_FIXED_ANSWER;
+        const answer = fixedAnswerFor(blocked.filter((violation) => blocking.has(violation)));
         const notice = `${responseText ? '\n\n' : ''}${answer}`;
         responseText += notice;
         yield notice;

@@ -1,12 +1,15 @@
 import type { QuestionIntent } from './question-intent';
 import { findSteeringHints } from './steering-hint';
+import { INTENT_POLICY } from './behavior-ladder';
 
-export type GuardViolation =
-  | 'page_beyond_cutoff'
-  | 'quote_not_in_source'
-  | 'verdict_phrase'
-  | 'verbatim_over_limit'
-  | 'steering_hint';
+export const GUARD_VIOLATIONS = [
+  'page_beyond_cutoff',
+  'quote_not_in_source',
+  'verdict_phrase',
+  'verbatim_over_limit',
+  'steering_hint',
+] as const;
+export type GuardViolation = (typeof GUARD_VIOLATIONS)[number];
 
 export interface GuardResult {
   ok: boolean;
@@ -180,7 +183,8 @@ export function guardAnswer(answer: string, options: GuardOptions): GuardResult 
   }
 
   // NFR-AI-005
-  const strict = intent !== undefined && intent !== 'fact' && intent !== 'outside';
+  // 유형별 엄격도는 행동 단계표에서 읽는다. 유형을 모르면 공통 판정 표현만 본다
+  const strict = intent !== undefined && INTENT_POLICY[intent].strictVerdict;
   const patterns = strict ? [...ALWAYS_VERDICT, ...HYPOTHESIS_VERDICT] : ALWAYS_VERDICT;
   if (patterns.some((pattern) => pattern.test(answer))) violations.push('verdict_phrase');
 
