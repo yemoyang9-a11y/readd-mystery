@@ -1,25 +1,39 @@
 import { randomUUID } from 'crypto';
-import type {
-  CommentRow,
-  CommunityAdminRepository,
-  CommunityRepository,
-  PostRow,
-  ReportSummary,
+import {
+  AUTO_HIDE_REPORT_THRESHOLD,
+  type CommentRow,
+  type CommunityAdminRepository,
+  type CommunityModerationRepository,
+  type CommunityRepository,
+  type ModerationItem,
+  type PostRow,
+  type ReportSummary,
+  type ReportTarget,
 } from './repository';
 
 export interface QueryClient {
   query(sql: string, params?: unknown[]): Promise<{ rows: any[] }>;
 }
 
+// 신고로 숨긴(hidden_at) 글·댓글은 독자 응답 어디에도 넣지 않는다 — 목록·상세·댓글·댓글 수.
+// 작성자 본인에게도 같다: 알림 장치가 없어 "숨김됨" 표시를 따로 만들지 않고, 모든 독자가
+// 같은 쿼리를 쓰는 편이 가장 단순하고 새는 곳이 없다. — 대표 결정 2026-11-17
+const COMMENT_VISIBLE = `c.deleted_at IS NULL AND c.hidden_at IS NULL`;
+
 const POST_SELECT = `
   SELECT p.seq::int AS seq, p.post_id, p.reader_id, p.kind, p.body, p.created_at,
          (p.deleted_at IS NOT NULL) AS deleted,
          (SELECT count(*)::int FROM community_comments c
-           WHERE c.post_id = p.post_id AND c.deleted_at IS NULL) AS comment_count
+           WHERE c.post_id = p.post_id AND ${COMMENT_VISIBLE}) AS comment_count
     FROM community_posts p`;
 
-const VISIBLE = `(p.deleted_at IS NULL OR EXISTS (
-  SELECT 1 FROM community_comments c WHERE c.post_id = p.post_id AND c.deleted_at IS NULL))`;
+const VISIBLE = `(p.hidden_at IS NULL AND (p.deleted_at IS NULL OR EXISTS (
+  SELECT 1 FROM community_comments c WHERE c.post_id = p.post_id AND ${COMMENT_VISIBLE})))`;
+
+const TARGETS: Record<ReportTarget, { table: string; id: string }> = {
+  post: { table: 'community_posts', id: 'post_id' },
+  comment: { table: 'community_comments', id: 'comment_id' },
+};
 
 function toPost(row: any): PostRow {
   return {
@@ -70,9 +84,9 @@ export function createPgCommunityRepository(db: QueryClient): CommunityRepositor
     async listComments(bookId, postId) {
       const { rows } = await db.query(
         `SELECT comment_id, post_id, reader_id, body, created_at
-           FROM community_comments
-          WHERE book_id = $1 AND post_id = $2 AND deleted_at IS NULL
-          ORDER BY seq`,
+           FROM community_comments c
+          WHERE c.book_id = $1 AND c.post_id = $2 AND ${COMMENT_VISIBLE}
+          ORDER BY c.seq`,
         [bookId, postId]
       );
       return rows.map(toComment);
@@ -94,7 +108,7 @@ export function createPgCommunityRepository(db: QueryClient): CommunityRepositor
         `INSERT INTO community_comments (comment_id, post_id, book_id, reader_id, body)
          SELECT $1, p.post_id, p.book_id, $4, $5
            FROM community_posts p
-          WHERE p.post_id = $2 AND p.book_id = $3 AND p.deleted_at IS NULL
+          WHERE p.post_id = $2 AND p.book_id = $3 AND p.deleted_at IS NULL AND p.hidden_at IS NULL
          RETURNING comment_id, post_id, reader_id, body, created_at`,
         [randomUUID(), postId, bookId, readerId, body]
       );
@@ -140,8 +154,7 @@ export function createPgCommunityRepository(db: QueryClient): CommunityRepositor
     },
 
     async createReport(bookId, reporterId, targetType, targetId, reason) {
-      const table = targetType === 'post' ? 'community_posts' : 'community_comments';
-      const idColumn = targetType === 'post' ? 'post_id' : 'comment_id';
+      const { table, id: idColumn } = TARGETS[targetType];
       const found = await db.query(
         `SELECT 1 FROM ${table} WHERE ${idColumn} = $1 AND book_id = $2`,
         [targetId, bookId]
@@ -153,12 +166,24 @@ export function createPgCommunityRepository(db: QueryClient): CommunityRepositor
          ON CONFLICT (target_type, target_id, reporter_id) DO NOTHING`,
         [randomUUID(), bookId, targetType, targetId, reporterId, reason]
       );
+      // 자동 숨김: 마지막 복구(reviewed_at) 뒤의 서로 다른 신고자가 임계값 이상이면 숨긴다.
+      // 신고 INSERT가 먼저 커밋된 뒤 실행되므로 동시에 들어온 신고도 늦게 도는 쪽이 모두 센다.
+      await db.query(
+        `UPDATE ${table} t SET hidden_at = now()
+          WHERE t.${idColumn} = $1 AND t.hidden_at IS NULL
+            AND (SELECT count(DISTINCT r.reporter_id) FROM community_reports r
+                  WHERE r.target_type = $2 AND r.target_id = t.${idColumn}
+                    AND (t.reviewed_at IS NULL OR r.created_at > t.reviewed_at)) >= $3`,
+        [targetId, targetType, AUTO_HIDE_REPORT_THRESHOLD]
+      );
       return true;
     },
   };
 }
 
-export function createPgCommunityAdminRepository(db: QueryClient): CommunityAdminRepository {
+export function createPgCommunityAdminRepository(
+  db: QueryClient
+): CommunityAdminRepository & CommunityModerationRepository {
   return {
     async listReports(): Promise<ReportSummary[]> {
       const { rows } = await db.query(
@@ -197,6 +222,62 @@ export function createPgCommunityAdminRepository(db: QueryClient): CommunityAdmi
         `UPDATE community_comments SET deleted_at = now()
           WHERE comment_id = $1 AND deleted_at IS NULL RETURNING comment_id`,
         [commentId]
+      );
+      return rows.length > 0;
+    },
+
+    async listModeration(): Promise<ModerationItem[]> {
+      const { rows } = await db.query(
+        `WITH t AS (
+           SELECT 'post'::text AS target_type, post_id AS target_id, book_id, body,
+                  deleted_at, hidden_at, reviewed_at
+             FROM community_posts
+           UNION ALL
+           SELECT 'comment', comment_id, book_id, body, deleted_at, hidden_at, reviewed_at
+             FROM community_comments
+         )
+         SELECT t.target_type, t.target_id, t.book_id, b.title AS book_title, t.body,
+                count(DISTINCT r.reporter_id)::int AS report_count,
+                (count(DISTINCT r.reporter_id) FILTER (
+                   WHERE t.reviewed_at IS NULL OR r.created_at > t.reviewed_at))::int
+                  AS reports_since_review,
+                array_agg(r.reason ORDER BY r.created_at DESC) AS reasons,
+                (t.hidden_at IS NOT NULL) AS hidden,
+                (t.deleted_at IS NOT NULL) AS deleted,
+                t.hidden_at, t.reviewed_at,
+                max(r.created_at) AS last_reported_at
+           FROM community_reports r
+           JOIN t ON t.target_type = r.target_type AND t.target_id = r.target_id
+           LEFT JOIN books b ON b.book_id = t.book_id
+          GROUP BY t.target_type, t.target_id, t.book_id, b.title, t.body,
+                   t.deleted_at, t.hidden_at, t.reviewed_at
+          ORDER BY max(r.created_at) DESC
+          LIMIT 200`
+      );
+      const iso = (v: unknown) => (v === null ? null : new Date(v as string).toISOString());
+      return rows.map((row) => ({
+        target_type: row.target_type,
+        target_id: row.target_id,
+        book_id: row.book_id,
+        book_title: row.book_title,
+        body: row.body,
+        report_count: row.report_count,
+        reports_since_review: row.reports_since_review,
+        reasons: row.reasons,
+        hidden: row.hidden,
+        deleted: row.deleted,
+        hidden_at: iso(row.hidden_at),
+        reviewed_at: iso(row.reviewed_at),
+        last_reported_at: new Date(row.last_reported_at).toISOString(),
+      }));
+    },
+
+    async restore(targetType, targetId) {
+      const { table, id } = TARGETS[targetType];
+      const { rows } = await db.query(
+        `UPDATE ${table} SET hidden_at = NULL, reviewed_at = now()
+          WHERE ${id} = $1 RETURNING ${id}`,
+        [targetId]
       );
       return rows.length > 0;
     },
