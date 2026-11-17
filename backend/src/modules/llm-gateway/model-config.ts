@@ -46,6 +46,7 @@ export const MODEL_CONFIG = {
   generate_background: DEFAULT_MODEL,
   generate_term: DEFAULT_MODEL,
   generate_event: DEFAULT_MODEL,
+  rewrite_reader_text: DEFAULT_MODEL,
 } as const;
 
 export function getModelForTask(task: string): string {

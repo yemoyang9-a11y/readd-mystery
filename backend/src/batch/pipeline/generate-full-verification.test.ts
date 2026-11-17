@@ -62,7 +62,19 @@ function setup(options: { second: unknown[]; supports: boolean }) {
     if (task === 'generate_summary') return JSON.stringify({ summary: '요약' });
     if (task === 'generate_character') return JSON.stringify({ characters });
     if (task === 'generate_term') return JSON.stringify({ terms: [] });
-    if (task === 'generate_event') return JSON.stringify({ events: [] });
+    if (task === 'generate_event')
+      return JSON.stringify({
+        events: [{ event: '손님맞이', description: '박영민이 손님을 맞았다.', occurrence_page: 1 }],
+      });
+    if (task === 'rewrite_reader_text') {
+      const keys = [...prompt.matchAll(/"key": "([^"]+)"/g)].map((m) => m[1]);
+      return JSON.stringify({
+        items: keys.map((key) => ({
+          key,
+          text: key.startsWith('rel:') ? '박영민과 이몽란은 부부예요.' : '박영민이 손님을 맞아요.',
+        })),
+      });
+    }
     if (task === 'generate_background') return JSON.stringify({ background: 'b', intro: 'i' });
     if (prompt.includes('반대 검토자'))
       return JSON.stringify({ supports: options.supports, why: '판단 이유' });
@@ -142,5 +154,30 @@ describe('FR-CHR-001: 인물 정리와 관계 검증이 생성 경로에 들어 
       expect.anything(),
       expect.anything()
     );
+  });
+});
+
+describe('R9: 독자용 쉬운 문장이 생성 경로에 들어 있다', () => {
+  test('R9: 관계는 semantics.reader_summary, 사건은 reader_description에 담는다', async () => {
+    const args = setup({ second: [relationship()], supports: true });
+    const book = await generateFullBook(args);
+    expect(book.relationships[0].semantics?.reader_summary).toBe('박영민과 이몽란은 부부예요.');
+    expect(book.relationships[0].semantics?.summary).toBe('박영민은 이몽란의 남편이다.');
+    expect(book.events).toHaveLength(1);
+    expect(book.events[0].reader_description).toBe('박영민이 손님을 맞아요.');
+  });
+
+  test('R9: 다시 실행해도 이미 만든 쉬운 문장은 모델에 다시 묻지 않는다', async () => {
+    const args = setup({ second: [relationship()], supports: true });
+    await generateFullBook(args);
+    fs.rmSync(path.join(args.fullDir, 'all-resolved.json'));
+    (call as jest.Mock).mockClear();
+    const book = await generateFullBook(args);
+    expect(call).not.toHaveBeenCalledWith(
+      'rewrite_reader_text',
+      expect.anything(),
+      expect.anything()
+    );
+    expect(book.relationships[0].semantics?.reader_summary).toBe('박영민과 이몽란은 부부예요.');
   });
 });

@@ -50,6 +50,7 @@ describe('NFR-AI-001: provider and model configuration', () => {
       'generate_background',
       'generate_term',
       'generate_event',
+      'rewrite_reader_text',
     ]);
     expect(new Set(Object.values(config.MODEL_CONFIG))).toEqual(new Set(['test-openai-model']));
   });

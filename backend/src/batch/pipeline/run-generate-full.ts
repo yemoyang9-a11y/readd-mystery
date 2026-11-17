@@ -68,6 +68,13 @@ import {
   buildVerifierPrompt,
   verifyRelationships,
 } from './relationship-verification';
+import {
+  eventReaderInput,
+  eventReaderKey,
+  relationshipReaderInput,
+  relationshipReaderKey,
+  rewriteReaderTexts,
+} from './reader-text';
 import { createHash } from 'crypto';
 
 // 출력 상한은 reasoning 토큰을 포함한다 — 기본 4096이면 장 하나의 인물·별칭·노트 JSON이 잘린다(화분 1장 incomplete)
@@ -455,6 +462,51 @@ function mergeChapterRelationships(
   mergeRelationships(state, resolved);
 }
 
+// R9
+async function applyReaderTexts(
+  state: GenerationState,
+  events: { id: string; description: string; reader_description?: string }[],
+  outDir: string
+): Promise<void> {
+  const names = new Map(state.characters.map((c) => [c.id, c.name]));
+  const items = [
+    ...state.relationships.flatMap((r) =>
+      r.semantics
+        ? [
+            relationshipReaderInput(
+              r.id,
+              r.semantics.summary,
+              names.get(r.character_a_id) ?? '',
+              names.get(r.character_b_id) ?? ''
+            ),
+          ]
+        : []
+    ),
+    ...events.map((e) => eventReaderInput(e.id, e.description)),
+  ];
+
+  const cachePath = path.join(outDir, 'reader-text.json');
+  const cache: Record<string, { source: string; text: string }> = fs.existsSync(cachePath)
+    ? JSON.parse(fs.readFileSync(cachePath, 'utf-8'))
+    : {};
+  const missing = items.filter((item) => cache[item.key]?.source !== item.text);
+  for (const [key, text] of await rewriteReaderTexts(missing)) {
+    cache[key] = { source: items.find((item) => item.key === key)!.text, text };
+  }
+  fs.writeFileSync(cachePath, JSON.stringify(cache, null, 2), 'utf-8');
+
+  const readerText = (key: string, source: string): string | undefined =>
+    cache[key]?.source === source ? cache[key].text : undefined;
+  state.relationships = state.relationships.map((r) => {
+    const text = r.semantics && readerText(relationshipReaderKey(r.id), r.semantics.summary);
+    return text ? { ...r, semantics: { ...r.semantics!, reader_summary: text } } : r;
+  });
+  for (const e of events) {
+    const text = readerText(eventReaderKey(e.id), e.description);
+    if (text) e.reader_description = text;
+  }
+}
+
 // FR-ADM-005 🚦
 export async function generateFullBook(args: BookArgs): Promise<ResolvedBookData> {
   const BOOK_ID = args.bookId;
@@ -478,8 +530,13 @@ export async function generateFullBook(args: BookArgs): Promise<ResolvedBookData
   const chapterReviews: { chapter_no: number; candidates: ReviewCandidate[] }[] = [];
   const chapterSummaries: { chapter_no: number; title: string; summary: string }[] = [];
   const verification = { candidates: 0, confirmed: 0, needs_review: 0, held: 0 };
-  const allEvents: { id: string; event: string; description: string; occurrence_page: number }[] =
-    [];
+  const allEvents: {
+    id: string;
+    event: string;
+    description: string;
+    reader_description?: string;
+    occurrence_page: number;
+  }[] = [];
   // events.id는 전역 PK다 — takryu는 기존 id를 유지하고, 다른 책은 bookId를 붙여 다른 도서와 충돌하지 않게 한다
   const eventIdPrefix = BOOK_ID === DEFAULT_BOOK_ID ? '' : `${BOOK_ID}:`;
 
@@ -558,6 +615,8 @@ export async function generateFullBook(args: BookArgs): Promise<ResolvedBookData
       `  누적 인물 ${state.characters.length}명, 관계(이력 포함) ${state.relationships.length}건, 용어 ${state.terms.length}개\n`
     );
   }
+
+  await applyReaderTexts(state, allEvents, OUT_DIR);
 
   const background = await loadOrGenerateBackground(OUT_DIR, title, author);
 
