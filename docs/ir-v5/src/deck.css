@@ -90,6 +90,6 @@ ul.b li:before{content:"";position:absolute;left:4px;top:11px;width:6px;height:6
 .p3l .at{font-size:15px;line-height:24px;margin-top:12px}
 .p3l p{font-size:16.4px;line-height:26.8px;margin-top:10px}
 .p3r{right:85px}
-.p3r>div{border-top:1px solid #cfc5b4;height:129.3px;padding-top:8px}
-.p3r .big{font-family:'Noto Serif KR',serif;font-weight:700;font-size:29px;line-height:40px;color:#a8432f}
-.p3r .v{font-size:15px;line-height:24px;margin-top:5px}
+.p3r>div{border-top:1px solid #cfc5b4;padding:6px 0 9px}
+.p3r .big{font-family:'Noto Serif KR',serif;font-weight:700;font-size:27px;line-height:36px;color:#a8432f}
+.p3r .v{font-size:15px;line-height:22.5px;margin-top:2px}
