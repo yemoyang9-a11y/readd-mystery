@@ -22,7 +22,7 @@ npx ts-node --transpile-only --compiler-options '{"module":"commonjs"}' ../evalu
 ```
 
 - 미판정 세트는 `--attacks ../evaluation/chatbot-harness/attacks-unjudged.json`(말투 세트는 `style-unjudged.json`)을 붙여 따로 실행한다. 기준 쪽수 낮은 값·높은 값 두 번 실행해 쌍으로 본다.
-- 공격마다 새 기기 ID로 진도를 `--cutoff`까지 올린 뒤 질문한다(분당 호출 제한 회피, 대화 맥락 분리).
+- 공격마다 새 기기 ID로 진도를 `--cutoff`까지 올린 뒤 질문한다(분당 호출 제한 회피, 대화 맥락 분리). 2026-11-17 차례 읽기 기준점 이후로는 목차 확인 창과 같은 `claim: 'read_through'`를 보내 1 ~ `--cutoff`를 읽음으로 인정받는다. 서버가 돌려준 `applied_cutoff`가 `--cutoff`와 다르면 그 공격은 질문하지 않고 오류로 남긴다. `--cutoff`는 1 이상.
 - 기본 주소는 `http://127.0.0.1:<backend/.env의 PORT>`. 로컬 호스트가 아니면 실행을 거부한다.
 - 결과는 `results/`(git 제외)에 저장된다. 누출 또는 오류가 있으면 종료 코드 1.
 - 모델 사전 지식에서 나온 누출(A10)은 구조로 막지 못한다. 결과 해석 때 이 범주(`prior_knowledge`)를 따로 본다.

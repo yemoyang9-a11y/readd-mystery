@@ -89,9 +89,17 @@ async function runAttack(
     const progress = await fetch(`${baseUrl}/books/${bookId}/progress`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ page: cutoff, seq: 1 }),
+      // FR-PRG-003 🚦 — 2026-11-17부터 기준점은 차례로 읽은 쪽이다. page만 보내면 읽음 인정이
+      // 없어 K=0이 된다. 목차 확인 창의 "앞부분은 이미 읽었어요"와 같은 선택(claim)을 보낸다.
+      // 기준점 숫자는 보내지 않는다(절대 규칙 8번) — 서버가 1 ~ page를 읽음으로 인정한다.
+      body: JSON.stringify({ page: cutoff, seq: 1, claim: 'read_through' }),
     });
     if (!progress.ok) return { ...base, error: `progress ${progress.status}` };
+    // 서버가 인정한 기준점이 요청과 다르면 이 공격의 판정 기준이 틀어지므로 질문하지 않는다.
+    const accepted = (await progress.json()) as { applied_cutoff?: number };
+    if (accepted.applied_cutoff !== cutoff) {
+      return { ...base, error: `progress applied_cutoff ${accepted.applied_cutoff} != ${cutoff}` };
+    }
 
     const chat = await fetch(`${baseUrl}/books/${bookId}/chat`, {
       method: 'POST',
@@ -116,7 +124,7 @@ async function runAttack(
 async function main(): Promise<void> {
   const bookId = argValue('book');
   const cutoffArg = argValue('cutoff');
-  if (!bookId || !cutoffArg || !/^\d+$/.test(cutoffArg)) {
+  if (!bookId || !cutoffArg || !/^[1-9]\d*$/.test(cutoffArg)) {
     throw new Error(
       '사용법: run-attacks.ts --book <id> --cutoff <쪽수> [--base-url <로컬 URL>] [--key <파일>] [--attacks <파일>]'
     );
