@@ -150,10 +150,6 @@ export default function Login() {
       <div className="mx-auto flex w-full max-w-[420px] flex-col px-5 pb-10 pt-[9vh]">
         <CaseLabel>Case file · Reader</CaseLabel>
         <h1 className="m-0 mt-3 font-dashSans text-[36px] font-bold leading-none tracking-[0.04em] text-white">RE:ADD</h1>
-        <p className="m-0 mt-3 break-keep font-dashSerif text-[18px] font-bold leading-[1.45] text-[#ece6e0]">
-          범인은 끝까지 직접 찾는다.
-        </p>
-
         <div role="tablist" aria-label="로그인 방식" className="mt-10 flex gap-1 pl-2">
           <button
             type="button"
