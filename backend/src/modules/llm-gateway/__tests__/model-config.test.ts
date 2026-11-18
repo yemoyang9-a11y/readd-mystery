@@ -46,7 +46,6 @@ describe('NFR-AI-001: provider and model configuration', () => {
       'recap',
       'generate_summary',
       'generate_character',
-      'generate_relationship',
       'generate_background',
       'generate_term',
       'generate_event',
@@ -88,6 +87,20 @@ describe('NFR-AI-001: provider and model configuration', () => {
     expect(warn).not.toHaveBeenCalled();
     expect(Object.keys(config.MODEL_CONFIG)).not.toContain('generate_chapter_key_point');
     warn.mockRestore();
+  });
+
+  test('2026-11-18: 관계 추출 작업은 API 모델 설정에 없고 Claude 구독(CLI) 모델을 쓴다', () => {
+    const config = load({
+      LLM_PROVIDER: 'openai',
+      OPENAI_MODEL: 'test-openai-model',
+      CLAUDE_CLI_MODEL: 'test-claude-model',
+    });
+    const warn = jest.spyOn(console, 'warn').mockImplementation();
+    expect(Object.keys(config.MODEL_CONFIG)).not.toContain('generate_relationship');
+    expect(config.getModelForTask('generate_relationship')).toBe('test-claude-model');
+    expect(config.getModelForTask('generate_relationship_verifier')).toBe('test-claude-model');
+    expect(config.getModelForTask('generate_relationship')).not.toBe('test-openai-model');
+    expect(warn).not.toHaveBeenCalled();
   });
 
   test('unknown task warns and uses the same selected provider model', () => {

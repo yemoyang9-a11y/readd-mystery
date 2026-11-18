@@ -20,6 +20,7 @@ import {
   finalizeStructuredRelationships,
   verifyPairLabels,
 } from '../../backend/src/batch/pipeline/relationship-labeling';
+import { relationType } from '../../backend/src/batch/pipeline/relationship-taxonomy';
 
 interface OracleCase {
   id: string;
@@ -73,19 +74,37 @@ function lexiconFor(c: OracleCase, config: ProbeConfig): CandidateCharacter[] {
   }));
 }
 
-/** probe-validator.cjs와 같은 주입 후보 — 사실·a_to_b·같은 요약 형식. support만 새 계약을 따른다 */
+/** oracle 의미 키 → 닫힌 관계 유형 표의 유형(relationship-taxonomy.ts). 표에 없는 경멸은 미움으로 본다 */
+const TYPE_OF: Record<string, string> = {
+  jealousy: 'jealousy',
+  possessive_desire: 'lust',
+  romantic_affection: 'affection',
+  romantic_partners: 'romance',
+  trust: 'trust',
+  hostility: 'hatred',
+  marriage: 'marriage',
+  contempt: 'hatred',
+  friendship: 'friendship',
+};
+
+/**
+ * probe-validator.cjs와 같은 주입 후보 — 사실·같은 요약 형식. 2026-11-18부터 관계 질문지 형식(판정 질문에
+ * 모두 맞게 답한 응답)으로 넣는다. support는 새 계약을 따른다.
+ */
 function injected(c: OracleCase, windowId: string, trigger: string) {
   const { subject, object, kind } = c.candidate_semantics!;
   const label = LABELS[kind] ?? kind;
+  const type = relationType(TYPE_OF[kind] ?? kind);
   return {
     character_a: subject,
     character_b: object,
-    direction: 'a_to_b',
-    label,
-    kind: ['marriage', 'friendship', 'romantic_partners'].includes(kind) ? 'social' : 'emotion',
-    relation_key: kind,
+    lasting: true,
+    category: type?.category,
+    type: type?.key ?? kind,
+    type_question: true,
+    exclusions: Object.fromEntries((type?.exclusions ?? []).map((x) => [x.id, false])),
+    subject: type?.directionality === 'directed' ? subject : null,
     assertion_status: 'fact',
-    temporal_scope: 'ongoing',
     state: 'active',
     change_type: 'establishment',
     summary: `${subject}은(는) ${object}에게 ${label}의 관계 또는 감정을 가진다.`,

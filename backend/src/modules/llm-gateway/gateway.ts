@@ -1,7 +1,9 @@
 /**
  * NFR-AI-001 / 4.3: all model requests pass through this gateway.
  * The call/stream contract is shared by chatbot, recap and batch generation.
- * LLM_PROVIDER selects one provider; an API failure never switches credentials/models.
+ * LLM_PROVIDER selects one API provider; an API failure never switches credentials/models.
+ * 관계 추출 작업(CLAUDE_CLI_TASKS)은 API 제공자가 아니라 Claude 구독(Claude Code CLI)으로만 간다 —
+ * 2026-11-18 대표 지시. CLI가 실패해도 API로 넘어가지 않는다.
  */
 
 import Anthropic from '@anthropic-ai/sdk';
@@ -15,6 +17,13 @@ import {
   LLM_PROVIDER,
 } from './model-config';
 import dotenv from 'dotenv';
+import {
+  CLAUDE_CLI_CONFIG,
+  ClaudeCliProvider,
+  ClaudeCliUsage,
+  createClaudeCliProvider,
+  isClaudeCliTask,
+} from './claude-cli-provider';
 
 // 환경 변수 로드 (gateway가 먼저 로드될 수 있으므로)
 dotenv.config();
@@ -52,9 +61,14 @@ const TIMEOUT_MS = 120_000;
 const WORKSPACE_ID = process.env.ANTHROPIC_WORKSPACE_ID?.trim();
 
 // NFR-AI-001: initialize only the selected provider; credentials never fall back.
-validateModelVersions();
+// 관계 추출만 도는 배치(Claude 구독)는 API 키 없이 실행된다 — 키가 없으면 API 클라이언트를 만들지 않고,
+// API 작업을 부르는 순간 validateModelVersions가 키 부재로 멈춘다. 서버 부팅은 index.ts가 따로 검사한다(NFR-AI-002).
+const API_KEY_NAME = LLM_PROVIDER === 'openai' ? 'OPENAI_API_KEY' : 'ANTHROPIC_API_KEY';
+const API_CONFIGURED =
+  process.env.MOCK_MODE === 'true' || Boolean(process.env[API_KEY_NAME]?.trim());
+if (API_CONFIGURED) validateModelVersions();
 const client =
-  LLM_PROVIDER === 'anthropic'
+  API_CONFIGURED && LLM_PROVIDER === 'anthropic'
     ? new Anthropic({
         maxRetries: MAX_RETRIES,
         timeout: TIMEOUT_MS,
@@ -62,9 +76,57 @@ const client =
       })
     : undefined;
 const openaiProvider =
-  LLM_PROVIDER === 'openai'
+  API_CONFIGURED && LLM_PROVIDER === 'openai'
     ? createOpenAIProvider(new OpenAI({ maxRetries: MAX_RETRIES, timeout: TIMEOUT_MS }))
     : undefined;
+
+/** 키가 없는 실행에서 API 작업을 부르면 여기서 멈춘다(실패 = 미호출, 다른 제공자로 넘어가지 않는다) */
+function requireApiProvider(): void {
+  // 키는 모듈을 불러올 때의 값으로 정한다 — 실행 중에 키가 생겨도 클라이언트는 만들어지지 않았다
+  if (!API_CONFIGURED) throw new Error(`Missing required environment variable: ${API_KEY_NAME}`);
+}
+
+let claudeCli: ClaudeCliProvider | undefined;
+function claudeCliProvider(): ClaudeCliProvider {
+  claudeCli ??= createClaudeCliProvider(CLAUDE_CLI_CONFIG);
+  return claudeCli;
+}
+
+/**
+ * 관계 추출 — Claude 구독(CLI). 호출 로그(NFR-OBS-004)는 API 작업과 같은 [LLM Metrics] 줄로 남긴다.
+ * 실패는 그대로 던진다 — API 키 경로로 넘어가지 않는다.
+ */
+async function callClaudeCli(task: string, prompt: string, options: LLMCallOptions) {
+  const startTime = Date.now();
+  let usage: ClaudeCliUsage | undefined;
+  try {
+    const text = await claudeCliProvider().call(prompt, {
+      ...(options.system !== undefined ? { system: options.system } : {}),
+      onUsage: (u) => (usage = u),
+    });
+    logMetrics({
+      task,
+      provider: 'claude-cli',
+      modelId: usage?.modelId ?? CLAUDE_CLI_CONFIG.model,
+      inputTokens:
+        (usage?.inputTokens ?? 0) + (usage?.cacheReadTokens ?? 0) + (usage?.cacheWriteTokens ?? 0),
+      outputTokens: usage?.outputTokens ?? 0,
+      durationMs: Date.now() - startTime,
+      attempts: usage?.attempts,
+      ...(usage?.listCostUsd !== undefined ? { list_cost_usd: usage.listCostUsd } : {}),
+    });
+    return text;
+  } catch (error) {
+    logMetrics({
+      task,
+      provider: 'claude-cli',
+      modelId: CLAUDE_CLI_CONFIG.model,
+      durationMs: Date.now() - startTime,
+      failed: true,
+    });
+    throw new Error(`LLM call failed for task "${task}" (claude-cli): ${String(error)}`);
+  }
+}
 
 /**
  * LLM 호출 옵션
@@ -171,6 +233,9 @@ export async function call(
   prompt: string,
   options: LLMCallOptions = {}
 ): Promise<string> {
+  // 2026-11-18 — 관계 추출은 Claude 구독으로만. API 키 경로를 타지 않는다
+  if (isClaudeCliTask(task)) return callClaudeCli(task, prompt, options);
+  requireApiProvider();
   const startTime = Date.now();
 
   // 모델 매핑 (D13 ②, NFR-AI-001)
@@ -240,6 +305,10 @@ export async function* stream(
   prompt: string,
   options: LLMCallOptions = {}
 ): AsyncGenerator<string, LLMStreamUsage> {
+  // 관계 추출은 배치 전용 — 스트리밍 경로가 없다(Claude 구독 작업을 API로 보내지 않는다)
+  if (isClaudeCliTask(task))
+    throw new Error(`LLM stream is not available for task "${task}" (claude-cli batch only)`);
+  requireApiProvider();
   const startTime = Date.now();
 
   // 모델 매핑 (D13 ②, NFR-AI-001)
@@ -306,6 +375,11 @@ export async function* stream(
  */
 interface LLMMetrics extends Partial<OpenAIUsage> {
   task: string;
+  /** 기본은 LLM_PROVIDER. 관계 추출은 'claude-cli' */
+  provider?: string;
+  attempts?: number;
+  list_cost_usd?: number;
+  failed?: boolean;
   modelId: string;
   inputTokens?: number;
   outputTokens?: number;

@@ -70,42 +70,52 @@ npx ts-node --transpile-only --compiler-options '{"module":"commonjs"}' ../evalu
 
 로그인(구글·카카오)을 쓰면 각 개발자 콘솔의 허용 주소에도 새 주소를 넣어야 한다.
 
-## 6. 논문 기반 인물 관계 추출 실측 (2026-11-18 추가, tasks.md T12)
+## 6. 논문 기반 인물 관계 추출 (2026-11-18 추가, 같은 날 Claude 구독·관계 유형 표로 바꿈, tasks.md T12·T13)
 
-새 방식은 코드가 두 인물이 원문에서 함께 드러난 곳만 후보로 만들고, AI는 그 근거 조각에만 관계 이름을 붙인다. 설명: [research-2026-11-18-relationship-extraction.md](research-2026-11-18-relationship-extraction.md). DB에는 쓰지 않는다.
+관계는 이제 이 방식 하나로만 만든다(대표 지시 2026-11-18). 코드가 두 인물이 원문에서 함께 드러난 곳만 후보로 만들고, AI는 그 근거 조각을 보고 **관계 질문지**에 답한다(이어지는 관계인가 → 큰 종류 → 닫힌 유형 표의 유형 → 그 유형의 판정 질문·제외 질문 → 주체 → 사실 여부). 큰 종류·방향·라벨은 코드가 유형 표에서 정한다. 설명: [research-2026-11-18-relationship-extraction.md](research-2026-11-18-relationship-extraction.md)(쌍 찾기), [research-2026-11-18-relationship-classification.md](research-2026-11-18-relationship-classification.md)(관계 유형 표·질문지). DB에는 쓰지 않는다.
 
-인물·별칭은 기존 전체 생성 결과(`data/generated/gasangbeomin/full/all-resolved.json`)를 쓴다. 이 파일이 없으면 먼저 전체 생성을 한 번 돌린다(비용 큼, 이미 있으면 건너뜀):
+**AI는 OpenAI API 키가 아니라 이 컴퓨터에 로그인한 Claude 구독으로 부른다**(게이트웨이 작업 `generate_relationship`·`generate_relationship_verifier` → `claude -p --output-format json`). 키가 필요 없다 — 게이트웨이가 CLI에 넘기는 환경에서 `ANTHROPIC_API_KEY`·`OPENAI_API_KEY`를 지운다.
 
-```bash
-npx ts-node --transpile-only src/batch/pipeline/run-generate-full.ts --book gasangbeomin --file data/raw/gasangbeomin.txt --title 가상범인 --author 김내성
-```
-
-① AI 호출 없이 후보와 기존 관계 비교 (무료):
+준비 (한 번):
 
 ```bash
-npx ts-node --transpile-only src/batch/pipeline/run-generate-relationships-structural.ts --book gasangbeomin --file data/raw/gasangbeomin.txt --candidates-only --out data/generated/gasangbeomin/structural-candidates
+claude --version          # Claude Code CLI가 있어야 한다
+claude                    # 처음이면 /login 으로 구독 계정 로그인 후 종료
+echo 'JSON만: {"ok":true}' | claude -p --output-format json --tools ""   # "is_error":false 면 준비 끝
 ```
 
-`comparison-with-existing.json`의 `no_structural_evidence`(기존 관계 중 두 인물이 한 번도 함께 나오지 않은 행)와 `established_before_first_cooccurrence`(확립 쪽이 첫 동시 등장보다 이른 행 = 스포일러 위험)를 본다.
+설정(선택, `backend/.env`): `CLAUDE_CLI_MODEL`(기본 `opus`), `CLAUDE_CLI_TIMEOUT_MS`(기본 600000 = 10분), `CLAUDE_CLI_MAX_ATTEMPTS`(기본 3), `CLAUDE_CLI_EFFORT`(비우면 CLI 기본), `CLAUDE_CLI_BIN`(기본 `claude`).
 
-② 실제 라벨 (후보가 있는 장마다 AI 2회 + 관계마다 검토 1회):
+인물·별칭은 둘 중 하나로 준다.
+- 운영 DB에서 읽은 인물 JSON(`[{name, first_appearance_page, aliases:[{alias, first_appearance_page}]}]`)을 `--characters`로 — 2026-11-18 실행이 이렇게 했다: [docs/validation/2026-11-18-relationships-claude/characters.json](../validation/2026-11-18-relationships-claude/characters.json)
+- 또는 전체 생성 결과(`data/generated/gasangbeomin/full/all-resolved.json`) — `--characters`를 빼면 이것을 쓰고, 기존 관계와의 비교(`comparison-with-existing.json`)도 쓴다.
+
+① AI 호출 없이 후보만 (무료):
 
 ```bash
-npx ts-node --transpile-only src/batch/pipeline/run-generate-relationships-structural.ts --book gasangbeomin --file data/raw/gasangbeomin.txt --verifier
+npx ts-node --transpile-only src/batch/pipeline/run-generate-relationships-structural.ts --book gasangbeomin --file data/raw/gasangbeomin.txt --characters ../docs/validation/2026-11-18-relationships-claude/characters.json --candidates-only --out data/generated/gasangbeomin/structural-candidates
 ```
 
-결과는 `data/generated/gasangbeomin/structural-relationships/`의 `structural-relationships.json`(채택·보류 사유·근거 창), `all-resolved.structural.json`(관계만 바꾼 검수용 산출물). 다시 돌리면 캐시를 재생해 AI를 부르지 않는다. 프롬프트·모델을 바꿨다면 `--out`으로 새 폴더를 준다.
+② 실제 실행 (후보가 있는 장마다 질문지 2회 + 채택 후보마다 반대 검토 1회, Claude 구독):
+
+```bash
+npx ts-node --transpile-only src/batch/pipeline/run-generate-relationships-structural.ts --book gasangbeomin --file data/raw/gasangbeomin.txt --characters ../docs/validation/2026-11-18-relationships-claude/characters.json --verifier --out data/generated/gasangbeomin/structural-claude
+```
+
+「가상범인」(5장)은 2026-11-18 이 환경에서 질문지 10회 + 검토 8회 = 구독 호출 18회, 약 9분 걸렸다([결과](../validation/2026-11-18-relationships-claude/structural-relationships.json)). 결과는 `--out` 폴더의 `structural-relationships.json`(채택 관계·보류 사유별 개수 `held_reasons`·관계 0건 인물 `uncovered_characters`·구독 호출 횟수 `counts.model_calls`), 장별 원래 응답(`chapter-N.run-1.json` 등). 다시 돌리면 캐시를 재생해 AI를 부르지 않는다. 프롬프트·유형 표·모델을 바꿨다면 새 `--out` 폴더를 준다(옛 폴더는 그대로 둔다).
 
 ③ 정답이 있는 발췌 5건으로 정확도 (탁류 2쪽, Austen 3발췌):
 
 ```bash
 for f in takryu-p91 takryu-p129 austen-jealousy austen-negated-envy austen-belief-attribution; do
-  npx ts-node --transpile-only src/batch/pipeline/run-generate-relationships-structural.ts --input ../evaluation/relationships/model-inputs/$f.json --out data/generated/structural/$f --verifier
+  npx ts-node --transpile-only src/batch/pipeline/run-generate-relationships-structural.ts --input ../evaluation/relationships/model-inputs/$f.json --out data/generated/structural-claude/$f --verifier
 done
-node ../evaluation/relationships/check-structural-metrics.cjs data/generated/structural/*/structural-relationships.json --out data/generated/structural/metrics.json
+node ../evaluation/relationships/check-structural-metrics.cjs data/generated/structural-claude/*/structural-relationships.json --out data/generated/structural-claude/metrics.json
 ```
 
-`early_established`가 0이어야 한다(정답보다 이르게 잡힌 관계 = 스포일러). 정밀도·재현율과 보류 목록(`held`)을 tasks.md T12에 적는다. 교체·공개는 기존 검수 절차(`docs/relationship-pipeline.md`)를 따른다.
+`early_established`가 0이어야 한다(정답보다 이르게 잡힌 관계 = 스포일러). 교체·공개는 기존 검수 절차(`docs/relationship-pipeline.md`)를 따른다 — 사람 검수 전에는 관계도에 나오지 않는다(R12).
+
+책 전체 생성(`run-generate-full.ts`, 관리자 업로드 작업도 이것을 쓴다)의 관계 단계도 같은 방식·같은 Claude 구독 호출이다. **그 컴퓨터(서버 포함)에 `claude`가 설치·로그인돼 있지 않으면 관계 단계에서 실패하고 멈춘다**(다른 AI로 넘어가지 않는다).
 
 ## 7. 마이그레이션 이력 — 처음 한 번 baseline (2026-11-18 추가, tasks.md R1)
 

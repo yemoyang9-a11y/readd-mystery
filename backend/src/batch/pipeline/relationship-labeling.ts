@@ -32,9 +32,17 @@ import {
   splitSentences,
 } from './interaction-candidates';
 import { VerifierAnswer, VerifierInput, endpointForms } from './relationship-verification';
+import {
+  RELATION_CATEGORIES,
+  RELATION_TYPES,
+  RelationCategory,
+  relationType,
+  storageKind,
+} from './relationship-taxonomy';
 
 // 2 — 2026-11-18 관계만(행동 제외)·동료·태도 안내로 프롬프트 계약 변경. 이전 캐시는 쓰지 않는다
-export const STRUCTURAL_LABEL_VERSION = 2;
+// 3 — 2026-11-18 닫힌 관계 유형 표 + 질문지 응답(relationship-taxonomy.ts). 큰 종류·방향은 코드가 정한다
+export const STRUCTURAL_LABEL_VERSION = 3;
 
 /** 한 쌍에 프롬프트로 보내는 근거 창 수 상한 — 이른 쪽부터. 잘린 창은 확립을 늦출 뿐 앞당기지 않는다 */
 export const MAX_WINDOWS_PER_PAIR = 8;
@@ -83,6 +91,34 @@ export interface FinalStructuredRelationship extends StructuredRelationship {
 
 // ─── 프롬프트 ────────────────────────────────────────────────────────────────
 
+const CATEGORY_NAMES: Record<RelationCategory, string> = {
+  family: '가족',
+  romance: '연애',
+  social: '사회(친구·지인·한편)',
+  professional: '직업',
+  adversarial: '적대(적·경쟁·의심)',
+  attitude: '감정·태도',
+};
+
+/** 관계 유형 표를 질문지로 — 프롬프트 문장은 표에서만 나온다(표가 바뀌면 프롬프트와 캐시 계약이 함께 바뀐다) */
+export function renderTaxonomy(): string {
+  return RELATION_CATEGORIES.map((category) => {
+    const rows = RELATION_TYPES.filter((t) => t.category === category).map((t) => {
+      const direction =
+        t.directionality === 'symmetric'
+          ? '대칭(subject는 null)'
+          : `방향 있음(subject = ${t.roles!.subject}, 다른 사람 = ${t.roles!.object})`;
+      const exclusions = t.exclusions.length
+        ? `\n    제외 질문: ${t.exclusions
+            .map((x) => `${x.id} "${x.question}"${x.instead ? `(예면 ${x.instead})` : ''}`)
+            .join(' / ')}`
+        : '';
+      return `  - ${t.key} (${t.name}, ${direction}): ${t.definition}\n    판정 질문: "${t.question}"${exclusions}`;
+    });
+    return `[${category} — ${CATEGORY_NAMES[category]}]\n${rows.join('\n')}`;
+  }).join('\n');
+}
+
 /** FR-DAT-005 — 후보 쌍과 근거 창만 담는다. NFR-AI-004: 상한은 입력 선택으로, 프롬프트는 형식만 */
 export function buildPairLabelPrompt(
   chapter: Chapter,
@@ -111,23 +147,32 @@ export function buildPairLabelPrompt(
       return `[${w.id}] ${w.page_no}쪽 ${w.kind}${who}\n${w.text}`;
     });
   return `다음은 이 작품 ${chapter.chapter_no}장 "${chapter.title}"에서 두 인물이 함께 드러난 원문 조각(근거 창)이다.
-장 원문 전체가 아니다. 근거 창에 쓰인 내용만으로, 각 쌍 사이에 원문이 직접 보여 주는 관계가 있으면 적어라.
+장 원문 전체가 아니다. 근거 창에 쓰인 내용만으로, 각 쌍 사이에 원문이 직접 말하는 관계가 있으면 아래 질문지에 답하라.
 
-규칙:
-- 아래 목록에 있는 쌍만 다룬다. 목록에 없는 두 사람의 관계는 쓰지 않는다.
-- 함께 나왔다는 것만으로는 관계가 아니다. 관계를 직접 말하는 낱말이 없으면 그 쌍은 비운다(relations에 넣지 않는다).
-- support에는 근거 창 id와, 그 창 안에서 관계를 가장 분명하게 말하는 최소한의 연속 낱말(trigger)을 원문 그대로 적는다. trigger가 있는 문장에 두 인물의 이름이나 표기가 함께 있어야 한다. 대화 창은 말한 사람과 듣는 사람이 두 인물이다.
-- 같은 관계를 보여 주는 창이 여럿이면 모두 support에 넣는다. 확립 쪽수는 서버가 검증된 support 중 가장 이른 쪽으로 정한다. 근거가 없는 앞 쪽을 확립 쪽으로 쓰지 않는다.
-- character_a/b에는 목록의 대표명을 쓴다. direction은 a_to_b(주체 A→대상 B), b_to_a, mutual(양쪽 모두 명시), undirected(방향 없는 관계: 남매·동료 등), unknown.
-- label은 짧고 구체적인 술어("태수를 두고 질투한다", "고용한다", "아버지다"). summary는 두 대표명을 모두 넣은 한 문장. 추상 명사("감정", "관계", "욕망")만 쓰지 않는다.
-- 관계만 적는다. 관계는 두 인물 사이에 이어지는 상태다: 가족(부부·부모·형제), 사회적 관계(친구·고용·동료·스승), 한 인물이 다른 인물에게 품은 감정·태도(사랑·미움·질투·의심·신뢰·두려움·경계). 같은 일을 함께 맡은 사이(같은 사건을 함께 맡은 검사와 경부, 같은 극단의 배우)는 동료 관계다 — 함께 맡았음을 말하는 낱말을 trigger로 쓴다. 한 인물이 다른 인물을 범인으로 의심하거나 노려보며 맞서는 것이 원문에 드러나면 의심·적대라는 태도 관계다. 한 번 일어난 행동(손을 잡는다·구하려 한다·찾아간다·때린다·만난다·말을 건넨다)은 사건이지 관계가 아니므로 적지 않는다. 행동에서 감정·태도가 원문에 직접 드러나면 그 감정·태도만 적는다.
-- kind는 family/social/emotion 중 하나(emotion은 감정과 태도), relation_key는 영어 소문자 키(parenthood, marriage, employment, friendship, jealousy, affection, suspicion, trust 등).
-- assertion_status: fact(서술로 확인), belief/claim/rumor/uncertain(누가 믿거나 주장하거나 소문 — attribution에 그 사람 이름을 쓰고 summary에 "믿는다/주장한다/소문" 같은 한정을 넣는다), negated(부정된 내용). 부정·소문·희망·오해를 fact로 쓰지 않는다.
-- temporal_scope는 언제나 ongoing, state는 active/ended, change_type은 establishment/restatement/transition/disclosure.
-- 작품·장르에 대한 기억으로 보충하지 않는다. 이 근거 창에 없는 사실은 쓰지 않는다.
+관계는 두 인물 사이에 이어지는 상태다. 한 번 일어난 행동(만남·방문·손을 잡음·구함·때림·말을 건넴)은 사건이지 관계가 아니다.
+함께 나왔다는 것만으로는 관계가 아니다. 관계를 직접 말하는 낱말이 없으면 그 쌍은 비운다(relations에 넣지 않는다).
+같은 두 사람 사이에 관계가 여럿이면(동료이면서 의심) 유형마다 따로 적는다. 방향 있는 감정이 서로 향하면 주체마다 따로 적는다.
 
-출력은 JSON만 반환한다:
-{"relations":[{"character_a":"대표명","character_b":"대표명","direction":"a_to_b","label":"구체적인 술어","kind":"emotion","relation_key":"jealousy","assertion_status":"fact","temporal_scope":"ongoing","state":"active","change_type":"establishment","summary":"대표명 A는 대표명 B를 … 한다.","rationale":"근거 창이 의미와 방향을 뒷받침하는 이유","support":[{"window_id":"p12:30-58:sentence","trigger":"원문 그대로의 낱말"}]}]}
+질문지 — 관계마다 이 순서로 답한다(Massey 외 2015의 인물 관계 주석 질문지를 따른다):
+1. lasting: 근거가 두 사람 사이에 이어지는 관계를 말하는가(true), 한 번 일어난 행동만 말하는가(false)? false면 적지 않아도 된다.
+2. category: 큰 종류를 고른다 — ${RELATION_CATEGORIES.join(' / ')}.
+3. type: 아래 관계 유형 표에서 그 큰 종류에 속한 유형 키 하나를 고른다. 표에 없는 유형은 쓰지 않는다. 맞는 유형이 없으면 적지 않는다.
+4. type_question: 고른 유형의 판정 질문에 대한 답(true/false). true가 아니면 그 유형이 아니다.
+5. exclusions: 고른 유형의 제외 질문마다 id를 키로 true/false. 하나라도 true면 그 유형이 아니다 — (예면 …)에 적힌 유형을 다시 검토한다.
+6. subject: 방향 있는 유형이면 주체의 대표명(표의 subject 역할), 대칭 유형이면 null.
+7. assertion_status: fact(서술로 확인) / belief·claim·rumor·uncertain(누가 믿거나 주장하거나 소문 — attribution에 근거 창에 나온 그 사람 이름을 쓰고 summary에 "믿는다/주장한다/소문" 같은 한정을 넣는다) / negated(부정된 내용). 인물의 추측·거짓말·소문·오해·희망을 fact로 쓰지 않는다. 추리물에서는 겉으로 알려진 관계와 감춰진 관계가 다를 수 있다 — 누가 그렇게 말하거나 믿는지 근거 창에서 확인되면 그 사람을 attribution에 쓴다.
+8. state(active/ended)와 change_type(establishment/restatement/transition/disclosure). 관계가 바뀌거나 끝났다고 원문이 직접 말할 때만 transition/ended를 쓴다.
+9. summary: 두 대표명을 모두 넣은 한 문장. rationale: 근거 창이 판정 질문의 답을 뒷받침하는 이유.
+10. support: 근거 창 id와, 그 창 안에서 관계를 가장 분명하게 말하는 최소한의 연속 낱말(trigger)을 원문 그대로. trigger가 있는 문장에 두 인물의 이름이나 표기가 함께 있어야 한다. 대화 창은 말한 사람과 듣는 사람이 두 인물이다. 같은 관계를 보여 주는 창이 여럿이면 모두 넣는다. 확립 쪽수는 서버가 검증된 support 중 가장 이른 쪽으로 정한다.
+
+character_a/b에는 후보 쌍 목록의 대표명을 쓴다. 큰 종류·방향·라벨은 서버가 유형 표에서 정한다.
+작품·장르에 대한 기억으로 보충하지 않는다. 이 근거 창에 없는 사실은 쓰지 않는다.
+
+--- 관계 유형 표 ---
+${renderTaxonomy()}
+
+출력은 JSON 객체 하나만 반환한다(설명·코드 블록 없이):
+{"relations":[{"character_a":"대표명","character_b":"대표명","lasting":true,"category":"professional","type":"colleague","type_question":true,"exclusions":{"commands":false,"hires":false},"subject":null,"assertion_status":"fact","state":"active","change_type":"establishment","summary":"대표명 A와 대표명 B는 같은 사건을 맡은 동료다.","rationale":"근거 창이 판정 질문의 답을 뒷받침하는 이유","support":[{"window_id":"p12:30-58:sentence","trigger":"원문 그대로의 낱말"}]}]}
 
 --- 후보 쌍 ---
 ${blocks.join('\n')}
@@ -185,6 +230,72 @@ export function uncoveredCharacters(
  */
 export function isOneOffAction(r: { kind?: unknown; temporal_scope?: unknown }): boolean {
   return r.kind === 'action' || r.temporal_scope === 'event';
+}
+
+/** 질문지 응답 해석 결과 — 저장 필드는 유형 표에서 정한다 */
+export type InterpretedAnswer =
+  | { aId: string; bId: string; fields: Record<string, unknown>; notes: string[] }
+  | { reasons: string[] };
+
+/**
+ * 관계 질문지 응답(buildPairLabelPrompt) → 저장 필드. LLM 호출 없음. FR-CHR-001 🚦
+ * - 이어지는 관계인가(lasting) → 아니면 one_off_action. 옛 형식 kind=action·temporal_scope=event도 같다.
+ * - type은 닫힌 유형 표 안(type_not_in_taxonomy), 판정 질문은 true(type_question_not_affirmed),
+ *   제외 질문은 모두 false(exclusion_applies / exclusion_unanswered).
+ * - 큰 종류(kind)·라벨·relation_key·방향·temporal_scope는 표에서 파생한다. LLM이 보낸 값은 쓰지 않는다
+ *   (Hamilton 외 2025: LLM은 세부 종류보다 큰 종류를 더 틀린다 → 세부 종류에서 큰 종류를 파생).
+ * - 방향 있는 유형은 subject가 character_a가 되고 direction=a_to_b. subject가 두 사람 중 하나가 아니면 보류.
+ * - category 답이 유형의 큰 종류와 다르면 저장값은 표를 따르고 검수 메모를 남긴다(category_answer_mismatch).
+ */
+export function interpretAnswer(
+  r: Record<string, unknown>,
+  lexicon: CandidateCharacter[]
+): InterpretedAnswer {
+  const aId = resolveName(r.character_a, lexicon);
+  const bId = resolveName(r.character_b, lexicon);
+  if (!aId || !bId) return { reasons: ['unresolved_endpoint'] };
+  if (aId === bId) return { reasons: ['same_endpoint'] };
+  // FR-CHR-001 — 관계도는 관계만 담는다(2026-11-18 대표 지시). 한 번 일어난 행동(손을 잡음·구하려 함)은
+  // 사건(타임라인 몫)이지 두 인물의 관계가 아니다. 프롬프트가 막아도 모델 출력은 여기서 다시 거른다.
+  const exclusions = object(r.exclusions);
+  if (r.lasting === false || isOneOffAction(r) || exclusions.one_off === true)
+    return { reasons: ['one_off_action'] };
+  const type = relationType(r.type);
+  if (!type) return { reasons: ['type_not_in_taxonomy'] };
+  if (r.lasting !== true) return { reasons: ['lasting_not_answered'] };
+  if (r.type_question !== true) return { reasons: ['type_question_not_affirmed'] };
+  const excluded: string[] = [];
+  for (const x of type.exclusions) {
+    const answer = exclusions[x.id];
+    if (answer === true)
+      excluded.push(`exclusion_applies:${x.id}${x.instead ? `→${x.instead}` : ''}`);
+    else if (answer !== false) excluded.push(`exclusion_unanswered:${x.id}`);
+  }
+  if (excluded.length > 0) return { reasons: excluded };
+  let [from, to, fromName, toName] = [aId, bId, r.character_a, r.character_b];
+  if (type.directionality === 'directed') {
+    const subject = resolveName(r.subject, lexicon);
+    if (subject !== aId && subject !== bId) return { reasons: ['subject_not_in_pair'] };
+    if (subject === bId) [from, to, fromName, toName] = [bId, aId, r.character_b, r.character_a];
+  }
+  const notes = r.category === type.category ? [] : ['category_answer_mismatch'];
+  const attribution =
+    typeof r.attribution === 'string' && r.attribution.trim() ? r.attribution.trim() : undefined;
+  return {
+    aId: from,
+    bId: to,
+    notes,
+    fields: {
+      character_a: fromName,
+      character_b: toName,
+      direction: type.directionality === 'directed' ? 'a_to_b' : 'undirected',
+      kind: storageKind(type),
+      relation_key: type.key,
+      label: type.label,
+      temporal_scope: 'ongoing',
+      attribution,
+    },
+  };
 }
 
 // 사실성 단서 — Saurí & Pustejovsky 2012(극성·양태·출처 도입 술어)를 한국어 어미·영어 어휘로 옮긴 보수적 목록
@@ -433,23 +544,14 @@ export function verifyPairLabels(
   const held: HeldLabel[] = [];
   const items = object(raw).relations;
   for (const item of Array.isArray(items) ? items : []) {
-    const r = object(item);
-    const aId = resolveName(r.character_a, lexicon);
-    const bId = resolveName(r.character_b, lexicon);
-    if (!aId || !bId) {
-      held.push({ candidate: item, reasons: ['unresolved_endpoint'] });
+    const r: Record<string, unknown> = { ...object(item) };
+    const interpreted = interpretAnswer(r, lexicon);
+    if ('reasons' in interpreted) {
+      held.push({ candidate: item, reasons: interpreted.reasons });
       continue;
     }
-    if (aId === bId) {
-      held.push({ candidate: item, reasons: ['same_endpoint'] });
-      continue;
-    }
-    // FR-CHR-001 — 관계도는 관계만 담는다(2026-11-18 대표 지시). 한 번 일어난 행동(손을 잡음·구하려 함)은
-    // 사건(타임라인 몫)이지 두 인물의 관계가 아니다. 프롬프트가 막아도 모델 출력은 여기서 다시 거른다.
-    if (isOneOffAction(r)) {
-      held.push({ candidate: item, reasons: ['one_off_action'] });
-      continue;
-    }
+    const { aId, bId } = interpreted;
+    Object.assign(r, interpreted.fields);
     const candidate = candidates.find(
       (c) => (c.a_id === aId && c.b_id === bId) || (c.a_id === bId && c.b_id === aId)
     );
@@ -486,7 +588,7 @@ export function verifyPairLabels(
       continue;
     }
     verified.sort((x, y) => x.page_no - y.page_no || x.evidence.start - y.evidence.start);
-    const notes: string[] = [];
+    const notes: string[] = [...interpreted.notes];
     const claimed =
       typeof r.established_page === 'number' && Number.isInteger(r.established_page)
         ? (r.established_page as number)
@@ -566,7 +668,8 @@ function orientedKey(s: StructuredRelationship): string {
       : d === 'b_to_a'
         ? `${s.character_b_id}>${s.character_a_id}`
         : [s.character_a_id, s.character_b_id].sort().join('~');
-  return `${pair}|${s.relationship.semantics?.kind ?? ''}`;
+  // 자기 일관성은 유형(relation_key)까지 같아야 일치로 본다 — 큰 종류만 같으면 다른 관계다
+  return `${pair}|${s.relationship.semantics?.relation_key ?? ''}`;
 }
 
 export interface FinalizeOptions {
@@ -623,6 +726,16 @@ export async function finalizeStructuredRelationships(
       reasons.push('dialogue_attribution_heuristic');
     if (chosen.notes.includes('claimed_page_later_than_evidence'))
       reasons.push('claimed_page_later_than_evidence');
+    // 질문지의 큰 종류 답이 유형과 어긋났다 — 저장값은 표를 따르지만 사람이 본다
+    if (chosen.notes.includes('category_answer_mismatch')) reasons.push('category_answer_mismatch');
+    // 관계 변화·종료는 사람끼리도 일치도가 낮다(Massey 2015 변화 κ 0.208) — 자동 확정하지 않는다
+    const g = grounded.relationships[0];
+    if (
+      g.change_type === 'transition' ||
+      g.change_type === 'disclosure' ||
+      g.semantics?.state === 'ended'
+    )
+      reasons.push('change_needs_review');
     const result: FinalStructuredRelationship = {
       ...chosen,
       relationship: grounded.relationships[0],
@@ -664,6 +777,9 @@ export async function finalizeStructuredRelationships(
           fromAliases: names(fromId),
           toAliases: names(toId),
           label: result.relationship.label,
+          ...(relationType(s.relation_key)
+            ? { definition: relationType(s.relation_key)!.definition }
+            : {}),
           direction: s.direction,
           quote: result.relationship.evidence.quote,
           context: windowText || result.relationship.evidence.quote,

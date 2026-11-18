@@ -1,30 +1,31 @@
 /**
  * 논문 기반 인물 관계 추출 실행기 — FR-CHR-001 🚦, FR-DAT-005, R9(배치 전용), R12(검수 전 비공개)
  *
- * 1) 인물·별칭: 기존 추출 결과를 그대로 쓴다(책 전체는 run-generate-full의 all-resolved.json).
+ * 1) 인물·별칭: 기존 추출 결과를 그대로 쓴다(책 전체는 run-generate-full의 all-resolved.json,
+ *    또는 --characters로 준 인물 JSON — 예: 운영 DB의 인물·별칭).
  * 2) 장마다 구조적 상호작용 후보를 결정적으로 만든다(interaction-candidates.ts, LLM 0회).
- * 3) 후보가 있는 장만 게이트웨이(⑥)로 라벨을 두 번 받는다(자기 일관성). 입력은 근거 창뿐이다.
- * 4) 결정적 검사·확립 페이지 결정(relationship-labeling.ts), 선택적으로 반대 검토자 LLM(--verifier).
+ * 3) 후보가 있는 장만 게이트웨이(⑥)로 관계 질문지 답을 두 번 받는다(자기 일관성). 입력은 근거 창과 관계 유형 표뿐이다.
+ *    2026-11-18 대표 지시: API 키가 아니라 Claude 구독(Claude Code CLI)으로 — 작업 이름 generate_relationship*.
+ * 4) 결정적 검사·유형 표 파생·확립 페이지 결정(relationship-labeling.ts), 선택적으로 반대 검토자(--verifier).
  * DB에 쓰지 않는다. 결과는 검수 후보다 — 교체·공개는 기존 검수/교체 절차(docs/relationship-pipeline.md).
  *
- * 사용법 (backend/ 에서):
- *  (A) 발췌 입력 — run-generate-relationships.ts와 같은 JSON(book_id, source, known_character_names,
- *      chapters, pages). 선택 필드 characters: [{name, first_appearance_page, aliases:[{alias, first_appearance_page}]}]
+ * 사용법 (backend/ 에서, 이 컴퓨터에 `claude` 로그인 필요 — API 키 없음):
+ *  (A) 발췌 입력 — JSON(book_id, source, known_character_names, chapters, pages).
+ *      선택 필드 characters: [{name, first_appearance_page, aliases:[{alias, first_appearance_page}]}]
  *      npx ts-node --transpile-only src/batch/pipeline/run-generate-relationships-structural.ts \
  *        --input ../evaluation/relationships/model-inputs/takryu-p91.json --out data/generated/structural/takryu-p91
- *  (B) 책 전체 — data/generated/<book>/full/all-resolved.json의 인물을 쓴다
+ *  (B) 책 전체 — 인물은 data/generated/<book>/full/all-resolved.json, 또는 --characters <인물 JSON>
  *      npx ts-node --transpile-only src/batch/pipeline/run-generate-relationships-structural.ts \
- *        --book gasangbeomin --file data/raw/gasangbeomin.txt [--verifier] [--candidates-only]
+ *        --book gasangbeomin --file data/raw/gasangbeomin.txt [--characters chars.json] [--verifier] [--candidates-only]
  *  --candidates-only: LLM을 부르지 않는다. 후보와 (B) 기존 관계와의 비교만 쓴다.
+ *  모델·시간 제한: CLAUDE_CLI_MODEL(기본 opus), CLAUDE_CLI_TIMEOUT_MS, CLAUDE_CLI_MAX_ATTEMPTS
  */
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { Chapter, Page } from '../../shared/types';
-import { parseJsonResponse } from './generate';
 import { splitBook } from './split';
 import { parseBookArgs } from './run-args';
 import {
@@ -42,131 +43,60 @@ import {
   FinalStructuredRelationship,
   HeldLabel,
   STRUCTURAL_LABEL_VERSION,
-  buildPairLabelPrompt,
   runStructuralChapter,
   uncoveredCharacters,
 } from './relationship-labeling';
-import { VerifierAnswer, VerifierInput, buildVerifierPrompt } from './relationship-verification';
+import {
+  CallStats,
+  GatewayCall,
+  cachedLabeler,
+  cachedVerifier,
+  emptyCallStats,
+  lexiconFromAccumulated,
+  structuralContract,
+} from './relationship-structural-calls';
 
-const MAX_TOKENS = 16000;
 /** 관계 0건 인물 검수 문턱 — 다른 인물과 근거 창이 이만큼 이상이면 올린다(보고용, 관계를 버리거나 만들지 않음) */
 const UNCOVERED_MIN_WINDOWS = 10;
-const JSON_RETRIES = 2;
 
 function flag(argv: string[], name: string): string | undefined {
   const i = argv.indexOf(name);
   return i === -1 ? undefined : argv[i + 1];
 }
 
+interface CharacterInput {
+  name: string;
+  first_appearance_page: number;
+  aliases?: { alias: string; first_appearance_page: number }[];
+}
+
 interface SourceInput {
   book_id: string;
   source: unknown;
   known_character_names: string[];
-  characters?: {
-    name: string;
-    first_appearance_page: number;
-    aliases?: { alias: string; first_appearance_page: number }[];
-  }[];
+  characters?: CharacterInput[];
   chapters: Chapter[];
   pages: Page[];
 }
 
-function lexiconFromCharacters(characters: AccumulatedCharacter[]): CandidateCharacter[] {
+/** 인물 JSON(이름·첫 등장 쪽·별칭) → 후보 사전. id는 대표명 */
+function lexiconFromInput(characters: CharacterInput[]): CandidateCharacter[] {
   return characters.map((c) => ({
-    id: c.id,
+    id: c.name,
     name: c.name,
     first_appearance_page: c.first_appearance_page,
-    aliases: c.aliases.map((a) => ({
+    aliases: (c.aliases ?? []).map((a) => ({
       alias: a.alias,
       first_appearance_page: a.first_appearance_page,
     })),
   }));
 }
 
-const sha = (text: string) => createHash('sha256').update(text).digest('hex');
-
-type GatewayCall = (
-  task: string,
-  prompt: string,
-  options?: { maxTokens?: number }
-) => Promise<string>;
-
-/** 게이트웨이(⑥)는 라벨을 실제로 받을 때만 불러온다 — --candidates-only는 키 없이 돈다 */
+/** 게이트웨이(⑥)는 라벨을 실제로 받을 때만 불러온다 — --candidates-only는 CLI 없이 돈다 */
 async function gateway(): Promise<{ call: GatewayCall; contract: string }> {
   const { call } = await import('../../modules/llm-gateway/gateway');
-  const { DEFAULT_EFFORT, LLM_PROVIDER, MODEL_CONFIG } =
-    await import('../../modules/llm-gateway/model-config');
-  const contract = JSON.stringify({
-    version: STRUCTURAL_LABEL_VERSION,
-    prompt: buildPairLabelPrompt.toString(),
-    provider: LLM_PROVIDER,
-    model: MODEL_CONFIG.generate_relationship,
-    effort: DEFAULT_EFFORT,
-  });
-  return { call, contract };
+  return { call, contract: structuralContract() };
 }
-
-/** 장·실행별 캐시 — 같은 프롬프트면 재생(LLM 0회), 다르면 새 출력 디렉터리를 요구한다 */
-function cachedLabeler(outDir: string, chapterNo: number, contract: string, call: GatewayCall) {
-  return async (prompt: string, run: 1 | 2): Promise<unknown> => {
-    const file = path.join(outDir, `chapter-${chapterNo}.run-${run}.json`);
-    const key = sha(contract + prompt);
-    if (fs.existsSync(file)) {
-      const cached = JSON.parse(fs.readFileSync(file, 'utf8'));
-      if (cached.key !== key)
-        throw new Error(
-          `${file}: 프롬프트·모델 계약이 바뀌었다. 새 --out 디렉터리를 쓰고 이전 결과는 보존한다`
-        );
-      return cached.parsed;
-    }
-    for (let attempt = 1; ; attempt++) {
-      const response = await call(
-        'generate_relationship',
-        attempt === 1
-          ? prompt
-          : `${prompt}\n\n직전 응답은 JSON이 아니었다. JSON 객체 하나만 출력하라.`,
-        { maxTokens: MAX_TOKENS }
-      );
-      try {
-        const parsed = parseJsonResponse(response);
-        fs.writeFileSync(
-          file,
-          JSON.stringify({ key, chapter_no: chapterNo, run, response, parsed }, null, 2),
-          {
-            flag: 'wx',
-          }
-        );
-        return parsed;
-      } catch (err) {
-        fs.writeFileSync(
-          path.join(outDir, `chapter-${chapterNo}.run-${run}.attempt-${attempt}.txt`),
-          response
-        );
-        if (attempt > JSON_RETRIES) throw err;
-      }
-    }
-  };
-}
-
-function cachedVerifier(outDir: string, chapterNo: number, call: GatewayCall) {
-  const file = path.join(outDir, `chapter-${chapterNo}.verifier.json`);
-  const cache: Record<string, VerifierAnswer> = fs.existsSync(file)
-    ? JSON.parse(fs.readFileSync(file, 'utf8'))
-    : {};
-  return async (input: VerifierInput): Promise<VerifierAnswer> => {
-    const prompt = buildVerifierPrompt(input);
-    const key = sha(prompt);
-    if (cache[key]) return cache[key];
-    const answer = parseJsonResponse<VerifierAnswer>(
-      await call('generate_relationship', prompt, { maxTokens: MAX_TOKENS })
-    );
-    if (typeof answer.supports !== 'boolean') throw new Error('verifier answer malformed');
-    cache[key] = { supports: answer.supports, why: String(answer.why ?? '') };
-    fs.writeFileSync(file, JSON.stringify(cache, null, 2));
-    return cache[key];
-  };
-}
-
 function summarizeCandidates(chapterNo: number, candidates: InteractionCandidate[]) {
   return candidates.map((c) => ({
     chapter_no: chapterNo,
@@ -232,12 +162,7 @@ export async function runStructuralRelationships(argv: string[] = process.argv.s
     pages = src.pages;
     chapters = src.chapters;
     lexicon = src.characters
-      ? src.characters.map((c) => ({
-          id: c.name,
-          name: c.name,
-          first_appearance_page: c.first_appearance_page,
-          aliases: c.aliases ?? [],
-        }))
+      ? lexiconFromInput(src.characters)
       : src.known_character_names.map((name) => ({
           id: name,
           name,
@@ -248,13 +173,19 @@ export async function runStructuralRelationships(argv: string[] = process.argv.s
   } else {
     const args = parseBookArgs(argv);
     bookId = args.bookId;
-    const resolvedPath = path.join(args.fullDir, 'all-resolved.json');
-    if (!fs.existsSync(resolvedPath))
-      throw new Error(
-        `${resolvedPath} 없음 — 인물·별칭은 run-generate-full 결과를 쓴다. 먼저 그 실행을 끝낸다`
-      );
-    resolved = JSON.parse(fs.readFileSync(resolvedPath, 'utf8'));
-    lexicon = lexiconFromCharacters(resolved!.characters as AccumulatedCharacter[]);
+    const charactersPath = flag(argv, '--characters');
+    if (charactersPath) {
+      // 인물·별칭을 직접 준다(예: 운영 DB에서 읽은 값). 기존 관계와의 비교는 하지 않는다
+      lexicon = lexiconFromInput(JSON.parse(fs.readFileSync(charactersPath, 'utf8')));
+    } else {
+      const resolvedPath = path.join(args.fullDir, 'all-resolved.json');
+      if (!fs.existsSync(resolvedPath))
+        throw new Error(
+          `${resolvedPath} 없음 — 인물·별칭은 run-generate-full 결과나 --characters <인물 JSON>을 쓴다`
+        );
+      resolved = JSON.parse(fs.readFileSync(resolvedPath, 'utf8'));
+      lexicon = lexiconFromAccumulated(resolved!.characters as AccumulatedCharacter[]);
+    }
     ({ pages, chapters } = splitBook(fs.readFileSync(args.filePath, 'utf8'), bookId));
     outDir = flag(argv, '--out') ?? path.join(args.generatedDir, 'structural-relationships');
   }
@@ -268,6 +199,8 @@ export async function runStructuralRelationships(argv: string[] = process.argv.s
   const accepted: (FinalStructuredRelationship & { chapter_no: number })[] = [];
   const held: (HeldLabel & { chapter_no: number })[] = [];
   let llmChapters = 0;
+  const stats: CallStats = emptyCallStats();
+  const started = Date.now();
   for (const chapter of [...chapters].sort((a, b) => a.start_page - b.start_page)) {
     const chapterPages = pages.filter(
       (p) => p.page_no >= chapter.start_page && p.page_no <= chapter.end_page
@@ -278,8 +211,22 @@ export async function runStructuralRelationships(argv: string[] = process.argv.s
     if (!llm || candidates.length === 0) continue;
     llmChapters++;
     const out = await runStructuralChapter(chapter, chapterPages, lexicon, {
-      label: cachedLabeler(outDir, chapter.chapter_no, llm.contract, llm.call),
-      ...(useVerifier ? { verifier: cachedVerifier(outDir, chapter.chapter_no, llm.call) } : {}),
+      label: cachedLabeler(
+        path.join(outDir, `chapter-${chapter.chapter_no}`),
+        chapter.chapter_no,
+        llm.contract,
+        llm.call,
+        stats
+      ),
+      ...(useVerifier
+        ? {
+            verifier: cachedVerifier(
+              path.join(outDir, `chapter-${chapter.chapter_no}`),
+              llm.call,
+              stats
+            ),
+          }
+        : {}),
     });
     accepted.push(...out.accepted.map((r) => ({ ...r, chapter_no: chapter.chapter_no })));
     held.push(...out.held.map((h) => ({ ...h, chapter_no: chapter.chapter_no })));
@@ -312,7 +259,14 @@ export async function runStructuralRelationships(argv: string[] = process.argv.s
   const counts = {
     chapters: chapters.length,
     chapters_with_candidates: new Set(candidateSummary.map((c) => c.chapter_no)).size,
-    llm_label_calls: candidatesOnly ? 0 : llmChapters * 2,
+    llm_label_runs: candidatesOnly ? 0 : llmChapters * 2,
+    // 이번 실행에서 실제로 모델을 부른 횟수(캐시 재생은 0) — Claude 구독 호출
+    model_calls: stats.label_calls + stats.verifier_calls,
+    model_label_calls: stats.label_calls,
+    model_verifier_calls: stats.verifier_calls,
+    model_json_retries: stats.json_retries,
+    model_seconds: Math.round(stats.model_ms / 1000),
+    wall_seconds: Math.round((Date.now() - started) / 1000),
     candidate_pairs: allCandidates.length,
     windows: allCandidates.reduce((n, c) => n + c.windows.length, 0),
     accepted: accepted.length,
@@ -340,8 +294,12 @@ export async function runStructuralRelationships(argv: string[] = process.argv.s
     book_id: bookId,
     mode: candidatesOnly ? 'candidates-only' : 'labeled',
     method:
-      'structural interaction candidates + evidence-window labeling (docs/context/research-2026-11-18-relationship-extraction.md)',
+      'structural interaction candidates + evidence-window relation questionnaire over a closed type table (docs/context/research-2026-11-18-relationship-extraction.md, research-2026-11-18-relationship-classification.md)',
+    provider: candidatesOnly ? 'none' : 'claude-cli (subscription, no API key)',
     counts,
+    held_reasons: held
+      .flatMap((h) => h.reasons)
+      .reduce<Record<string, number>>((acc, r) => ((acc[r] = (acc[r] ?? 0) + 1), acc), {}),
     relationships: state.relationships.map((r) => ({
       ...r,
       character_a: names.get(r.character_a_id),
@@ -352,7 +310,15 @@ export async function runStructuralRelationships(argv: string[] = process.argv.s
       character_a: r.relationship.character_a,
       character_b: r.relationship.character_b,
       label: r.relationship.label,
+      relation_key: r.relationship.semantics?.relation_key,
+      kind: r.relationship.semantics?.kind,
+      direction: r.relationship.semantics?.direction,
+      assertion_status: r.relationship.semantics?.assertion_status,
+      attribution: r.relationship.semantics?.attribution,
+      summary: r.relationship.semantics?.summary,
+      evidence_quote: r.relationship.evidence.quote,
       established_page: r.relationship.established_page,
+      runs_agreed: r.runs_agreed,
       check: r.check,
       reasons: r.reasons,
       support: r.support,

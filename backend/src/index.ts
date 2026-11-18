@@ -10,6 +10,7 @@ dotenv.config();
 
 import express from 'express';
 import path from 'path';
+import { validateModelVersions } from './modules/llm-gateway/model-config';
 import routes from './api/routes';
 import { pool } from './config/database';
 import { createNotesRoutes } from './modules/notes/composition';
@@ -17,6 +18,10 @@ import { createCommunityRoutes } from './modules/community/composition';
 import { adminRouter, resumeIngestJobs } from './modules/ingest/composition';
 import { createAnalyticsIngestRouter } from './modules/analytics/ingest-router';
 import { createPgEventStore } from './modules/analytics/event-store';
+
+// NFR-AI-002 — 서버는 API 키가 없으면 부팅하지 않는다. 게이트웨이는 관계 추출 배치(Claude 구독, 키 없음)를
+// 위해 키 검사를 첫 API 호출로 미루므로, 서버 부팅 가드는 여기서 한다.
+validateModelVersions();
 
 const app = express();
 const PORT = process.env.PORT || 3000;

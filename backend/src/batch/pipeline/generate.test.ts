@@ -2,7 +2,6 @@ import {
   buildPageTaggedText,
   buildSummaryPrompt,
   buildCharacterPrompt,
-  buildRelationshipPrompt,
   buildBackgroundPrompt,
   buildTermPrompt,
   parseJsonResponse,
@@ -45,11 +44,6 @@ describe('프롬프트 빌더 — 장 번호·제목·원문이 포함되는지'
 
     const withoutKnown = buildCharacterPrompt(chapter, pages, []);
     expect(withoutKnown).toContain('없음');
-  });
-
-  test('관계 프롬프트에 이력형 규칙(라벨 덮어쓰기 금지)이 명시된다', () => {
-    const p = buildRelationshipPrompt(chapter, pages, ['정주사', '초봉이']);
-    expect(p).toContain('덮어쓰지');
   });
 
   test('R5: 배경지식 프롬프트는 다른 작품의 무대(미두장·군산)나 고정 연재 정보를 넣지 않고, 첫 페이지 원문만 근거로 준다 (2026-11-18 E2E #28)', () => {

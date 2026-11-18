@@ -61,38 +61,8 @@ export function buildCharacterPrompt(
 ${buildPageTaggedText(pages)}`;
 }
 
-/** 관계 — FR-DAT-005, A6(이력형 복수 행), 확립 페이지 = 명시적 근거 페이지 */
-export function buildRelationshipPrompt(
-  chapter: Chapter,
-  pages: Page[],
-  knownCharacterNames: string[],
-  previousRelationships: string[] = []
-): string {
-  const known =
-    knownCharacterNames.length > 0 ? knownCharacterNames.join(', ') : '(없음 — 이 장이 첫 장)';
-  return `다음은 이 작품 ${chapter.chapter_no}장 "${chapter.title}"의 원문이다(각 문단 앞에 [페이지 N] 표시).
-이 장에서 드러나는 인물 간 관계를 추출하라.
-
-규칙:
-- 이름 문자열은 이 원문과 아래 인물 목록에 나온 표기를 사용한다. 각 관계는 누가 누구에게 무엇을 하는지 설명한다. 장르/작품 기억으로 보충하지 않는다.
-- label은 짧고 구체적인 술어/관계다(예: "성적으로 탐낸다", "고용한다", "아버지다", "협박한다"). "욕망", "감정", "관계"처럼 대상/의미를 알 수 없는 추상 명사는 금지한다. summary는 두 이름을 모두 넣은 한 문장으로 해당 술어의 구체적인 의미를 설명한다. rationale는 그 해석을 뒷받침하는 원문 문맥이다.
-- direction은 입력 character_a/b 기준 a_to_b(주체 A→대상 B), b_to_a(주체 B→대상 A), mutual(양쪽에 동일한 관계가 명시됨), undirected(방향이 없는 관계), unknown(방향 불명)이다. 사랑/미움/욕망은 일방일 수 있으며 서로 사랑함으로 승격하지 않는다. 아버지→자녀 등 역할이 다른 가족도 방향이 있다. 알 수 없으면 unknown으로 보류할 문맥을 남긴다.
-- 관계만 추출한다. 관계는 두 인물 사이에 이어지는 상태다: 가족(부부·부모·형제), 사회적 관계(친구·고용·동료·스승), 한 인물이 다른 인물에게 품은 감정·태도(사랑·미움·질투·의심·신뢰·두려움·경계). 한 번 일어난 행동(손을 잡는다·구하려 한다·찾아간다·때린다·만난다)은 사건이지 관계가 아니므로 추출하지 않는다. 행동에서 감정·태도가 원문에 직접 드러나면 그 감정·태도만 관계로 적는다.
-- kind는 family/social/emotion 중 하나다(emotion은 감정과 태도). 같은 두 인물의 가족·고용·감정은 별도 행으로 공존한다. relation_key는 두 인물 사이의 같은 의미 이력을 추적하는 영어 소문자 키다(예: parenthood, employment, affection, marriage). 라벨 문구가 달라도 같은 이력에는 앞서 사용한 키를 재사용한다. 다른 의미를 덮어쓰지 않는다.
-- temporal_scope는 언제나 ongoing(지속 관계/감정·태도)이다. state=active는 그 시점 성립/진행, ended는 원문에서 종료가 명시된 이력이다. 종료 페이지를 앞선 관계 행에 소급해 넣지 않는다.
-- 확립 페이지 = 해당 의미와 방향 및 지위가 확인되는 evidence.source_page. character_a/b에는 인물 목록의 대표명을 쓴다. evidence의 quote는 한 페이지 안의 정확한 부분 문자열이며, 두 인물이 이름·등록된 별칭·호칭으로 드러나도록 필요하면 앞뒤 문장까지 포함한다(대사만으로 화자나 대상이 불분명한 문장 하나만 인용하지 않는다). 유일한 인용은 서버가 위치를 계산한다. 반복 인용에만 start_char/end_char를 0 기반 UTF-16 위치로 쓰며 end_char는 제외한다. 명확한 한 페이지 근거를 잡을 수 없으면 추측하지 말고 검수 후보로 남긴다.
-- assertion_status는 fact/belief/claim/rumor/uncertain/negated다. fact는 서술로 확인되는 사실만이다. 인물의 추측·거짓말·소문을 사실로 바꾸지 않는다. belief/claim/rumor/uncertain은 attribution에 근거에 명시된 주장/믿음 주체의 이름을 넣고 summary에도 그 이름과 "믿는다/주장한다/소문/불확실하다" 같은 한정을 명시한다. negated는 부정된 내용임을 summary에 명시한다. 인용 다음 문맥의 부정·오해도 확인한다. 계획은 성립한 혼인/친족이 아니라 구체적인 제안/계획 행위로 적거나 보류한다.
-- change_type은 establishment/restatement/transition/disclosure. 동일 관계 이력의 재서술은 restatement이며 새 확립 날짜를 만들지 않는다. 실제 상태 변화는 transition, 새 사실 공개는 disclosure다. transition/disclosure 또는 ended에는 같은 확립 페이지의 별도 정확한 change_evidence가 필수다. 새로운 독립 relation_key는 establishment로 추가할 수 있다.
-- semantics는 version=2의 완전한 계약이며 evidence/assertion_status/change_evidence는 상위 값과 동일하다. 구체적인 의미가 불명확하면 확신을 꾸미지 않는다. 서버 검증은 정확한 인용/구조의 검사이며 작품 해석의 진실을 보증하지 않으므로 사람 검수 전 후보다.
-- 이미 등장한 인물: ${known}
-- 앞 장까지의 관계 이력(서로 다른 의미 병존): ${previousRelationships.length ? previousRelationships.join('; ') : '(없음)'}
-
-출력은 JSON만 반환한다. 완전한 예시 형태:
-{"relationships":[{"character_a":"주체 이름","character_b":"대상 이름","label":"구체적인 술어","established_page":1,"assertion_status":"fact","change_type":"establishment","rationale":"원문이 의미와 방향을 뒷받침하는 이유","evidence":{"source_page":1,"quote":"두 이름과 관계가 포함된 정확한 원문"},"semantics":{"version":2,"direction":"a_to_b","kind":"emotion","relation_key":"affection","summary":"주체 이름은 대상 이름에게 어떤 감정을 느낀다.","assertion_status":"fact","temporal_scope":"ongoing","state":"active","evidence":{"source_page":1,"quote":"동일한 정확한 원문"}}}]}
-
---- 원문 ---
-${buildPageTaggedText(pages)}`;
-}
+// 관계(FR-DAT-005)는 장 원문 전체를 LLM에 주고 쌍을 고르게 하지 않는다(2026-11-18 대표 지시로 삭제).
+// 구조적 후보 쌍 + 근거 창 관계 질문지 — relationship-labeling.ts, Claude 구독으로 실행(relationship-structural-calls.ts)
 
 /**
  * 배경지식·소개 — FR-DAT-006, R5(상한 없음, 1페이지 시점에도 안전해야 함)

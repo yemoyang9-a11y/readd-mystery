@@ -8,8 +8,8 @@ import { bookArgsFor } from './run-args';
 jest.mock('../../modules/llm-gateway/gateway', () => ({ call: jest.fn() }));
 
 const TEXT =
-  '박영민은 해왕좌의 좌장이다. 이몽란은 그의 부인이다. 유불란은 소설가다. 운전수는 차를 몰았다. 에도가와 란포의 소설이다.';
-const QUOTE = '이몽란은 그의 부인이다.';
+  '박영민은 해왕좌의 좌장이다. 이몽란은 박영민의 부인이다. 유불란은 소설가다. 운전수는 차를 몰았다. 에도가와 란포의 소설이다.';
+const QUOTE = '이몽란은 박영민의 부인이다.';
 
 const person = (name: string, quote: string, patch: Record<string, unknown> = {}) => ({
   name,
@@ -25,26 +25,25 @@ const person = (name: string, quote: string, patch: Record<string, unknown> = {}
   ...patch,
 });
 
+/**
+ * 관계 질문지 응답(relationship-labeling.ts의 프롬프트 계약) — 2026-11-18부터 관계는 구조적 후보 쌍 +
+ * 근거 창 질문지로만 만든다. 게이트웨이 작업 generate_relationship(Claude 구독)의 가짜 응답이다.
+ */
 const relationship = (patch: Record<string, unknown> = {}) => ({
   character_a: '박영민',
   character_b: '이몽란',
-  label: '남편이다',
-  established_page: 1,
+  lasting: true,
+  category: 'family',
+  type: 'marriage',
+  type_question: true,
+  exclusions: { plan_only: false },
+  subject: null,
   assertion_status: 'fact',
+  state: 'active',
   change_type: 'establishment',
+  summary: '박영민과 이몽란은 부부다.',
   rationale: '부인이라고 서술한다.',
-  evidence: { source_page: 1, quote: QUOTE },
-  semantics: {
-    version: 2,
-    direction: 'a_to_b',
-    kind: 'family',
-    relation_key: 'marriage',
-    summary: '박영민은 이몽란의 남편이다.',
-    assertion_status: 'fact',
-    temporal_scope: 'ongoing',
-    state: 'active',
-    evidence: { source_page: 1, quote: QUOTE },
-  },
+  support: [{ window_id: 'WINDOW', trigger: '부인' }],
   ...patch,
 });
 
@@ -108,11 +107,22 @@ function setup(options: {
       });
     }
     if (task === 'generate_background') return JSON.stringify({ background: 'b', intro: 'i' });
-    if (prompt.includes('반대 검토자'))
+    if (task === 'generate_relationship_verifier')
       return JSON.stringify({ supports: options.supports, why: '판단 이유' });
+    if (task !== 'generate_relationship') throw new Error(`unexpected task ${task}`);
+    // 근거 창 id는 프롬프트에 실린 그 쌍의 창을 쓴다(구조적 후보 — LLM이 고르지 않는다)
+    const windowId = /\[(p1:[^\]]+:sentence)\][^\n]*\n이몽란은 박영민의 부인이다/.exec(prompt)?.[1];
+    const withWindow = (items: unknown[]) =>
+      items.map((r) => {
+        const x = r as { support?: { window_id: string; trigger: string }[] };
+        return {
+          ...x,
+          support: (x.support ?? []).map((sp) => ({ ...sp, window_id: windowId ?? 'none' })),
+        };
+      });
     relationshipCalls++;
     return JSON.stringify({
-      relationships: relationshipCalls === 1 ? [relationship()] : options.second,
+      relations: withWindow(relationshipCalls === 1 ? [relationship()] : options.second),
     });
   });
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'verify-'));
@@ -154,6 +164,28 @@ describe('FR-CHR-001: 인물 정리와 관계 검증이 생성 경로에 들어 
     });
   });
 
+  test('FR-CHR-001: 관계 작업은 질문지 2회 + 반대 검토뿐이고, 입력은 근거 창(장 원문 전체가 아님)이다', async () => {
+    const args = setup({ second: [relationship()], supports: true });
+    const book = await generateFullBook(args);
+    const relationshipCalls = (call as jest.Mock).mock.calls.filter(([task]) =>
+      String(task).startsWith('generate_relationship')
+    );
+    expect(relationshipCalls.map(([task]) => task)).toEqual([
+      'generate_relationship',
+      'generate_relationship',
+      'generate_relationship_verifier',
+    ]);
+    const labelPrompt = relationshipCalls[0][1] as string;
+    expect(labelPrompt).toContain('이몽란은 박영민의 부인이다.');
+    expect(labelPrompt).not.toContain('운전수는 차를 몰았다');
+    expect(book.relationships[0].semantics).toMatchObject({
+      relation_key: 'marriage',
+      kind: 'family',
+      direction: 'undirected',
+    });
+    expect(book.relationships[0].label).toBe('부부다');
+  });
+
   test('FR-CHR-001: 두 번째 추출에 없으면 needs_review로 저장한다', async () => {
     const args = setup({ second: [], supports: true });
     const book = await generateFullBook(args);
@@ -186,6 +218,11 @@ describe('FR-CHR-001: 인물 정리와 관계 검증이 생성 경로에 들어 
       expect.anything(),
       expect.anything()
     );
+    expect(call).not.toHaveBeenCalledWith(
+      'generate_relationship_verifier',
+      expect.anything(),
+      expect.anything()
+    );
   });
 });
 
@@ -194,7 +231,7 @@ describe('R9: 독자용 쉬운 문장이 생성 경로에 들어 있다', () => 
     const args = setup({ second: [relationship()], supports: true });
     const book = await generateFullBook(args);
     expect(book.relationships[0].semantics?.reader_summary).toBe('박영민과 이몽란은 부부예요.');
-    expect(book.relationships[0].semantics?.summary).toBe('박영민은 이몽란의 남편이다.');
+    expect(book.relationships[0].semantics?.summary).toBe('박영민과 이몽란은 부부다.');
     expect(book.events).toHaveLength(1);
     expect(book.events[0].reader_description).toBe('박영민이 손님을 맞아요.');
   });
@@ -309,7 +346,7 @@ describe('해석·평가어 검사가 생성 경로에 들어 있다', () => {
     });
     const book = await generateFullBook(args);
     expect(book.relationships).toHaveLength(1);
-    expect(book.relationships[0].semantics?.summary).toBe('박영민은 이몽란의 남편이다.');
+    expect(book.relationships[0].semantics?.summary).toBe('박영민과 이몽란은 부부다.');
     expect(book.relationships[0].semantics?.reader_summary).toBeUndefined();
     expect(reviewOf(book)).toContain('reader_text_evaluative_word');
   });
