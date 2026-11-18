@@ -33,6 +33,17 @@ describe('PgAccountRepository', () => {
     expect(statement?.text).toContain('device_id = $1');
   });
 
+  test.each(['reading_notes', 'community_post_likes'])(
+    '탈퇴는 독자가 남긴 %s 를 reader_id 로 지운다 (2026-11-18 — 탈퇴 뒤 노트가 남던 문제)',
+    async (table) => {
+      const { pool, statements } = fakePool();
+      await new PgAccountRepository(pool).deleteAccount('user-1', 'reader-1');
+      const statement = statements.find((s) => s.text.includes(`DELETE FROM ${table} `));
+      expect(statement?.values).toEqual(['reader-1']);
+      expect(statement?.text).toContain('reader_id = $1');
+    }
+  );
+
   test('탈퇴는 계정을 user_id로 지우고 커밋한다', async () => {
     const { pool, statements, release } = fakePool();
     await new PgAccountRepository(pool).deleteAccount('user-1', 'reader-1');

@@ -22,6 +22,8 @@ const READING_TABLES = [
   'chatbot_conversation',
 ];
 
+const READER_ID_TABLES = ['reading_notes', 'community_post_likes'];
+
 /** user_consents 에 한 문장으로 넣는다. 같은 종류·버전이면 동의 여부와 시각을 바꾼다 */
 async function upsertConsents(
   db: Pick<Pool, 'query'> | PoolClient,
@@ -193,6 +195,10 @@ export class PgAccountRepository implements AccountRepository {
     return this.inTransaction(async (client) => {
       for (const table of READING_TABLES) {
         await client.query(`DELETE FROM ${table} WHERE device_id = $1`, [readerId]);
+      }
+      // 독자가 직접 남긴 추리 노트와 공감 기록도 함께 지운다 (2026-11-18)
+      for (const table of READER_ID_TABLES) {
+        await client.query(`DELETE FROM ${table} WHERE reader_id = $1`, [readerId]);
       }
       await client.query(`DELETE FROM users WHERE user_id = $1`, [userId]);
     });
