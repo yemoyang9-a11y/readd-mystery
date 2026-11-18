@@ -88,6 +88,15 @@ describe('모바일 홈 3D 책 캐러셀', () => {
     expect(hook()).toHaveTextContent('한강 건너 명수대의 밤.');
   });
 
+  test('책 넘기기 버튼은 배경 없는 얇은 꺾쇠(C안, 2026-11-18 대표 선택) — 누르는 영역은 높이 44px 유지', () => {
+    renderHome();
+    for (const name of ['이전 책', '다음 책']) {
+      const button = screen.getByRole('button', { name });
+      expect(button.className).not.toMatch(/\bbg-white|backdrop-blur|rounded-full/);
+      expect(button.className).toMatch(/\bh-11\b/);
+    }
+  });
+
   test('좌우로 밀어도 책이 넘어간다', () => {
     renderHome();
     swipe(-80);

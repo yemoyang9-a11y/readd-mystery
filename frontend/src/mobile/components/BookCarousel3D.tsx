@@ -40,15 +40,16 @@ function Cover({ book }: { book: ShowcaseBook }) {
   );
 }
 
+/** 2026-11-18 대표 선택 C안 — 배경 없는 얇은 꺾쇠를 화면 가장자리에. 누르는 영역은 높이 44px 유지 */
 function Arrow({ direction, onClick }: { direction: -1 | 1; onClick: () => void }) {
   return (
     <button
       type="button"
       aria-label={direction < 0 ? '이전 책' : '다음 책'}
       onClick={onClick}
-      className="pointer-events-auto flex size-11 items-center justify-center rounded-full bg-white/10 text-white/80 backdrop-blur transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brief-accent active:scale-95"
+      className="pointer-events-auto flex h-11 w-8 items-center justify-center rounded-md text-white/45 transition-colors hover:text-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brief-accent active:text-white/90"
     >
-      <svg aria-hidden="true" viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg aria-hidden="true" viewBox="0 0 16 16" className="size-[18px]" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d={direction < 0 ? 'M10 3.5 5.5 8l4.5 4.5' : 'M6 3.5 10.5 8 6 12.5'} />
       </svg>
     </button>
@@ -209,7 +210,7 @@ export default function BookCarousel3D({
             );
           })}
         </div>
-        <div className="pointer-events-none absolute inset-x-1 flex justify-between" style={{ top: 122 * scale }}>
+        <div className="pointer-events-none absolute inset-x-0 flex justify-between" style={{ top: 122 * scale }}>
           <Arrow direction={-1} onClick={() => step(-1)} />
           <Arrow direction={1} onClick={() => step(1)} />
         </div>
