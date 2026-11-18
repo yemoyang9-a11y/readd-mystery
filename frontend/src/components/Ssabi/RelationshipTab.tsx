@@ -4,6 +4,7 @@ import Loading from '../common/Loading';
 import RelationshipGraph from './RelationshipGraph';
 import RelationDetails from './RelationDetails';
 import { filterMajorCharacters, graphMilestones, graphUpTo } from './graphFilter';
+import { centralNodeIndex } from './graphLayout';
 
 /**
  * 인물 관계도 탭 — 기본 탭 (FR-SVB-002)
@@ -90,6 +91,17 @@ import { filterMajorCharacters, graphMilestones, graphUpTo } from './graphFilter
  * 초기값으로 돌려준다. 세션이 바뀌면(SsabiPanel의 epoch 판정) 자동으로 기본값("주요인물")
  * 으로 리셋된다 — 탭 기억과 동일하게 새 세션에는 옛 화면 설정을 들고 가지 않는다.
  *
+ * ## 2026-11-17 승인 시안 (`docs/superpowers/specs/mockups-2026-11-17/readd-relationship-simple.html`)
+ *
+ * 제목 질문 → 그래프 → 선 모양 범례 한 줄 → "{중심 인물}과 이어진 사람" 카드 순서다. 중심 인물(ego)이
+ * 늘 한 명 있다 — 처음은 지금 보이는 인물 중 연결이 가장 많은 인물(동점이면 먼저 등장한 인물,
+ * `centralNodeIndex`)이고, 인물을 누르면 그 인물이 중심이 된다. 그래서 "선택 해제"가 없다.
+ * 범례의 "지난번 이후 새로"는 그 데이터(지난 방문 이후 새 관계)가 계약에 없어 넣지 않는다(6장).
+ * 회색 부연 문구는 두지 않는다(DESIGN.md 2026-11-18 대표 지시).
+ *
+ * 중심 인물을 고르는 것은 받은 그래프 안에서의 표시 선택이다 — 기준점·쪽수 계산이 아니다
+ * (절대 규칙 2·7번). 그래프 데이터는 서버가 기준점 이하로 걸러 준 그대로다 (FR-SPL-002 🚦).
+ *
  * 조회 실패는 부분 표시로 넘어가지 않는다 (FR-SPL-005 🚦).
  */
 export default function RelationshipTab({
@@ -139,9 +151,21 @@ export default function RelationshipTab({
   const at = picked !== null && milestones.includes(picked) ? picked : latest;
   const shown = useMemo(() => (graph ? graphUpTo(graph, at) : null), [graph, at]);
 
-  // 되감아서 선택했던 인물이 아직 안 나왔으면 선택을 무시한다(지우지는 않는다 —
-  // 다시 앞으로 감으면 그대로 복원된다)
-  const activeSelected = selected && shown?.nodes.some((n) => n.id === selected) ? selected : null;
+  // 그래프·카드 리스트·개수 표시가 전부 이 값 하나를 공유한다 — 위 클래스 주석 참고.
+  const displayed = useMemo(
+    () => (shown ? (characterMode === 'major' ? filterMajorCharacters(shown) : shown) : null),
+    [shown, characterMode]
+  );
+
+  // 되감아서(또는 주요인물로 걸러져) 고른 인물이 안 보이면 고른 값을 무시한다(지우지는 않는다 —
+  // 다시 앞으로 감으면 그대로 복원된다). 그때는 기본 중심 인물로 돌아간다 (2026-11-17 시안).
+  const pickedVisible = selected && displayed?.nodes.some((n) => n.id === selected) ? selected : null;
+  const defaultEgo = useMemo(() => {
+    if (!displayed) return null;
+    const index = centralNodeIndex(displayed.nodes, displayed.edges);
+    return index >= 0 ? displayed.nodes[index].id : null;
+  }, [displayed]);
+  const activeSelected = pickedVisible ?? defaultEgo;
 
   if (failed)
     return (
@@ -149,10 +173,8 @@ export default function RelationshipTab({
         관계도를 불러오지 못했습니다
       </p>
     );
-  if (!graph || !shown) return <Loading fullScreen={false} message="인물 관계를 정리하는 중" />;
-
-  // 그래프·카드 리스트·개수 표시가 전부 이 값 하나를 공유한다 — 위 클래스 주석 참고.
-  const displayed = characterMode === 'major' ? filterMajorCharacters(shown) : shown;
+  if (!graph || !shown || !displayed)
+    return <Loading fullScreen={false} message="인물 관계를 정리하는 중" />;
 
   // 검색 대상은 되감기로 지금 화면에 보이는 인물(shown.nodes)로만 한정한다 — 아직
   // 등장하지 않은 시점으로 되감아 놓고 그 이후 인물을 검색해 포커싱하면, 검색이 곧
@@ -175,7 +197,7 @@ export default function RelationshipTab({
   function focusOn(id: string) {
     // 걸러진 인물을 검색으로 골랐으면 "전체"로 돌려 실제로 보이게 한다 — 완전히 숨기지
     // 않는다는 약속(위 클래스 주석)을 여기서 지킨다.
-    if (characterMode === 'major' && !displayed.nodes.some((node) => node.id === id)) {
+    if (characterMode === 'major' && !displayed?.nodes.some((node) => node.id === id)) {
       setCharacterMode('all');
     }
     setSelected(id);
@@ -184,39 +206,52 @@ export default function RelationshipTab({
   }
 
   return (
-    <div className="space-y-5">
-      <RelationshipGraph
-        graph={displayed}
-        selectedId={activeSelected}
-        onSelect={setSelected}
-        selectedEdgeKey={selectedEdgeKey}
-        onSelectEdge={setSelectedEdgeKey}
-      />
+    <div className="space-y-4">
+      <h3 className="m-0 font-dashSans text-[21px] font-extrabold leading-snug tracking-[-0.02em] text-brief-ink">
+        지금 누가 누구와 엮여 있을까요
+      </h3>
+      <div>
+        <RelationshipGraph
+          graph={displayed}
+          selectedId={activeSelected}
+          // 인물을 누르면 그 인물이 중심이 된다. 빈 곳을 누르면(null) 선 선택만 풀고 중심은 그대로 둔다.
+          onSelect={(id) => (id ? setSelected(id) : setSelectedEdgeKey(null))}
+          selectedEdgeKey={selectedEdgeKey}
+          onSelectEdge={setSelectedEdgeKey}
+        />
+        {/* 선 모양 범례 한 줄 (2026-11-17 시안). 라벨이므로 부연 문구 금지 규칙의 예외다. */}
+        <ul
+          aria-label="선 모양 범례"
+          className="m-0 mt-2.5 flex list-none gap-4 px-0.5 font-dashSans text-[12px] text-brief-muted"
+        >
+          <li className="flex items-center gap-1.5">
+            <svg aria-hidden="true" width="22" height="6" viewBox="0 0 22 6">
+              <line x1="1" y1="3" x2="21" y2="3" strokeWidth="2" strokeLinecap="round" className="stroke-brief-accent" />
+            </svg>
+            <span>사실</span>
+          </li>
+          <li className="flex items-center gap-1.5">
+            <svg aria-hidden="true" width="22" height="6" viewBox="0 0 22 6">
+              <line
+                x1="1"
+                y1="3"
+                x2="21"
+                y2="3"
+                strokeWidth="2"
+                strokeDasharray="5 4"
+                strokeLinecap="round"
+                className="stroke-brief-accent"
+              />
+            </svg>
+            <span>의심·주장</span>
+          </li>
+        </ul>
+      </div>
       <RelationDetails
         graph={displayed}
         selectedId={activeSelected}
         selectedEdgeKey={selectedEdgeKey}
       />
-      {!graph?.history ? (
-        <p className="text-[11px] leading-relaxed text-brief-muted">
-          이전 관계 이력이 없는 응답은 되감아도 당시 관계를 모두 복원할 수 없습니다.
-        </p>
-      ) : null}
-
-      {/* 시안(reader-map-graph.html)의 .hintbar 에서 명시적 선택 해제만 남긴다.
-          예전엔 같은 카드를 다시 눌러야만 접혔는데, 그래프 위 다른 곳을 눌러도 되지만
-          그 동작이 눈에 안 보인다 — 이 버튼으로 "선택을 지우는 방법이 있다"를 드러낸다.
-          조작 안내 문구("두 손가락으로 확대 · 끌어서 이동")는 뺐다(2026-11-18 대표 지시 —
-          기능 설명용 회색 부연 문구를 두지 않는다). */}
-      <div className="flex justify-end text-[11px]">
-        <button
-          type="button"
-          onClick={() => setSelected(null)}
-          className="font-bold text-brief-accent underline mobile:min-h-11 mobile:min-w-11"
-        >
-          선택 해제
-        </button>
-      </div>
 
       {milestones.length > 1 ? (
         <div className="space-y-2">

@@ -1,5 +1,5 @@
 import type { GraphEdge } from '../../types';
-import { graphEdgeKey, graphEdgeLabel, graphTrackKey, makeEdgePaths } from './graphEdges';
+import { edgePointAt, graphEdgeKey, graphEdgeLabel, graphTrackKey, makeEdgePaths } from './graphEdges';
 
 const legacy: GraphEdge = {
   source: 'a',
@@ -180,6 +180,15 @@ describe('makeEdgePaths 곡선 회피 (FR-CHR-001)', () => {
     const [entry] = makeEdgePaths(nodes, [edge], positions, () => 10, 38);
     expect(entry.label).toEqual({ x: 50, y: 0 });
     expect(entry.path).toBe('M 10 0 Q 50 0 90 0');
+  });
+
+  it('이름표를 선 위 다른 자리로 옮길 수 있게 곡선의 시작·조절·끝 점을 함께 준다', () => {
+    const edge: GraphEdge = { ...legacy, source: 'a', target: 'c' };
+    const [entry] = makeEdgePaths(nodes, [edge], positions, () => 10, 38);
+    expect(entry.start).toEqual({ x: 10, y: 0 });
+    expect(entry.control).toEqual({ x: 50, y: 0 });
+    expect(entry.end).toEqual({ x: 90, y: 0 });
+    expect(edgePointAt(entry, 0.25)).toEqual({ x: 30, y: 0 });
   });
 
   it('선분 양 끝 8% 안에 있는 카드는 피하지 않는다', () => {

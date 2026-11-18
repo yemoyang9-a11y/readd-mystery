@@ -2,23 +2,52 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalLayer } from '../../hooks/useModalLayer';
 import type { GraphResponse } from '../../types';
-import { graphEdgeLabel, makeEdgePaths } from './graphEdges';
-
-/** 선택한 선의 색·굵기 (2026-11-17 시안). 강조는 색·굵기로만 하고 다른 것을 흐리게 하지 않는다. */
-const SELECTED_EDGE_COLOR = '#ff5c7d';
-const SELECTED_EDGE_WIDTH = 3.6;
-const EDGE_HIT_WIDTH = 20;
+import { edgePointAt, graphEdgeLabel, makeEdgePaths } from './graphEdges';
 import {
   boundingBox,
   computeDegrees,
   estimateTextWidth,
   forceLayout,
-  nodeRadius,
   pickNonOverlapping,
   type BoundingBox,
   type LabelBox,
   type Point,
 } from './graphLayout';
+
+/** 선택한 선의 색·굵기 (2026-11-17 시안). 강조는 색·굵기로만 하고 다른 것을 흐리게 하지 않는다. */
+const SELECTED_EDGE_COLOR = '#ff5c7d';
+const SELECTED_EDGE_WIDTH = 3.6;
+const EDGE_HIT_WIDTH = 20;
+/** 중심 인물과 닿은 선 / 닿지 않은 선의 굵기(화면 px). 2026-11-17 시안 1.8 / 1.3 */
+const EGO_EDGE_WIDTH = 2;
+const PLAIN_EDGE_WIDTH = 1.2;
+
+/**
+ * 인물 칩(둥근 네모)의 반 변 길이(화면 px, 100% 기준). 2026-11-17 시안 — 중심 인물은 52px,
+ * 나머지는 연결 수에 따라 28~42px.
+ */
+const EGO_CHIP_HALF_PX = 26;
+const CHIP_HALF_MIN_PX = 15;
+const CHIP_HALF_STEP_PX = 1.4;
+const CHIP_HALF_MAX_PX = 22;
+function chipHalfPx(degree: number, isEgo: boolean): number {
+  if (isEgo) return EGO_CHIP_HALF_PX;
+  return Math.min(CHIP_HALF_MAX_PX, CHIP_HALF_MIN_PX + CHIP_HALF_STEP_PX * Math.max(0, degree - 1));
+}
+
+/** 이름 첫 글자(한 음절). 칩 가운데에 크게 쓴다. */
+function initialOf(name: string): string {
+  return Array.from(name.trim())[0] ?? '';
+}
+
+/**
+ * 레이아웃 전(jsdom·첫 렌더)처럼 캔버스 크기를 아직 모를 때 쓰는 폭 — 휴대폰 싸비 패널 폭(시안 354px).
+ * 1px로 잡으면 글자·이름표가 그래프 전체만큼 커져 서로 다 겹친 것으로 계산된다.
+ */
+const FALLBACK_CANVAS_WIDTH_PX = 354;
+/** 배치 좌표 둘레 여백(사용자 좌표)과 맨 아래 이름 자리 */
+const GRAPH_PADDING = 92;
+const GRAPH_NAME_ROOM = 56;
 
 /**
  * 관계도 그래프 렌더 — 지도형 리디자인 (2026-08-24)
@@ -45,6 +74,12 @@ import {
  * 인물은 최우선 유지). 관계 라벨은 선택된 인물과 닿은 간선에서만 보여준다 — 예전엔
  * 간선 51개에서 캔버스 라벨을 통째로 생략했는데(2026-08-21 polish), 이제 선택 시에만
  * 보여주는 쪽이 더 낫다. 항상 보이는 "관계" 텍스트 목록은 RelationshipTab이 맡는다.
+ *
+ * ## 2026-11-17 승인 시안 (FR-CHR-001)
+ *
+ * 인물은 둥근 네모 칩 + 이름 첫 글자, 이름은 칩 아래 작게. 중심 인물(selectedId)은 크게, 버건디
+ * 테두리·바깥 고리. 중심 인물과 닿은 선은 강조색·화살표·관계 이름표, 나머지는 옅은 선. 실선 = 사실,
+ * 점선 = 의심·주장 또는 끝난 관계. 색은 앱의 밝은 테마 토큰(brief-*)을 쓴다(시안의 검정 바탕은 옮기지 않음).
  */
 
 // 2026-08-25 — "글씨가 작다"(1차) → 14/12로 올렸는데 "꽤 더 키워야" 재요청, 그 다음
@@ -58,10 +93,10 @@ import {
 const KOREAN_CHAR_WIDTH_RATIO = 0.94;
 // 2026-08-25 (3차) — "여전히 좀 난잡해 보인다" 피드백으로 전체 글자 크기를 한 단계
 // 낮춘다(17→15, 12→10). CHAR_PX는 위 비율로 자동 재계산되니 손대지 않아도 된다.
-const NAME_FONT_PX = 15;
-const NAME_CHAR_PX = NAME_FONT_PX * KOREAN_CHAR_WIDTH_RATIO;
-// 관계 라벨은 이름보다 한 단계 작게 — 인물명이 우선이라는 위계를 글자 크기로도 드러낸다.
-const EDGE_LABEL_FONT_PX = 10;
+// 2026-11-17 시안 — 이름은 칩 아래 작게(시안 9.5px, 휴대폰 가독성으로 11px). 칩 안 첫 글자가 주인공이다.
+const NAME_FONT_PX = 11;
+const EGO_NAME_FONT_PX = 12;
+const EDGE_LABEL_FONT_PX = 11;
 const EDGE_LABEL_CHAR_PX = EDGE_LABEL_FONT_PX * KOREAN_CHAR_WIDTH_RATIO;
 const MIN_ZOOM_RATIO = 0.32;
 const MAX_ZOOM_RATIO = 2.4;
@@ -70,8 +105,6 @@ const MAX_ZOOM_RATIO = 2.4;
 // 쪼그라들어 드래그가 전혀 안 먹는다(실기기 확인, 2026-08-24) — 0.35였을 때 한계가
 // 1.7이라 2.4까지 축소가 가능한 것과 충돌했다. 축소 한계(2.4)를 넉넉히 덮도록 올린다.
 const PAN_MARGIN_RATIO = 0.9;
-/** 포커스 확대 시 선택 인물·인접 인물 범위 바깥에 남기는 여유(라벨이 잘리지 않을 만큼) */
-const FOCUS_PADDING = 90;
 
 interface ViewBox {
   x: number;
@@ -102,7 +135,9 @@ export default function RelationshipGraph({
   onSelectEdge,
 }: {
   graph: GraphResponse;
+  /** 중심 인물(ego). 2026-11-17 시안 — 부모가 늘 한 명을 준다(처음은 연결이 가장 많은 인물). */
   selectedId: string | null;
+  /** 인물을 누르면 그 id, 빈 캔버스를 누르면 null(선 선택 해제용). 같은 인물을 다시 눌러도 그 id다. */
   onSelect: (id: string | null) => void;
   /** 선택한 선 = `graphEdgeKey(edge)`. 같은 선을 다시 누르면 해제된다. */
   selectedEdgeKey?: string | null;
@@ -132,7 +167,12 @@ export default function RelationshipGraph({
     () => forceLayout(graph.nodes, graph.edges),
     [graph.nodes, graph.edges]
   );
-  const base = useMemo(() => boundingBox(positions), [positions]);
+  // 칩 아래에 이름이 붙으므로(2026-11-17 시안) 위·옆보다 아래 여백을 더 둔다 — 맨 아래 인물의 이름이
+  // 그래프 틀에 잘리지 않게.
+  const base = useMemo(() => {
+    const box = boundingBox(positions, GRAPH_PADDING);
+    return { ...box, height: box.height + GRAPH_NAME_ROOM };
+  }, [positions]);
 
   const [viewBox, setViewBox] = useState<ViewBox>(() => ({
     x: base.x,
@@ -242,45 +282,24 @@ export default function RelationshipGraph({
     return ids;
   }, [validSelectedId, graph.edges]);
 
-  // 선택하면 그 인물 + 인접 인물이 보이는 범위로 중앙 이동·확대한다(2026-08-25 —
-  // 예전엔 화면 밖일 때만 팬하고 확대율은 그대로 뒀는데, "포커싱될 때 중심 이동 +
-  // 적절한 확대"를 요청받아 항상 재조정한다. 인접 인물이 없으면(고립 노드) 선택
-  // 인물 하나만 감쌀 여유만큼만 확대한다.
+  // 중심 인물이 바뀌었을 때 카메라 — 2026-11-17 시안은 인물을 눌러도 그래프 전체가 그대로 보인다.
+  // 예전(2026-08-25)에는 선택 인물 + 인접 인물 범위로 늘 확대했는데, 중심 인물이 늘 있는 지금은
+  // 누를 때마다 다른 인물이 틀 밖으로 밀려났다(휴대폰 화면으로 확인). 그래서 확대하지 않고,
+  // 새 중심 인물이 지금 보이는 범위 밖에 있을 때만(확대·이동해 둔 상태에서 검색으로 고른 경우 등)
+  // 지금 배율 그대로 그 인물을 가운데로 옮긴다.
   useEffect(() => {
     if (!validSelectedId) return;
     const idx = graph.nodes.findIndex((n) => n.id === validSelectedId);
     if (idx < 0) return;
     const p = positions[idx];
-    const neighborPositions = graph.nodes
-      .map((n, i) => (neighborIds.has(n.id) ? positions[i] : null))
-      .filter((q): q is Point => q !== null);
-    // p를 뷰박스 중심에 고정하고 대칭으로 확장하면, 인접 인물이 한쪽에 몰려 있을 때
-    // (흔한 경우) 반대쪽엔 아무도 없는데 그만큼 빈 공간이 생긴다(2026-08-25, "한쪽이
-    // 텅 비어 보인다" 피드백). 대신 방향별로 실제 필요한 만큼만 여백을 두는 바운딩박스
-    // (p + 인접 인물 전원)를 만들고, 그 박스의 중심으로 카메라를 맞춘다 — 인접 인물이
-    // p 주위에 고르게 둘러싸여 있으면 이 중심은 자연히 p 근처에 온다.
-    const leftExtent = Math.max(0, ...neighborPositions.map((q) => p.x - q.x));
-    const rightExtent = Math.max(0, ...neighborPositions.map((q) => q.x - p.x));
-    const topExtent = Math.max(0, ...neighborPositions.map((q) => p.y - q.y));
-    const bottomExtent = Math.max(0, ...neighborPositions.map((q) => q.y - p.y));
-    const minX = p.x - leftExtent - FOCUS_PADDING;
-    const maxX = p.x + rightExtent + FOCUS_PADDING;
-    const minY = p.y - topExtent - FOCUS_PADDING;
-    const maxY = p.y + bottomExtent + FOCUS_PADDING;
-    const cx = (minX + maxX) / 2;
-    const cy = (minY + maxY) / 2;
-    const aspect = base.height / base.width;
-    // clampViewBox가 height를 base의 가로세로비로 다시 계산한다. width 하나만 두 축 중
-    // 큰 쪽으로 잡으면, 작은 쪽 축은 그 비율로 다시 계산된 height가 실제로 필요한 반경보다
-    // 작아질 수 있다 — width를 두 축 모두를 여유 있게 덮는 값으로 따로 계산한다.
-    const rawWidth = Math.max(maxX - minX, (maxY - minY) / aspect);
-    const width = Math.max(
-      base.width * MIN_ZOOM_RATIO,
-      Math.min(base.width * MAX_ZOOM_RATIO, rawWidth)
+    const vb = viewBoxRef.current;
+    const inside = p.x >= vb.x && p.x <= vb.x + vb.width && p.y >= vb.y && p.y <= vb.y + vb.height;
+    if (inside) return;
+    animateViewBoxTo(
+      clampViewBox({ x: p.x - vb.width / 2, y: p.y - vb.height / 2, width: vb.width, height: vb.height }, base)
     );
-    const height = width * aspect;
-    animateViewBoxTo(clampViewBox({ x: cx - width / 2, y: cy - height / 2, width, height }, base));
-  }, [validSelectedId, graph.nodes, positions, neighborIds, base]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [validSelectedId]);
 
   // SVG는 기본적으로 preserveAspectRatio="xMidYMid meet" — 컨테이너와 viewBox의 가로세로비가
   // 다르면 더 좁게 맞아야 하는 쪽(폭 기준 배율 또는 높이 기준 배율 중 작은 쪽)에 맞춰 여백을
@@ -288,19 +307,21 @@ export default function RelationshipGraph({
   // 상대적으로 넓어졌을 때 실제로는 높이가 배율을 결정하는데 폭 기준값을 쓰게 돼 글자·노드가
   // 실제보다 작게 계산됐다(2026-08-25, "가로로 늘리면 글씨가 작아진다" 피드백) — 두 축 모두
   // 계산해 더 큰 쪽(더 좁게 맞아야 하는 쪽)을 쓴다.
-  const unit = () => {
+  const canvasPx = () => {
     const el = canvasRef.current;
-    const widthPx = el?.clientWidth || 1;
-    const heightPx = el?.clientHeight || 1;
+    const widthPx = el?.clientWidth || FALLBACK_CANVAS_WIDTH_PX;
+    const heightPx = el?.clientHeight || widthPx * (base.height / base.width);
+    return { widthPx, heightPx };
+  };
+  const unit = () => {
+    const { widthPx, heightPx } = canvasPx();
     return Math.max(viewBox.width / widthPx, viewBox.height / heightPx);
   };
 
   // 100%(fit) 상태 기준 k — 노드 원을 이 값 대비로 스케일해 "글자처럼" 화면상 크기를
   // 고정한다(아래 nodeScale 참고).
   const unit0 = () => {
-    const el = canvasRef.current;
-    const widthPx = el?.clientWidth || 1;
-    const heightPx = el?.clientHeight || 1;
+    const { widthPx, heightPx } = canvasPx();
     return Math.max(base.width / widthPx, base.height / heightPx);
   };
 
@@ -417,7 +438,8 @@ export default function RelationshipGraph({
   function handleNodeClick(id: string) {
     if (wasDragged()) return;
     onSelectEdge?.(null);
-    onSelect(validSelectedId === id ? null : id);
+    // 2026-11-17 시안 — 누른 인물이 중심이 된다. 같은 인물을 다시 눌러도 풀리지 않는다.
+    onSelect(id);
   }
 
   function handleEdgeClick(key: string) {
@@ -471,16 +493,22 @@ export default function RelationshipGraph({
   const NODE_ZOOM_DAMPING = 0.5;
   const nodeScale = Math.pow(k / unit0(), NODE_ZOOM_DAMPING);
   const labelScale = 1 / nodeScale;
+  const k0 = unit0();
+  /** 칩 반 변(사용자 좌표). 100%에서 화면 px 그대로, 확대·축소하면 nodeScale만큼만 따라간다. */
+  const chipHalf = (id: string) =>
+    chipHalfPx(degree.get(id) ?? 0, id === validSelectedId) * k0 * nodeScale;
   const edgePaths = useMemo(
     () =>
       makeEdgePaths(
         graph.nodes,
         graph.edges,
         positions,
-        (id) => nodeRadius(degree.get(id) ?? 0) * nodeScale + 7 * k,
+        // 네모 칩은 모서리까지 원보다 멀다 — 반 변의 1.15배 + 여백
+        (id) => chipHalf(id) * 1.15 + 5 * k,
         38 * k * labelScale
       ),
-    [graph.nodes, graph.edges, positions, degree, nodeScale, k, labelScale]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [graph.nodes, graph.edges, positions, degree, nodeScale, k, k0, labelScale, validSelectedId]
   );
 
   const validSelectedEdgeKey =
@@ -494,10 +522,12 @@ export default function RelationshipGraph({
   const nameLabelBoxes = useMemo(() => {
     const boxes: (LabelBox & { id: string })[] = graph.nodes.map((node, i) => {
       const p = positions[i];
-      const r = nodeRadius(degree.get(node.id) ?? 0) * nodeScale;
-      const width = estimateTextWidth(node.name, NAME_CHAR_PX * k * labelScale) + 4 * k;
-      const height = (NAME_FONT_PX * labelScale + 4) * k;
+      const r = chipHalf(node.id);
       const isSelected = node.id === validSelectedId;
+      const fontPx = isSelected ? EGO_NAME_FONT_PX : NAME_FONT_PX;
+      const width =
+        estimateTextWidth(node.name, fontPx * KOREAN_CHAR_WIDTH_RATIO * k * labelScale) + 4 * k;
+      const height = (fontPx * labelScale + 4) * k;
       const isNeighbor = neighborIds.has(node.id);
       return {
         id: node.id,
@@ -510,62 +540,70 @@ export default function RelationshipGraph({
     });
     return pickNonOverlapping(boxes);
     // k(줌 배율)가 바뀌면 라벨 크기가 바뀌어 충돌 여부도 바뀐다
-  }, [graph.nodes, positions, degree, validSelectedId, neighborIds, k, nodeScale, labelScale]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [graph.nodes, positions, degree, validSelectedId, neighborIds, k, k0, nodeScale, labelScale]);
 
   const nameLabels = useMemo(() => new Set(nameLabelBoxes.map((b) => b.id)), [nameLabelBoxes]);
 
   /**
-   * 관계 라벨 — 선택된 인물과 닿은 간선에서만. 참고 시안(reader-map-graph.html
-   * relayout())과 같은 규칙: 선택·인접 인물의 이름 라벨은 항상 이긴다(우선순위
-   * 무한대로 블로커 취급, 아래 blockerBoxes 참고 — 흐려진 무관 인물의 이름은 제외),
-   * 관계 라벨끼리는 간선이 긴 쪽이 우선(짧은 간선끼리 몰린 라벨이 더 잘 겹치므로).
-   * 예전엔 이 겹침 회피가 전혀 없어서 연결이 많은 인물을 선택하면 라벨이 죄다 겹쳐
-   * 보였다(2026-08-25 피드백).
+   * 관계 이름표 — 중심 인물과 닿은 선 전부 + 고른 선 (2026-11-17 시안: 중심 인물의 선에는 늘 이름표가 있다).
+   * 글은 관계 이름(edge.label) 그대로 쓰고, 사실/의심·주장은 선 모양(실선/점선)과 아래 카드의 글자 배지가
+   * 말한다(NFR-USE-006). 이름표가 칩·이름·다른 이름표와 겹치면 선을 따라 자리를 옮겨 본 뒤
+   * (가운데 → 양옆), 그래도 겹치면 그 이름표만 뺀다. 고른 선의 이름표가 가장 먼저 자리를 잡는다.
    */
   const edgeLabels = useMemo(() => {
-    if (!validSelectedId && !validSelectedEdgeKey) return [];
     const candidates = edgePaths
       .filter(
         ({ edge, key }) =>
           key === validSelectedEdgeKey ||
           (validSelectedId !== null && (edge.source === validSelectedId || edge.target === validSelectedId))
       )
-      .map(({ edge, key, label: anchor, length }) => {
-        const label = graphEdgeLabel(edge);
-        const width = estimateTextWidth(label, EDGE_LABEL_CHAR_PX * k * labelScale) + 10 * k;
-        const height = (EDGE_LABEL_FONT_PX * labelScale + 7) * k;
-        return {
-          key,
-          label,
-          cx: anchor.x,
-          cy: anchor.y,
-          width,
-          height,
-          len: length,
-        };
+      .map((entry) => {
+        const label = entry.edge.label;
+        const width = estimateTextWidth(label, EDGE_LABEL_CHAR_PX * k * labelScale) + 14 * k;
+        const height = (EDGE_LABEL_FONT_PX * labelScale + 9) * k;
+        return { entry, key: entry.key, label, width, height };
       })
-      .filter((v): v is NonNullable<typeof v> => v !== null);
+      .sort(
+        (a, b) =>
+          Number(b.key === validSelectedEdgeKey) - Number(a.key === validSelectedEdgeKey) ||
+          b.entry.length - a.entry.length
+      );
 
-    // 이름 라벨은 전부(선택·인접 무관) 항상 무한 우선순위 블로커였는데, 포커스 중엔
-    // 화면 대부분이 흐려진(dimmed) 무관 인물이라 그 이름과 우연히 겹쳤다는 이유만으로
-    // 정작 선택 인물의 관계 설명이 통째로 빠지는 경우가 잦았다("확대 배율에 따라 관계
-    // 설명이 안 보이는 경우가 많다" 피드백). 포커스 중엔 실제로 화면에서 또렷한
-    // 선택·인접 인물의 이름만 블로커로 남긴다 — 흐려진 인물 이름과의 우연한 겹침으로
-    // 관계 설명이 사라지지 않게 한다.
-    const blockerBoxes = nameLabelBoxes
-      .filter((b) => b.id === validSelectedId || neighborIds.has(b.id))
-      .map((b) => ({ ...b, key: `name:${b.id}`, priority: Infinity }));
-    const edgeBoxes = candidates.map((c) => ({
-      key: c.key,
-      x: c.cx - c.width / 2,
-      y: c.cy - c.height / 2,
-      width: c.width,
-      height: c.height,
-      priority: c.len,
-    }));
-    const kept = new Set(pickNonOverlapping([...blockerBoxes, ...edgeBoxes]).map((b) => b.key));
-    return candidates.filter((c) => kept.has(c.key));
-  }, [validSelectedId, validSelectedEdgeKey, edgePaths, k, labelScale, nameLabelBoxes, neighborIds]);
+    // 칩(사각형)과 이름 라벨은 이름표가 덮지 않는다
+    const blockers: LabelBox[] = [
+      ...nameLabelBoxes,
+      ...graph.nodes.map((node, i) => {
+        const p = positions[i];
+        const h = chipHalf(node.id);
+        return { x: p.x - h, y: p.y - h, width: h * 2, height: h * 2, priority: Infinity };
+      }),
+    ];
+    const overlaps = (a: LabelBox, b: LabelBox) =>
+      !(a.x + a.width < b.x || b.x + b.width < a.x || a.y + a.height < b.y || b.y + b.height < a.y);
+    const placed: (LabelBox & { key: string; label: string; cx: number; cy: number })[] = [];
+    for (const c of candidates) {
+      for (const t of [0.5, 0.4, 0.6, 0.32, 0.68]) {
+        const at = edgePointAt(c.entry, t);
+        const box = {
+          key: c.key,
+          label: c.label,
+          cx: at.x,
+          cy: at.y,
+          x: at.x - c.width / 2,
+          y: at.y - c.height / 2,
+          width: c.width,
+          height: c.height,
+          priority: 0,
+        };
+        if (blockers.some((b) => overlaps(box, b)) || placed.some((b) => overlaps(box, b))) continue;
+        placed.push(box);
+        break;
+      }
+    }
+    return placed;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [validSelectedId, validSelectedEdgeKey, edgePaths, k, k0, labelScale, nameLabelBoxes, positions, graph.nodes]);
 
   const graphBox = (
     <div
@@ -580,8 +618,8 @@ export default function RelationshipGraph({
       // base의 가로세로비는 그대로 유지된 채 크기만 화면에 맞춰 커진다.
       className={
         isFullscreen
-          ? 'relative flex flex-col touch-none rounded-xl border border-brief-rule bg-white'
-          : 'relative flex w-full min-h-[220px] max-h-[420px] flex-col touch-none rounded-xl border border-brief-rule bg-white'
+          ? 'relative flex flex-col touch-none rounded-[20px] border border-brief-rule bg-white'
+          : 'relative flex w-full min-h-[220px] max-h-[420px] flex-col touch-none rounded-[20px] border border-brief-rule bg-white'
       }
       style={
         isFullscreen && fullscreenSize
@@ -630,9 +668,13 @@ export default function RelationshipGraph({
             const touches = validSelectedId === edge.source || validSelectedId === edge.target;
             const isSelectedEdge = key === validSelectedEdgeKey;
             const direction = edge.semantics?.direction;
+            // FR-CHR-001 — 실선 = 사실, 점선 = 의심·주장(사실이 아닌 단언)이거나 끝난 관계.
+            // 옛 관계(semantics 없음)는 사실 여부를 지어내지 않고 실선으로 둔다.
             const qualified =
               edge.semantics &&
               (edge.semantics.assertion_status !== 'fact' || edge.semantics.state === 'ended');
+            // 화살표(감정·행동의 방향)는 강조된 선에만 — 2026-11-17 시안. 옅은 선까지 화살표를 달면 어지럽다.
+            const marker = touches || isSelectedEdge ? `url(#${markerId})` : undefined;
             return (
               <g
                 key={key}
@@ -654,21 +696,19 @@ export default function RelationshipGraph({
                 <path
                   data-edge-id={edge.id ?? key}
                   data-selected={isSelectedEdge ? 'true' : 'false'}
+                  data-ego-edge={touches ? 'true' : 'false'}
                   d={path}
                   fill="none"
-                  markerStart={
-                    direction === 'b_to_a' || direction === 'mutual' ? `url(#${markerId})` : undefined
-                  }
-                  markerEnd={
-                    direction === 'a_to_b' || direction === 'mutual' ? `url(#${markerId})` : undefined
-                  }
-                  strokeDasharray={qualified ? `${5 * k} ${4 * k}` : undefined}
+                  markerStart={direction === 'b_to_a' || direction === 'mutual' ? marker : undefined}
+                  markerEnd={direction === 'a_to_b' || direction === 'mutual' ? marker : undefined}
+                  strokeDasharray={qualified ? `${6 * k} ${5 * k}` : undefined}
+                  strokeLinecap="round"
                   className={
-                    isSelectedEdge ? undefined : touches ? 'stroke-brief-accent' : 'stroke-brief-rule'
+                    isSelectedEdge ? undefined : touches ? 'stroke-brief-accent' : 'stroke-brief-muted/35'
                   }
                   stroke={isSelectedEdge ? SELECTED_EDGE_COLOR : undefined}
                   strokeWidth={
-                    (isSelectedEdge ? SELECTED_EDGE_WIDTH : touches ? 2.4 : 1.2) * k
+                    (isSelectedEdge ? SELECTED_EDGE_WIDTH : touches ? EGO_EDGE_WIDTH : PLAIN_EDGE_WIDTH) * k
                   }
                   // 선택과 무관한 선도 흐리게 하지 않는다 — 강조는 색·굵기로만 (2026-11-17)
                   opacity={1}
@@ -682,48 +722,12 @@ export default function RelationshipGraph({
         </g>
 
         <g>
-          {edgeLabels.map((label) => (
-            <g
-              key={label.key}
-              data-edge-label
-              data-selected={label.key === validSelectedEdgeKey ? 'true' : 'false'}
-              pointerEvents="none"
-            >
-              <rect
-                x={label.cx - label.width / 2}
-                y={label.cy - label.height / 2}
-                width={label.width}
-                height={label.height}
-                rx={label.height / 2}
-                className={
-                  label.key === validSelectedEdgeKey
-                    ? 'stroke-[#ff5c7d]'
-                    : 'fill-white stroke-brief-accent/40'
-                }
-                fill={label.key === validSelectedEdgeKey ? '#ff5c7d' : undefined}
-              />
-              <text
-                x={label.cx}
-                y={label.cy}
-                textAnchor="middle"
-                dominantBaseline="central"
-                className={`${
-                  label.key === validSelectedEdgeKey ? 'fill-white' : 'fill-brief-accent'
-                } font-dashSans`}
-                style={{ fontSize: EDGE_LABEL_FONT_PX * k * labelScale }}
-              >
-                {label.label}
-              </text>
-            </g>
-          ))}
-        </g>
-
-        <g>
           {graph.nodes.map((node, i) => {
             const p = positions[i];
-            const r = nodeRadius(degree.get(node.id) ?? 0) * nodeScale;
+            const half = chipHalf(node.id);
             const isSelected = node.id === validSelectedId;
-            const isNeighbor = neighborIds.has(node.id);
+            const fontPx = isSelected ? EGO_NAME_FONT_PX : NAME_FONT_PX;
+            const ring = 5 * k;
             return (
               <g
                 key={node.id}
@@ -745,35 +749,106 @@ export default function RelationshipGraph({
                 className="cursor-pointer outline-none"
                 opacity={1}
               >
-                <circle cx={p.x} cy={p.y} r={r + 13 * k} fill="transparent" />
-                {/* 2026-08-25 — 그냥 회색 원이라 "성의없어 보인다"는 피드백. 브랜드 액센트
-                    (보라)를 옅게 채우고 테두리를 둘러 "핀" 느낌을 준다 — 새 색을 추가하지
-                    않고 이미 쓰는 brief-accent 톤 하나로 선택/인접/기본 3단계를 표현한다. */}
-                <circle
-                  cx={p.x}
-                  cy={p.y}
-                  r={r}
-                  className={`${isSelected ? 'fill-brief-accent' : 'fill-brief-accent/25'} ${
-                    isNeighbor ? 'stroke-brief-accent' : 'stroke-brief-accent/45'
-                  }`}
-                  strokeWidth={(isNeighbor ? 2.8 : 1) * k}
+                <rect
+                  x={p.x - half - 10 * k}
+                  y={p.y - half - 10 * k}
+                  width={(half + 10 * k) * 2}
+                  height={(half + 10 * k) * 2}
+                  fill="transparent"
                 />
+                {/* 2026-11-17 시안 — 둥근 네모 칩 + 첫 글자. 중심 인물은 크게, 버건디 테두리와 바깥 고리. */}
+                {isSelected ? (
+                  <rect
+                    data-ego-ring
+                    x={p.x - half - ring}
+                    y={p.y - half - ring}
+                    width={(half + ring) * 2}
+                    height={(half + ring) * 2}
+                    rx={half * 0.46 + ring}
+                    fill="none"
+                    className="stroke-brief-accent/30"
+                    strokeWidth={4 * k}
+                  />
+                ) : null}
+                <rect
+                  data-node-chip
+                  x={p.x - half}
+                  y={p.y - half}
+                  width={half * 2}
+                  height={half * 2}
+                  rx={half * 0.36}
+                  className={
+                    isSelected
+                      ? 'fill-brief-accent-soft stroke-brief-accent'
+                      : 'fill-white stroke-brief-rule'
+                  }
+                  strokeWidth={(isSelected ? 1.6 : 1.2) * k}
+                />
+                <text
+                  data-node-initial
+                  x={p.x}
+                  y={p.y}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  className={`${isSelected ? 'fill-brief-accent' : 'fill-brief-ink'} font-dashSans font-extrabold`}
+                  style={{ fontSize: half * 0.9 }}
+                  aria-hidden="true"
+                >
+                  {initialOf(node.name)}
+                </text>
                 {nameLabels.has(node.id) ? (
                   <text
+                    data-node-name
                     x={p.x}
-                    y={p.y + r + NAME_FONT_PX * k * labelScale + 2 * k}
+                    y={p.y + half + fontPx * k * labelScale + 3 * k}
                     textAnchor="middle"
-                    className="fill-brief-ink stroke-white font-dashSerif font-semibold"
+                    className={`${
+                      isSelected ? 'fill-brief-accent font-bold' : 'fill-brief-muted font-semibold'
+                    } stroke-white font-dashSans`}
                     style={{
-                      fontSize: NAME_FONT_PX * k * labelScale,
+                      fontSize: fontPx * k * labelScale,
+                      letterSpacing: 0.5 * k * labelScale,
                       paintOrder: 'stroke',
-                      strokeWidth: 3 * k,
+                      // 이름 아래를 지나는 선이 글자 사이로 비치지 않게 흰 테두리를 넉넉히
+                      strokeWidth: 5 * k,
                       strokeLinejoin: 'round',
                     }}
                   >
                     {node.name}
                   </text>
                 ) : null}
+              </g>
+            );
+          })}
+        </g>
+
+        {/* 이름표는 칩 위에 그린다 — 선이 칩 근처에서 꺾여도 글이 칩에 가리지 않는다 */}
+        <g>
+          {edgeLabels.map((label) => {
+            const selected = label.key === validSelectedEdgeKey;
+            return (
+              <g key={label.key} data-edge-label data-selected={selected ? 'true' : 'false'} pointerEvents="none">
+                <rect
+                  x={label.x}
+                  y={label.y}
+                  width={label.width}
+                  height={label.height}
+                  rx={label.height / 2}
+                  className={selected ? undefined : 'fill-white stroke-brief-accent/45'}
+                  fill={selected ? SELECTED_EDGE_COLOR : undefined}
+                  stroke={selected ? SELECTED_EDGE_COLOR : undefined}
+                  strokeWidth={1 * k}
+                />
+                <text
+                  x={label.cx}
+                  y={label.cy}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  className={`${selected ? 'fill-white' : 'fill-brief-accent'} font-dashSans font-bold`}
+                  style={{ fontSize: EDGE_LABEL_FONT_PX * k * labelScale }}
+                >
+                  {label.label}
+                </text>
               </g>
             );
           })}

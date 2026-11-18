@@ -56,5 +56,6 @@ it('FR-CHR-001: 과거 데이터는 임의 화살표 없이 그리고 방향 미
   expect(path).not.toHaveAttribute('marker-end');
   fireEvent.click(screen.getByRole('button', { name: '가' }));
   expect(screen.queryByText(/방향 미검증/)).not.toBeInTheDocument();
-  expect(screen.getByText(/이전 관계 이력이 없는 응답/)).toBeInTheDocument();
+  // 회색 부연 문구는 두지 않는다 (DESIGN.md 2026-11-18 대표 지시)
+  expect(screen.queryByText(/이전 관계 이력이 없는 응답/)).not.toBeInTheDocument();
 });
