@@ -1,0 +1,38 @@
+{
+  "authored_by": "구현자(2026-11-18 구조적 관계 추출 작업). 독립 평가자가 만든 oracle.json이 아니다.",
+  "purpose": "oracle.json의 주입 후보 21건을 새 파이프라인(구조적 후보 + 근거 창 trigger 검사)에 넣을 때 쓰는 보조 자료. 새 파이프라인은 LLM이 근거 창 id와 창 안의 정확한 낱말(trigger)을 대야 하므로, 주입 후보에도 trigger가 필요하다.",
+  "trigger_rule": "그 후보의 관계 종류를 붙이는 모델이 가장 그럴듯하게 인용할, 발췌 속 낱말을 하나 고른다. 틀린 후보에는 틀린 주장을 가장 잘 받쳐 주는 낱말을 고른다(공격자에게 유리하게). 이 선택이 결과를 좌우할 수 있으므로 probe는 '모든 낱말을 trigger로 시도'하는 최악 조건 결과도 함께 낸다.",
+  "lexicons": {
+    "채만식 탁류": ["김씨", "초봉이", "태수", "형보", "정주사", "형주", "행화", "계봉이", "한참봉"],
+    "유리 항구 — 창작 평가문": ["서윤", "도현"],
+    "안개 실험실 — 창작 평가문": ["민", "윤아", "수"],
+    "역 앞의 우산 — 창작 holdout": ["혜온", "가람", "Nara", "Eren", "은결", "지후"],
+    "Jane Austen, Pride and Prejudice — actual public-domain holdout": ["Elizabeth", "Miss Bingley", "Darcy", "Jane", "Kitty", "Lydia", "Miss Lucas", "Mr. Collins"]
+  },
+  "aliases": {
+    "안개 실험실 — 창작 평가문": { "윤아": [{ "alias": "새벽", "first_appearance_page": 2 }] }
+  },
+  "triggers": {
+    "takryu-desire-direction": "탐내는",
+    "takryu-jealousy-direction": "강짜가 나고",
+    "takryu-negated-jealousy": "질투하는",
+    "harbor-direct-jealousy": "질투했다",
+    "harbor-reversed-jealousy": "질투했다",
+    "harbor-unrelated-desire": "원했다",
+    "harbor-nonmutual-love": "연정을 품었다",
+    "harbor-rumor-as-fact": "연인",
+    "lab-alias-established": "신뢰했다",
+    "lab-ambiguous-pronoun": "질투한다는",
+    "lab-negation": "질투하지",
+    "lab-plan": "결혼하고",
+    "lab-reported-mistake": "미워한다고",
+    "station-clear-asymmetry": "경멸했다",
+    "station-oblique-negation": "미워한다니",
+    "station-english-direction": "envied",
+    "station-cooccurrence": "만나지",
+    "austen-jealousy-holdout": "jealous",
+    "austen-reversed-jealousy-holdout": "jealous",
+    "austen-negated-envy-holdout": "envying",
+    "austen-belief-attribution-holdout": "jealousy"
+  }
+}

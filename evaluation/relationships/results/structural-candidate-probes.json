@@ -1,0 +1,260 @@
+{
+  "mode": "structural-candidate-injection-only",
+  "counts": {
+    "total": 21,
+    "passed": 20,
+    "false_accepts": 0,
+    "false_holds": 1
+  },
+  "worst_case": {
+    "wrong_total": 13,
+    "false_accepts": 6
+  },
+  "results": [
+    {
+      "id": "takryu-desire-direction",
+      "provenance": "actual-source-excerpt",
+      "holdout": false,
+      "expected": "accept",
+      "observed": "accept",
+      "pass": true,
+      "trigger": "탐내는",
+      "reasons": []
+    },
+    {
+      "id": "takryu-jealousy-direction",
+      "provenance": "actual-source-excerpt",
+      "holdout": false,
+      "expected": "accept",
+      "observed": "accept",
+      "pass": true,
+      "trigger": "강짜가 나고",
+      "reasons": []
+    },
+    {
+      "id": "takryu-negated-jealousy",
+      "provenance": "actual-source-excerpt",
+      "holdout": false,
+      "expected": "hold-unqualified-fact",
+      "observed": "hold",
+      "pass": true,
+      "trigger": "질투하는",
+      "reasons": [
+        "trigger_sentence_lacks_endpoint"
+      ]
+    },
+    {
+      "id": "harbor-direct-jealousy",
+      "provenance": "synthetic",
+      "holdout": false,
+      "expected": "accept",
+      "observed": "accept",
+      "pass": true,
+      "trigger": "질투했다",
+      "reasons": []
+    },
+    {
+      "id": "harbor-reversed-jealousy",
+      "provenance": "synthetic",
+      "holdout": false,
+      "expected": "hold-unqualified-fact",
+      "observed": "hold",
+      "pass": true,
+      "trigger": "질투했다",
+      "reasons": [
+        "direction_conflict"
+      ],
+      "worst_case_trigger": "마음을"
+    },
+    {
+      "id": "harbor-unrelated-desire",
+      "provenance": "synthetic",
+      "holdout": false,
+      "expected": "hold-unqualified-fact",
+      "observed": "hold",
+      "pass": true,
+      "trigger": "원했다",
+      "reasons": [
+        "trigger_not_in_window"
+      ]
+    },
+    {
+      "id": "harbor-nonmutual-love",
+      "provenance": "synthetic",
+      "holdout": false,
+      "expected": "accept",
+      "observed": "accept",
+      "pass": true,
+      "trigger": "연정을 품었다",
+      "reasons": []
+    },
+    {
+      "id": "harbor-rumor-as-fact",
+      "provenance": "synthetic",
+      "holdout": false,
+      "expected": "hold-unqualified-fact",
+      "observed": "hold",
+      "pass": true,
+      "trigger": "연인",
+      "reasons": [
+        "factuality_cue:reported"
+      ]
+    },
+    {
+      "id": "lab-alias-established",
+      "provenance": "synthetic",
+      "holdout": false,
+      "expected": "accept",
+      "observed": "accept",
+      "pass": true,
+      "trigger": "신뢰했다",
+      "reasons": []
+    },
+    {
+      "id": "lab-ambiguous-pronoun",
+      "provenance": "synthetic",
+      "holdout": false,
+      "expected": "hold-unqualified-fact",
+      "observed": "hold",
+      "pass": true,
+      "trigger": "질투한다는",
+      "reasons": [
+        "trigger_not_in_window"
+      ],
+      "worst_case_trigger": "방에"
+    },
+    {
+      "id": "lab-negation",
+      "provenance": "synthetic",
+      "holdout": false,
+      "expected": "hold-unqualified-fact",
+      "observed": "hold",
+      "pass": true,
+      "trigger": "질투하지",
+      "reasons": [
+        "factuality_cue:negation"
+      ]
+    },
+    {
+      "id": "lab-plan",
+      "provenance": "synthetic",
+      "holdout": false,
+      "expected": "hold-unqualified-fact",
+      "observed": "hold",
+      "pass": true,
+      "trigger": "결혼하고",
+      "reasons": [
+        "factuality_cue:reported"
+      ]
+    },
+    {
+      "id": "lab-reported-mistake",
+      "provenance": "synthetic",
+      "holdout": false,
+      "expected": "hold-unqualified-fact",
+      "observed": "hold",
+      "pass": true,
+      "trigger": "미워한다고",
+      "reasons": [
+        "factuality_cue:reported"
+      ],
+      "worst_case_trigger": "믿고"
+    },
+    {
+      "id": "station-clear-asymmetry",
+      "provenance": "synthetic",
+      "holdout": true,
+      "expected": "accept",
+      "observed": "accept",
+      "pass": true,
+      "trigger": "경멸했다",
+      "reasons": []
+    },
+    {
+      "id": "station-oblique-negation",
+      "provenance": "synthetic",
+      "holdout": true,
+      "expected": "hold-unqualified-fact",
+      "observed": "hold",
+      "pass": true,
+      "trigger": "미워한다니",
+      "reasons": [
+        "factuality_cue:reported"
+      ],
+      "worst_case_trigger": "위해"
+    },
+    {
+      "id": "station-english-direction",
+      "provenance": "synthetic",
+      "holdout": true,
+      "expected": "accept",
+      "observed": "accept",
+      "pass": true,
+      "trigger": "envied",
+      "reasons": []
+    },
+    {
+      "id": "station-cooccurrence",
+      "provenance": "synthetic",
+      "holdout": true,
+      "expected": "hold-unqualified-fact",
+      "observed": "hold",
+      "pass": true,
+      "trigger": "만나지",
+      "reasons": [
+        "factuality_cue:negation"
+      ],
+      "worst_case_trigger": "정류장에서"
+    },
+    {
+      "id": "austen-jealousy-holdout",
+      "provenance": "actual-public-domain-excerpt",
+      "holdout": true,
+      "expected": "accept",
+      "observed": "hold",
+      "pass": false,
+      "trigger": "jealous",
+      "reasons": [
+        "factuality_cue:source"
+      ]
+    },
+    {
+      "id": "austen-reversed-jealousy-holdout",
+      "provenance": "actual-public-domain-excerpt",
+      "holdout": true,
+      "expected": "hold-unqualified-fact",
+      "observed": "hold",
+      "pass": true,
+      "trigger": "jealous",
+      "reasons": [
+        "factuality_cue:source"
+      ]
+    },
+    {
+      "id": "austen-negated-envy-holdout",
+      "provenance": "actual-public-domain-excerpt",
+      "holdout": true,
+      "expected": "hold-unqualified-fact",
+      "observed": "hold",
+      "pass": true,
+      "trigger": "envying",
+      "reasons": [
+        "factuality_cue:negation"
+      ],
+      "worst_case_trigger": "were"
+    },
+    {
+      "id": "austen-belief-attribution-holdout",
+      "provenance": "actual-public-domain-excerpt",
+      "holdout": true,
+      "expected": "hold-unqualified-fact",
+      "observed": "hold",
+      "pass": true,
+      "trigger": "jealousy",
+      "reasons": [
+        "factuality_cue:source"
+      ]
+    }
+  ],
+  "completed_at": "2026-11-18T05:52:09.880Z"
+}

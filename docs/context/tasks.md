@@ -1,6 +1,6 @@
 # 작업 문서 — 남은 작업과 미결 사항
 
-마지막 갱신: 2026-11-18 (종합 리뷰 반영, 최신 대표 결정 유지)
+마지막 갱신: 2026-11-18 (종합 리뷰 반영, 최신 대표 결정 유지, 논문 기반 관계 추출 T12 추가)
 
 **남은 작업, 진행 상태, 아직 정하지 않은 것은 이 문서 한 곳에서만 관리한다. 대표 컴퓨터에서 할 실측·배포 순서는 [runbook-local-2026-11-17.md](runbook-local-2026-11-17.md).** `CLAUDE.md`에는 규칙만 두고 할 일·진행 상태를 적지 않는다. `handoff-*.md`는 그날 세션의 인수인계 기록이며, 할 일 목록의 원본은 이 문서다.
 
@@ -25,6 +25,7 @@
 | T9 | 장면 단위 사건 추출 비용 | 결정 필요 (T8 ③ 뒤) | 장면마다 장 처음부터 다시 읽혀 입력이 장면 수에 비례해 늘어난다(1장 20장면 가정 시 약 23만 자). 실측 뒤 "앞 장면 1~2개 + 대상 장면"으로 줄일지 정한다(스포일러 측면은 같음, 맥락은 줄어듦). **비교 방법** — `run-generate-sample.ts --chapter 1`(또는 `run-generate-full.ts`, 사건 캐시 재생이면 AI 호출 없음)을 돌리면 `[사건 입력]` 로그에 창별 원문 입력 글자 수(`full`·`recent:1`·`recent:2`)가 함께 찍히고, 실제로 줄여서 돌려 보려면 `--scene-window recent:1`(또는 환경 변수 `EVENT_SCENE_WINDOW`)을 준다 — 기본은 `full` 그대로다 | `batch/pipeline/event-scenes.ts` |
 | T10 | 리캡 길이 실측 | 로컬 필요 (대표가 직접 실행, 2026-11-17) | 018 적용 후 `recap_call_log`로 목표 문장 수 대비 실제 길이 분포를 본다(쿼리는 4장). 여전히 흔들리면 다음 단계로 누적 리캡 사전 생성·검수(A안) 설계 | `reading-state/recap-length.ts` |
 | T3 | 공격 질문 시험 전체 판정 | 결정 필요 | 130건 중 117건은 사람이 읽지 않았다. 판정 방식·담당이 미정. 출시 전에 필요. 이번 하네스 변경 뒤 다시 실행해야 한다 | `evaluation/chatbot-harness/` |
+| T12 | 논문 기반 인물 관계 추출 실제 모델 실행 (「가상범인」) | 로컬 필요 (대표 컴퓨터, 비용 발생) | 구조적 후보 + 근거 창 라벨링을 구현·단위 시험했으나 실제 모델 출력은 0건. ① `--candidates-only`로 기존 관계와 비교(LLM 0회) ② 라벨 실행(후보 있는 장마다 2회 + `--verifier`) ③ 발췌 5건 실행 후 `check-structural-metrics.cjs`로 정밀도·재현율·이른 확립 0건 확인 ④ 보류 목록(특히 `trigger_sentence_lacks_endpoint`)으로 재현율 손실 판단. 명령은 [runbook](runbook-local-2026-11-17.md) 6장. 그 뒤 `run-generate-full`의 관계 단계를 새 방식으로 바꿀지 **결정 필요** | [조사·설계](research-2026-11-18-relationship-extraction.md), `batch/pipeline/run-generate-relationships-structural.ts` |
 | T6 | 운영 배포 | 사용자 요청 시 | 운영 주소(https://ssabi-d4c.pages.dev, https://ssabi-api.fly.dev)는 피벗 전 버전이다. 피벗 후 Cloudflare 배포가 따로 있는지 확인 중(API 토큰이 유효하지 않아 아직 못 봄) | [README.md](README.md) 3장 |
 
 ## 2. 작업과 별개로 결정이 필요한 것
