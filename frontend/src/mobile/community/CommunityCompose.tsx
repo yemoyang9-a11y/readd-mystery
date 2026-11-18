@@ -65,15 +65,15 @@ export default function CommunityCompose({
             onClick={() => setKind(item)}
             className={`min-h-11 rounded-full border text-[14px] font-bold ${
               kind === item
-                ? 'border-[#8f1d35] bg-[#f3e3e7] text-[#8f1d35]'
-                : 'border-[#d9d1cc] bg-white text-[#5b4f51]'
+                ? 'border-[#c4475f] bg-[#2d161d] text-[#e58a9b]'
+                : 'border-[#35292c] bg-transparent text-[#d8cfca]'
             }`}
           >
             {KIND_LABEL[item]}
           </button>
         ))}
       </div>
-      <label htmlFor={fieldId} className="mt-4 block text-[13px] font-bold text-[#5b4f51]">
+      <label htmlFor={fieldId} className="mt-4 block text-[13px] font-bold text-[#d8cfca]">
         내용
       </label>
       <textarea
@@ -82,13 +82,13 @@ export default function CommunityCompose({
         maxLength={MAX_LENGTH}
         onChange={(event) => setBody(event.target.value)}
         placeholder={kind === 'theory' ? '범인과 그렇게 생각한 이유를 적어 보세요' : '읽고 난 감상을 적어 보세요'}
-        className="mt-1.5 block h-44 w-full resize-none rounded-[12px] border border-[#d9d1cc] bg-white p-3 text-[16px] leading-relaxed text-[#1a1415] outline-none placeholder:text-[#8a7f81] focus:border-[#8f1d35] focus-visible:ring-2 focus-visible:ring-[#8f1d35]/30"
+        className="mt-1.5 block h-44 w-full resize-none rounded-[12px] border border-[#35292c] bg-transparent p-3 text-[16px] leading-relaxed text-[#ece6e0] outline-none placeholder:text-[#8a7f81] focus:border-[#c4475f] focus-visible:ring-2 focus-visible:ring-[#e58a9b]/30"
       />
-      <p className="m-0 mt-1 text-right text-[12px] text-[#6f6466]">
+      <p className="m-0 mt-1 text-right text-[12px] text-[#a89e9a]">
         {body.length} / {MAX_LENGTH}
       </p>
       {error ? (
-        <p role="alert" className="m-0 mt-2 break-keep text-[13px] text-[#8f1d35]">
+        <p role="alert" className="m-0 mt-2 break-keep text-[13px] text-[#e58a9b]">
           {error}
         </p>
       ) : null}
@@ -96,7 +96,7 @@ export default function CommunityCompose({
         <button
           type="button"
           onClick={onClose}
-          className="min-h-11 rounded-full border border-[#d9d1cc] bg-white text-[15px] font-bold text-[#1a1415]"
+          className="min-h-11 rounded-full border border-[#35292c] bg-transparent text-[15px] font-bold text-[#ece6e0]"
         >
           취소
         </button>

@@ -68,8 +68,8 @@ export default function LikeButton({
       aria-label={`공감 ${state.like_count}`}
       data-track="community-like"
       onClick={() => void toggle()}
-      className={`inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-[13px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8f1d35] ${
-        state.liked_by_me ? 'text-[#b0213f]' : tone === 'detail' ? 'text-[#4a3f41]' : 'text-[#6f6466]'
+      className={`inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-[13px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b] ${
+        state.liked_by_me ? 'text-[#e58a9b]' : tone === 'detail' ? 'text-[#d8cfca]' : 'text-[#a89e9a]'
       }`}
     >
       <HeartIcon filled={state.liked_by_me} />

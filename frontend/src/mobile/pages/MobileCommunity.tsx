@@ -12,6 +12,7 @@ import CommunityCompose from '../community/CommunityCompose';
 import CommunityPostView, { KindTag } from '../community/CommunityPostView';
 import { KIND_LABEL, relativeTime } from '../community/communityFormat';
 import LikeButton from '../community/LikeButton';
+import { CaseLabel } from '../components/CaseMotifs';
 
 type Status = 'loading' | 'ready' | 'locked' | 'error';
 type Filter = CommunityKind | null;
@@ -145,7 +146,8 @@ function CommunityScreen({ bookId }: { bookId: string }) {
           <BackIcon />
         </button>
         <div className="min-w-0">
-          <h1 className="m-0 font-dashSerif text-[20px] font-bold">완독자 이야기</h1>
+          <CaseLabel>Case closed</CaseLabel>
+          <h1 className="m-0 mt-0.5 font-dashSerif text-[20px] font-bold leading-tight">완독자 이야기</h1>
         </div>
       </header>
 
@@ -243,6 +245,7 @@ function CommunityScreen({ bookId }: { bookId: string }) {
               data-testid="community-empty"
               className="mx-4 mt-4 flex flex-col items-center gap-5 rounded-[16px] border border-dashed border-[#4a3237] px-6 py-12 text-center"
             >
+              <CaseLabel>File · empty</CaseLabel>
               <p className="m-0 break-keep font-dashSerif text-[19px] font-bold leading-[1.45] text-[#ece6e0]">
                 첫 이야기를 남겨 주세요
               </p>
@@ -260,28 +263,28 @@ function CommunityScreen({ bookId }: { bookId: string }) {
           {status === 'ready' ? (
             <ul className="m-0 flex list-none flex-col gap-3 px-4">
               {posts.map((post) => (
-                <li key={post.post_id} className="rounded-[14px] bg-[#fbfaf9] text-[#1a1415]">
+                <li key={post.post_id} className="rounded-[14px] border border-[#35292c] bg-[#1e1618] text-[#ece6e0]">
                   <button
                     type="button"
                     data-track="community-post-open"
                     onClick={() => setOpenPostId(post.post_id)}
-                    className="block min-h-11 w-full rounded-t-[14px] px-4 pb-1 pt-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c4475f]"
+                    className="block min-h-11 w-full rounded-t-[14px] px-4 pb-3 pt-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c4475f]"
                   >
                     <span className="flex items-center gap-2">
                       {post.deleted ? null : <KindTag kind={post.kind} />}
                       <span className="text-[13px] font-bold">{post.nickname}</span>
-                      <span className="text-[12px] text-[#6f6466]">{relativeTime(post.created_at)}</span>
+                      <span className="text-[12px] text-[#a89e9a]">{relativeTime(post.created_at)}</span>
                     </span>
                     <span
                       data-no-track
                       className={`mt-2 line-clamp-3 block whitespace-pre-wrap break-words text-[15px] leading-[1.65] ${
-                        post.deleted ? 'text-[#6f6466]' : ''
+                        post.deleted ? 'text-[#a89e9a]' : ''
                       }`}
                     >
                       {post.body}
                     </span>
                   </button>
-                  <div className="flex items-center gap-1 px-1.5 pb-1">
+                  <div className="mx-3 flex items-center gap-1 border-t border-[#35292c]/70 pb-0.5">
                     {post.deleted ? null : (
                       <LikeButton
                         bookId={bookId}
@@ -298,7 +301,7 @@ function CommunityScreen({ bookId }: { bookId: string }) {
                       type="button"
                       aria-label={`댓글 ${post.comment_count}`}
                       onClick={() => setOpenPostId(post.post_id)}
-                      className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-[13px] font-bold text-[#6f6466] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8f1d35]"
+                      className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-[13px] font-bold text-[#a89e9a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b]"
                     >
                       <CommentIcon />
                       <span aria-hidden="true">댓글 {post.comment_count}</span>

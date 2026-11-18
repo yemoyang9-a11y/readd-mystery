@@ -3,6 +3,7 @@ import type { RefObject } from 'react';
 import BookCover from '../../components/common/BookCover';
 import { useCatalog } from '../../hooks/useCatalog';
 import { useModalLayer } from '../../hooks/useModalLayer';
+import { CaseLabel, CaseStamp } from '../components/CaseMotifs';
 
 /**
  * 완독 화면 (2026-11-18 대표 지시 "책 다 읽고 커뮤니티로 바로 들어갈 수 있게")
@@ -77,23 +78,27 @@ export default function CompletionScreen({
       </div>
 
       <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-        <div className="rotate-[-3deg] shadow-[0_18px_40px_rgba(0,0,0,0.55)]">
-          <BookCover
-            book={{ book_id: bookId, title, author: book?.author ?? '', cover_url: book?.cover_url ?? '' }}
-            size="detail"
-          />
+        {/* 완독 = 사건 종결. 표지 모서리에 도장 하나 (조사: research-2026-11-18-new-screens.md 3장) */}
+        <div className="relative">
+          <div className="rotate-[-3deg] shadow-[0_18px_40px_rgba(0,0,0,0.55)]">
+            <BookCover
+              book={{ book_id: bookId, title, author: book?.author ?? '', cover_url: book?.cover_url ?? '' }}
+              size="detail"
+            />
+          </div>
+          <CaseStamp className="absolute -bottom-3 -right-8 rotate-[-12deg] bg-[#0d0a0b]/85 backdrop-blur-[1px]">사건 종결</CaseStamp>
         </div>
-        <p className="m-0 mt-8 text-[13px] font-bold tracking-[0.16em] text-[#e58a9b]">완독</p>
-        <h2 id={titleId} className="m-0 mt-2 break-keep font-dashSerif text-[30px] font-bold leading-[1.25] text-white">
+        <CaseLabel className="mt-10">Case closed</CaseLabel>
+        <h2 id={titleId} className="m-0 mt-3 break-keep font-dashSerif text-[30px] font-bold leading-[1.25] text-white">
           끝까지 읽었어요
         </h2>
         <p className="m-0 mt-3 break-keep font-dashSerif text-[17px] text-[#d8cfca]">「{title}」</p>
 
         {stats.length > 0 ? (
-          <dl className="m-0 mt-8 flex w-full max-w-[320px] divide-x divide-[#4a3237] rounded-[16px] border border-[#4a3237] bg-white/[0.04]">
+          <dl className="m-0 mt-8 flex w-full max-w-[320px] divide-x divide-[#35292c] rounded-[14px] border border-[#35292c] bg-[#1e1618]/80">
             {stats.map((stat) => (
               <div key={stat.label} className="flex flex-1 flex-col items-center gap-1 py-4">
-                <dt className="text-[12px] font-semibold text-[#bfb3ae]">{stat.label}</dt>
+                <dt className="text-[12px] font-semibold tracking-[0.04em] text-[#bfb3ae]">{stat.label}</dt>
                 <dd className="m-0 font-dashSerif text-[22px] font-bold text-white">{stat.value}</dd>
               </div>
             ))}
@@ -115,7 +120,7 @@ export default function CompletionScreen({
           type="button"
           onClick={onHome}
           data-track="completion-home"
-          className="h-12 w-full rounded-full border border-[#4a3237] text-[15px] font-bold text-[#ece6e0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b]"
+          className="h-12 w-full rounded-full border border-[#35292c] text-[15px] font-bold text-[#ece6e0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b]"
         >
           홈으로
         </button>

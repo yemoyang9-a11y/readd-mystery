@@ -1,7 +1,7 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { isAxiosError } from 'axios';
-import { ReaddMark } from '../components/Layout/Header';
+import { CaseLabel } from '../mobile/components/CaseMotifs';
 import {
   fetchMe,
   fetchProviders,
@@ -20,11 +20,12 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_MIN_LENGTH = 8;
 const DISPLAY_NAME_MAX_LENGTH = 20;
 
+// 미스터리 브랜딩(2026-11-18 대표 지시) — data-night 토큰. 조사: docs/context/research-2026-11-18-new-screens.md 1장
 const FIELD =
-  'block min-h-12 w-full rounded-dash-card border border-dash-line bg-dash-card px-3.5 text-[16px] text-dash-ink outline-none placeholder:text-dash-muted focus:border-brief-accent';
-const LABEL = 'mb-1.5 block text-[14px] font-bold text-dash-ink';
+  'block min-h-12 w-full rounded-[10px] border border-[#35292c] bg-[#0d0a0b] px-3.5 text-[16px] text-[#ece6e0] outline-none transition-colors placeholder:text-[#8a7f81] focus:border-[#c4475f] focus-visible:ring-2 focus-visible:ring-[#c4475f]/35 disabled:opacity-60';
+const LABEL = 'mb-1.5 block text-[13px] font-bold tracking-[0.02em] text-[#ece6e0]';
 const OUTLINE_BUTTON =
-  'inline-flex min-h-12 w-full items-center justify-center rounded-full border border-dash-line bg-dash-card px-4 text-[15px] font-bold text-dash-ink transition-colors active:bg-dash-ink/10';
+  'inline-flex min-h-12 w-full items-center justify-center rounded-full border border-[#35292c] bg-transparent px-4 text-[15px] font-bold text-[#ece6e0] transition-colors active:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b]';
 
 const PROVIDER_LABEL: Record<AuthProvider, string> = {
   google: '구글로 계속하기',
@@ -127,26 +128,33 @@ export default function Login() {
     }
   }
 
+  // 서류철 탭 — 고른 탭은 아래 카드와 같은 색으로 이어 붙는다
   const tabClass = (active: boolean) =>
-    `min-h-10 flex-1 rounded-full text-[15px] font-bold transition-colors ${
-      active ? 'bg-dash-card text-dash-ink shadow-dash-soft' : 'text-dash-muted'
+    `relative min-h-11 rounded-t-[10px] border border-b-0 px-5 text-[15px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#e58a9b] ${
+      active
+        ? 'z-[1] -mb-px border-[#35292c] bg-[#1e1618] pb-px text-[#ece6e0]'
+        : 'border-transparent text-[#a89e9a]'
     }`;
 
   return (
     <div
-      className="min-h-[100dvh] bg-dash-paper font-dashSans text-dash-ink"
-      style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
+      data-night
+      data-testid="login-screen"
+      className="min-h-[100dvh] bg-[#0d0a0b] font-dashSans text-[#ece6e0]"
+      style={{
+        paddingTop: 'var(--safe-top)',
+        paddingBottom: 'var(--safe-bottom)',
+        background: 'radial-gradient(130% 55% at 50% 0%, #2c1219 0%, #170d10 48%, #0d0a0b 100%)',
+      }}
     >
-      <div className="mx-auto flex w-full max-w-[420px] flex-col px-5 pb-10 pt-[12vh]">
-        <h1 className="text-center font-dashMono text-[34px] font-medium tracking-[-1.5px]">
-          <span className="sr-only">RE:ADD</span>
-          <span aria-hidden="true">
-            RE<ReaddMark />
-            ADD
-          </span>
-        </h1>
+      <div className="mx-auto flex w-full max-w-[420px] flex-col px-5 pb-10 pt-[9vh]">
+        <CaseLabel>Case file · Reader</CaseLabel>
+        <h1 className="m-0 mt-3 font-dashSans text-[36px] font-bold leading-none tracking-[0.04em] text-white">RE:ADD</h1>
+        <p className="m-0 mt-3 break-keep font-dashSerif text-[18px] font-bold leading-[1.45] text-[#ece6e0]">
+          범인은 끝까지 직접 찾는다.
+        </p>
 
-        <div role="tablist" aria-label="로그인 방식" className="mt-10 flex gap-1 rounded-full bg-dash-line/70 p-1">
+        <div role="tablist" aria-label="로그인 방식" className="mt-10 flex gap-1 pl-2">
           <button
             type="button"
             role="tab"
@@ -167,7 +175,8 @@ export default function Login() {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} noValidate className="mt-6 flex flex-col gap-4">
+        <div className="rounded-[14px] border border-[#35292c] bg-[#1e1618] p-5 shadow-[0_24px_48px_rgba(0,0,0,0.45)]">
+        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
           <div>
             <label htmlFor={ids.email} className={LABEL}>
               이메일
@@ -206,7 +215,7 @@ export default function Login() {
                 onClick={() => setShowPassword((shown) => !shown)}
                 aria-pressed={showPassword}
                 aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'}
-                className="absolute inset-y-0 right-1 my-auto h-10 rounded-full px-3 text-[14px] font-bold text-dash-ink"
+                className="absolute inset-y-0 right-1 my-auto h-10 rounded-full px-3 text-[14px] font-bold text-[#e58a9b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b]"
               >
                 {showPassword ? '숨기기' : '보기'}
               </button>
@@ -232,7 +241,11 @@ export default function Login() {
           ) : null}
 
           {error ? (
-            <p role="alert" className="m-0 break-keep text-[14px] font-bold text-brief-accent">
+            <p
+              role="alert"
+              className="m-0 flex items-start gap-2 break-keep rounded-[10px] border border-[#c4475f]/50 bg-[#2d161d] px-3 py-2.5 text-[14px] font-bold text-[#f0b3be]"
+            >
+              <span aria-hidden="true" className="font-dashMono text-[#e58a9b]">!</span>
               {error}
             </p>
           ) : null}
@@ -240,18 +253,19 @@ export default function Login() {
           <button
             type="submit"
             disabled={busy || !filled}
-            className="mt-1 min-h-12 w-full rounded-full bg-brief-accent text-[16px] font-bold text-brief-on-accent transition-opacity disabled:opacity-40"
+            className="mt-1 min-h-12 w-full rounded-full bg-[#8f1d35] text-[16px] font-bold text-white transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1e1618] disabled:bg-[#4a2630] disabled:text-[#c9b7ba]"
           >
             {busy ? (mode === 'signup' ? '가입하는 중' : '로그인하는 중') : mode === 'signup' ? '가입하기' : '로그인'}
           </button>
         </form>
+        </div>
 
         {oauth.length > 0 ? (
           <div className="mt-8">
-            <div className="flex items-center gap-3 text-[13px] text-dash-ink" aria-hidden="true">
-              <span className="h-px flex-1 bg-dash-line" />
+            <div className="flex items-center gap-3 font-dashMono text-[12px] tracking-[0.12em] text-[#a89e9a]" aria-hidden="true">
+              <span className="h-px flex-1 bg-[#35292c]" />
               또는
-              <span className="h-px flex-1 bg-dash-line" />
+              <span className="h-px flex-1 bg-[#35292c]" />
             </div>
             <div className="mt-4 flex flex-col gap-2">
               {oauth.map((provider) => (

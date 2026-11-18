@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import AmoSherlock from '../components/common/AmoSherlock';
+import { CaseLabel, CaseStamp } from '../mobile/components/CaseMotifs';
 import type { GuideProgress, GuideStep } from './guideSteps';
 
 interface Rect {
@@ -12,6 +13,8 @@ interface Rect {
 
 const PAD = 6;
 const GAP = 14;
+/** 비추지 않는 곳을 덮는 막 — 브랜드 검정(#0d0a0b) 계열 (2026-11-18 미스터리 브랜딩) */
+const SCRIM = 'rgba(13, 10, 11, 0.74)';
 
 /** 비춘 요소와 가이드 UI 밖의 입력은 전부 막는다 — 가이드는 정해진 곳을 눌러야만 넘어간다 */
 const BLOCKED_EVENTS = [
@@ -130,15 +133,15 @@ export default function GuideCoach({
 
   const text = typeof step.text === 'function' ? step.text(progress) : step.text;
   const counter = (
-    <span className="font-dashMono text-[13px] font-semibold text-brief-muted" aria-label={`${total}단계 중 ${index + 1}단계`}>
-      {index + 1} / {total}
+    <span className="font-dashMono text-[12px] font-medium tracking-[0.14em] text-[#a89e9a]" aria-label={`${total}단계 중 ${index + 1}단계`}>
+      <span className="text-[#e58a9b]">{String(index + 1).padStart(2, '0')}</span> / {String(total).padStart(2, '0')}
     </span>
   );
   const skip = (
     <button
       type="button"
       onClick={onSkip}
-      className="min-h-11 rounded-full px-3 font-dashSans text-[14px] font-bold text-brief-ink underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brief-accent"
+      className="min-h-11 rounded-full px-3 font-dashSans text-[14px] font-bold text-[#ece6e0] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b]"
     >
       건너뛰기
     </button>
@@ -146,28 +149,32 @@ export default function GuideCoach({
 
   if (step.final) {
     return (
-      <div data-guide-ui className="fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(20,18,16,0.55)] px-4">
+      <div data-guide-ui className="fixed inset-0 z-[100] flex items-center justify-center px-4" style={{ background: SCRIM }}>
         <section
           role="dialog"
           aria-modal="true"
           aria-labelledby="guide-final-title"
           data-testid="guide-bubble"
-          className="w-full max-w-[358px] animate-pop-in rounded-brief-panel bg-white p-6 text-center shadow-brief-soft motion-reduce:animate-none"
+          className="relative w-full max-w-[358px] animate-pop-in overflow-hidden rounded-[16px] border border-[#35292c] bg-[#1e1618] px-6 pb-5 pt-6 text-center text-[#ece6e0] shadow-[0_24px_48px_rgba(0,0,0,0.5)] motion-reduce:animate-none"
         >
-          <AmoSherlock className="mx-auto h-20 w-auto" />
-          <h2 id="guide-final-title" className="mt-3 font-dashSerif text-[21px] font-bold leading-snug text-brief-ink">
+          <CaseStamp className="absolute right-4 top-4 rotate-[8deg] opacity-90">수사 개시</CaseStamp>
+          <div className="flex justify-start">
+            <CaseLabel>Case file · 001</CaseLabel>
+          </div>
+          <AmoSherlock className="mx-auto mt-5 h-20 w-auto" />
+          <h2 id="guide-final-title" className="m-0 mt-4 break-keep font-dashSerif text-[22px] font-bold leading-snug text-white">
             {step.final.title}
           </h2>
-          <p className="m-0 mt-2 break-keep font-amo text-[15px] leading-relaxed text-brief-ink">{text}</p>
+          <p className="m-0 mt-2 break-keep font-amo text-[15px] leading-relaxed text-[#ece6e0]">{text}</p>
           <button
             type="button"
             data-guide-finish
             onClick={onFinish}
-            className="mt-5 h-12 w-full rounded-full border border-brief-ink bg-transparent font-dashSans text-[15px] font-bold text-brief-ink transition-colors hover:bg-[rgba(31,31,31,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brief-accent"
+            className="mt-6 h-12 w-full rounded-full bg-[#8f1d35] font-dashSans text-[15px] font-bold text-white transition-colors hover:bg-[#a3243f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1e1618]"
           >
             {step.final.action}
           </button>
-          <div className="mt-2 flex justify-center">{counter}</div>
+          <div className="mt-3 flex justify-center">{counter}</div>
         </section>
       </div>
     );
@@ -200,11 +207,11 @@ export default function GuideCoach({
         {hole ? (
           <div
             data-testid="guide-spotlight"
-            className="absolute rounded-xl ring-2 ring-white motion-safe:transition-[top,left,width,height] motion-safe:duration-200"
-            style={{ ...hole, boxShadow: '0 0 0 200vmax rgba(20, 18, 16, 0.55)' }}
+            className="absolute rounded-xl ring-2 ring-[#e58a9b] motion-safe:transition-[top,left,width,height] motion-safe:duration-200"
+            style={{ ...hole, boxShadow: `0 0 0 4px rgba(196, 71, 95, 0.28), 0 0 0 200vmax ${SCRIM}` }}
           />
         ) : (
-          <div className="absolute inset-0 bg-[rgba(20,18,16,0.55)]" />
+          <div className="absolute inset-0" style={{ background: SCRIM }} />
         )}
       </div>
       <section
@@ -214,14 +221,14 @@ export default function GuideCoach({
         aria-label="이용 가이드"
         aria-live="polite"
         data-testid="guide-bubble"
-        className="fixed inset-x-4 z-[101] mx-auto max-w-[358px] animate-pop-in rounded-brief-panel bg-white px-4 pb-2 pt-4 shadow-brief-soft motion-reduce:animate-none"
+        className="fixed inset-x-4 z-[101] mx-auto max-w-[358px] animate-pop-in rounded-[16px] border border-[#35292c] bg-[#1e1618] px-4 pb-2 pt-4 text-[#ece6e0] shadow-[0_18px_40px_rgba(0,0,0,0.5)] motion-reduce:animate-none"
         style={bubbleStyle}
       >
         <div className="flex items-start gap-3">
           <AmoSherlock className="h-12 w-auto shrink-0" />
-          <p className="m-0 min-w-0 flex-1 break-keep pt-1 font-amo text-[15px] leading-[1.6] text-brief-ink">{text}</p>
+          <p className="m-0 min-w-0 flex-1 break-keep pt-1 font-amo text-[15px] leading-[1.6] text-[#ece6e0]">{text}</p>
         </div>
-        <div className="mt-1 flex items-center justify-between pl-1">
+        <div className="mt-2 flex items-center justify-between border-t border-[#35292c] pl-1">
           {counter}
           {skip}
         </div>
