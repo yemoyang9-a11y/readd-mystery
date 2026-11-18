@@ -106,3 +106,37 @@ node ../evaluation/relationships/check-structural-metrics.cjs data/generated/str
 ```
 
 `early_established`가 0이어야 한다(정답보다 이르게 잡힌 관계 = 스포일러). 정밀도·재현율과 보류 목록(`held`)을 tasks.md T12에 적는다. 교체·공개는 기존 검수 절차(`docs/relationship-pipeline.md`)를 따른다.
+
+## 7. 마이그레이션 이력 — 처음 한 번 baseline (2026-11-18 추가, tasks.md R1)
+
+`scripts/migrate.js`가 바뀌었다. 이제 적용한 파일을 DB의 `schema_migrations` 표에 적어 두고 **다시 실행하지 않는다.** 한 번에 한 실행만 돌고(잠금), 파일 하나가 실패하면 그 파일만 통째로 되돌린다. 예전처럼 매번 전부 실행하면 019가 목차로 건너뛰기만 한 독자의 앞부분까지 "읽음"으로 채워 스포일러가 샐 수 있었다.
+
+운영 DB(Supabase `readd-mystery`)는 이 표가 생기기 전에 001~025가 적용되었다. 그래서 새 실행기는 **이력이 비어 있는데 테이블이 있는 DB에는 아무것도 실행하지 않고 멈춘다.** 대표가 아래 순서로 "여기까지는 이미 적용됨"을 한 번 기록(baseline)해야 한다. 이 명령은 SQL을 실행하지 않고 기록만 한다. 배포나 서버 시작 때 자동으로 돌지 않는다.
+
+1. **DB 백업.** Supabase 대시보드 → Database → Backups에서 최근 백업이 있는지 확인한다(없으면 `pg_dump`로 한 벌 받는다).
+2. **접속 주소 확인.** `backend/.env`의 `DB_HOST`·`DB_NAME`이 운영 DB인지 본다. 연결은 직접 연결 또는 Session pooler(포트 5432)를 쓴다. Transaction pooler(포트 6543)는 잠금이 풀리지 않을 수 있어 쓰지 않는다.
+3. **정말 025까지 적용되었는지 확인.** Supabase SQL 편집기에서:
+   ```sql
+   SELECT to_regclass('public.user_consents')        AS m025,  -- 025
+          to_regclass('public.community_post_likes') AS m024,  -- 024
+          (SELECT count(*) FROM information_schema.columns
+            WHERE table_name = 'reading_position' AND column_name = 'read_pages') AS m019;
+   ```
+   세 값이 모두 비어 있지 않아야(m019는 1) 한다. 하나라도 비면 멈추고 알려 준다 — 그 번호 앞까지만 baseline 해야 한다.
+4. **상태 보기 (실행 없음):** `cd backend && node scripts/migrate.js --status` — "적용됨 0개, 남음 22개"가 나온다.
+5. **baseline 기록:**
+   ```bash
+   node scripts/migrate.js --baseline-through 025_signup_consents.sql --confirm-baseline
+   ```
+   "baseline 22개 기록 (SQL 실행 없음)"이 나오면 된다. 이력이 이미 있으면 거부한다(덧쓰지 않음).
+6. **확인:** `node scripts/migrate.js` → "적용 0개, 건너뜀 22개". 이후 새 파일(026~)이 생기면 같은 명령이 새 파일만 적용한다.
+
+로컬 DB처럼 SSL이 없는 곳은 `DB_SSL=false`를 붙인다. 이미 적용된 파일 내용을 고치면 실행기가 "내용이 바뀌었습니다"로 멈춘다. 019는 이번에 고쳐서(아래) baseline 때 고친 뒤의 내용으로 기록된다.
+
+**019 파일도 고침:** read_pages 열을 처음 만들 때만 기존 독자를 1 ~ current_page로 채운다(023과 같은 방식). 처음 적용할 때 결과는 전과 같고, 누가 SQL 편집기에서 019를 다시 실행해도 아무것도 바뀌지 않는다.
+
+**시험 (로컬 PostgreSQL + pgvector 필요, 운영 주소 금지):**
+```bash
+MIGRATE_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/readd_migrate_test \
+  npx jest tests/unit/scripts/migrate.test.ts
+```
