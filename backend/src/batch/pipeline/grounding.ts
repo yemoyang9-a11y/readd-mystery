@@ -348,6 +348,11 @@ export function validateGroundedChapter(
         );
         continue;
       }
+      // FR-CHR-001 — 관계도는 관계만(2026-11-18 대표 지시). 한 번 일어난 행동은 사건이지 관계가 아니다
+      if (s.kind === 'action' || s.temporal_scope === 'event') {
+        hold('relationship', item, 'One-off action is an event, not a relationship');
+        continue;
+      }
       // Only the versioned contract is persisted; extra model keys never become public JSON.
       semantics = {
         version: 2,

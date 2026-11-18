@@ -119,9 +119,10 @@ export function buildPairLabelPrompt(
 - 같은 관계를 보여 주는 창이 여럿이면 모두 support에 넣는다. 확립 쪽수는 서버가 검증된 support 중 가장 이른 쪽으로 정한다. 근거가 없는 앞 쪽을 확립 쪽으로 쓰지 않는다.
 - character_a/b에는 목록의 대표명을 쓴다. direction은 a_to_b(주체 A→대상 B), b_to_a, mutual(양쪽 모두 명시), undirected(방향 없는 관계: 남매·동료 등), unknown.
 - label은 짧고 구체적인 술어("태수를 두고 질투한다", "고용한다", "아버지다"). summary는 두 대표명을 모두 넣은 한 문장. 추상 명사("감정", "관계", "욕망")만 쓰지 않는다.
-- kind는 family/social/emotion/action, relation_key는 영어 소문자 키(parenthood, employment, jealousy, affection 등).
+- 관계만 적는다. 관계는 두 인물 사이에 이어지는 상태다: 가족(부부·부모·형제), 사회적 관계(친구·고용·동료·스승), 한 인물이 다른 인물에게 품은 감정·태도(사랑·미움·질투·의심·신뢰·두려움·경계). 한 번 일어난 행동(손을 잡는다·구하려 한다·찾아간다·때린다·만난다·말을 건넨다)은 사건이지 관계가 아니므로 적지 않는다. 행동에서 감정·태도가 원문에 직접 드러나면 그 감정·태도만 적는다.
+- kind는 family/social/emotion 중 하나(emotion은 감정과 태도), relation_key는 영어 소문자 키(parenthood, marriage, employment, friendship, jealousy, affection, suspicion, trust 등).
 - assertion_status: fact(서술로 확인), belief/claim/rumor/uncertain(누가 믿거나 주장하거나 소문 — attribution에 그 사람 이름을 쓰고 summary에 "믿는다/주장한다/소문" 같은 한정을 넣는다), negated(부정된 내용). 부정·소문·희망·오해를 fact로 쓰지 않는다.
-- temporal_scope는 ongoing/event, state는 active/ended, change_type은 establishment/restatement/transition/disclosure.
+- temporal_scope는 언제나 ongoing, state는 active/ended, change_type은 establishment/restatement/transition/disclosure.
 - 작품·장르에 대한 기억으로 보충하지 않는다. 이 근거 창에 없는 사실은 쓰지 않는다.
 
 출력은 JSON만 반환한다:
@@ -137,6 +138,14 @@ ${windowLines.join('\n\n')}`;
 // ─── 결정적 검사 ─────────────────────────────────────────────────────────────
 
 const LATIN = /[A-Za-z]/u;
+
+/**
+ * 한 번 일어난 행동인가 — kind=action 또는 temporal_scope=event. 관계도에 넣지 않는다.
+ * FR-CHR-001 (2026-11-18 대표 지시: 손을 잡음 같은 사건은 관계가 아니다)
+ */
+export function isOneOffAction(r: { kind?: unknown; temporal_scope?: unknown }): boolean {
+  return r.kind === 'action' || r.temporal_scope === 'event';
+}
 
 // 사실성 단서 — Saurí & Pustejovsky 2012(극성·양태·출처 도입 술어)를 한국어 어미·영어 어휘로 옮긴 보수적 목록
 const KO_NEGATION = /(?:않|아니|없[었다는이을지]|못\s*(?:했|하|한|해|된)|커녕|리\s*(?:가\s*)?없)/u;
@@ -196,9 +205,10 @@ export function factualityCue(
     return 'factuality_cue:negation';
   if (KO_REPORTATIVE.test(masked)) return 'factuality_cue:reported';
   if (KO_MODAL.test(masked)) return 'factuality_cue:modal';
-  // 사람 목적어("□□를") 바로 뒤의 믿- 은 신뢰다
+  // 사람 목적어("□□를") 바로 뒤의 믿- 은 신뢰, 의심- 은 의심이라는 태도다(관계). "…라고 의심했다"처럼
+  // 절을 받는 의심은 사람 목적어 바로 뒤가 아니므로 그대로 출처 단서다 (2026-11-18 대표 지시: 의심은 관계)
   const source = masked.replace(
-    /(□[을를]?\s*)(믿[가-힣]*)/gu,
+    /(□[을를]?\s*)(믿[가-힣]*|의심[가-힣]*)/gu,
     (_, a: string, b: string) => a + '·'.repeat(b.length)
   );
   if (KO_SOURCE.test(source)) return 'factuality_cue:source';
@@ -392,6 +402,12 @@ export function verifyPairLabels(
     }
     if (aId === bId) {
       held.push({ candidate: item, reasons: ['same_endpoint'] });
+      continue;
+    }
+    // FR-CHR-001 — 관계도는 관계만 담는다(2026-11-18 대표 지시). 한 번 일어난 행동(손을 잡음·구하려 함)은
+    // 사건(타임라인 몫)이지 두 인물의 관계가 아니다. 프롬프트가 막아도 모델 출력은 여기서 다시 거른다.
+    if (isOneOffAction(r)) {
+      held.push({ candidate: item, reasons: ['one_off_action'] });
       continue;
     }
     const candidate = candidates.find(

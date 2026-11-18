@@ -2,6 +2,8 @@
 
 The relationship pipeline extracts a specific predicate and a sentence identifying the subject and object. `semantics.version = 2` retains direction, category, an independent relationship track, ongoing/event scope, active/ended state, assertion status, attribution and exact page/quote/UTF-16 offsets. Canonical endpoint sorting also reverses a directional arrow. Family, employment and feelings between the same people can coexist; an event has its own source anchor.
 
+**2026-11-18 — relations only.** The relationship graph holds standing relations only: family, social ties and one character's feeling/attitude toward another (love, hatred, jealousy, suspicion, trust, fear). One-off actions (holding hands, trying to rescue, visiting) are events for the timeline, not relations. Both extraction prompts no longer offer `kind=action` or `temporal_scope=event`; `verifyPairLabels` holds such labels as `one_off_action` and `validateGroundedChapter` holds them for review; `graph.service.ts` drops already-stored action/event rows from edges and history. The DB constraint and types keep the `action`/`event` values for existing rows (additive-only rule).
+
 A valid source quote and a complete schema are **structural checks, not proof that the interpretation is true**. Reversed feelings, misleading quoted speech and literary inference still need semantic review. Accepted candidates remain unpublished until that review. Legacy rows have no inferred direction or invented explanation.
 
 ## Local generation for any supplied novel

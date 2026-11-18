@@ -577,3 +577,89 @@ describe('FR-CHR-001: 장 단위 실행 — 가짜 LLM, 실제 호출 0회', () 
     ]);
   });
 });
+
+// 2026-11-18 대표 지시 — 관계도는 관계만 담는다. 한 번 일어난 행동은 사건(타임라인)이다
+describe('FR-CHR-001: 한 번 일어난 행동은 관계로 라벨링하지 않는다', () => {
+  test('kind=action 또는 temporal_scope=event 라벨 → 채택 0건, one_off_action', () => {
+    const pages = [page(1, '서윤은 도현의 손을 잡았다.')];
+    const { candidates, windowOn } = setup(pages);
+    const support = [{ window_id: windowOn(1), trigger: '손을 잡았다' }];
+    const out = verifyPairLabels(
+      {
+        relations: [
+          label('서윤', '도현', support, {
+            label: '손을 잡는다',
+            kind: 'action',
+            relation_key: 'physical_contact',
+            temporal_scope: 'event',
+          }),
+          label('서윤', '도현', support, { label: '손을 잡는다', kind: 'action' }),
+          label('서윤', '도현', support, { label: '손을 잡는다', temporal_scope: 'event' }),
+        ],
+      },
+      candidates,
+      pages,
+      lexicon
+    );
+    expect(out.relationships).toHaveLength(0);
+    expect(out.held.map((h) => h.reasons)).toEqual([
+      ['one_off_action'],
+      ['one_off_action'],
+      ['one_off_action'],
+    ]);
+  });
+
+  test('positive — 같은 쌍의 지속 관계(의심)는 채택된다', () => {
+    const pages = [page(1, '서윤은 도현을 의심했다.')];
+    const { candidates, windowOn } = setup(pages);
+    const out = verifyPairLabels(
+      {
+        relations: [
+          label('서윤', '도현', [{ window_id: windowOn(1), trigger: '의심' }], {
+            label: '의심한다',
+            relation_key: 'suspicion',
+            summary: '서윤은(는) 도현을(를) 의심한다.',
+          }),
+        ],
+      },
+      candidates,
+      pages,
+      lexicon
+    );
+    expect(out.held).toEqual([]);
+    expect(out.relationships).toHaveLength(1);
+  });
+
+  test('negative 쌍 — 절을 받는 의심("도현이 범인인지 의심했다")은 여전히 사실 관계로 단정하지 않는다', () => {
+    const pages = [page(1, '서윤은 도현이 범인인지 의심했다.')];
+    const { candidates, windowOn } = setup(pages);
+    const out = verifyPairLabels(
+      {
+        relations: [
+          label('서윤', '도현', [{ window_id: windowOn(1), trigger: '의심' }], {
+            label: '의심한다',
+            relation_key: 'suspicion',
+            summary: '서윤은(는) 도현을(를) 의심한다.',
+          }),
+        ],
+      },
+      candidates,
+      pages,
+      lexicon
+    );
+    expect(out.relationships).toHaveLength(0);
+    expect(out.held.map((h) => h.reasons)).toEqual([['factuality_cue:source']]);
+  });
+
+  test('라벨 프롬프트는 action·event를 관계 종류로 내놓지 않는다', () => {
+    const pages = [page(1, '서윤은 도현을 의심했다.')];
+    const { candidates } = setup(pages);
+    const prompt = buildPairLabelPrompt(
+      { chapter_no: 1, title: '첫 장', start_page: 1, end_page: 1 } as never,
+      candidates,
+      lexicon
+    );
+    expect(prompt).not.toMatch(/family\/social\/emotion\/action/);
+    expect(prompt).not.toMatch(/ongoing\/event/);
+  });
+});

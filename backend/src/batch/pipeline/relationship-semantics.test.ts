@@ -423,3 +423,35 @@ test('FR-CHR-001: 다음 장 힌트(캐시 키)는 검증 결과 표시에 따�
   expect(previousRelationshipHints(a)).toHaveLength(1);
   expect(previousRelationshipHints(a)).toEqual(previousRelationshipHints(b));
 });
+
+// 2026-11-18 대표 지시 — 관계도는 관계만. 한 번 일어난 행동(손을 잡음·구하려 함)은 사건이지 관계가 아니다
+test('FR-CHR-001: 한 번 일어난 행동(kind=action 또는 temporal_scope=event)은 관계로 채택 0건, 검수에 남긴다', () => {
+  const out = validateGroundedChapter(
+    {
+      relationships: [
+        candidate({
+          label: '손을 맞잡는다',
+          semantics: semantic({ kind: 'action', relation_key: 'physical_contact', temporal_scope: 'event' }),
+        }),
+        candidate({
+          label: '손을 맞잡는다',
+          semantics: semantic({ kind: 'action', relation_key: 'physical_contact' }),
+        }),
+        candidate({ semantics: semantic({ temporal_scope: 'event' }) }),
+      ],
+    },
+    [page],
+    { requireRelationshipSemantics: true }
+  );
+  expect(out.relationships).toHaveLength(0);
+  expect(out.review).toHaveLength(3);
+});
+
+test('positive — 지속되는 감정·태도(사랑·의심)는 관계로 채택된다', () => {
+  const out = validateGroundedChapter(
+    { relationships: [candidate()] },
+    [page],
+    { requireRelationshipSemantics: true }
+  );
+  expect(out.relationships).toHaveLength(1);
+});
