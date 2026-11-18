@@ -112,15 +112,25 @@ describe('싸비 탭 데이터', () => {
     expect(fetchGraph).toHaveBeenCalledTimes(1);
   });
 
-  it('관계도 탭이 아니면 관계도를 조회하지 않는다 — 열린 탭만 재조회한다', async () => {
+  it('관계도·챗봇 탭이 아니면 관계도를 조회하지 않는다 — 열린 탭만 재조회한다', async () => {
     const fetchGraph = vi.fn().mockResolvedValue(graph([]));
 
     renderHook(() =>
-      useSsabiData({ panelOpen: true, bookId: 'takryu', tab: 'chatbot', currentPage: 21, fetchGraph })
+      useSsabiData({ panelOpen: true, bookId: 'takryu', tab: 'timeline', currentPage: 21, fetchGraph })
     );
 
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(fetchGraph).not.toHaveBeenCalled();
+  });
+
+  // 2026-11-18 대표 승인 — 아모 답변의 인물 이름 강조는 기준점으로 거른 관계도 응답의 이름만 쓴다
+  it('챗봇 탭이면 이름 강조용으로 관계도를 조회한다(같은 서버 상한 응답)', async () => {
+    const fetchGraph = vi.fn().mockResolvedValue(graph(['정주사']));
+    const { result } = renderHook(() =>
+      useSsabiData({ panelOpen: true, bookId: 'takryu', tab: 'chatbot', currentPage: 21, fetchGraph })
+    );
+    await waitFor(() => expect(result.current.graph?.nodes.map((n) => n.name)).toEqual(['정주사']));
+    expect(fetchGraph).toHaveBeenCalledWith('takryu', 21, expect.any(Number));
   });
 
   it('조회가 실패하면 데이터를 비우고 실패를 알린다 — 옛 데이터를 남기지 않는다', async () => {

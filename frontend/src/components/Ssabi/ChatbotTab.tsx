@@ -1,10 +1,98 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import type { Components } from 'react-markdown';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import type { ChatbotConversationSummary, ChatbotConversationTurn } from '../../types';
 import AmoSherlock from '../common/AmoSherlock';
 import { formatConversationTimestamp } from './formatConversationTime';
+import { rehypeAmoMentions } from './chatMentions';
+
+/**
+ * 아모 답변의 인물·쪽 표시 — 2026-11-18 대표 승인 시안(인물 강조색, 쪽은 키캡 ①, 검은 말풍선 후 이동).
+ * 쪽 키캡을 한 번 누르면 "p.N 펼치기" 말풍선, 한 번 더(또는 말풍선을) 누르면 그 쪽으로 이동한다.
+ * 이동은 부모의 jumpToNote 와 같다 — 이동 직전 쪽을 기억하고 읽음 인정은 없다 (FR-PRG-003, R1).
+ */
+const MentionContext = createContext<{
+  openId: string | null;
+  setOpenId: (id: string | null) => void;
+  onJump?: (page: number) => void;
+}>({ openId: null, setOpenId: () => {} });
+
+function AmoName({ children }: { children?: React.ReactNode }) {
+  return (
+    <span data-amo-name className="font-semibold text-brief-accent">
+      {children}
+    </span>
+  );
+}
+
+function AmoPage({
+  node,
+  children,
+}: {
+  node?: { properties?: Record<string, unknown> };
+  children?: React.ReactNode;
+}) {
+  const { openId, setOpenId, onJump } = useContext(MentionContext);
+  const id = useId();
+  const page = Number(node?.properties?.dataPage);
+  const label =
+    typeof children === 'string'
+      ? children
+      : Array.isArray(children)
+        ? children.join('')
+        : String(children ?? '');
+  if (!onJump || !Number.isSafeInteger(page)) return <span>{label}</span>;
+  const open = openId === id;
+  const go = () => {
+    setOpenId(null);
+    onJump(page);
+  };
+  return (
+    <span className="relative inline-block" data-amo-page>
+      <button
+        type="button"
+        aria-label={label}
+        aria-expanded={open}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (open) go();
+          else setOpenId(id);
+        }}
+        className={`mx-[0.1em] inline-grid h-[1.45em] -translate-y-[0.08em] place-items-center rounded-[6px] bg-[#f1ecec] px-[0.42em] font-dashSans text-[0.82em] font-bold leading-none tabular-nums transition-[transform,box-shadow] duration-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brief-accent ${
+          open
+            ? 'translate-y-[0.04em] text-brief-accent shadow-[inset_0_-1px_0_#d8cfd0,0_0_0_1px_rgb(var(--brief-accent))]'
+            : 'text-brief-ink shadow-[inset_0_-2px_0_#d8cfd0,0_0_0_1px_#e4dbdc]'
+        }`}
+      >
+        {label}
+      </button>
+      {open ? (
+        <button
+          aria-label={`${label} 펼치기`}
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            go();
+          }}
+          className="amo-page-tip absolute bottom-[calc(100%+8px)] left-1/2 z-10 flex h-[30px] items-center whitespace-nowrap rounded-[10px] bg-brief-ink px-[11px] font-dashSans text-[12.5px] font-semibold text-white after:absolute after:-bottom-[5px] after:left-1/2 after:size-[10px] after:-translate-x-1/2 after:rotate-45 after:rounded-[2px] after:bg-brief-ink after:content-['']"
+        >
+          {label} 펼치기 ›
+        </button>
+      ) : null}
+    </span>
+  );
+}
 
 /**
  * 답변 마크다운 렌더링 — 굵게만 파싱하던 parseMarkdownBold.ts로는 "##" 같은 헤더가
@@ -14,6 +102,8 @@ import { formatConversationTimestamp } from './formatConversationTime';
  * 크기(text-xs)에 맞춰 여기서 좁혀 잡는다 — 기본 h1~h6는 채팅창엔 너무 크다.
  */
 const markdownComponents = {
+  'amo-name': AmoName,
+  'amo-page': AmoPage,
   p: ({ children }: { children?: React.ReactNode }) => <p className="mb-2 last:mb-0">{children}</p>,
   h1: ({ children }: { children?: React.ReactNode }) => (
     <strong className="mb-1 mt-2 block text-[13px] font-bold first:mt-0">{children}</strong>
@@ -37,12 +127,19 @@ const markdownComponents = {
     <code className="rounded bg-brief-paper px-1 py-0.5 font-dashMono text-[11px]">{children}</code>
   ),
   a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="text-brief-accent underline">
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-brief-accent underline"
+    >
       {children}
     </a>
   ),
   blockquote: ({ children }: { children?: React.ReactNode }) => (
-    <blockquote className="border-l-2 border-brief-rule pl-2 text-brief-muted">{children}</blockquote>
+    <blockquote className="border-l-2 border-brief-rule pl-2 text-brief-muted">
+      {children}
+    </blockquote>
   ),
 };
 
@@ -152,14 +249,17 @@ export const SUGGESTED_QUESTIONS = [
   '내 노트랑 관련된 장면 있어?',
 ] as const;
 
-
 /**
  * 답을 만드는 동안 빈 아모 말풍선 안에 그리는 점 세 개 (2026-11-18 대표 지시). 장식이라 읽지 않는다 —
  * 상태는 아래 role="status" 문구가 알린다. 움직임 줄이기 설정이면 멈춘다.
  */
 function TypingDots() {
   return (
-    <span data-testid="amo-typing" aria-hidden="true" className="flex h-[19.8px] items-center gap-1">
+    <span
+      data-testid="amo-typing"
+      aria-hidden="true"
+      className="flex h-[19.8px] items-center gap-1"
+    >
       {[0, 160, 320].map((delay) => (
         <span
           key={delay}
@@ -187,8 +287,17 @@ export default function ChatbotTab({
   onDeleteConversation,
   onQuoteDismissed,
   requireTextToSend = false,
+  mentionNames = [],
+  totalPages = 0,
+  onJumpToPage,
 }: {
   requireTextToSend?: boolean;
+  /** 강조할 인물 이름 — 서버가 기준점으로 거른 관계도 응답에서 뽑은 것만 (FR-SPL-002 🚦) */
+  mentionNames?: string[];
+  /** 쪽 링크를 만들 범위(1 ~ 마지막 쪽). 기준점 판단이 아니다 (R3, 절대 규칙 7) */
+  totalPages?: number;
+  /** 쪽 키캡에서 이동 — 이동 직전 쪽을 기억하는 jumpToNote 와 같다. 없으면 쪽은 글자로만 */
+  onJumpToPage?: (page: number) => void;
   /** 구경로 전용(테스트 호환). turns를 쓰는 실제 화면에서는 전달하지 않는다 */
   answer?: string;
   streaming: boolean;
@@ -268,9 +377,12 @@ export default function ChatbotTab({
    */
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const confirmDeleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => {
-    if (confirmDeleteTimerRef.current) clearTimeout(confirmDeleteTimerRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (confirmDeleteTimerRef.current) clearTimeout(confirmDeleteTimerRef.current);
+    },
+    []
+  );
   function handleDeleteClick(id: number) {
     if (confirmDeleteTimerRef.current) clearTimeout(confirmDeleteTimerRef.current);
     if (confirmDeleteId === id) {
@@ -287,18 +399,18 @@ export default function ChatbotTab({
    * turns가 오면 그게 유일한 진실이다 — 부모(useChatConversation)가 스트리밍 중인
    * 답변까지 이 배열의 마지막 원소로 갱신해 준다. 없으면(구경로) 로컬 asked/answer로 그린다.
    */
-  const bubbles: ChatbotConversationTurn[] =
-    turns ?? [
-      ...(asked ? [{ role: 'user' as const, text: asked }] : []),
-      ...(answer ? [{ role: 'assistant' as const, text: answer }] : []),
-    ];
+  const bubbles: ChatbotConversationTurn[] = turns ?? [
+    ...(asked ? [{ role: 'user' as const, text: asked }] : []),
+    ...(answer ? [{ role: 'assistant' as const, text: answer }] : []),
+  ];
   const hasBubbles = bubbles.length > 0;
   const latestBubbleText = bubbles[bubbles.length - 1]?.text;
   const userMessageCount = bubbles.filter((bubble) => bubble.role === 'user').length;
 
   useLayoutEffect(() => {
     const userMessageWasAdded =
-      previousUserMessageCountRef.current !== null && userMessageCount > previousUserMessageCountRef.current;
+      previousUserMessageCountRef.current !== null &&
+      userMessageCount > previousUserMessageCountRef.current;
     previousUserMessageCountRef.current = userMessageCount;
 
     if (!hasBubbles) return;
@@ -319,322 +431,351 @@ export default function ChatbotTab({
     }
   }, [hasBubbles, latestBubbleText, streaming, userMessageCount]);
 
-  return (
-    <div className="flex h-full flex-col">
-      {hasHistoryFeature ? (
-        hasHistoryFeature && historyOpen ? (
-          // 이력 화면 헤더 — accent 색 "뒤로" 버튼 하나로 채팅 화면과 시각적으로 다르게
-          // 만든다(클래스 주석 "지난 대화 화면 재설계" 참고). 버튼 색 자체가 "지금 다른
-          // 화면에 있다"는 신호이자 돌아가는 길이다.
-          //
-          // 좌우 배치(2026-08-26, 사용자 요청) — "지난 대화 N"이 왼쪽, "채팅으로" 버튼이
-          // 오른쪽이다. 순서는 테스트로 고정돼 있다(ChatbotTab.test.tsx "이력 화면 헤더는
-          // ... 왼쪽 ... 오른쪽").
-          //
-          // 셰브런은 오른쪽을 향하고 글자 뒤에 온다("채팅으로 →", 2026-08-26 사용자 결정).
-          // 처음엔 왼쪽 셰브런(←)을 유지했었다 — 뒤로 가기 관례상 "이전 화면으로 돌아간다"는
-          // 이동 방향을 뜻한다고 봤기 때문인데, 사용자가 버튼이 헤더 오른쪽 끝에 있는 지금
-          // 배치에선 오른쪽을 향하는 편이 낫다고 판단했다. 되돌리지 말 것.
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <span className="font-dashSans text-[11px] font-bold text-brief-muted">
-              지난 대화 {conversations?.length ?? 0}
-            </span>
-            <button
-              type="button"
-              onClick={onToggleHistory}
-              aria-pressed={true}
-              className="flex items-center gap-1 rounded-full border border-brief-accent bg-brief-accent-soft px-3 py-1.5 font-dashSans text-[11px] font-bold mobile:min-h-11 text-brief-accent"
-            >
-              채팅으로
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" aria-hidden="true">
-                <path
-                  d="M9 5 16 12l-7 7"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-          </div>
-        ) : (
-          <div className="mb-3 flex items-center justify-end gap-2">
-            {hasHistoryFeature ? (
-              <>
-                <button
-                  type="button"
-                  onClick={onToggleHistory}
-                  aria-pressed={false}
-                  className="flex items-center gap-1 rounded-full border border-brief-rule bg-white px-3 py-1.5 font-dashSans text-[11px] font-bold mobile:min-h-11 text-brief-muted"
-                >
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" aria-hidden="true">
-                    <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.6" />
-                    <path
-                      d="M12 8v4l3 2"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  지난 대화
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    clearPinnedQuote();
-                    onNewChat?.();
-                  }}
-                  className="rounded-full border border-brief-rule bg-white px-3 py-1.5 font-dashSans text-[11px] font-bold mobile:min-h-11 text-brief-muted"
-                >
-                  새 채팅
-                </button>
-              </>
-            ) : null}
-          </div>
-        )
-      ) : null}
+  const [openMention, setOpenMention] = useState<string | null>(null);
+  useEffect(() => {
+    if (openMention === null) return;
+    const close = () => setOpenMention(null);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [openMention]);
+  const mentionContext = useMemo(
+    () => ({ openId: openMention, setOpenId: setOpenMention, onJump: onJumpToPage }),
+    [openMention, onJumpToPage]
+  );
+  const mentionPlugins = useMemo(
+    () => [[rehypeAmoMentions, { names: mentionNames, totalPages }]] as never,
+    [mentionNames, totalPages]
+  );
 
-      {historyOpen ? (
-        <div data-no-track className="brief-scroll flex-1 overflow-y-auto">
-          {conversations && conversations.length > 0 ? (
-            <ul className="space-y-2">
-              {conversations.map((c) => {
-                const confirming = confirmDeleteId === c.id;
-                return (
-                  // 인물 카드(RelationshipTab.tsx)와 같은 카드 레시피 — 클래스 주석
-                  // "지난 대화 화면 재설계" 참고.
-                  <li
-                    key={c.id}
-                    className="flex items-center gap-1 rounded-xl border border-brief-rule bg-white"
+  return (
+    <MentionContext.Provider value={mentionContext}>
+      <div className="flex h-full flex-col">
+        {hasHistoryFeature ? (
+          hasHistoryFeature && historyOpen ? (
+            // 이력 화면 헤더 — accent 색 "뒤로" 버튼 하나로 채팅 화면과 시각적으로 다르게
+            // 만든다(클래스 주석 "지난 대화 화면 재설계" 참고). 버튼 색 자체가 "지금 다른
+            // 화면에 있다"는 신호이자 돌아가는 길이다.
+            //
+            // 좌우 배치(2026-08-26, 사용자 요청) — "지난 대화 N"이 왼쪽, "채팅으로" 버튼이
+            // 오른쪽이다. 순서는 테스트로 고정돼 있다(ChatbotTab.test.tsx "이력 화면 헤더는
+            // ... 왼쪽 ... 오른쪽").
+            //
+            // 셰브런은 오른쪽을 향하고 글자 뒤에 온다("채팅으로 →", 2026-08-26 사용자 결정).
+            // 처음엔 왼쪽 셰브런(←)을 유지했었다 — 뒤로 가기 관례상 "이전 화면으로 돌아간다"는
+            // 이동 방향을 뜻한다고 봤기 때문인데, 사용자가 버튼이 헤더 오른쪽 끝에 있는 지금
+            // 배치에선 오른쪽을 향하는 편이 낫다고 판단했다. 되돌리지 말 것.
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <span className="font-dashSans text-[11px] font-bold text-brief-muted">
+                지난 대화 {conversations?.length ?? 0}
+              </span>
+              <button
+                type="button"
+                onClick={onToggleHistory}
+                aria-pressed={true}
+                className="flex items-center gap-1 rounded-full border border-brief-accent bg-brief-accent-soft px-3 py-1.5 font-dashSans text-[11px] font-bold mobile:min-h-11 text-brief-accent"
+              >
+                채팅으로
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" aria-hidden="true">
+                  <path
+                    d="M9 5 16 12l-7 7"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
+          ) : (
+            <div className="mb-3 flex items-center justify-end gap-2">
+              {hasHistoryFeature ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={onToggleHistory}
+                    aria-pressed={false}
+                    className="flex items-center gap-1 rounded-full border border-brief-rule bg-white px-3 py-1.5 font-dashSans text-[11px] font-bold mobile:min-h-11 text-brief-muted"
                   >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        clearPinnedQuote();
-                        onSelectConversation?.(c.id);
-                      }}
-                      className="flex min-w-0 flex-1 flex-col px-3.5 py-2.5 text-left"
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" aria-hidden="true">
+                      <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.6" />
+                      <path
+                        d="M12 8v4l3 2"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    지난 대화
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearPinnedQuote();
+                      onNewChat?.();
+                    }}
+                    className="rounded-full border border-brief-rule bg-white px-3 py-1.5 font-dashSans text-[11px] font-bold mobile:min-h-11 text-brief-muted"
+                  >
+                    새 채팅
+                  </button>
+                </>
+              ) : null}
+            </div>
+          )
+        ) : null}
+
+        {historyOpen ? (
+          <div data-no-track className="brief-scroll flex-1 overflow-y-auto">
+            {conversations && conversations.length > 0 ? (
+              <ul className="space-y-2">
+                {conversations.map((c) => {
+                  const confirming = confirmDeleteId === c.id;
+                  return (
+                    // 인물 카드(RelationshipTab.tsx)와 같은 카드 레시피 — 클래스 주석
+                    // "지난 대화 화면 재설계" 참고.
+                    <li
+                      key={c.id}
+                      className="flex items-center gap-1 rounded-xl border border-brief-rule bg-white"
                     >
-                      <span className="truncate font-dashSerif text-sm font-bold text-brief-ink">
-                        {c.title || '(질문 없음)'}
-                      </span>
-                      <span className="font-dashMono text-[10px] text-brief-muted">
-                        {formatConversationTimestamp(c.conversation_date, c.updated_at)}
-                      </span>
-                    </button>
-                    {onDeleteConversation ? (
                       <button
                         type="button"
-                        aria-label={confirming ? '정말 삭제하려면 다시 누르세요' : '대화 삭제'}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleDeleteClick(c.id);
+                        onClick={() => {
+                          clearPinnedQuote();
+                          onSelectConversation?.(c.id);
                         }}
-                        className={
-                          confirming
-                            ? 'mr-1.5 shrink-0 rounded-full bg-brief-accent px-2.5 py-1 font-dashSans text-[10px] font-bold text-white'
-                            : 'mr-1.5 shrink-0 rounded-full p-1.5 text-brief-muted hover:bg-brief-paper hover:text-brief-ink'
-                        }
+                        className="flex min-w-0 flex-1 flex-col px-3.5 py-2.5 text-left"
                       >
-                        {confirming ? (
-                          '삭제?'
-                        ) : (
-                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true">
-                            <path
-                              d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.867 12.142A2 2 0 0 1 14.138 21H9.862a2 2 0 0 1-1.995-1.858L7 7"
-                              stroke="currentColor"
-                              strokeWidth="1.6"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        )}
+                        <span className="truncate font-dashSerif text-sm font-bold text-brief-ink">
+                          {c.title || '(질문 없음)'}
+                        </span>
+                        <span className="font-dashMono text-[10px] text-brief-muted">
+                          {formatConversationTimestamp(c.conversation_date, c.updated_at)}
+                        </span>
                       </button>
-                    ) : null}
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p className="text-xs text-brief-muted">아직 나눈 대화가 없습니다</p>
-          )}
-        </div>
-      ) : (
-        <>
-          <div data-no-track ref={messagesRef} className="brief-scroll flex-1 space-y-3 overflow-y-auto">
-            {pinnedQuote ? (
-              <div
-                key={pinnedQuote}
-                className="sticky top-0 z-10 flex animate-tab-in items-start justify-between gap-2 border-l-2 border-brief-accent bg-brief-accent-soft py-2 pl-3 pr-2"
-              >
-                <div>
-                  <p className="mb-1 font-dashSans text-[11px] font-bold text-brief-accent">
-                    선택한 문장
-                  </p>
-                  <p className="whitespace-pre-wrap font-serif text-xs leading-[1.6] text-brief-ink">
-                    “{pinnedQuote}”
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  aria-label="선택한 문장 해제"
-                  onClick={() => {
-                    clearPinnedQuote();
-                    setAttachedQuote(null);
-                  }}
-                  className="shrink-0 rounded-full p-1 text-brief-accent hover:bg-brief-accent/10"
+                      {onDeleteConversation ? (
+                        <button
+                          type="button"
+                          aria-label={confirming ? '정말 삭제하려면 다시 누르세요' : '대화 삭제'}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleDeleteClick(c.id);
+                          }}
+                          className={
+                            confirming
+                              ? 'mr-1.5 shrink-0 rounded-full bg-brief-accent px-2.5 py-1 font-dashSans text-[10px] font-bold text-white'
+                              : 'mr-1.5 shrink-0 rounded-full p-1.5 text-brief-muted hover:bg-brief-paper hover:text-brief-ink'
+                          }
+                        >
+                          {confirming ? (
+                            '삭제?'
+                          ) : (
+                            <svg
+                              viewBox="0 0 24 24"
+                              width="14"
+                              height="14"
+                              fill="none"
+                              aria-hidden="true"
+                            >
+                              <path
+                                d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.867 12.142A2 2 0 0 1 14.138 21H9.862a2 2 0 0 1-1.995-1.858L7 7"
+                                stroke="currentColor"
+                                strokeWidth="1.6"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          )}
+                        </button>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="text-xs text-brief-muted">아직 나눈 대화가 없습니다</p>
+            )}
+          </div>
+        ) : (
+          <>
+            <div
+              data-no-track
+              ref={messagesRef}
+              className="brief-scroll flex-1 space-y-3 overflow-y-auto"
+            >
+              {pinnedQuote ? (
+                <div
+                  key={pinnedQuote}
+                  className="sticky top-0 z-10 flex animate-tab-in items-start justify-between gap-2 border-l-2 border-brief-accent bg-brief-accent-soft py-2 pl-3 pr-2"
                 >
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" aria-hidden="true">
-                    <path
-                      d="M6 6l12 12M18 6L6 18"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </button>
+                  <div>
+                    <p className="mb-1 font-dashSans text-[11px] font-bold text-brief-accent">
+                      선택한 문장
+                    </p>
+                    <p className="whitespace-pre-wrap font-serif text-xs leading-[1.6] text-brief-ink">
+                      “{pinnedQuote}”
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="선택한 문장 해제"
+                    onClick={() => {
+                      clearPinnedQuote();
+                      setAttachedQuote(null);
+                    }}
+                    className="shrink-0 rounded-full p-1 text-brief-accent hover:bg-brief-accent/10"
+                  >
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" aria-hidden="true">
+                      <path
+                        d="M6 6l12 12M18 6L6 18"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              ) : null}
+
+              {bubbles.length === 0 ? (
+                <>
+                  <div className="flex items-end gap-2">
+                    <AmoSherlock className="h-11 w-auto shrink-0 translate-y-3" />
+                    <p className="w-fit max-w-[76%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] font-amo text-xs leading-[1.65] text-brief-ink">
+                      {DEFAULT_GREETING}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                bubbles.map((turn, i) =>
+                  turn.role === 'user' ? (
+                    <p
+                      key={i}
+                      className="ml-auto w-fit max-w-[76%] rounded-2xl rounded-br-md border border-brief-rule bg-brief-paper px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink"
+                    >
+                      {turn.text}
+                    </p>
+                  ) : (
+                    <div key={i} className="flex items-end gap-2">
+                      <AmoSherlock className="h-11 w-auto shrink-0 translate-y-3" />
+                      <div className="w-fit max-w-[76%] rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] font-amo text-xs leading-[1.65] text-brief-ink">
+                        {streaming && turn.text === '' && i === bubbles.length - 1 ? (
+                          <TypingDots />
+                        ) : (
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm, remarkBreaks]}
+                            rehypePlugins={mentionPlugins}
+                            components={markdownComponents as Components}
+                          >
+                            {turn.text}
+                          </ReactMarkdown>
+                        )}
+                      </div>
+                    </div>
+                  )
+                )
+              )}
+
+              {error ? (
+                <p role="alert" className="text-xs text-brief-muted">
+                  {error}
+                </p>
+              ) : null}
+
+              {/* 2026-11-18 대표 지시 — 아모는 말풍선 옆 하나만 둔다. "답하는 중"은 화면 읽기 프로그램용 상태로만 남긴다 */}
+              {streaming ? (
+                <span role="status" aria-live="polite" className="sr-only">
+                  답하는 중
+                </span>
+              ) : null}
+            </div>
+
+            {/* 2026-11-17 대표 결정 — 고정 추천 질문. 누르면 입력칸만 채운다(전송 안 함).
+              2026-11-18 대표 지시 — 입력창 바로 위에 둔다 */}
+            {bubbles.length === 0 ? (
+              <div role="group" aria-label="추천 질문" className="mt-3 flex flex-wrap gap-2">
+                {SUGGESTED_QUESTIONS.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    data-track="chat-suggestion"
+                    onClick={() => {
+                      setQuery(suggestion);
+                      inputRef.current?.focus();
+                    }}
+                    className="rounded-full border border-brief-rule bg-white px-3 py-1.5 text-left font-dashSans text-[11px] font-bold text-brief-muted mobile:min-h-11 mobile:text-[13px]"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
               </div>
             ) : null}
-
-            {bubbles.length === 0 ? (
-              <>
-                <div className="flex items-end gap-2">
-                  <AmoSherlock className="h-11 w-auto shrink-0 translate-y-3" />
-                  <p className="w-fit max-w-[76%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] font-amo text-xs leading-[1.65] text-brief-ink">
-                    {DEFAULT_GREETING}
-                  </p>
-                </div>
-              </>
-            ) : (
-              bubbles.map((turn, i) =>
-                turn.role === 'user' ? (
-                  <p
-                    key={i}
-                    className="ml-auto w-fit max-w-[76%] rounded-2xl rounded-br-md border border-brief-rule bg-brief-paper px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink"
-                  >
-                    {turn.text}
-                  </p>
-                ) : (
-                  <div key={i} className="flex items-end gap-2">
-                    <AmoSherlock className="h-11 w-auto shrink-0 translate-y-3" />
-                    <div className="w-fit max-w-[76%] rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] font-amo text-xs leading-[1.65] text-brief-ink">
-                      {streaming && turn.text === '' && i === bubbles.length - 1 ? (
-                        <TypingDots />
-                      ) : (
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm, remarkBreaks]}
-                          components={markdownComponents}
-                        >
-                          {turn.text}
-                        </ReactMarkdown>
-                      )}
-                    </div>
-                  </div>
-                )
-              )
-            )}
-
-            {error ? (
-              <p role="alert" className="text-xs text-brief-muted">
-                {error}
-              </p>
-            ) : null}
-
-            {/* 2026-11-18 대표 지시 — 아모는 말풍선 옆 하나만 둔다. "답하는 중"은 화면 읽기 프로그램용 상태로만 남긴다 */}
-            {streaming ? (
-              <span role="status" aria-live="polite" className="sr-only">
-                답하는 중
-              </span>
-            ) : null}
-          </div>
-
-          {/* 2026-11-17 대표 결정 — 고정 추천 질문. 누르면 입력칸만 채운다(전송 안 함).
-              2026-11-18 대표 지시 — 입력창 바로 위에 둔다 */}
-          {bubbles.length === 0 ? (
-            <div role="group" aria-label="추천 질문" className="mt-3 flex flex-wrap gap-2">
-              {SUGGESTED_QUESTIONS.map((suggestion) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  data-track="chat-suggestion"
-                  onClick={() => {
-                    setQuery(suggestion);
-                    inputRef.current?.focus();
-                  }}
-                  className="rounded-full border border-brief-rule bg-white px-3 py-1.5 text-left font-dashSans text-[11px] font-bold text-brief-muted mobile:min-h-11 mobile:text-[13px]"
-                >
-                  {suggestion}
-                </button>
-              ))}
-            </div>
-          ) : null}
-          <form
-            className="mt-2 flex items-end gap-2 rounded-3xl border border-brief-rule bg-white py-1 pl-4 pr-1 focus-within:border-brief-accent"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (!query.trim() || streaming) return;
-              onAsk(query.trim(), attachedQuote ?? undefined);
-              setAsked(query.trim());
-              setQuery('');
-              // attachedQuote는 여기서 지우지 않는다 — "선택한 문장" 카드가 떠 있는 한
-              // (clearPinnedQuote가 불리기 전까지) 후속 질문에도 계속 실려 나가야 한다.
-            }}
-          >
-            <label htmlFor="chat-query" className="sr-only">
-              질문
-            </label>
-            <textarea
-              id="chat-query"
-              ref={inputRef}
-              rows={1}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              onKeyDown={(event) => {
-                // 한글(IME) 조합 중 Enter — 사용자 제보(2026-08-26, "마지막 글자가 다시
-                // 남는다"): 한글은 자모를 조합해서 한 음절을 완성하는데, 조합이 끝나기
-                // 전에 Enter를 누르면 그 keydown이 "조합 확정"과 겹친다. isComposing 체크
-                // 없이 바로 제출하면 아직 textarea DOM/React 상태에 반영되지 않은 마지막
-                // 음절이 제출 이후(setQuery('') 뒤)에 뒤늦게 커밋되면서 입력창에 남는다.
-                // isComposing이 true인 동안은 이 Enter를 조합 확정으로만 두고 제출하지
-                // 않는다 — 한 번 더 Enter를 누르면(조합이 끝난 뒤) 그때 제출된다.
-                if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
-                  event.preventDefault();
-                  event.currentTarget.form?.requestSubmit();
-                }
+            <form
+              className="mt-2 flex items-end gap-2 rounded-3xl border border-brief-rule bg-white py-1 pl-4 pr-1 focus-within:border-brief-accent"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!query.trim() || streaming) return;
+                onAsk(query.trim(), attachedQuote ?? undefined);
+                setAsked(query.trim());
+                setQuery('');
+                // attachedQuote는 여기서 지우지 않는다 — "선택한 문장" 카드가 떠 있는 한
+                // (clearPinnedQuote가 불리기 전까지) 후속 질문에도 계속 실려 나가야 한다.
               }}
-              className="max-h-32 min-h-9 flex-1 resize-none overflow-y-auto bg-transparent py-2 text-xs leading-5 mobile:max-h-[9.6rem] mobile:text-[16px] mobile:leading-5 text-brief-ink outline-none placeholder:text-brief-muted"
-              // 2026-11-18 대표 지시 — 한 줄에 들어가는 짧은 문구. 스포일러 약속은 첫 인사에서 한다
-              placeholder="아모에게 물어보세요"
-            />
-            <button
-              type="submit"
-              disabled={streaming || (requireTextToSend && !query.trim())}
-              aria-label="질문 보내기"
-              // 글이 있으면 강조색, 없으면 회색 — 흐린 분홍(opacity) 대신 상태를 색으로 구분한다
-              className={`flex h-9 w-9 shrink-0 items-center justify-center self-end rounded-full transition-colors ${
-                query.trim() && !streaming
-                  ? 'bg-brief-accent text-white active:scale-95'
-                  : 'bg-brief-rule text-brief-muted'
-              }`}
             >
-              <svg
-                data-icon="arrow-up"
-                viewBox="0 0 24 24"
-                width="18"
-                height="18"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
+              <label htmlFor="chat-query" className="sr-only">
+                질문
+              </label>
+              <textarea
+                id="chat-query"
+                ref={inputRef}
+                rows={1}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  // 한글(IME) 조합 중 Enter — 사용자 제보(2026-08-26, "마지막 글자가 다시
+                  // 남는다"): 한글은 자모를 조합해서 한 음절을 완성하는데, 조합이 끝나기
+                  // 전에 Enter를 누르면 그 keydown이 "조합 확정"과 겹친다. isComposing 체크
+                  // 없이 바로 제출하면 아직 textarea DOM/React 상태에 반영되지 않은 마지막
+                  // 음절이 제출 이후(setQuery('') 뒤)에 뒤늦게 커밋되면서 입력창에 남는다.
+                  // isComposing이 true인 동안은 이 Enter를 조합 확정으로만 두고 제출하지
+                  // 않는다 — 한 번 더 Enter를 누르면(조합이 끝난 뒤) 그때 제출된다.
+                  if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                    event.preventDefault();
+                    event.currentTarget.form?.requestSubmit();
+                  }
+                }}
+                className="max-h-32 min-h-9 flex-1 resize-none overflow-y-auto bg-transparent py-2 text-xs leading-5 mobile:max-h-[9.6rem] mobile:text-[16px] mobile:leading-5 text-brief-ink outline-none placeholder:text-brief-muted"
+                // 2026-11-18 대표 지시 — 한 줄에 들어가는 짧은 문구. 스포일러 약속은 첫 인사에서 한다
+                placeholder="아모에게 물어보세요"
+              />
+              <button
+                type="submit"
+                disabled={streaming || (requireTextToSend && !query.trim())}
+                aria-label="질문 보내기"
+                // 글이 있으면 강조색, 없으면 회색 — 흐린 분홍(opacity) 대신 상태를 색으로 구분한다
+                className={`flex h-9 w-9 shrink-0 items-center justify-center self-end rounded-full transition-colors ${
+                  query.trim() && !streaming
+                    ? 'bg-brief-accent text-white active:scale-95'
+                    : 'bg-brief-rule text-brief-muted'
+                }`}
               >
-                <path d="M12 19V5M5.5 11.5 12 5l6.5 6.5" />
-              </svg>
-            </button>
-          </form>
-        </>
-      )}
-    </div>
+                <svg
+                  data-icon="arrow-up"
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 19V5M5.5 11.5 12 5l6.5 6.5" />
+                </svg>
+              </button>
+            </form>
+          </>
+        )}
+      </div>
+    </MentionContext.Provider>
   );
 }

@@ -87,9 +87,14 @@ describe('싸비 데이터 연결 (mock 기준)', () => {
     await userEvent.type(screen.getByLabelText('질문'), '정주사는 어떤 사람인가', { delay: null });
     await userEvent.click(screen.getByRole('button', { name: '질문 보내기' }));
 
-    await waitFor(() => expect(screen.getByText(/정주사에 대해/)).toBeInTheDocument(), {
-      timeout: 3000,
-    });
+    // 인물 이름은 강조 칸으로 나뉜다(2026-11-18 승인 시안) — 문단 전체 글자로 찾는다. 답변 글자는 같다
+    await waitFor(
+      () =>
+        expect(
+          screen.getByText((_, el) => el?.tagName === 'P' && /정주사에 대해/.test(el.textContent ?? ''))
+        ).toBeInTheDocument(),
+      { timeout: 3000 }
+    );
   });
 
   it(

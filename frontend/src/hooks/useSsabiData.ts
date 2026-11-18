@@ -55,7 +55,8 @@ export function useSsabiData({
   }
 
   useEffect(() => {
-    if (!panelOpen || tab !== 'relationship' || currentPage === null) return;
+    // 챗봇 탭도 조회한다 — 아모 답변의 인물 이름 강조용(2026-11-18 대표 승인 시안). 같은 상한 응답이다
+    if (!panelOpen || (tab !== 'relationship' && tab !== 'chatbot') || currentPage === null) return;
 
     let cancelled = false;
     const token = generation.current;

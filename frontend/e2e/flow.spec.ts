@@ -280,14 +280,14 @@ test('FR-PRG-003: 장을 눌러 들어온 뒤 읽던 곳으로 돌아가기를 �
   await enterChapterThree(page, testInfo);
   await expect(page).toHaveURL(READ_URL);
   await expect(pageInput(page)).toHaveValue('21');
-  // 휴대폰 돌아가기 줄은 "21쪽을 보는 중 · 15쪽으로 돌아가기"다(MobileJumpBar)
+  // 휴대폰 돌아가기 줄은 "p.21 보는 중 · p.15로 돌아가기"다(MobileJumpBar)
   const bar = isDesktop(testInfo)
     ? page.getByRole('status').filter({ hasText: '15쪽에서 옮겨 왔어요' })
-    : page.getByRole('status').filter({ hasText: '21쪽을 보는 중' });
+    : page.getByRole('status').filter({ hasText: 'p.21 보는 중' });
   await expect(bar).toBeVisible();
 
   await press(
-    page.getByRole('button', { name: isDesktop(testInfo) ? '읽던 곳으로 돌아가기' : '15쪽으로 돌아가기' }),
+    page.getByRole('button', { name: isDesktop(testInfo) ? '읽던 곳으로 돌아가기' : 'p.15로 돌아가기' }),
     testInfo
   );
 

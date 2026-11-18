@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import type {
   ChatbotConversationSummary,
   FrontierChoice,
@@ -15,6 +15,7 @@ import NotesTab from './NotesTab';
 import TimelineTab from './TimelineTab';
 import RelationshipTab from './RelationshipTab';
 import ChatbotTab from './ChatbotTab';
+import { mentionNames } from './chatMentions';
 import FrontierConfirmCard from './FrontierConfirmCard';
 
 const TAB_LABELS: Record<SsabiTab, string> = {
@@ -162,6 +163,8 @@ export default function SsabiPanel({
     if (pendingNoteQuote) setLastTab('notes');
   }, [pendingNoteQuote?.token]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // FR-SPL-002 🚦 — 강조 이름은 서버가 기준점으로 거른 관계도 응답에서만. 실패·조회 전이면 0건
+  const chatMentionNames = useMemo(() => mentionNames(graph), [graph]);
   return (
     <section className="flex h-full flex-col border-l border-brief-rule bg-brief-paper">
       {/* 여닫기 버튼은 이 헤더 우측에 겹쳐 보이지만 Reader 가 고정 위치로 그린다 —
@@ -245,6 +248,9 @@ export default function SsabiPanel({
             onSelectConversation={onSelectChatConversation}
             onDeleteConversation={onDeleteChatConversation}
             onQuoteDismissed={onQuoteDismissed}
+            mentionNames={chatMentionNames}
+            totalPages={totalPages ?? 0}
+            onJumpToPage={onJumpToNote}
           />
         ) : null}
       </div>

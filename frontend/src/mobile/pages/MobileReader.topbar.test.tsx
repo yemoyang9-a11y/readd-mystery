@@ -99,17 +99,17 @@ describe('모바일 읽기 화면 윗줄', () => {
     renderReader();
     await openedAt(11);
     const bar = screen.getByRole('status');
-    expect(bar).toHaveTextContent('11쪽을 보는 중');
-    await user.click(within(bar).getByRole('button', { name: '21쪽으로 돌아가기' }));
+    expect(bar).toHaveTextContent('p.11 보는 중');
+    await user.click(within(bar).getByRole('button', { name: 'p.21로 돌아가기' }));
     await openedAt(21);
-    expect(screen.queryByText(/쪽을 보는 중/)).toBeNull();
+    expect(screen.queryByText(/보는 중/)).toBeNull();
   });
 
   test('목차에서 옮겨 오지 않았으면 돌아가기 줄이 없다', async () => {
     renderReader();
     await openedAt(21);
-    expect(screen.queryByText(/쪽을 보는 중/)).toBeNull();
-    expect(screen.queryByRole('button', { name: /쪽으로 돌아가기/ })).toBeNull();
+    expect(screen.queryByText(/보는 중/)).toBeNull();
+    expect(screen.queryByRole('button', { name: /로 돌아가기/ })).toBeNull();
   });
 
   test('돌아가기 줄의 닫기를 누르면 줄만 사라지고 쪽은 그대로다', async () => {
@@ -118,7 +118,7 @@ describe('모바일 읽기 화면 윗줄', () => {
     renderReader();
     await openedAt(11);
     await user.click(within(screen.getByRole('status')).getByRole('button', { name: '닫기' }));
-    expect(screen.queryByText(/쪽을 보는 중/)).toBeNull();
+    expect(screen.queryByText(/보는 중/)).toBeNull();
     await openedAt(11);
     expect(sendProgressMock.mock.calls.map(([, page]) => page)).toEqual([11]);
   });

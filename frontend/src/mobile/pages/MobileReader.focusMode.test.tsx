@@ -143,11 +143,11 @@ describe('FR-PRG-001: 모바일 읽기 화면 한 번 탭 = 본문만', () => {
     setPendingJump('takryu', 11);
     renderReader();
     await openedAt(11);
-    expect(screen.getByRole('status')).toHaveTextContent('25쪽으로 돌아가기');
+    expect(screen.getByRole('status')).toHaveTextContent('p.25로 돌아가기');
     tap();
     expectControlsHidden();
     tap();
-    expect(screen.getByRole('status')).toHaveTextContent('25쪽으로 돌아가기');
+    expect(screen.getByRole('status')).toHaveTextContent('p.25로 돌아가기');
   });
 
   test('좌우로 밀면 쪽만 넘어가고 숨김은 바뀌지 않는다', async () => {
