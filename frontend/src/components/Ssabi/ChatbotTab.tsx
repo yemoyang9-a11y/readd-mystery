@@ -547,7 +547,7 @@ export default function ChatbotTab({
           </div>
 
           <form
-            className="mt-4 flex items-end gap-2 rounded-3xl border border-brief-rule bg-white px-4 py-2.5"
+            className="mt-4 flex items-end gap-2 rounded-3xl border border-brief-rule bg-white py-1.5 pl-4 pr-1.5 focus-within:border-brief-accent"
             onSubmit={(event) => {
               event.preventDefault();
               if (!query.trim() || streaming) return;
@@ -581,23 +581,33 @@ export default function ChatbotTab({
                 }
               }}
               className="max-h-32 flex-1 resize-none overflow-y-auto bg-transparent py-1 text-xs leading-[1.6] mobile:max-h-[9.6rem] mobile:text-[16px] text-brief-ink outline-none placeholder:text-brief-muted"
-              placeholder="스포일러 없이 답해줄게요, 궁금한 걸 물어보세요"
+              // 2026-11-18 대표 지시 — 한 줄에 들어가는 짧은 문구. 스포일러 약속은 첫 인사에서 한다
+              placeholder="아모에게 물어보세요"
             />
             <button
               type="submit"
               disabled={streaming || (requireTextToSend && !query.trim())}
               aria-label="질문 보내기"
-              className="flex h-7 w-7 shrink-0 items-center justify-center self-end rounded-full bg-brief-accent mobile:h-11 mobile:w-11 text-white disabled:opacity-40"
+              // 글이 있으면 강조색, 없으면 회색 — 흐린 분홍(opacity) 대신 상태를 색으로 구분한다
+              className={`flex h-8 w-8 shrink-0 items-center justify-center self-end rounded-full transition-colors mobile:h-11 mobile:w-11 ${
+                query.trim() && !streaming
+                  ? 'bg-brief-accent text-white active:scale-95'
+                  : 'bg-brief-rule text-brief-muted'
+              }`}
             >
               <svg
+                data-icon="arrow-up"
                 viewBox="0 0 24 24"
-                width="14"
-                height="14"
-                fill="currentColor"
+                width="18"
+                height="18"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
                 aria-hidden="true"
-                className="-rotate-45"
               >
-                <path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z" />
+                <path d="M12 19V5M5.5 11.5 12 5l6.5 6.5" />
               </svg>
             </button>
           </form>
