@@ -12,6 +12,7 @@ import RequireSession from './components/auth/RequireSession';
 import { LOGIN_PATH, PUBLIC_ROUTE_PATHS } from './utils/authRedirect';
 import MobileHome from './mobile/pages/MobileHome';
 import MobileFeedback from './mobile/pages/MobileFeedback';
+import MobileCommunityHub from './mobile/pages/MobileCommunityHub';
 import MobileBookRedirect from './mobile/pages/MobileBookRedirect';
 import MobileNotFound from './mobile/pages/MobileNotFound';
 import { isMobileDevice } from './mobile/device';
@@ -62,6 +63,7 @@ export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
         { path: APP_ROUTES.shelf, element: <Shelf /> },
         { path: APP_ROUTES.my, element: <My /> },
         { path: APP_ROUTES.feedback, element: isMobile ? <MobileFeedback /> : <NotFound /> },
+        { path: APP_ROUTES.community, element: isMobile ? <MobileCommunityHub /> : <NotFound /> },
       ],
     },
     isMobile

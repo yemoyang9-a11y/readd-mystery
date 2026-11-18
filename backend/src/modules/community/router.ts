@@ -5,9 +5,11 @@ import type { CutoffService } from '../reading-state/cutoff.service';
 import { attachReaderIdentity, resolveReaderId, UUID_PATTERN } from '../auth/reader-id.middleware';
 import type {
   CommentRow,
+  CommunityEngagementRepository,
   CommunityRepository,
   PostKind,
   PostRow,
+  PostSort,
   ReportTarget,
 } from './repository';
 
@@ -19,6 +21,7 @@ const POSTS_PER_HOUR = 10;
 const COMMENTS_PER_HOUR = 30;
 const KINDS: PostKind[] = ['theory', 'review'];
 const TARGETS: ReportTarget[] = ['post', 'comment'];
+const SORTS: PostSort[] = ['new', 'popular'];
 const DELETED_BODY = '삭제된 글입니다';
 
 function nicknameFor(readerId: string, bookId: string): string {
@@ -30,8 +33,22 @@ function encodeCursor(seq: number): string {
 }
 
 function decodeCursor(raw: string): number | null {
-  const seq = Number(Buffer.from(raw, 'base64url').toString());
+  const text = Buffer.from(raw, 'base64url').toString();
+  if (!/^\d+$/.test(text)) return null;
+  const seq = Number(text);
   return Number.isSafeInteger(seq) && seq > 0 ? seq : null;
+}
+
+// 인기순은 공감 수가 바뀌어 seq 커서로 이어 받을 수 없다 — 건너뛸 글 수를 커서로 쓴다.
+// 최신순 커서와 섞이지 않게 앞에 'o:' 를 붙인다.
+function encodeOffsetCursor(offset: number): string {
+  return Buffer.from(`o:${offset}`).toString('base64url');
+}
+
+function decodeOffsetCursor(raw: string): number | null {
+  const match = /^o:(\d+)$/.exec(Buffer.from(raw, 'base64url').toString());
+  const offset = match ? Number(match[1]) : NaN;
+  return Number.isSafeInteger(offset) && offset > 0 ? offset : null;
 }
 
 function trimmedBody(raw: unknown, max: number): string | null {
@@ -53,15 +70,19 @@ function tooMany(res: Response) {
 
 export function createCommunityRouter({
   community,
+  engagement,
   content,
   cutoff,
 }: {
   community: CommunityRepository;
-  content: Pick<ContentRepository, 'findReadiness'>;
+  /** 공감·인기순·허브. 없으면 그 경로를 열지 않는다 (2026-11-18 대표 지시) */
+  engagement?: CommunityEngagementRepository;
+  content: Pick<ContentRepository, 'findReadiness'> & Partial<Pick<ContentRepository, 'findCatalog'>>;
   cutoff: Pick<CutoffService, 'getCutoffSnapshot'>;
 }): Router {
   const router = express.Router();
   router.use('/books/:bookId/community', express.json(), attachReaderIdentity());
+  router.use('/community', attachReaderIdentity());
 
   function publicPost(row: PostRow, readerId: string, bookId: string) {
     return {
@@ -71,6 +92,9 @@ export function createCommunityRouter({
       nickname: row.deleted ? null : nicknameFor(row.reader_id, bookId),
       created_at: row.created_at,
       comment_count: row.comment_count,
+      // 삭제된 글은 공감을 받지 않고 개수도 보이지 않는다
+      like_count: row.deleted ? 0 : row.like_count ?? 0,
+      liked_by_me: !row.deleted && row.liked_by_me === true,
       is_mine: !row.deleted && row.reader_id === readerId,
       deleted: row.deleted,
     };
@@ -111,30 +135,51 @@ export function createCommunityRouter({
       const { bookId } = req.params;
       const kind = req.query.kind;
       const cursor = req.query.cursor;
+      const sort = (req.query.sort ?? 'new') as PostSort;
       if (kind !== undefined && !KINDS.includes(kind as PostKind)) {
         badRequest(res, 'kind must be theory or review');
         return;
       }
+      if (!SORTS.includes(sort)) {
+        badRequest(res, 'sort must be new or popular');
+        return;
+      }
       let before: number | undefined;
+      let offset: number | undefined;
       if (cursor !== undefined) {
-        const decoded = typeof cursor === 'string' ? decodeCursor(cursor) : null;
+        const decoded =
+          typeof cursor !== 'string'
+            ? null
+            : sort === 'popular'
+              ? decodeOffsetCursor(cursor)
+              : decodeCursor(cursor);
         if (decoded === null) {
           badRequest(res, 'cursor is invalid');
           return;
         }
-        before = decoded;
+        if (sort === 'popular') offset = decoded;
+        else before = decoded;
       }
+      // FR-QNA-004 🚦 — 게이트를 먼저 지난다. 미완독이면 저장소를 부르지 않는다
       const readerId = await authorize(req, res);
       if (!readerId) return;
       const rows = await community.listPosts(bookId, {
         kind: kind as PostKind | undefined,
         before,
+        offset,
+        sort,
+        viewerId: readerId,
         limit: PAGE_SIZE + 1,
       });
       const page = rows.slice(0, PAGE_SIZE);
+      const hasMore = rows.length > PAGE_SIZE;
       res.json({
         posts: page.map((row) => publicPost(row, readerId, bookId)),
-        next_cursor: rows.length > PAGE_SIZE ? encodeCursor(page[page.length - 1].seq) : null,
+        next_cursor: !hasMore
+          ? null
+          : sort === 'popular'
+            ? encodeOffsetCursor((offset ?? 0) + PAGE_SIZE)
+            : encodeCursor(page[page.length - 1].seq),
       });
     } catch (error) {
       next(error);
@@ -279,6 +324,77 @@ export function createCommunityRouter({
       next(error);
     }
   });
+
+  if (engagement) {
+    // 2026-11-18 대표 지시 — 공감. 완독 게이트(authorize)를 지난 독자만 누르고 취소한다
+    for (const method of ['post', 'delete'] as const) {
+      router[method]('/books/:bookId/community/posts/:postId/like', async (req, res, next) => {
+        try {
+          const { bookId, postId } = req.params;
+          const readerId = await authorize(req, res);
+          if (!readerId) return;
+          const done = UUID_PATTERN.test(postId)
+            ? method === 'post'
+              ? await engagement.likePost(bookId, postId, readerId)
+              : await engagement.unlikePost(bookId, postId, readerId)
+            : false;
+          if (!done) {
+            notFound(res, 'Post not found');
+            return;
+          }
+          res.json(await engagement.likeState(bookId, postId, readerId));
+        } catch (error) {
+          next(error);
+        }
+      });
+    }
+  }
+
+  const findCatalog = content.findCatalog;
+  if (engagement && findCatalog) {
+    /**
+     * 커뮤니티 허브 — 공개 도서별 커뮤니티 입구 (2026-11-18 대표 지시).
+     *
+     * 완독 여부는 도서마다 getCutoffSnapshot 의 is_complete 하나로만 정한다 (FR-QNA-004 🚦).
+     * 잠긴 도서에는 글 수·제목·글 내용을 넣지 않고, 글 수 조회 자체를 하지 않는다
+     * (대표 결정 2026-11-17 ④ "미완독자에게는 글·개수·제목을 보이지 않는다", 절대 규칙 7).
+     * 기준점 조회가 실패한 도서는 잠김으로 내린다 (FR-SPL-005 🚦 실패 = 미노출).
+     * 싸비 미완비 도서는 커뮤니티에 들어갈 수 없으므로 목록에서 뺀다 (R12 🚦).
+     */
+    router.get('/community/books', async (req, res, next) => {
+      try {
+        const readerId = resolveReaderId(req);
+        if (!readerId || !UUID_PATTERN.test(readerId)) {
+          badRequest(res, 'X-Device-Id header is required');
+          return;
+        }
+        const catalog = (await findCatalog()).filter((book) => book.ssabi_ready === true);
+        const books = await Promise.all(
+          catalog.map(async (book) => {
+            const card = {
+              book_id: book.book_id,
+              title: book.title,
+              author: book.author,
+              cover_url: book.cover_url,
+            };
+            const complete = await cutoff
+              .getCutoffSnapshot(readerId, book.book_id)
+              .then((snapshot) => snapshot.is_complete === true)
+              .catch(() => false);
+            if (!complete) return { ...card, access: 'locked' as const };
+            return {
+              ...card,
+              access: 'open' as const,
+              post_count: await engagement.countVisiblePosts(book.book_id),
+            };
+          })
+        );
+        res.json({ books });
+      } catch (error) {
+        next(error);
+      }
+    });
+  }
 
   return router;
 }

@@ -35,6 +35,18 @@ const TABS = [
     ),
   },
   {
+    // 2026-11-18 대표 지시 — 커뮤니티 허브
+    to: APP_ROUTES.community,
+    label: '커뮤니티',
+    end: false,
+    icon: (
+      <Icon>
+        <path d="M4 5h11v8H8l-4 3.5z" />
+        <path d="M15 9h5v7.5L17 14h-5" />
+      </Icon>
+    ),
+  },
+  {
     to: APP_ROUTES.feedback,
     label: '피드백',
     end: false,

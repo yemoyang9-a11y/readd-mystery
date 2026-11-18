@@ -38,6 +38,7 @@ export default function MobileReaderView({
   canToggleChrome = false,
   onToggleChrome,
   onOpenCommunity,
+  onOpenCompletion,
   onBack,
 }: {
   content: string;
@@ -58,6 +59,8 @@ export default function MobileReaderView({
   onToggleChrome?: () => void;
   /** 서버가 완독(is_complete)이라고 알려 준 독자에게만 넘긴다 — 마지막 쪽 도달은 완독이 아니다 (FR-BRF-005 🚦) */
   onOpenCommunity?: () => void;
+  /** 완독 배지를 누르면 완독 화면을 다시 연다 (2026-11-18 대표 지시). onOpenCommunity 와 같은 조건에서만 넘긴다 */
+  onOpenCompletion?: () => void;
   onBack?: () => void;
 }) {
   const theme = READER_THEMES[prefs.theme];
@@ -225,9 +228,24 @@ export default function MobileReaderView({
               data-testid="completion-block"
               className="mt-12 whitespace-normal border-t border-brief-rule pt-8 text-center font-dashSans"
             >
-              <p className="m-0 font-dashSerif text-[20px] font-bold" style={darkInk}>
-                완독했어요
-              </p>
+              {onOpenCompletion ? (
+                <button
+                  type="button"
+                  data-track="completion-reopen"
+                  onClick={onOpenCompletion}
+                  className="m-0 min-h-11 rounded-full px-4 font-dashSerif text-[20px] font-bold text-brief-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8f1d35]"
+                  style={darkInk}
+                >
+                  <span>완독했어요</span>
+                  <span aria-hidden="true" className="ml-1 font-dashSans text-[18px] font-semibold">
+                    ›
+                  </span>
+                </button>
+              ) : (
+                <p className="m-0 font-dashSerif text-[20px] font-bold" style={darkInk}>
+                  완독했어요
+                </p>
+              )}
               <button
                 type="button"
                 data-track="community-open"

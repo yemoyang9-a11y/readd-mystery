@@ -292,6 +292,8 @@ async function pgRepos(): Promise<{ repos: Repos; close: () => Promise<void> }> 
   const m022 = fs.readFileSync(path.join(MIGRATIONS, '022_community_moderation.sql'), 'utf8');
   await pool.query(m022);
   await pool.query(m022); // IF NOT EXISTS — 두 번 적용해도 그대로
+  // 2026-11-18 공감 — 글 조회가 공감 수를 함께 읽는다
+  await pool.query(fs.readFileSync(path.join(MIGRATIONS, '024_community_likes.sql'), 'utf8'));
   const db = { query: (sql: string, params?: unknown[]) => pool.query(sql, params) };
   return {
     repos: {

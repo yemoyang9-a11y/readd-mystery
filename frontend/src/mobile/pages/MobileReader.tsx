@@ -18,6 +18,9 @@ import TocJumpDialog from '../../components/Reader/TocJumpDialog';
 import { useBackToBook } from '../../hooks/useBackToBook';
 import { BOOK_ROUTES } from '../../utils/routes';
 import { useCommunityAccess } from '../community/useCommunityAccess';
+import CompletionScreen from '../community/CompletionScreen';
+import { hasSeenCompletion, markCompletionSeen } from '../community/completionSeen';
+import { APP_ROUTES } from '../../utils/routes';
 
 const FOCUS_TOGGLE_CLASS =
   'sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-1/2 focus-visible:top-[calc(var(--safe-top)+6px)] focus-visible:z-[60] focus-visible:-translate-x-1/2 focus-visible:inline-flex focus-visible:min-h-11 focus-visible:items-center focus-visible:whitespace-nowrap focus-visible:rounded-full focus-visible:border focus-visible:border-brief-ink focus-visible:bg-white focus-visible:px-4 focus-visible:font-dashSans focus-visible:text-[13px] focus-visible:font-bold focus-visible:text-brief-ink focus-visible:shadow-brief-soft-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brief-accent focus-visible:ring-offset-2 focus-visible:aria-pressed:bg-brief-accent-soft focus-visible:aria-pressed:text-brief-accent';
@@ -38,7 +41,7 @@ export default function MobileReader() {
 // FR-PRG-003 🚦 FR-BRF-001
 function MobileReadingSession() {
   const { bookId = '' } = useParams();
-  const { entryError, retryEntry, frontierConfirm, page, pageError, retryPage, currentPage, totalPages, chapters, jumpOrigin, returnToOrigin, dismissJumpOrigin, moveTo, requestTocJump, tocJumpConfirm, confirmTocJump, cancelTocJump, highlightedQuote, panelOpen, togglePanel, ssabiPanelProps, quote } =
+  const { entryError, retryEntry, frontierConfirm, page, pageError, retryPage, currentPage, totalPages, chapters, bookTitle, jumpOrigin, returnToOrigin, dismissJumpOrigin, moveTo, requestTocJump, tocJumpConfirm, confirmTocJump, cancelTocJump, highlightedQuote, panelOpen, togglePanel, ssabiPanelProps, quote } =
     useReadingSession(bookId);
   const backToBook = useBackToBook(bookId);
   const navigate = useNavigate();
@@ -52,6 +55,20 @@ function MobileReadingSession() {
   // FR-BRF-005 🚦 — 완독은 서버의 is_complete 로만 안다. 마지막 쪽이 화면에 떴을 때만 묻는다
   const onLastPage = page !== null && page.page_no === currentPage && page.next_page === null;
   const communityAccess = useCommunityAccess(bookId, onLastPage, frontierConfirm);
+  // 2026-11-18 대표 지시 — 완독 화면. 서버가 완독(open)이라고 답했을 때만, 책마다 한 번 저절로 뜬다.
+  // 닫으면 기억하고, 마지막 쪽의 "완독했어요" 배지로 다시 연다. FR-BRF-005 🚦
+  const [completionOpen, setCompletionOpen] = useState(false);
+  const completionReturnRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (communityAccess === 'open' && !hasSeenCompletion(bookId)) setCompletionOpen(true);
+    if (communityAccess !== 'open') setCompletionOpen(false);
+  }, [communityAccess, bookId]);
+  function leaveCompletion(then?: () => void) {
+    markCompletionSeen(bookId);
+    setCompletionOpen(false);
+    then?.();
+  }
+  const openCommunity = () => navigate(BOOK_ROUTES.community.replace(':bookId', bookId));
 
   useEffect(() => {
     if (panelOpen) setTocOpen(false);
@@ -82,9 +99,13 @@ function MobileReadingSession() {
         chromeHidden={chromeHidden}
         canToggleChrome={!panelOpen && !tocOpen && !prefsOpen}
         onToggleChrome={() => setChromeHidden((hidden) => !hidden)}
-        onOpenCommunity={
+        onOpenCommunity={communityAccess === 'open' ? openCommunity : undefined}
+        onOpenCompletion={
           communityAccess === 'open'
-            ? () => navigate(BOOK_ROUTES.community.replace(':bookId', bookId))
+            ? () => {
+                completionReturnRef.current = document.activeElement as HTMLElement | null;
+                setCompletionOpen(true);
+              }
             : undefined
         }
         onBack={backToBook}
@@ -194,6 +215,18 @@ function MobileReadingSession() {
           onMoveOnly={() => confirmTocJump('move')}
           onReadThrough={() => confirmTocJump('read_through')}
           onCancel={cancelTocJump}
+        />
+      ) : null}
+      {completionOpen && communityAccess === 'open' ? (
+        <CompletionScreen
+          bookId={bookId}
+          bookTitle={bookTitle ?? ''}
+          totalPages={totalPages}
+          noteCount={ssabiPanelProps.notesFailed ? null : ssabiPanelProps.notes.length}
+          returnFocusRef={completionReturnRef}
+          onCommunity={() => leaveCompletion(openCommunity)}
+          onHome={() => leaveCompletion(() => navigate(APP_ROUTES.home))}
+          onClose={() => leaveCompletion()}
         />
       ) : null}
       {prefsOpen ? (
