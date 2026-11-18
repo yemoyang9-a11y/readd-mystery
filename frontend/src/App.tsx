@@ -1,32 +1,29 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentType } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import Home from './pages/Home';
 import Search from './pages/Search';
 import Shelf from './pages/Shelf';
 import My from './pages/My';
 import BookDetail from './pages/BookDetail';
-import Briefing from './pages/Briefing';
-import Reader from './pages/Reader';
 import NotFound from './pages/NotFound';
 import AuthCallback from './pages/AuthCallback';
 import MobileHome from './mobile/pages/MobileHome';
 import MobileFeedback from './mobile/pages/MobileFeedback';
-import MobileReader from './mobile/pages/MobileReader';
-import MobileBriefing from './mobile/pages/MobileBriefing';
-import MobileCommunity from './mobile/pages/MobileCommunity';
 import MobileBookRedirect from './mobile/pages/MobileBookRedirect';
 import MobileNotFound from './mobile/pages/MobileNotFound';
 import { isMobileDevice } from './mobile/device';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import Loading from './components/common/Loading';
 import AppShell from './components/Layout/AppShell';
 import RouteFade from './components/Layout/RouteFade';
 import { APP_ROUTES, BOOK_ROUTES } from './utils/routes';
-import AdminLayout from './admin/AdminLayout';
-import AnalyticsPage from './admin/AnalyticsPage';
-import BooksPage from './admin/BooksPage';
-import ReviewPage from './admin/ReviewPage';
-import CommunityReportsPage from './admin/CommunityReportsPage';
 import { initAnalytics } from './services/analytics';
+
+// NFR-PERF: 읽기·관계도·관리자 코드는 해당 화면에 진입할 때 받는다.
+async function fadedPage(load: Promise<{ default: ComponentType }>) {
+  const { default: Page } = await load;
+  return { element: <RouteFade><Page /></RouteFade> };
+}
 
 /**
  * 라우팅.
@@ -54,26 +51,26 @@ export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
         },
     {
       path: BOOK_ROUTES.briefing,
-      element: <RouteFade>{isMobile ? <MobileBriefing /> : <Briefing />}</RouteFade>,
+      lazy: () => fadedPage(isMobile ? import('./mobile/pages/MobileBriefing') : import('./pages/Briefing')),
     },
     {
       path: BOOK_ROUTES.reader,
-      element: <RouteFade>{isMobile ? <MobileReader /> : <Reader />}</RouteFade>,
+      lazy: () => fadedPage(isMobile ? import('./mobile/pages/MobileReader') : import('./pages/Reader')),
     },
     {
       path: BOOK_ROUTES.community,
-      element: <RouteFade>{isMobile ? <MobileCommunity /> : <NotFound />}</RouteFade>,
+      lazy: () => fadedPage(isMobile ? import('./mobile/pages/MobileCommunity') : Promise.resolve({ default: NotFound })),
     },
     { path: '/auth/callback', element: <AuthCallback /> },
     // FR-ADM-006 🚦
     {
       path: '/admin',
-      element: <AdminLayout />,
+      lazy: async () => ({ Component: (await import('./admin/AdminLayout')).default }),
       children: [
-        { index: true, element: <AnalyticsPage /> },
-        { path: 'books', element: <BooksPage /> },
-        { path: 'books/:bookId/review', element: <ReviewPage /> },
-        { path: 'community', element: <CommunityReportsPage /> },
+        { index: true, lazy: async () => ({ Component: (await import('./admin/AnalyticsPage')).default }) },
+        { path: 'books', lazy: async () => ({ Component: (await import('./admin/BooksPage')).default }) },
+        { path: 'books/:bookId/review', lazy: async () => ({ Component: (await import('./admin/ReviewPage')).default }) },
+        { path: 'community', lazy: async () => ({ Component: (await import('./admin/CommunityReportsPage')).default }) },
       ],
     },
     { path: '*', element: <RouteFade>{isMobile ? <MobileNotFound /> : <NotFound />}</RouteFade> },
@@ -105,7 +102,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <RouterProvider router={router} />
+      <RouterProvider router={router} fallbackElement={<Loading />} />
     </ErrorBoundary>
   );
 }

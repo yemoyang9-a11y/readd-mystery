@@ -66,3 +66,16 @@ describe('원문 출력 상한 (답변당 합계 200자)', () => {
     expect(r.violations).not.toContain('verbatim_over_limit');
   });
 });
+
+describe('원문 출력 상한: 유니코드 글자 경계', () => {
+  const source = Array.from({ length: 250 }, (_, i) => String.fromCodePoint(0x20000 + i)).join('');
+  test.each([200, 201])('%i개의 보조 평면 한자도 글자 단위로 센다', (length) => {
+    const answer = Array.from(source).slice(0, length).join('');
+    const result = guardAnswer(answer, { cutoff: 1, pages: [{ page_no: 1, content: source }] });
+    expect(result.violations.includes('verbatim_over_limit')).toBe(length > 200);
+  });
+  test('앞의 이모지가 뒤의 원문 201자 인식을 흐트러뜨리지 않는다', () => {
+    const answer = '😀'.repeat(210) + SOURCE.slice(0, 201);
+    expect(guardAnswer(answer, { cutoff: 40, pages }).violations).toContain('verbatim_over_limit');
+  });
+});

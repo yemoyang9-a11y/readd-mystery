@@ -57,7 +57,7 @@ export function createReadingStateServices(pool: Pool): ReadingStateServices {
   const conversationHistory = createPgConversationHistoryRepository(db);
 
   const cutoffService = createCutoffService({ positions, books });
-  const progressService = createProgressService({ positions });
+  const progressService = createProgressService({ positions, books });
   const sessionService = createSessionService({ positions, books, sessions, clock: systemClock });
   const briefingService = createBriefingService({ cutoffService, books, savedRecap, positions });
   const recapService = createRecapService({

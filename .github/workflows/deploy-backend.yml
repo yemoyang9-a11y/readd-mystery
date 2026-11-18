@@ -29,11 +29,13 @@ on:
       - '.github/workflows/deploy-backend.yml'
   workflow_dispatch:
 
-# 같은 브랜치의 배포가 겹치면 뒤엣것만 남긴다 — 앞선 배포를 취소해
-# 두 배포가 동시에 머신을 갈아치우는 상황을 막는다
+# PR 검증은 최신 요청으로 대체한다. 진행 중인 운영 배포는 중간에 취소하지 않는다.
 concurrency:
   group: deploy-backend-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
 
 jobs:
   test:
@@ -45,6 +47,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
 
       # Node 22 가 기본 번들하는 npm 10.x 에는 `npm ci` + optionalDependencies 조합에서
       # EBADPLATFORM 오탐이 나는 회귀가 있다(2026-08-23 확인). npm 11 에서는 재현되지 않는다.
@@ -55,6 +59,14 @@ jobs:
         working-directory: backend
         run: npm ci
 
+      - name: Lint production sources
+        working-directory: backend
+        run: npm run lint
+
+      - name: Audit production dependencies
+        working-directory: backend
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Typecheck
         working-directory: backend
         run: npx tsc --noEmit
@@ -62,7 +74,15 @@ jobs:
       # 스포일러 차단이 이 프로젝트의 본질이다 — 게이트 테스트가 깨진 채로 배포하지 않는다
       - name: Test
         working-directory: backend
-        run: npm test
+        run: npm test -- --runInBand
+
+      - name: Build runtime image
+        run: docker build -t readd-backend:ci backend
+
+      - name: Verify non-root upload workspace
+        run: >-
+          docker run --rm --entrypoint sh readd-backend:ci -c
+          'test "$(id -u)" != 0 && mkdir -p /app/data/uploads /app/data/generated/ci && touch /app/data/uploads/ci.txt'
 
   deploy:
     name: Fly.io 배포

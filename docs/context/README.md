@@ -21,7 +21,7 @@
 | --- | --- | --- |
 | 서비스 | 추리소설 전용 독서 플랫폼. 본문을 우리 사이트에서 읽는다 | 13, 19 |
 | 기능 | 추리 노트, 인물관계도, 타임라인(다 읽은 장만 장별 간략 요약), AI 친구. 이어 읽기는 기본 | 31 |
-| 스포일러 기준 | 가장 멀리 읽은 쪽(`max_page`). 목차로 그보다 뒤로 건너뛰면 확인 창 | 22 |
+| 스포일러 기준 | `read_pages`에서 1쪽부터 이어진 읽음 범위. 목차 이동과 읽음 확인을 구분하고 `max_page`는 확인 카드에만 사용 | 2026-11-17 A + C안 |
 | AI 친구 원칙 | 같이 추론하는 친구. 독자 가설을 판정·반박하지 않고 결말을 말하지 않는다. 물을 때만 답한다 | 23 |
 | 원문 출력 상한 | 답변 하나에 원문을 그대로 옮기는 양은 합계 200자까지 | 34 |
 | 핵심 고객 | 추리소설을 평소에 읽으며 읽는 동안 직접 범인을 맞혀 보는 20~30대. 전자책 독자로 한정하지 않음 | 27 |
@@ -41,17 +41,18 @@
 
 | 기능 | 근거 |
 | --- | --- |
-| 기준 쪽수 = 가장 멀리 읽은 쪽 | `backend/migrations/012_reading_max_page.sql`, `reading-state/cutoff.service.ts`, `frontend/src/components/Reader/TocJumpDialog.tsx` |
+| 기준 쪽수 = 연속 읽음 + 독자 확인 | `backend/migrations/019_read_frontier.sql`, `reading-state/cutoff.service.ts`, `frontend/src/components/Reader/TocJumpDialog.tsx` |
 | 업로드 작업 실행기·관리자 검수·승인 API | `backend/src/modules/ingest/`, `013_ingest_jobs.sql` |
 | 인물 정리·관계 교차 추출·반대 검토 | 커밋 3333fa0 |
 | 챗봇 하네스(질문 분류, 출력 검사, 고정 답변) | `backend/src/modules/chatbot/harness/` |
 | 추리 노트(저장, 패널 탭, 챗봇 연결) | `014_reading_notes.sql`, `frontend/src/components/Ssabi/NotesTab.tsx` |
 | 관리자 대시보드·이용 기록 | `015_analytics.sql`, `frontend` `/admin` |
-| 완독자 커뮤니티 게시판 | `016_community.sql` (결정 기록에는 없는 기능, 코드에만 있음) |
+| 완독자 커뮤니티 게시판 | `016_community.sql` (2026-11-17 출시 범위에 포함 결정, 서버 완독 게이트) |
 | 모바일 화면 | 2026-11-06 모바일 설계, 11-16 브랜드 색·아모 교체 |
 
-**브랜치에만 있음**
-- `feat/chatbot-verbatim-limit`: 챗봇 원문 출력 상한 답변당 합계 200자(커밋 78787c8). 미병합
+**추가 구현·병합됨**
+- 챗봇 원문 출력 상한 답변당 합계 200자(78787c8, 7657e59).
+- 사건 정리·장면 추출·암시형 답 검사·검색 순위 융합. 상세 완료 기록은 [tasks.md](tasks.md).
 
 **결정과 코드가 다른 곳, 남은 작업, 미결 사항**은 [tasks.md](tasks.md)에서 관리한다.
 

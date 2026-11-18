@@ -10,7 +10,7 @@ function setup() {
   const { positions, books } = makeSeededFakes();
   const clock = new FakeClock(new Date('2026-11-10T00:00:00Z'));
   const sessions = new FakeReadingSessionRepository(clock);
-  const progress = createProgressService({ positions });
+  const progress = createProgressService({ positions, books });
   const session = createSessionService({ positions, books, sessions, clock });
   const cutoff = createCutoffService({ positions, books });
 

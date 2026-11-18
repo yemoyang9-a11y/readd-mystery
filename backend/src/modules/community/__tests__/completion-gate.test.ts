@@ -89,7 +89,7 @@ describe('완독자 커뮤니티 — 완독 게이트 (실제 기준점 결정�
   beforeEach(async () => {
     const { positions, books } = makeSeededFakes();
     books.set(BOOK, { total_pages: LAST_PAGE, chapters: CHAPTERS });
-    progress = createProgressService({ positions });
+    progress = createProgressService({ positions, books });
     const cutoff = createCutoffService({ positions, books });
     let seq = 0;
     go = (page, from, claim) =>

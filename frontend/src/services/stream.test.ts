@@ -41,8 +41,8 @@ describe('SSE 스트림 수신', () => {
   });
 
   it('네트워크 청크가 프레임 중간에서 잘려도 이어 붙여 읽는다', async () => {
-    const frames = await collect(streamOf('data: {"type":"del', 'ta","text":"고무신"}\n\n'));
-    expect(frames).toEqual([{ type: 'delta', text: '고무신' }]);
+    const frames = await collect(streamOf('data: {"type":"del', 'ta","text":"고무신"}\n\ndata: {"type":"done"}\n\n'));
+    expect(frames).toEqual([{ type: 'delta', text: '고무신' }, { type: 'done' }]);
   });
 
   it('한 청크에 여러 프레임이 몰려 와도 모두 읽는다', async () => {

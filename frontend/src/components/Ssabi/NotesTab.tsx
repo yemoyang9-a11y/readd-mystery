@@ -83,7 +83,7 @@ function NoteEditor({
         aria-modal="true"
         aria-label="단서·가설 적기"
         tabIndex={-1}
-        className="w-full max-w-[420px] rounded-brief-panel border border-brief-rule bg-brief-paper p-5 font-dashSans text-brief-ink shadow-brief-soft outline-none"
+        className="max-h-[calc(100dvh-2rem)] overflow-y-auto w-full max-w-[420px] rounded-brief-panel border border-brief-rule bg-brief-paper p-5 font-dashSans text-brief-ink shadow-brief-soft outline-none"
       >
         <div className="flex items-center justify-between">
           <h2 className="font-dashSerif text-base font-extrabold">단서·가설 적기</h2>

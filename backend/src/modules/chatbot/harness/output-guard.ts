@@ -103,8 +103,9 @@ function quoteSegments(quote: string): string[] {
 const IGNORED = /[\s"'“”‘’「」『』]/u;
 
 function ngrams(text: string, into: Set<string>): void {
-  const c = compact(text);
-  for (let i = 0; i + VERBATIM_RUN <= c.length; i++) into.add(c.slice(i, i + VERBATIM_RUN));
+  const c = Array.from(compact(text));
+  for (let i = 0; i + VERBATIM_RUN <= c.length; i++)
+    into.add(c.slice(i, i + VERBATIM_RUN).join(''));
 }
 
 /**
@@ -143,10 +144,10 @@ function measureVerbatim(answer: string, grams: Set<string>, excluded: Set<strin
       index.push(i);
     }
   });
-  const text = chars.join('');
   const covered = new Array<boolean>(chars.length).fill(false);
   for (let i = 0; i + VERBATIM_RUN <= chars.length; i++) {
-    const gram = text.slice(i, i + VERBATIM_RUN);
+    // FR-QNA-004 🚦 — 원문·답변·위치 모두 같은 유니코드 코드 포인트 단위를 쓴다.
+    const gram = chars.slice(i, i + VERBATIM_RUN).join('');
     if (grams.has(gram) && !excluded.has(gram)) covered.fill(true, i, i + VERBATIM_RUN);
   }
 

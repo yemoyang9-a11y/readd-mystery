@@ -19,6 +19,7 @@ import {
 import { pool } from '../config/database';
 import { createPgNotesRepository } from '../modules/notes/pg-repository';
 import { createReadingStateServices } from '../modules/reading-state/composition';
+import { InvalidProgressError } from '../modules/reading-state/progress.service';
 import { BookNotReadyError } from '../modules/reading-state/session.service';
 import { createContentServices } from '../modules/content/composition';
 import { createSsabiServices } from '../modules/ssabi/composition';
@@ -304,6 +305,10 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
       return res.end();
     }
   } catch (error) {
+    if (error instanceof InvalidProgressError) {
+      res.status(400).json({ error: 'BAD_REQUEST', message: error.message });
+      return;
+    }
     console.error('[API] Chatbot error', { bookId, query, error });
     // SSE 열기 전 에러는 일반 JSON 응답
     return res.status(500).json({
@@ -499,6 +504,10 @@ router.post('/books/:bookId/progress', async (req: Request, res: Response) => {
       confirm: snapshot.frontier_confirm ?? null,
     });
   } catch (error) {
+    if (error instanceof InvalidProgressError) {
+      res.status(400).json({ error: 'BAD_REQUEST', message: error.message });
+      return;
+    }
     console.error('[API] progress error', { bookId, error });
     res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
@@ -538,6 +547,10 @@ router.post('/books/:bookId/progress/confirm', async (req: Request, res: Respons
       confirm: snapshot.frontier_confirm ?? null,
     });
   } catch (error) {
+    if (error instanceof InvalidProgressError) {
+      res.status(400).json({ error: 'BAD_REQUEST', message: error.message });
+      return;
+    }
     console.error('[API] progress confirm error', { bookId, error });
     res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
@@ -681,6 +694,10 @@ router.post('/books/:bookId/recap/stream', async (req: Request, res: Response) =
       res.end();
     }
   } catch (error) {
+    if (error instanceof InvalidProgressError) {
+      res.status(400).json({ error: 'BAD_REQUEST', message: error.message });
+      return;
+    }
     console.error('[API] recap error', { bookId, error });
     res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
@@ -818,6 +835,10 @@ router.get('/books/:bookId/ssabi/graph', async (req: Request, res: Response) => 
     res.setHeader('Cache-Control', 'private, no-store');
     res.json({ ...graph, applied_cutoff: K });
   } catch (error) {
+    if (error instanceof InvalidProgressError) {
+      res.status(400).json({ error: 'BAD_REQUEST', message: error.message });
+      return;
+    }
     console.error('[API] ssabi/graph error', { bookId, error });
     res.status(500).json({
       error: 'INTERNAL_ERROR',
@@ -852,6 +873,10 @@ router.get('/books/:bookId/ssabi/timeline', async (req: Request, res: Response) 
     res.setHeader('Cache-Control', 'private, no-store');
     res.json({ ...timeline, applied_cutoff: K });
   } catch (error) {
+    if (error instanceof InvalidProgressError) {
+      res.status(400).json({ error: 'BAD_REQUEST', message: error.message });
+      return;
+    }
     console.error('[API] ssabi/timeline error', { bookId, error });
     res.status(500).json({
       error: 'INTERNAL_ERROR',
@@ -897,6 +922,10 @@ router.get('/books/:bookId/ssabi/characters/:characterId', async (req: Request, 
     }
     return res.json(detail);
   } catch (error) {
+    if (error instanceof InvalidProgressError) {
+      res.status(400).json({ error: 'BAD_REQUEST', message: error.message });
+      return;
+    }
     console.error('[API] ssabi/characters error', { bookId, characterId, error });
     return res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
   }

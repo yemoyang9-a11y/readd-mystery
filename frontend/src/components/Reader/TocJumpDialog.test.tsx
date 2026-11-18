@@ -69,3 +69,19 @@ describe('TocJumpDialog', () => {
     }
   });
 });
+
+it('NFR-USE: Tab과 Shift+Tab은 확인 창 안에서 순환한다', async () => {
+  renderDialog();
+  await userEvent.tab({ shift: true });
+  expect(screen.getByRole('button', { name: '앞부분은 이미 읽었어요' })).toHaveFocus();
+  await userEvent.tab();
+  expect(screen.getByRole('button', { name: '취소' })).toHaveFocus();
+});
+
+it('NFR-USE: 부모가 다시 렌더되어도 사용자가 고른 초점을 유지한다', async () => {
+  const { rerender } = render(<TocJumpDialog targetPage={200} onCancel={() => {}} onMoveOnly={() => {}} onReadThrough={() => {}} />);
+  await userEvent.tab();
+  expect(screen.getByRole('button', { name: '이동만 하기' })).toHaveFocus();
+  rerender(<TocJumpDialog targetPage={200} onCancel={() => {}} onMoveOnly={() => {}} onReadThrough={() => {}} />);
+  expect(screen.getByRole('button', { name: '이동만 하기' })).toHaveFocus();
+});

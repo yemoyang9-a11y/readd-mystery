@@ -71,7 +71,7 @@ export function createAdminRouter(deps: {
       if (typeof req.body !== 'string' || req.body.trim() === '')
         return badRequest(res, 'text/plain body is required');
 
-      const text = req.body.replace(/^﻿/, '').replace(/\r\n?/g, '\n');
+      const text = req.body.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
       if (parseChapters(text).length === 0)
         return badRequest(res, 'no chapter headers ("번호 제목") found in text');
 
@@ -97,7 +97,9 @@ export function createAdminRouter(deps: {
           job_id: result.job.job_id,
         });
       }
-      void runner.startJob(result.job.job_id);
+      void runner.startJob(result.job.job_id).catch((error) => {
+        console.error('[ingest] start failed', { jobId: result.job.job_id, error });
+      });
       return res.status(201).json({ book_id: result.job.book_id, job_id: result.job.job_id });
     })
   );
@@ -132,7 +134,9 @@ export function createAdminRouter(deps: {
         return res
           .status(409)
           .json({ error: 'NOT_FAILED', message: `job status is ${job.status}` });
-      void runner.retryJob(job.job_id);
+      void runner.retryJob(job.job_id).catch((error) => {
+        console.error('[ingest] retry failed', { jobId: job.job_id, error });
+      });
       return res.status(202).json({ job_id: job.job_id });
     })
   );
@@ -183,7 +187,9 @@ export function createAdminRouter(deps: {
     '/analytics/summary',
     handle(async (req, res) => {
       if (!deps.analytics)
-        return res.status(503).json({ error: 'ANALYTICS_DISABLED', message: 'Analytics not configured' });
+        return res
+          .status(503)
+          .json({ error: 'ANALYTICS_DISABLED', message: 'Analytics not configured' });
       const from = typeof req.query.from === 'string' ? req.query.from : defaultDate(13);
       const to = typeof req.query.to === 'string' ? req.query.to : defaultDate(0);
       const valid = (d: string) => DATE_RE.test(d) && !Number.isNaN(Date.parse(`${d}T00:00:00Z`));

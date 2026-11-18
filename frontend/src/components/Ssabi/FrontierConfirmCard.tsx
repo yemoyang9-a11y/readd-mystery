@@ -22,12 +22,16 @@ export default function FrontierConfirmCard({
   onAnswer: (choice: FrontierChoice) => Promise<boolean> | boolean | void;
 }) {
   const [pending, setPending] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   async function answer(choice: FrontierChoice) {
     if (pending) return;
     setPending(true);
+    setFailed(false);
     try {
-      await onAnswer(choice);
+      if ((await onAnswer(choice)) === false) setFailed(true);
+    } catch {
+      setFailed(true);
     } finally {
       setPending(false);
     }
@@ -42,6 +46,11 @@ export default function FrontierConfirmCard({
         {prompt.furthest_page}쪽까지 넘겨 보셨어요. 거기까지 읽으셨나요? 지금은 {prompt.applied_cutoff}쪽까지를
         기준으로 보여 드려요.
       </p>
+      {failed ? (
+        <p role="alert" className="mt-2 font-dashSans text-[13px] text-brief-ink">
+          읽은 범위를 저장하지 못했어요. 다시 시도해 주세요.
+        </p>
+      ) : null}
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"

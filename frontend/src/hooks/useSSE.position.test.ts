@@ -53,6 +53,8 @@ it('reset invalidates an active stream and consumes network rejection as an erro
   expect(result.current.text).toBe('');
   expect(result.current.error).toBeNull();
   expect(result.current.streaming).toBe(false);
+  // 네트워크 예외를 내는 스트림은 의도적으로 프레임을 한 번도 생성하지 않는다.
+  // eslint-disable-next-line require-yield
   async function* broken(): AsyncGenerator<SseFrame> {
     throw new Error('network failure');
   }

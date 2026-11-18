@@ -35,6 +35,8 @@ module.exports = {
           target: 'ES2022',
           lib: ['ES2022'],
           module: 'commonjs',
+          // 각 테스트 파일은 독립 모듈이다. import 없는 테스트의 전역 선언 충돌도 막는다.
+          moduleDetection: 'force',
           moduleResolution: 'node',
           esModuleInterop: true,
           allowSyntheticDefaultImports: true,

@@ -26,7 +26,7 @@ const D = SEED_DEVICE_ID;
 function setup() {
   const { positions, books } = makeSeededFakes();
   books.set(BOOK_ID, { total_pages: 300, chapters: CHAPTERS });
-  const progress = createProgressService({ positions });
+  const progress = createProgressService({ positions, books });
   const cutoff = createCutoffService({ positions, books });
   let seq = 0;
   const go = (page: number, from_page?: number | null, claim?: 'read_through') =>

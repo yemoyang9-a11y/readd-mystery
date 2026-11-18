@@ -64,7 +64,9 @@ export function createCollector(deps: CollectorDeps) {
       try {
         const payload = body(batch);
         if (!(useBeacon && deps.beacon(payload))) deps.send(payload);
-      } catch {}
+      } catch {
+        // 이용 통계 전송 실패가 독서 흐름을 막지 않게 한다.
+      }
     }
   }
 
