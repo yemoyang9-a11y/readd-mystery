@@ -104,7 +104,8 @@ test('피드백: 싸비가 열리면 가장자리 손잡이 대신 PC와 같은 
   await expect(close).toHaveClass(/rounded-full/);
   await expect(close).toHaveClass(/border/);
   const box = (await close.boundingBox())!;
-  const title = (await page.getByRole('heading', { name: '아모의 가이드북' }).boundingBox())!;
+  // 2026-11-18 대표 지시 — 싸비 패널 머리는 책 제목이다
+  const title = (await page.getByRole('heading', { level: 2, name: '탁류' }).boundingBox())!;
   expect(box.width).toBeGreaterThanOrEqual(44);
   expect(width - (box.x + box.width)).toBeLessThanOrEqual(30);
   expect(Math.abs(box.y + box.height / 2 - (title.y + title.height / 2))).toBeLessThanOrEqual(12);

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { BOOK_ID, bookInfo } from './support/fixtures';
 import { installMockApi, type MockApiOptions } from './support/mockApi';
-import { noHorizontalScroll, overflowingTexts, smallTapTargets } from './support/layoutChecks';
+import { noHorizontalScroll } from './support/layoutChecks';
 
 const API = 'http://api.e2e.test';
 const BOOK_URL = `/books/${BOOK_ID}`;
@@ -40,62 +40,23 @@ async function open(page: Page, opts: MockApiOptions = {}) {
 
 const readButton = (page: Page) => page.getByRole('button', { name: '이어서 읽기' });
 
-test.describe('모바일 작품 페이지', () => {
-  test.beforeEach(({}, testInfo) => {
-    test.skip(testInfo.project.name === 'desktop', '모바일 프로젝트에서만');
-  });
+// 2026-11-06 모바일 설계 — 휴대폰에는 작품 페이지가 없다. 작품 주소(/books/:id)를 열면 곧장 그 책의
+// 브리핑으로 간다(MobileBookRedirect, 로그인 시점 조사 2026-11-18). 그래서 휴대폰 작품 페이지의
+// 고정 읽기 버튼·목차 배치 시험은 PC 작품 페이지 시험(아래)과 브리핑 시험(mobile-briefing.spec)이 맡는다.
+test('FR-BRF-001: 작품 주소를 열면 PC는 작품 페이지, 휴대폰은 브리핑이고 진입·진도 요청은 없다', async ({ page }, testInfo) => {
+  const log = await installMockApi(page, { totalPages: 200, startPage: 15 });
+  await page.goto(BOOK_URL);
 
-  test('NFR-USE: 읽기 버튼은 스크롤해도 화면 아래에 있고 아래 안전 영역을 침범하지 않는다', async ({ page }) => {
-    await open(page);
-    const { height } = page.viewportSize()!;
-
-    const before = await readButton(page).boundingBox();
-    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-    await expect(page.getByRole('button', { name: /20번째 장/ })).toBeInViewport();
-    const after = await readButton(page).boundingBox();
-
-    for (const box of [before!, after!]) {
-      expect(box.y + box.height, '버튼 아래').toBeLessThanOrEqual(height - SAFE_BOTTOM + 0.5);
-      expect(box.y, '버튼은 화면 아래쪽에 있다').toBeGreaterThan(height - 140);
-      expect(box.height).toBeGreaterThanOrEqual(44);
-    }
-    expect(Math.abs(after!.y - before!.y)).toBeLessThan(1);
-  });
-
-  test('NFR-USE: 목차 마지막 줄이 읽기 버튼에 가려지지 않는다', async ({ page }) => {
-    await open(page);
-    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-
-    const last = await page.getByRole('button', { name: /20번째 장/ }).boundingBox();
-    const bar = await readButton(page).locator('..').boundingBox();
-    expect(last!.y + last!.height).toBeLessThanOrEqual(bar!.y + 0.5);
-  });
-
-  test('NFR-USE: 목차 줄과 누르는 대상이 모두 44px 이상이다', async ({ page }) => {
-    await open(page);
-    const rows = page.getByRole('list', { name: '목차' }).getByRole('button');
-    await expect(rows).toHaveCount(20);
-    for (const box of await rows.evaluateAll((els) => els.map((el) => el.getBoundingClientRect().height))) {
-      expect(box).toBeGreaterThanOrEqual(44);
-    }
-    expect(await smallTapTargets(page)).toEqual([]);
-  });
-
-  test('NFR-USE: 가로로 넘치지 않고 글자가 잘리지 않는다', async ({ page }) => {
-    await open(page);
-    expect(await noHorizontalScroll(page)).toBe(true);
-    expect(await overflowingTexts(page)).toEqual([]);
-  });
-
-  test('FR-BRF-001: 읽기 버튼을 누르면 서버가 정한 브리핑 주소로 가고 진도 요청은 없다', async ({ page }) => {
-    const log = await open(page, { entryRoute: 'briefing' });
-
-    await readButton(page).tap();
-
+  if (testInfo.project.name === 'desktop') {
+    await expect(page.getByRole('heading', { level: 1, name: '탁류' })).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/books/${BOOK_ID}$`));
+  } else {
     await expect(page).toHaveURL(new RegExp(`/books/${BOOK_ID}/briefing$`));
-    expect(log.entries).toBe(1);
-    expect(log.progress).toEqual([]);
-  });
+    await expect(page.getByTestId('mobile-briefing')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: '탁류' })).toHaveCount(0);
+  }
+  expect(log.entries).toBe(0);
+  expect(log.progress).toEqual([]);
 });
 
 test('FR-BRF-001: PC 작품 페이지의 읽기 버튼은 표지 아래에 있고 누르면 브리핑으로 간다', async ({ page }, testInfo) => {

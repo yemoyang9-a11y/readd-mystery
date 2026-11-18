@@ -16,6 +16,10 @@ const BOOK_URL_RE = new RegExp(`/books/${BOOK_ID}$`);
 const SSABI_PATH = /\/(ssabi|recap|chat)\//;
 
 const isDesktop = (testInfo: TestInfo) => testInfo.project.name === 'desktop';
+// 2026-11-06 모바일 설계 — 휴대폰에는 작품 페이지가 없다(작품 주소 = 브리핑). 휴대폰 홈은 입체 책 무대와
+// 이어 읽기 카드(브리핑으로 가는 링크)다(2026-11-17 홈 시안). 작품 페이지·신작 줄을 거치는 흐름은 PC에서,
+// 휴대폰은 같은 목적의 휴대폰 흐름(이어 읽기 카드 → 브리핑 → 읽기, 브리핑 목차)으로 본다.
+const mobileContinueCard = (page: Page) => page.getByRole('link', { name: /^이어서 읽기, 탁류,/ });
 
 async function press(locator: Locator, testInfo: TestInfo) {
   if (isDesktop(testInfo)) await locator.click();
@@ -34,6 +38,13 @@ const chapterButton = (page: Page, title: RegExp) =>
   page.getByRole('list', { name: '목차' }).getByRole('button', { name: title });
 
 async function openBookFromHome(page: Page, testInfo: TestInfo) {
+  if (!isDesktop(testInfo)) {
+    // 휴대폰: 이어 읽기 카드가 그 책의 브리핑으로 바로 간다
+    await press(mobileContinueCard(page), testInfo);
+    await expect(page).toHaveURL(BRIEFING_URL);
+    await expect(page.getByTestId('mobile-briefing')).toBeVisible();
+    return;
+  }
   await press(
     page.getByRole('region', { name: '신작' }).getByRole('link', { name: '탁류' }),
     testInfo
@@ -42,7 +53,15 @@ async function openBookFromHome(page: Page, testInfo: TestInfo) {
   await expect(page.getByRole('heading', { level: 1, name: '탁류' })).toBeVisible();
 }
 
+// 작품 페이지(PC) 또는 브리핑(휴대폰)의 목차에서 장을 고른다. 휴대폰 브리핑 목차는 접혀 있다
+async function openChapterList(page: Page, testInfo: TestInfo) {
+  if (isDesktop(testInfo)) return;
+  await expect(page.getByTestId('mobile-briefing')).toBeVisible();
+  await press(page.getByRole('button', { name: /^목차/ }), testInfo);
+}
+
 async function enterChapterThree(page: Page, testInfo: TestInfo) {
+  await openChapterList(page, testInfo);
   const chapter = chapterButton(page, /신판 흥보전/);
   await expect(chapter).toBeEnabled();
   await press(chapter, testInfo);
@@ -61,10 +80,12 @@ test('FR-BRF-001: 홈 → 표지 → 작품 페이지 → 이어서 읽기 → �
 
   await openBookFromHome(page, testInfo);
   expect(log.entries).toBe(0);
-  await press(readButton(page), testInfo);
-  await expect(page).toHaveURL(BRIEFING_URL);
-  await expect(readButton(page)).toBeVisible();
-  expect(log.entries).toBe(1);
+  if (isDesktop(testInfo)) {
+    await press(readButton(page), testInfo);
+    await expect(page).toHaveURL(BRIEFING_URL);
+    await expect(readButton(page)).toBeVisible();
+    expect(log.entries).toBe(1);
+  }
   await continueFromBriefing(page, testInfo);
 
   await expect(pageInput(page)).toHaveValue('15');
@@ -75,12 +96,17 @@ test('FR-BRF-001: 홈의 이어 읽기 버튼은 작품 페이지를 거치지 �
 }, testInfo) => {
   const log = await start(page, '/', { entryRoute: 'briefing' });
 
-  const strip = page.getByRole('region', { name: '이어 읽기' });
-  await press(strip.getByRole('button', { name: '이어서 읽기' }), testInfo);
+  if (isDesktop(testInfo)) {
+    const strip = page.getByRole('region', { name: '이어 읽기' });
+    await press(strip.getByRole('button', { name: '이어서 읽기' }), testInfo);
+  } else {
+    await press(mobileContinueCard(page), testInfo);
+  }
 
   await expect(page).toHaveURL(BRIEFING_URL);
   await expect(readButton(page)).toBeVisible();
-  expect(log.entries).toBe(1);
+  // PC 이어 읽기는 진입 판정을 거쳐 서버가 정한 화면으로, 휴대폰 카드는 브리핑 링크다
+  expect(log.entries).toBe(isDesktop(testInfo) ? 1 : 0);
   await page.goBack();
   await expect(page).toHaveURL(/\/$/);
 });
@@ -90,9 +116,16 @@ async function backTwiceWithoutNewRequests(page: Page, testInfo: TestInfo, log: 
   const entries = log.entries;
 
   await press(page.getByRole('button', { name: '뒤로 가기' }), testInfo);
-  await expect(page).toHaveURL(BOOK_URL_RE);
-  await expect(page.getByRole('heading', { level: 1, name: '탁류' })).toBeVisible();
-  await press(page.getByRole('button', { name: '뒤로 가기' }), testInfo);
+  if (isDesktop(testInfo)) {
+    await expect(page).toHaveURL(BOOK_URL_RE);
+    await expect(page.getByRole('heading', { level: 1, name: '탁류' })).toBeVisible();
+    await press(page.getByRole('button', { name: '뒤로 가기' }), testInfo);
+  } else {
+    // 휴대폰 작품 주소는 브리핑이다 — 읽기의 뒤로 가기는 브리핑, 브리핑의 돌아가기는 들어온 화면이다
+    await expect(page).toHaveURL(BRIEFING_URL);
+    await expect(page.getByTestId('mobile-briefing')).toBeVisible();
+    await press(page.getByRole('button', { name: '돌아가기' }), testInfo);
+  }
 
   return async () => {
     await page.waitForTimeout(500);
@@ -110,8 +143,12 @@ test('FR-BRW-003: 서재 → 작품 → 읽기에서 뒤로 두 번이면 서재
     page.getByRole('list', { name: '서재 책 목록' }).getByRole('link', { name: '탁류' }),
     testInfo
   );
-  await expect(page).toHaveURL(BOOK_URL_RE);
-  await press(readButton(page), testInfo);
+  if (isDesktop(testInfo)) {
+    await expect(page).toHaveURL(BOOK_URL_RE);
+    await press(readButton(page), testInfo);
+  } else {
+    await continueFromBriefing(page, testInfo);
+  }
   await expect(page).toHaveURL(READ_URL);
   await expect(pageInput(page)).toHaveValue('15');
 
@@ -127,17 +164,23 @@ test('FR-BRW-003: 홈 → 이어 읽기 → 읽기에서 뒤로 두 번이면 �
 }, testInfo) => {
   const log = await start(page, '/');
 
-  await press(
-    page.getByRole('region', { name: '이어 읽기' }).getByRole('button', { name: '이어서 읽기' }),
-    testInfo
-  );
+  if (isDesktop(testInfo)) {
+    await press(
+      page.getByRole('region', { name: '이어 읽기' }).getByRole('button', { name: '이어서 읽기' }),
+      testInfo
+    );
+  } else {
+    await press(mobileContinueCard(page), testInfo);
+    await continueFromBriefing(page, testInfo);
+  }
   await expect(page).toHaveURL(READ_URL);
   await expect(pageInput(page)).toHaveValue('15');
 
   const noNewRequests = await backTwiceWithoutNewRequests(page, testInfo, log);
 
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole('region', { name: '신작' })).toBeVisible();
+  if (isDesktop(testInfo)) await expect(page.getByRole('region', { name: '신작' })).toBeVisible();
+  else await expect(page.getByRole('group', { name: '이번 달 추리소설' })).toBeVisible();
   await noNewRequests();
 });
 
@@ -150,7 +193,7 @@ test('FR-BRW-003: 작품 → 브리핑 → 읽기에서 뒤로 가기는 브리�
     page.getByRole('list', { name: '서재 책 목록' }).getByRole('link', { name: '탁류' }),
     testInfo
   );
-  await press(readButton(page), testInfo);
+  if (isDesktop(testInfo)) await press(readButton(page), testInfo);
   await continueFromBriefing(page, testInfo);
   await expect(pageInput(page)).toHaveValue('15');
 
@@ -173,6 +216,13 @@ test('FR-SPL-002: 이 흐름에서 싸비 관련 요청은 읽기 화면에서 �
   await start(page, '/');
 
   await openBookFromHome(page, testInfo);
+  if (!isDesktop(testInfo)) {
+    // 휴대폰은 브리핑을 거친다. 브리핑은 리캡의 인물 이름 강조에 서버가 준 쪽의 관계도를 쓰므로
+    // (useBriefingSession) 읽기 화면으로 넘어간 뒤의 요청부터 센다
+    await expect(readButton(page)).toBeVisible();
+    await page.waitForTimeout(500);
+    ssabiRequests.length = 0;
+  }
   await press(readButton(page), testInfo);
   await expect(page).toHaveURL(READ_URL);
   await expect(page.getByRole('article')).toBeVisible();
@@ -194,11 +244,16 @@ test('FR-PRG-003: 작품 페이지 목차 → 장 누르기 → 브리핑 → �
   const log = await start(page, BOOK_URL, { entryRoute: 'briefing' });
 
   await enterChapterThree(page, testInfo);
-  await expect(page).toHaveURL(BRIEFING_URL);
-  await expect(readButton(page)).toBeVisible();
-  expect(log.entries).toBe(1);
-  expect(log.progress).toEqual([]);
-  await continueFromBriefing(page, testInfo);
+  if (isDesktop(testInfo)) {
+    await expect(page).toHaveURL(BRIEFING_URL);
+    await expect(readButton(page)).toBeVisible();
+    expect(log.entries).toBe(1);
+    expect(log.progress).toEqual([]);
+    await continueFromBriefing(page, testInfo);
+  } else {
+    // 휴대폰은 작품 주소가 이미 브리핑이다 — 브리핑 목차에서 장을 고르면 곧장 읽기로 간다
+    await expect(page).toHaveURL(READ_URL);
+  }
 
   await expect(pageInput(page)).toHaveValue('21');
   await expect.poll(() => log.progress).toEqual([21]);
@@ -225,10 +280,16 @@ test('FR-PRG-003: 장을 눌러 들어온 뒤 읽던 곳으로 돌아가기를 �
   await enterChapterThree(page, testInfo);
   await expect(page).toHaveURL(READ_URL);
   await expect(pageInput(page)).toHaveValue('21');
-  const bar = page.getByRole('status').filter({ hasText: '15쪽에서 옮겨 왔어요' });
+  // 휴대폰 돌아가기 줄은 "21쪽을 보는 중 · 15쪽으로 돌아가기"다(MobileJumpBar)
+  const bar = isDesktop(testInfo)
+    ? page.getByRole('status').filter({ hasText: '15쪽에서 옮겨 왔어요' })
+    : page.getByRole('status').filter({ hasText: '21쪽을 보는 중' });
   await expect(bar).toBeVisible();
 
-  await press(page.getByRole('button', { name: '읽던 곳으로 돌아가기' }), testInfo);
+  await press(
+    page.getByRole('button', { name: isDesktop(testInfo) ? '읽던 곳으로 돌아가기' : '15쪽으로 돌아가기' }),
+    testInfo
+  );
 
   await expect(pageInput(page)).toHaveValue('15');
   await expect(bar).toHaveCount(0);

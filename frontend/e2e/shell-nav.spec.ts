@@ -2,7 +2,8 @@ import { expect, test } from '@playwright/test';
 import { installMockApi } from './support/mockApi';
 
 const SAFE_BOTTOM = 34;
-const MENU = ['홈', '검색', '서재', 'MY'] as const;
+// 2026-11-18 대표 지시 — 휴대폰 하단 메뉴는 홈 · 커뮤니티(허브) · 피드백 · MY (검색·서재는 하단 메뉴에서 빠졌다)
+const MENU = ['홈', '커뮤니티', '피드백', 'MY'] as const;
 
 test.beforeEach(async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'desktop', '모바일 프로젝트에서만');
@@ -58,14 +59,14 @@ test('메뉴를 누르면 해당 주소로 간다', async ({ page }) => {
   await page.goto('/');
   const nav = page.getByRole('navigation', { name: '주 메뉴' });
 
-  await nav.getByRole('link', { name: '서재' }).tap();
-  await expect(page).toHaveURL(/\/shelf$/);
-  await expect(page.getByRole('heading', { level: 1, name: '내 서재' })).toBeVisible();
-  await expect(nav.getByRole('link', { name: '서재' })).toHaveAttribute('aria-current', 'page');
+  await nav.getByRole('link', { name: '커뮤니티' }).tap();
+  await expect(page).toHaveURL(/\/community$/);
+  await expect(page.getByRole('heading', { level: 1, name: '커뮤니티' })).toBeVisible();
+  await expect(nav.getByRole('link', { name: '커뮤니티' })).toHaveAttribute('aria-current', 'page');
 
-  await nav.getByRole('link', { name: '검색' }).tap();
-  await expect(page).toHaveURL(/\/search$/);
-  await expect(page.getByRole('heading', { level: 1, name: '검색' })).toBeVisible();
+  await nav.getByRole('link', { name: '피드백' }).tap();
+  await expect(page).toHaveURL(/\/feedback$/);
+  await expect(page.getByRole('heading', { level: 1, name: '피드백' })).toBeVisible();
 
   await nav.getByRole('link', { name: 'MY' }).tap();
   await expect(page).toHaveURL(/\/my$/);
