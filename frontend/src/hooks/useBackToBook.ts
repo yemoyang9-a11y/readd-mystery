@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router';
 import { bookPath } from '../utils/routes';
 
 export function cameFromBook(state: unknown): boolean {

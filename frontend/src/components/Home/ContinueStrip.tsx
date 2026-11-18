@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import BookCover from '../common/BookCover';
 import { bookPath } from '../../utils/routes';
 import { resumeLabel } from '../../utils/resumeLabel';

@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet } from 'react-router';
 import Header from './Header';
 import RouteFade from './RouteFade';
 import TabBar, { TAB_BAR_HEIGHT } from './TabBar';

@@ -1,5 +1,5 @@
 import { act, render, screen } from '@testing-library/react';
-import { RouterProvider } from 'react-router-dom';
+import { RouterProvider } from 'react-router';
 import { createAppRouter } from './App';
 import { setAuthToken } from './utils/storage';
 

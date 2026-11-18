@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router';
 import Reader from './Reader';
 import MobileReader from '../mobile/pages/MobileReader';
 import { clearPendingJump } from '../utils/pendingJump';

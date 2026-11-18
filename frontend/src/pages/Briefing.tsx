@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useParams } from 'react-router';
 import BriefingView from './BriefingView';
 import Loading from '../components/common/Loading';
 import { useBriefingSession } from '../hooks/useBriefingSession';

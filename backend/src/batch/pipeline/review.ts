@@ -12,7 +12,7 @@
  * APPLICABLE_CRITERIA로 매핑을 고정한다 — 이 매핑은 R1의 해석이며, FR-ADM-005 표의
  * "확인 내용" 문구를 대상별로 나눈 것이다.
  */
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { isDeepStrictEqual } from 'util';
 import { canonicalRelationship, AccumulatedRelationship } from './accumulate';
 import { QueryClient } from './register';
@@ -503,7 +503,7 @@ export async function applyReviewJudgments(
          info_separation_ok = $9, intro_tone_ok = $10, spoiler_free_ok = $11, correction_note = $12,
          reviewer = $13, relationship_snapshot = $14::jsonb, reviewed_at = now()`,
       [
-        uuidv4(),
+        randomUUID(),
         bookId,
         row.target_type,
         row.target_id,

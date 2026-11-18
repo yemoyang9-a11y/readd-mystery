@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router';
 import AuthScreen, { ErrorBox, PRIMARY_BUTTON } from '../components/auth/AuthScreen';
 import ConsentList, { type ConsentListHandle } from '../components/auth/ConsentList';
 import { agreeConsents, fetchMe } from '../services/authService';

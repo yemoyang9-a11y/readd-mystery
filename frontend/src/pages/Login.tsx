@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router';
 import { isAxiosError } from 'axios';
 import AuthScreen, { ErrorBox, PRIMARY_BUTTON, closeTarget } from '../components/auth/AuthScreen';
 import ConsentList, { type ConsentListHandle } from '../components/auth/ConsentList';

@@ -1,5 +1,5 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router';
 import BookCover from '../components/common/BookCover';
 import { useCatalog } from '../hooks/useCatalog';
 import { listableBooks } from '../utils/listableBooks';

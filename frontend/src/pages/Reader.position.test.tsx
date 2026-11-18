@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router';
 import type { ComponentProps } from 'react';
 import Reader from './Reader';
 import { enterBook, sendProgress } from '../services/progressService';

@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router';
 import Reader from './Reader';
 
 const { sendProgressMock } = vi.hoisted(() => ({ sendProgressMock: vi.fn().mockResolvedValue({ success: true, applied_cutoff: 21, confirm: null }) }));

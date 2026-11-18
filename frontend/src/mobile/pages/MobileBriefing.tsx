@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router';
 import { BOOK_ROUTES } from '../../utils/routes';
 import Loading from '../../components/common/Loading';
 import { useBookPosition } from '../../hooks/useBookPosition';

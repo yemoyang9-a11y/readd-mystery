@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router';
 import { safeNextPath } from '../utils/authRedirect';
 import BookCarousel3D from '../mobile/components/BookCarousel3D';
 import MobileBriefingView from '../mobile/components/MobileBriefingView';

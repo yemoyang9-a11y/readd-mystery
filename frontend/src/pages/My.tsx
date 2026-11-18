@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import AccountCard from '../components/My/AccountCard';
 import ReaderPrefsControls from '../components/Reader/ReaderPrefsControls';
 import FeedbackEntry from '../components/Feedback/FeedbackEntry';

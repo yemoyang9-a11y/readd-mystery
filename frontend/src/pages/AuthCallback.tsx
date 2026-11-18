@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { exchangeLoginCode, fetchMe } from '../services/authService';
 import { GUIDE_PATH, LOGIN_PATH, consentPathFor, takeLoginNext } from '../utils/authRedirect';
 import { setAuthToken } from '../utils/storage';

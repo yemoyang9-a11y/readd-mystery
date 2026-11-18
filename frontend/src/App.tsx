@@ -1,5 +1,7 @@
 import { useEffect, useState, type ComponentType } from 'react';
-import { createBrowserRouter, RouterProvider, type RouteObject } from 'react-router-dom';
+// Router 7 — react-router-dom 은 react-router 로 합쳐졌다. RouterProvider 도 여기서 받는다
+// (react-router/dom 판은 navigate 의 flushSync 옵션용인데 이 앱은 쓰지 않는다. 테스트에서 두 사본으로 갈라진다).
+import { createBrowserRouter, RouterProvider, type RouteObject } from 'react-router';
 import Home from './pages/Home';
 import Search from './pages/Search';
 import Shelf from './pages/Shelf';
@@ -46,6 +48,8 @@ function requireSession(route: RouteObject): RouteObject {
   if (!requiresLogin(route.path)) return route;
   const { lazy } = route;
   if (!lazy) return gate(route);
+  // Router 7 은 lazy 를 속성별 객체로도 받는다. 그 형태는 관문을 씌울 수 없으므로 쓰지 않는다.
+  if (typeof lazy !== 'function') throw new Error(`로그인 관문 경로는 lazy 함수만 쓴다: ${route.path}`);
   return { ...gate(route), lazy: async () => gate(await lazy()) };
 }
 
@@ -124,8 +128,11 @@ export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
   ];
   // GitHub Pages 는 /<저장소>/ 아래에 올라간다 — 빌드 기준 경로(BASE_URL)를 라우터 기준으로 쓴다
   const basename = (import.meta.env.BASE_URL ?? '/').replace(/\/$/, '') || '/';
+  // Router 7 — 첫 진입 경로를 나눠 받는 동안 보이던 RouterProvider fallbackElement 가 없어졌다.
+  // 같은 <Loading /> 을 최상위 경로마다 hydrateFallbackElement 로 달아 화면을 그대로 둔다.
+  const loading = <Loading />;
   return createBrowserRouter(
-    routes.map((route) => ({ errorElement: routeError, ...requireSession(route) })),
+    routes.map((route) => ({ errorElement: routeError, hydrateFallbackElement: loading, ...requireSession(route) })),
     { basename }
   );
 }
@@ -159,7 +166,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <RouterProvider router={router} fallbackElement={<Loading />} />
+      <RouterProvider router={router} />
     </ErrorBoundary>
   );
 }

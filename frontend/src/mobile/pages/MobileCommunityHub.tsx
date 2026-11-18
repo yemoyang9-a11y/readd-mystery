@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { fetchCommunityHub } from '../../services/communityService';
 import type { CommunityHubBook } from '../../types';
 import { resolveCoverUrl } from '../../utils/coverOverrides';

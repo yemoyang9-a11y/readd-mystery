@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { createSearchParams, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { createSearchParams, NavLink, useLocation, useNavigate } from 'react-router';
 import { APP_ROUTES } from '../../utils/routes';
 
 /**

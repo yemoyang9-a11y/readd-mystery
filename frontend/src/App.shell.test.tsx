@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { RouterProvider } from 'react-router-dom';
+import { RouterProvider } from 'react-router';
 import { createAppRouter } from './App';
 import { setAuthToken } from './utils/storage';
 
