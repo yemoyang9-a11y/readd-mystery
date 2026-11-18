@@ -1,0 +1,83 @@
+{
+  "key": "3f2169030fcff2e903b69e1e595b2ec4cf438acdaa7810a330c8c75ce47748f2",
+  "chapter_no": 4,
+  "run": 1,
+  "response": "{\"relations\":[{\"character_a\":\"나용귀\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"romance\",\"type\":\"affection\",\"type_question\":true,\"exclusions\":{},\"subject\":\"나용귀\",\"assertion_status\":\"fact\",\"state\":\"active\",\"change_type\":\"disclosure\",\"summary\":\"나용귀는 이몽란을 자기 생명보다 귀하게 여기며 사랑한다.\",\"rationale\":\"나용귀가 임경부에게 몽란을 사랑하는 사람이라 부르며 자기 생명보다 더 중한 사람이라고 직접 말한다. 임경부도 나용귀가 이몽란을 한량없이 사랑한다고 말한다. 이몽란의 마음은 근거 창에 나오지 않으므로 한쪽 사랑인 affection으로 적는다.\",\"support\":[{\"window_id\":\"p54:393-708:sentence\",\"trigger\":\"몽란은 나의 생명보다도 더 중한 사람\"},{\"window_id\":\"p51:133-643:sentence\",\"trigger\":\"이몽란을 한량없이 사랑하는 당신의 정성\"}]},{\"character_a\":\"박영민\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"family\",\"type\":\"marriage\",\"type_question\":true,\"exclusions\":{\"plan_only\":false},\"subject\":null,\"assertion_status\":\"fact\",\"state\":\"active\",\"change_type\":\"restatement\",\"summary\":\"박영민(좌장)과 이몽란(부인)은 부부다.\",\"rationale\":\"임경부의 설명에 좌장이 부인과 함께 외출했다는 사실이 판명되었다고 나온다. 여기서 좌장은 박영민, 부인은 이몽란이므로 두 사람이 부부임을 말한다.\",\"support\":[{\"window_id\":\"p53:0-602:sentence\",\"trigger\":\"좌장이 부인과 함께 외출한\"}]},{\"character_a\":\"임경부\",\"character_b\":\"유불란\",\"lasting\":true,\"category\":\"adversarial\",\"type\":\"suspicion\",\"type_question\":true,\"exclusions\":{},\"subject\":\"임경부\",\"assertion_status\":\"fact\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"임경부는 유불란을 이몽란 살해의 혐의자로 보고 있다.\",\"rationale\":\"임경부가 백검사에게 유불란을 즉시 체포해 달라고 요청한다. 또 몽란 살해의 가해자를 유불란이라고 말한다. 단언은 보류했지만 유불란을 혐의자로 보고 있다는 것은 근거 창에서 확인된다.\",\"support\":[{\"window_id\":\"p54:851-925:sentence\",\"trigger\":\"가해자는 유불란\"},{\"window_id\":\"p49:497-906:sentence\",\"trigger\":\"즉시로 유불란을 체포하여 주십시오\"}]}]}",
+  "parsed": {
+    "relations": [
+      {
+        "character_a": "나용귀",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "affection",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "나용귀",
+        "assertion_status": "fact",
+        "state": "active",
+        "change_type": "disclosure",
+        "summary": "나용귀는 이몽란을 자기 생명보다 귀하게 여기며 사랑한다.",
+        "rationale": "나용귀가 임경부에게 몽란을 사랑하는 사람이라 부르며 자기 생명보다 더 중한 사람이라고 직접 말한다. 임경부도 나용귀가 이몽란을 한량없이 사랑한다고 말한다. 이몽란의 마음은 근거 창에 나오지 않으므로 한쪽 사랑인 affection으로 적는다.",
+        "support": [
+          {
+            "window_id": "p54:393-708:sentence",
+            "trigger": "몽란은 나의 생명보다도 더 중한 사람"
+          },
+          {
+            "window_id": "p51:133-643:sentence",
+            "trigger": "이몽란을 한량없이 사랑하는 당신의 정성"
+          }
+        ]
+      },
+      {
+        "character_a": "박영민",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "family",
+        "type": "marriage",
+        "type_question": true,
+        "exclusions": {
+          "plan_only": false
+        },
+        "subject": null,
+        "assertion_status": "fact",
+        "state": "active",
+        "change_type": "restatement",
+        "summary": "박영민(좌장)과 이몽란(부인)은 부부다.",
+        "rationale": "임경부의 설명에 좌장이 부인과 함께 외출했다는 사실이 판명되었다고 나온다. 여기서 좌장은 박영민, 부인은 이몽란이므로 두 사람이 부부임을 말한다.",
+        "support": [
+          {
+            "window_id": "p53:0-602:sentence",
+            "trigger": "좌장이 부인과 함께 외출한"
+          }
+        ]
+      },
+      {
+        "character_a": "임경부",
+        "character_b": "유불란",
+        "lasting": true,
+        "category": "adversarial",
+        "type": "suspicion",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "임경부",
+        "assertion_status": "fact",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "임경부는 유불란을 이몽란 살해의 혐의자로 보고 있다.",
+        "rationale": "임경부가 백검사에게 유불란을 즉시 체포해 달라고 요청한다. 또 몽란 살해의 가해자를 유불란이라고 말한다. 단언은 보류했지만 유불란을 혐의자로 보고 있다는 것은 근거 창에서 확인된다.",
+        "support": [
+          {
+            "window_id": "p54:851-925:sentence",
+            "trigger": "가해자는 유불란"
+          },
+          {
+            "window_id": "p49:497-906:sentence",
+            "trigger": "즉시로 유불란을 체포하여 주십시오"
+          }
+        ]
+      }
+    ]
+  }
+}

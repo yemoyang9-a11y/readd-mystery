@@ -158,4 +158,4 @@ AI 응답(관계마다, 이 순서로):
 - 유형 표의 우리말 정의와 판정 질문은 논문 범주를 옮겨 우리가 쓴 것이다. 한국어 근대 추리소설에서의 사람 일치도는 재지 않았다.
 - 유명 작품은 AI가 이미 줄거리를 알 수 있다(A10). 질문지가 근거 창 밖 기억을 금지하지만 구조로 막지는 못한다.
 - 프런트 관계도 이름표(`frontend/src/components/Ssabi/graphEdges.ts`의 짧은 이름 표)에 새 유형 키(colleague·superior·hostility·trust 등)가 없다. 지금은 라벨("동료다")이 그대로 보인다 — 프런트 수정은 이번 범위 밖.
-- 실제 실행 결과와 수치: [docs/validation/2026-11-18-relationships-claude/summary.md](../validation/2026-11-18-relationships-claude/summary.md).
+- 실제 실행 결과(2026-11-18, 「가상범인」): [structural-relationships.json](../validation/2026-11-18-relationships-claude/structural-relationships.json) — 구독 호출 18회·약 9분, 채택 5건(부부·친구·백검사–임경부 동료·연인·윗사람), 보류 24건(전언 어미 8·방향 4·다음 문장 반박 3·반대 검토 거절 3 등).

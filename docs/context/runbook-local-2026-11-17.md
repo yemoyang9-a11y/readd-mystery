@@ -102,7 +102,7 @@ npx ts-node --transpile-only src/batch/pipeline/run-generate-relationships-struc
 npx ts-node --transpile-only src/batch/pipeline/run-generate-relationships-structural.ts --book gasangbeomin --file data/raw/gasangbeomin.txt --characters ../docs/validation/2026-11-18-relationships-claude/characters.json --verifier --out data/generated/gasangbeomin/structural-claude
 ```
 
-「가상범인」은 5장이라 질문지 10회 + 검토 수십 회, 2026-11-18 이 환경에서 걸린 시간은 [실행 요약](../validation/2026-11-18-relationships-claude/summary.md)에 있다. 결과는 `--out` 폴더의 `structural-relationships.json`(채택 관계·보류 사유별 개수 `held_reasons`·관계 0건 인물 `uncovered_characters`·구독 호출 횟수 `counts.model_calls`), 장별 원래 응답(`chapter-N.run-1.json` 등). 다시 돌리면 캐시를 재생해 AI를 부르지 않는다. 프롬프트·유형 표·모델을 바꿨다면 새 `--out` 폴더를 준다(옛 폴더는 그대로 둔다).
+「가상범인」(5장)은 2026-11-18 이 환경에서 질문지 10회 + 검토 8회 = 구독 호출 18회, 약 9분 걸렸다([결과](../validation/2026-11-18-relationships-claude/structural-relationships.json)). 결과는 `--out` 폴더의 `structural-relationships.json`(채택 관계·보류 사유별 개수 `held_reasons`·관계 0건 인물 `uncovered_characters`·구독 호출 횟수 `counts.model_calls`), 장별 원래 응답(`chapter-N.run-1.json` 등). 다시 돌리면 캐시를 재생해 AI를 부르지 않는다. 프롬프트·유형 표·모델을 바꿨다면 새 `--out` 폴더를 준다(옛 폴더는 그대로 둔다).
 
 ③ 정답이 있는 발췌 5건으로 정확도 (탁류 2쪽, Austen 3발췌):
 

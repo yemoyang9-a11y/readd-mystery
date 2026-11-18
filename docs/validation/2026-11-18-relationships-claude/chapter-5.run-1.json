@@ -1,0 +1,195 @@
+{
+  "key": "d17d1301c261cec25b19bc0ea354ea25ba468c53ca8189830ec4d55442096d9e",
+  "chapter_no": 5,
+  "run": 1,
+  "response": "{\"relations\":[{\"character_a\":\"나용귀\",\"character_b\":\"유불란\",\"lasting\":true,\"category\":\"attitude\",\"type\":\"hatred\",\"type_question\":true,\"exclusions\":{},\"subject\":\"나용귀\",\"assertion_status\":\"fact\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"나용귀는 유불란을 미워한다.\",\"rationale\":\"서술이 나용귀가 미움이 가득 찬 눈초리를 불란에게 던졌다고 직접 말한다. 나용귀가 유불란에게 품은 미움을 서술자가 확인하는 문장이다.\",\"support\":[{\"window_id\":\"p57:136-285:sentence\",\"trigger\":\"미움이 가득 찬 눈초리를 불란에게 던졌다\"}]},{\"character_a\":\"유불란\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"romance\",\"type\":\"affection\",\"type_question\":true,\"exclusions\":{},\"subject\":\"유불란\",\"assertion_status\":\"fact\",\"state\":\"active\",\"change_type\":\"restatement\",\"summary\":\"유불란은 이몽란을 사랑한다.\",\"rationale\":\"유불란이 몽란을 '자기의 가장 사랑하는 몽란'이라고 스스로 말한다. 임경부도 유불란에게 '당신은 몽란을 사랑한다'고 말한다.\",\"support\":[{\"window_id\":\"p56:118-527:sentence\",\"trigger\":\"자기의 가장 사랑하는 몽란\"},{\"window_id\":\"p58:872-1084:sentence\",\"trigger\":\"당신은 몽란을 사랑한다\"}]},{\"character_a\":\"유불란\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"romance\",\"type\":\"affection\",\"type_question\":true,\"exclusions\":{},\"subject\":\"이몽란\",\"assertion_status\":\"uncertain\",\"attribution\":\"임경부\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"임경부는 이몽란이 유불란을 더 사랑했을지도 모른다고 추측한다.\",\"rationale\":\"임경부가 유불란에게 몽란이 그를 더 사랑했을지도 모른다고 말한다. 추측이므로 uncertain으로 적었다.\",\"support\":[{\"window_id\":\"p59:0-844:sentence\",\"trigger\":\"몽란은 혹은 당신을 더 사랑했을지도 모르나\"}]},{\"character_a\":\"나용귀\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"romance\",\"type\":\"affection\",\"type_question\":true,\"exclusions\":{},\"subject\":\"이몽란\",\"assertion_status\":\"claim\",\"attribution\":\"임경부\",\"state\":\"active\",\"change_type\":\"transition\",\"summary\":\"임경부는 이몽란의 마음이 유불란에게서 떠나 나용귀에게로 옮아갔다고 주장한다.\",\"rationale\":\"임경부가 몽란의 마음이 나 씨께로 옮아갔다고 말한다. 마음이 바뀌었다고 직접 말하므로 transition으로 적었다. 임경부의 주장이므로 claim이다.\",\"support\":[{\"window_id\":\"p59:0-844:sentence\",\"trigger\":\"드디어 나 씨께로 옮아가고야 말았습니다\"}]},{\"character_a\":\"나용귀\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"romance\",\"type\":\"affection\",\"type_question\":true,\"exclusions\":{},\"subject\":\"이몽란\",\"assertion_status\":\"negated\",\"attribution\":\"유불란\",\"state\":\"active\",\"change_type\":\"restatement\",\"summary\":\"유불란은 이몽란이 나용귀를 결코 사랑하지 않았다고 부정한다.\",\"rationale\":\"유불란이 몽란은 결코 나용귀를 사랑하지 않았다고 말하며 임경부의 주장을 부정한다.\",\"support\":[{\"window_id\":\"p60:0-494:sentence\",\"trigger\":\"몽란은 결코 나용귀를 사랑하지 않았다\"}]},{\"character_a\":\"나용귀\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"romance\",\"type\":\"lust\",\"type_question\":true,\"exclusions\":{},\"subject\":\"나용귀\",\"assertion_status\":\"claim\",\"attribution\":\"백검사\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"백검사는 나용귀가 이몽란의 사랑을 차지하려 했다고 주장한다.\",\"rationale\":\"백검사가 나용귀에게 몽란에게 사랑을 받아보려다 거절당했다고 말한다. 또 몽란의 사랑을 네게로 돌려놓고자 했다고 말한다. 둘 다 몽란을 차지하려는 마음을 가리키며, 백검사의 주장이다.\",\"support\":[{\"window_id\":\"p61:346-681:sentence\",\"trigger\":\"네가 몽란에게 사랑을 받아보려다 거절당한 것\"},{\"window_id\":\"p63:33-272:adjacent\",\"trigger\":\"몽란의 사랑을 네게로 돌려놓고자 했던 것이다\"}]},{\"character_a\":\"나용귀\",\"character_b\":\"박영민\",\"lasting\":true,\"category\":\"attitude\",\"type\":\"hatred\",\"type_question\":true,\"exclusions\":{},\"subject\":\"박영민\",\"assertion_status\":\"claim\",\"attribution\":\"백검사\",\"state\":\"ended\",\"change_type\":\"establishment\",\"summary\":\"백검사는 박영민이 생전에 나용귀를 독사같이 싫어하고 미워했다고 주장한다.\",\"rationale\":\"백검사가 나용귀에게 좌장이 너를 독사와도 같이 싫어하고 미워했다고 말한다. 박영민은 피해자로 이미 죽었으므로 state는 ended로 적었다.\",\"support\":[{\"window_id\":\"p61:346-681:sentence\",\"trigger\":\"좌장이 너를 독사와도 같이 싫어하고 미워한 것이다\"}]},{\"character_a\":\"유불란\",\"character_b\":\"임경부\",\"lasting\":true,\"category\":\"adversarial\",\"type\":\"suspicion\",\"type_question\":true,\"exclusions\":{},\"subject\":\"임경부\",\"assertion_status\":\"fact\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"임경부는 유불란을 이몽란을 계획적으로 죽인 범인으로 본다.\",\"rationale\":\"임경부가 유불란에게 눈보라 치는 밤을 일부러 고른 것이 당신이라고 말한다. 또 당신이 몽란을 죽인 동기를 말해 보겠다고 말한다. 유불란을 범인으로 보고 취조하고 있음을 직접 보여 준다.\",\"support\":[{\"window_id\":\"p57:601-679:sentence\",\"trigger\":\"일부러 눈보라 치는 밤을 선택한 것은 당신이 아니었습니까?\"},{\"window_id\":\"p59:0-844:sentence\",\"trigger\":\"당신이 몽란을 죽인 동기를 내 입으로 말해보라는 말이지요\"}]}]}",
+  "parsed": {
+    "relations": [
+      {
+        "character_a": "나용귀",
+        "character_b": "유불란",
+        "lasting": true,
+        "category": "attitude",
+        "type": "hatred",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "나용귀",
+        "assertion_status": "fact",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "나용귀는 유불란을 미워한다.",
+        "rationale": "서술이 나용귀가 미움이 가득 찬 눈초리를 불란에게 던졌다고 직접 말한다. 나용귀가 유불란에게 품은 미움을 서술자가 확인하는 문장이다.",
+        "support": [
+          {
+            "window_id": "p57:136-285:sentence",
+            "trigger": "미움이 가득 찬 눈초리를 불란에게 던졌다"
+          }
+        ]
+      },
+      {
+        "character_a": "유불란",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "affection",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "유불란",
+        "assertion_status": "fact",
+        "state": "active",
+        "change_type": "restatement",
+        "summary": "유불란은 이몽란을 사랑한다.",
+        "rationale": "유불란이 몽란을 '자기의 가장 사랑하는 몽란'이라고 스스로 말한다. 임경부도 유불란에게 '당신은 몽란을 사랑한다'고 말한다.",
+        "support": [
+          {
+            "window_id": "p56:118-527:sentence",
+            "trigger": "자기의 가장 사랑하는 몽란"
+          },
+          {
+            "window_id": "p58:872-1084:sentence",
+            "trigger": "당신은 몽란을 사랑한다"
+          }
+        ]
+      },
+      {
+        "character_a": "유불란",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "affection",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "이몽란",
+        "assertion_status": "uncertain",
+        "attribution": "임경부",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "임경부는 이몽란이 유불란을 더 사랑했을지도 모른다고 추측한다.",
+        "rationale": "임경부가 유불란에게 몽란이 그를 더 사랑했을지도 모른다고 말한다. 추측이므로 uncertain으로 적었다.",
+        "support": [
+          {
+            "window_id": "p59:0-844:sentence",
+            "trigger": "몽란은 혹은 당신을 더 사랑했을지도 모르나"
+          }
+        ]
+      },
+      {
+        "character_a": "나용귀",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "affection",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "이몽란",
+        "assertion_status": "claim",
+        "attribution": "임경부",
+        "state": "active",
+        "change_type": "transition",
+        "summary": "임경부는 이몽란의 마음이 유불란에게서 떠나 나용귀에게로 옮아갔다고 주장한다.",
+        "rationale": "임경부가 몽란의 마음이 나 씨께로 옮아갔다고 말한다. 마음이 바뀌었다고 직접 말하므로 transition으로 적었다. 임경부의 주장이므로 claim이다.",
+        "support": [
+          {
+            "window_id": "p59:0-844:sentence",
+            "trigger": "드디어 나 씨께로 옮아가고야 말았습니다"
+          }
+        ]
+      },
+      {
+        "character_a": "나용귀",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "affection",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "이몽란",
+        "assertion_status": "negated",
+        "attribution": "유불란",
+        "state": "active",
+        "change_type": "restatement",
+        "summary": "유불란은 이몽란이 나용귀를 결코 사랑하지 않았다고 부정한다.",
+        "rationale": "유불란이 몽란은 결코 나용귀를 사랑하지 않았다고 말하며 임경부의 주장을 부정한다.",
+        "support": [
+          {
+            "window_id": "p60:0-494:sentence",
+            "trigger": "몽란은 결코 나용귀를 사랑하지 않았다"
+          }
+        ]
+      },
+      {
+        "character_a": "나용귀",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "lust",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "나용귀",
+        "assertion_status": "claim",
+        "attribution": "백검사",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "백검사는 나용귀가 이몽란의 사랑을 차지하려 했다고 주장한다.",
+        "rationale": "백검사가 나용귀에게 몽란에게 사랑을 받아보려다 거절당했다고 말한다. 또 몽란의 사랑을 네게로 돌려놓고자 했다고 말한다. 둘 다 몽란을 차지하려는 마음을 가리키며, 백검사의 주장이다.",
+        "support": [
+          {
+            "window_id": "p61:346-681:sentence",
+            "trigger": "네가 몽란에게 사랑을 받아보려다 거절당한 것"
+          },
+          {
+            "window_id": "p63:33-272:adjacent",
+            "trigger": "몽란의 사랑을 네게로 돌려놓고자 했던 것이다"
+          }
+        ]
+      },
+      {
+        "character_a": "나용귀",
+        "character_b": "박영민",
+        "lasting": true,
+        "category": "attitude",
+        "type": "hatred",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "박영민",
+        "assertion_status": "claim",
+        "attribution": "백검사",
+        "state": "ended",
+        "change_type": "establishment",
+        "summary": "백검사는 박영민이 생전에 나용귀를 독사같이 싫어하고 미워했다고 주장한다.",
+        "rationale": "백검사가 나용귀에게 좌장이 너를 독사와도 같이 싫어하고 미워했다고 말한다. 박영민은 피해자로 이미 죽었으므로 state는 ended로 적었다.",
+        "support": [
+          {
+            "window_id": "p61:346-681:sentence",
+            "trigger": "좌장이 너를 독사와도 같이 싫어하고 미워한 것이다"
+          }
+        ]
+      },
+      {
+        "character_a": "유불란",
+        "character_b": "임경부",
+        "lasting": true,
+        "category": "adversarial",
+        "type": "suspicion",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "임경부",
+        "assertion_status": "fact",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "임경부는 유불란을 이몽란을 계획적으로 죽인 범인으로 본다.",
+        "rationale": "임경부가 유불란에게 눈보라 치는 밤을 일부러 고른 것이 당신이라고 말한다. 또 당신이 몽란을 죽인 동기를 말해 보겠다고 말한다. 유불란을 범인으로 보고 취조하고 있음을 직접 보여 준다.",
+        "support": [
+          {
+            "window_id": "p57:601-679:sentence",
+            "trigger": "일부러 눈보라 치는 밤을 선택한 것은 당신이 아니었습니까?"
+          },
+          {
+            "window_id": "p59:0-844:sentence",
+            "trigger": "당신이 몽란을 죽인 동기를 내 입으로 말해보라는 말이지요"
+          }
+        ]
+      }
+    ]
+  }
+}
