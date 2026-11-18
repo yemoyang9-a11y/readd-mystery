@@ -9,7 +9,38 @@ function chapterCount(count: number): string {
 }
 
 /**
- * 타임라인 탭 — 2026-11-18 대표 승인 시안 A안 "타임라인 안에 사건을 함께"
+ * 핵심 한 줄 — 서버가 준 장 요약의 첫 문장. 요약 전체(4~5문장)는 길어서 접는다(2026-11-18 대표 지시).
+ * 서버가 이미 기준점으로 거른 문장을 자르기만 한다. 장마다 따로 만든 핵심 문장이 생기면 그것으로 바꾼다.
+ */
+export function firstSentence(summary: string | null): string | null {
+  if (!summary) return null;
+  const match = /^.+?[.?!。](?=\s|$)/su.exec(summary.trim());
+  return (match ? match[0] : summary).trim();
+}
+
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={`shrink-0 text-brief-muted transition-transform ${open ? 'rotate-180' : ''}`}
+    >
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+
+/**
+ * 타임라인 탭 — 2026-11-18 대표 승인 시안 2차 A안: 장을 누르면 그 장의 사건 카드가 펼쳐지고, 사건 카드를
+ * 누르면 그 자리에서 상세가 펼쳐진다. 쪽수는 p.N 표기. 장에는 핵심 한 줄만 둔다.
+ * 이전: 승인 시안 A안 "타임라인 안에 사건을 함께"
  * (`scratchpad/eventpage/event-placement.html`, 결정 31).
  *
  * 세로 시간 축에 다 읽은 장마다 "N장" · 장 제목 · 간략 요약 · "이 장의 사건"(사건 이름 + 쪽)을 둔다.
@@ -79,64 +110,74 @@ export default function TimelineTab({
             (event) =>
               event.occurrence_page >= chapter.start_page && event.occurrence_page <= chapter.end_page
           );
+          const chapterKey = `ch-${chapter.chapter_no}`;
+          const chapterOpen = openIds.has(chapterKey);
+          const keyLine = firstSentence(chapter.summary);
           return (
-            <li key={chapter.chapter_no} className="relative mb-3.5">
+            <li key={chapter.chapter_no} className="relative mb-4">
               <span
                 aria-hidden="true"
                 className="absolute -left-6 top-1 size-[9px] rounded-full border-[1.5px] border-brief-muted bg-brief-paper"
               />
-              <span className="text-[11px] font-semibold leading-none tracking-[0.02em] text-brief-muted">
-                {chapter.chapter_no}장
-              </span>
-              <b className="mb-0.5 mt-[3px] block text-[13.5px] font-bold leading-[1.4]">{chapter.title}</b>
-              {chapter.summary ? (
-                <p className="m-0 text-[12.5px] leading-relaxed text-brief-ink">{chapter.summary}</p>
-              ) : null}
-              {events.length > 0 ? (
-                <div
-                  data-chapter-events
-                  className="mt-[7px] rounded-[10px] border border-brief-rule bg-white px-2.5 py-2"
-                >
-                  <div className="pb-1 text-[11px] font-semibold leading-none text-brief-accent">이 장의 사건</div>
+              <button
+                type="button"
+                aria-expanded={chapterOpen}
+                onClick={() => toggle(chapterKey)}
+                className="block w-full rounded-lg text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brief-accent"
+              >
+                <span className="block text-[11px] font-semibold leading-none tracking-[0.02em] text-brief-muted">
+                  {chapter.chapter_no}장 · p.{chapter.start_page}–{chapter.end_page}
+                </span>
+                <span className="mb-1 mt-[3px] flex items-center gap-2">
+                  <b className="min-w-0 flex-1 text-[13.5px] font-bold leading-[1.4]">{chapter.title}</b>
+                  {events.length > 0 ? (
+                    <span className="shrink-0 text-[11px] font-semibold text-brief-accent">사건 {events.length}</span>
+                  ) : null}
+                  <Chevron open={chapterOpen} />
+                </span>
+                {keyLine ? <span className="block text-[12.5px] leading-relaxed text-brief-ink">{keyLine}</span> : null}
+              </button>
+              {chapterOpen && events.length > 0 ? (
+                <div data-chapter-events className="mt-2 flex flex-col gap-1.5">
                   {events.map((event) => {
-                    const row = (
-                      <>
-                        <span className={openIds.has(event.id) ? 'font-semibold text-brief-accent' : undefined}>
+                    const cardClass =
+                      'block w-full rounded-[10px] border bg-white px-3 py-2.5 text-left text-xs leading-normal shadow-brief-soft-sm';
+                    const row = (open: boolean, expandable: boolean) => (
+                      <span className="flex items-baseline gap-2">
+                        <span className={`min-w-0 flex-1 ${open ? 'font-semibold text-brief-accent' : ''}`}>
                           {event.event}
                         </span>
-                        <span className="shrink-0 text-brief-muted">{event.occurrence_page}쪽</span>
-                      </>
+                        <span className="shrink-0 tabular-nums text-brief-muted">p.{event.occurrence_page}</span>
+                        {expandable ? <Chevron open={open} /> : null}
+                      </span>
                     );
-                    const rowClass =
-                      'flex w-full justify-between gap-2 border-t border-brief-rule/60 text-left text-xs leading-normal';
                     // 독자용 설명이 없으면 펼칠 것이 없다 — 지어내지 않고 이름과 쪽만 둔다
                     if (!event.description) {
                       return (
-                        <div key={event.id} className={`${rowClass} py-1.5`}>
-                          {row}
+                        <div key={event.id} className={`${cardClass} border-brief-rule`}>
+                          {row(false, false)}
                         </div>
                       );
                     }
                     const open = openIds.has(event.id);
                     return (
-                      <div key={event.id}>
-                        <button
-                          type="button"
-                          aria-expanded={open}
-                          onClick={() => toggle(event.id)}
-                          className={`${rowClass} min-h-11 items-center py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brief-accent`}
-                        >
-                          {row}
-                        </button>
+                      <button
+                        key={event.id}
+                        type="button"
+                        aria-expanded={open}
+                        onClick={() => toggle(event.id)}
+                        className={`${cardClass} min-h-11 ${open ? 'border-brief-accent' : 'border-brief-rule'} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brief-accent`}
+                      >
+                        {row(open, true)}
                         {open ? (
-                          <p
+                          <span
                             data-event-description
-                            className="m-0 mb-1.5 text-xs leading-[1.55] text-brief-muted"
+                            className="mt-2 block border-t border-brief-rule/60 pt-2 text-[12.5px] leading-[1.6] text-brief-ink"
                           >
                             {event.description}
-                          </p>
+                          </span>
                         ) : null}
-                      </div>
+                      </button>
                     );
                   })}
                 </div>

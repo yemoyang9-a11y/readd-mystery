@@ -6,7 +6,7 @@ import type { TimelineResponse } from '../../types';
 // 서버가 기준점 K=30으로 걸러 준 응답의 대역 — 1·2장은 다 읽음, 3장은 읽는 중
 const timeline: TimelineResponse = {
   chapters: [
-    { chapter_no: 1, title: '무대에 올려진 살인 사건', start_page: 1, end_page: 10, completed: true, summary: '좌장이 살해되고 아내가 붙잡혀요.' },
+    { chapter_no: 1, title: '무대에 올려진 살인 사건', start_page: 1, end_page: 10, completed: true, summary: '좌장이 살해되고 아내가 붙잡혀요. 경찰은 아내를 의심해요.' },
     { chapter_no: 2, title: '무대 위의 자백', start_page: 11, end_page: 20, completed: true, summary: '배우가 대본에 없던 말을 해요.' },
     { chapter_no: 3, title: '7년 만의 재회', start_page: 21, end_page: 40, completed: false, summary: null },
   ],
@@ -18,30 +18,48 @@ const timeline: TimelineResponse = {
   applied_cutoff: 30,
 };
 
-describe('타임라인 탭 — 2026-11-18 승인 시안 A안 (결정 31)', () => {
+describe('타임라인 탭 — 2026-11-18 대표 승인 시안 2차 A안 (장 누르면 사건 카드, 카드 누르면 그 자리 상세)', () => {
+  const chapterButton = (no: number) => screen.getByRole('button', { name: new RegExp(`^${no}장`) });
+
   it('제목은 "지금까지, 세 장이에요" — 받은 장 수를 시안 말투로', () => {
     render(<TimelineTab timeline={timeline} failed={false} />);
     expect(screen.getByRole('heading', { name: '지금까지, 세 장이에요' })).toBeInTheDocument();
   });
 
-  it('다 읽은 장마다 "N장"·장 제목·요약·"이 장의 사건"(사건 이름과 쪽)을 차례로 보여 준다', () => {
+  it('다 읽은 장은 "N장 · p.시작–끝"·제목·핵심 한 줄·사건 수만 보이고, 사건 카드는 접혀 있다', () => {
     render(<TimelineTab timeline={timeline} failed={false} />);
-    const items = screen.getAllByRole('listitem');
-    expect(items).toHaveLength(3);
-    const first = within(items[0]);
-    expect(first.getByText('1장')).toBeInTheDocument();
+    const first = within(screen.getAllByRole('listitem')[0]);
+    expect(first.getByText('1장 · p.1–10')).toBeInTheDocument();
     expect(first.getByText('무대에 올려진 살인 사건')).toBeInTheDocument();
-    expect(first.getByText('좌장이 살해되고 아내가 붙잡혀요.')).toBeInTheDocument();
-    expect(first.getByText('이 장의 사건')).toBeInTheDocument();
-    expect(first.getByRole('button', { name: /좌장 살해\s*3쪽/ })).toBeInTheDocument();
-    expect(first.getByRole('button', { name: /아내 체포\s*5쪽/ })).toBeInTheDocument();
-    // 사건은 서버가 준 장 범위로만 묶인다 — 2장 사건이 1장 칸에 섞이지 않는다
-    expect(first.queryByText('무대 위 자백')).not.toBeInTheDocument();
-    expect(within(items[1]).getByText('무대 위 자백')).toBeInTheDocument();
+    expect(first.getByText('사건 2')).toBeInTheDocument();
+    expect(chapterButton(1)).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: /좌장 살해/ })).not.toBeInTheDocument();
   });
 
-  it('사건을 누르면 그 자리에서 짧은 설명이 펼쳐지고(창·시트 없음), 다시 누르면 접힌다', async () => {
+  it('핵심 한 줄 = 서버가 준 요약의 첫 문장만 — 긴 요약 전체를 늘어놓지 않는다', () => {
     render(<TimelineTab timeline={timeline} failed={false} />);
+    expect(screen.getByText('좌장이 살해되고 아내가 붙잡혀요.')).toBeInTheDocument();
+    expect(screen.queryByText(/경찰은 아내를 의심해요/)).not.toBeInTheDocument();
+  });
+
+  it('장을 누르면 그 장의 사건 카드(이름·p.N)가 펼쳐지고, 다시 누르면 접힌다', async () => {
+    render(<TimelineTab timeline={timeline} failed={false} />);
+    await userEvent.click(chapterButton(1));
+    expect(chapterButton(1)).toHaveAttribute('aria-expanded', 'true');
+    const first = within(screen.getAllByRole('listitem')[0]);
+    expect(first.getByRole('button', { name: /좌장 살해\s*p\.3/ })).toBeInTheDocument();
+    expect(first.getByRole('button', { name: /아내 체포\s*p\.5/ })).toBeInTheDocument();
+    // 사건은 서버가 준 장 범위로만 묶인다 — 2장 사건이 1장 칸에 섞이지 않는다
+    expect(first.queryByText('무대 위 자백')).not.toBeInTheDocument();
+
+    await userEvent.click(chapterButton(1));
+    expect(chapterButton(1)).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: /좌장 살해/ })).not.toBeInTheDocument();
+  });
+
+  it('사건 카드를 누르면 그 자리에서 상세가 펼쳐지고(창·시트 없음), 다시 누르면 접힌다', async () => {
+    render(<TimelineTab timeline={timeline} failed={false} />);
+    await userEvent.click(chapterButton(1));
     const event = screen.getByRole('button', { name: /좌장 살해/ });
     expect(event).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByText('좌장이 자기 집에서 숨진 채 발견돼요.')).not.toBeInTheDocument();
@@ -49,8 +67,7 @@ describe('타임라인 탭 — 2026-11-18 승인 시안 A안 (결정 31)', () =>
     await userEvent.click(event);
     expect(event).toHaveAttribute('aria-expanded', 'true');
     const description = screen.getByText('좌장이 자기 집에서 숨진 채 발견돼요.');
-    // 사건 칸 안, 그 사건 바로 아래에 붙는다 — 이동·모달 없이 칸 높이만 늘어난다
-    expect(event.parentElement?.contains(description)).toBe(true);
+    expect(event.contains(description) || event.parentElement?.contains(description)).toBe(true);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
     await userEvent.click(event);
@@ -58,17 +75,22 @@ describe('타임라인 탭 — 2026-11-18 승인 시안 A안 (결정 31)', () =>
     expect(screen.queryByText('좌장이 자기 집에서 숨진 채 발견돼요.')).not.toBeInTheDocument();
   });
 
-  it('여러 사건을 따로 펼쳐 둘 수 있다', async () => {
+  it('여러 장·여러 사건을 따로 펼쳐 둘 수 있다', async () => {
     render(<TimelineTab timeline={timeline} failed={false} />);
+    await userEvent.click(chapterButton(1));
+    await userEvent.click(chapterButton(2));
     await userEvent.click(screen.getByRole('button', { name: /좌장 살해/ }));
     await userEvent.click(screen.getByRole('button', { name: /아내 체포/ }));
     expect(screen.getByText('좌장이 자기 집에서 숨진 채 발견돼요.')).toBeInTheDocument();
     expect(screen.getByText('경찰이 아내를 붙잡아요.')).toBeInTheDocument();
+    expect(screen.getByText('무대 위 자백')).toBeInTheDocument();
   });
 
-  it('독자용 설명이 없는 사건은 펼치는 버튼 없이 이름과 쪽만 보인다', () => {
+  it('독자용 설명이 없는 사건 카드는 누를 수 없고 이름과 p.N만 보인다', async () => {
     render(<TimelineTab timeline={timeline} failed={false} />);
+    await userEvent.click(chapterButton(2));
     expect(screen.getByText('무대 위 자백')).toBeInTheDocument();
+    expect(screen.getByText('p.14')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /무대 위 자백/ })).not.toBeInTheDocument();
   });
 
@@ -78,15 +100,16 @@ describe('타임라인 탭 — 2026-11-18 승인 시안 A안 (결정 31)', () =>
     expect(within(now).getByText('지금 읽는 곳 · 3장')).toBeInTheDocument();
     expect(within(now).getByText('다 읽으면 정리돼요')).toBeInTheDocument();
     expect(within(now).queryByText('7년 만의 재회')).not.toBeInTheDocument();
-    expect(within(now).queryByText('이 장의 사건')).not.toBeInTheDocument();
-    // 지금 읽는 곳의 점은 강조색으로 채운다
+    expect(within(now).queryByRole('button')).not.toBeInTheDocument();
     expect(now.querySelector('span[aria-hidden="true"]')?.className).toContain('bg-brief-accent');
   });
 
-  it('FR-SPL-002 🚦: 받은 응답의 사건만 그린다 — 응답에 없는 사건 0건, 있는 사건은 전부', () => {
+  it('FR-SPL-002 🚦: 받은 응답의 사건만 그린다 — 다 펼쳤을 때 응답에 없는 사건 0건, 있는 사건은 전부', async () => {
     render(<TimelineTab timeline={timeline} failed={false} />);
+    await userEvent.click(chapterButton(1));
+    await userEvent.click(chapterButton(2));
     for (const e of timeline.events) expect(screen.getByText(e.event)).toBeInTheDocument();
-    expect(screen.getAllByText(/쪽$/)).toHaveLength(timeline.events.length);
+    expect(screen.getAllByText(/^p\.\d+$/)).toHaveLength(timeline.events.length);
   });
 
   it('FR-BRF-005 🚦: 다 읽었는지는 서버 completed만 따른다 — 쪽수로 다시 판정하지 않는다', () => {

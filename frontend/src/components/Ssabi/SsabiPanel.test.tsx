@@ -252,13 +252,14 @@ describe('싸비 사이드창', () => {
       events: [{ id: 'e1', event: '편지가 도착해요', description: '아침에 편지가 와요.', occurrence_page: 4 }],
     };
 
-    it('타임라인 탭에 장 요약과 그 장의 사건이 함께 나온다', async () => {
+    it('타임라인 탭에 장 핵심 한 줄이 나오고, 장을 누르면 그 장의 사건 카드가 펼쳐진다 (2026-11-18 시안 2차 A안)', async () => {
       const user = userEvent.setup();
       render(<SsabiPanel {...baseProps} timeline={timeline} />);
       await user.click(screen.getByRole('tab', { name: '타임라인' }));
       expect(screen.getByRole('heading', { name: '지금까지, 두 장이에요' })).toBeInTheDocument();
       expect(screen.getByText('편지가 와요.')).toBeInTheDocument();
-      expect(screen.getByText('이 장의 사건')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /편지가 도착해요/ })).toBeNull();
+      await user.click(screen.getByRole('button', { name: /^1장/ }));
       expect(screen.getByRole('button', { name: /편지가 도착해요/ })).toHaveAttribute('aria-expanded', 'false');
       expect(screen.getByText('지금 읽는 곳 · 2장')).toBeInTheDocument();
     });
