@@ -1,0 +1,19 @@
+{
+  "read_at": "2026-11-18",
+  "note": "운영 Supabase(readd-mystery) 읽기 전용 조회 값 — 쓰기 없음",
+  "book_id": "bk-95898cdf13",
+  "pages_md5": "0de44c2c9e51a42865c78a5a92f9e66c",
+  "pages_md5_sql": "SELECT md5(string_agg(page_no::text || '|' || content, '#' ORDER BY page_no)) FROM pages WHERE book_id = 'bk-95898cdf13'",
+  "chapter_nos": [1, 2, 3, 4, 5],
+  "characters": [
+    { "id": "c1fbb2f5-a25e-5faf-bb5d-91bb9b84fad4", "name": "김영애" },
+    { "id": "2d8ecb4c-a8d5-5d91-8556-927ffe42e697", "name": "나용귀" },
+    { "id": "c8a1f705-f41a-5981-aefd-3ecb24b09c62", "name": "박병국" },
+    { "id": "7edb9939-a8e8-5e3a-bd4e-f840c9f82d04", "name": "박영민" },
+    { "id": "9d6a52e0-3f3c-5690-833f-ce7559cbf33c", "name": "백검사" },
+    { "id": "e0ff01ac-0ddb-5f99-be46-3ea6c4799011", "name": "유불란" },
+    { "id": "24657550-b5de-517d-9c16-ab3fb2387a37", "name": "이몽란" },
+    { "id": "968d8a1f-1066-5e8b-9456-cbda541a0f10", "name": "임경부" },
+    { "id": "f034d382-3a91-537d-a9e7-b159e0b2260e", "name": "진대성" }
+  ]
+}

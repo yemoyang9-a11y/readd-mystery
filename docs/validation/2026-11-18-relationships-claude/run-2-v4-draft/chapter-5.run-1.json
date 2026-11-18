@@ -1,0 +1,195 @@
+{
+  "key": "e6ec4b25652150e7ab3f7b36f6a2778f55666fc4af168e1116206bc474d9f685",
+  "chapter_no": 5,
+  "run": 1,
+  "response": "{\"relations\":[{\"character_a\":\"유불란\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"romance\",\"type\":\"affection\",\"type_question\":true,\"exclusions\":{},\"subject\":\"유불란\",\"assertion_status\":\"claim\",\"attribution\":\"유불란\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"유불란은 이몽란을 자기가 가장 사랑하는 사람이라고 말한다(유불란의 주장).\",\"rationale\":\"따옴표 안 대사에서 유불란이 몽란을 '자기의 가장 사랑하는 몽란'이라 부르고, 창 끝에 말한 사람이 유불란으로 드러나므로 유불란의 claim이다.\",\"support\":[{\"window_id\":\"p56:118-527:sentence\",\"trigger\":\"자기의 가장 사랑하는 몽란\"}]},{\"character_a\":\"유불란\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"romance\",\"type\":\"affection\",\"type_question\":true,\"exclusions\":{},\"subject\":\"이몽란\",\"assertion_status\":\"claim\",\"attribution\":\"임경부\",\"state\":\"ended\",\"change_type\":\"transition\",\"summary\":\"임경부는 이몽란의 마음이 유불란에게서 떠났다고 주장한다.\",\"rationale\":\"임경부가 대사에서 몽란이 유불란을 더 사랑했을지 모르나 '그의 마음은 당신에게서 떠나기 시작'했다고 말한다. 따라서 관계가 바뀌었다는 임경부의 claim이다.\",\"support\":[{\"window_id\":\"p59:0-844:sentence\",\"trigger\":\"그의 마음은 당신에게서 떠나기 시작하여\"}]},{\"character_a\":\"나용귀\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"romance\",\"type\":\"affection\",\"type_question\":true,\"exclusions\":{},\"subject\":\"이몽란\",\"assertion_status\":\"claim\",\"attribution\":\"임경부\",\"state\":\"active\",\"change_type\":\"transition\",\"summary\":\"임경부는 이몽란의 마음이 나용귀에게로 옮아갔다고 주장한다.\",\"rationale\":\"임경부의 대사가 몽란의 마음이 변해 '드디어 나 씨께로 옮아가고야 말았'다고 말한다. 이는 임경부의 claim이며, 유불란은 곧이어 이를 부인한다.\",\"support\":[{\"window_id\":\"p59:0-844:sentence\",\"trigger\":\"드디어 나 씨께로 옮아가고야 말았습니다\"}]},{\"character_a\":\"나용귀\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"romance\",\"type\":\"lust\",\"type_question\":true,\"exclusions\":{},\"subject\":\"나용귀\",\"assertion_status\":\"claim\",\"attribution\":\"백검사\",\"state\":\"active\",\"change_type\":\"disclosure\",\"summary\":\"백검사는 나용귀가 이몽란의 사랑을 차지하려 했다고 주장한다.\",\"rationale\":\"백검사가 대사에서 나용귀가 몽란에게 사랑을 받아보려다 거절당했다고 말한다. 또 거짓 자백으로 유불란에게 가던 몽란의 사랑을 자기에게로 돌려놓으려 했다고 말하므로 백검사의 claim이다.\",\"support\":[{\"window_id\":\"p61:346-681:sentence\",\"trigger\":\"네가 몽란에게 사랑을 받아보려다 거절당한 것\"},{\"window_id\":\"p63:33-272:adjacent\",\"trigger\":\"유불란 씨에게 흘러가고 있던 몽란의 사랑을 네게로 돌려놓고자 했던 것이다\"}]},{\"character_a\":\"나용귀\",\"character_b\":\"유불란\",\"lasting\":true,\"category\":\"attitude\",\"type\":\"hatred\",\"type_question\":true,\"exclusions\":{},\"subject\":\"나용귀\",\"assertion_status\":\"fact\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"나용귀는 유불란을 미워한다.\",\"rationale\":\"따옴표 밖 서술이 나용귀가 '미움이 가득 찬 눈초리'를 불란에게 던졌다고 직접 말한다.\",\"support\":[{\"window_id\":\"p57:136-285:sentence\",\"trigger\":\"미움이 가득 찬 눈초리를 불란에게 던졌다\"}]},{\"character_a\":\"나용귀\",\"character_b\":\"유불란\",\"lasting\":true,\"category\":\"adversarial\",\"type\":\"hostility\",\"type_question\":true,\"exclusions\":{\"one_off\":false},\"subject\":\"유불란\",\"assertion_status\":\"claim\",\"attribution\":\"백검사\",\"state\":\"active\",\"change_type\":\"disclosure\",\"summary\":\"백검사는 유불란이 『가상범인』으로 나용귀에게 노골적으로 싸움을 걸었다고 주장한다.\",\"rationale\":\"백검사가 나용귀에게 하는 대사에서 유불란이 '너무도 노골적으로 네게다 싸움을 걸었다'고 말한다. 이는 범인으로 보는 상대에게 맞선 것으로, 백검사의 claim이다.\",\"support\":[{\"window_id\":\"p62:0-740:sentence\",\"trigger\":\"유불란 씨는 타는 불덩어리와 같은 정열을 가슴에 품고 너무도 노골적으로 네게다 싸움을 걸었다\"}]},{\"character_a\":\"유불란\",\"character_b\":\"임경부\",\"lasting\":true,\"category\":\"adversarial\",\"type\":\"suspicion\",\"type_question\":true,\"exclusions\":{},\"subject\":\"임경부\",\"assertion_status\":\"claim\",\"attribution\":\"임경부\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"임경부는 유불란이 계획적으로 몽란을 죽였다고 보고 그렇게 주장한다.\",\"rationale\":\"경부가 유불란에게 눈보라 치는 밤을 일부러 고른 것이 당신이라고 몰아세운다. 또 유불란이 몽란을 죽인 동기를 말하겠다고 하여 유불란을 범인으로 다루므로 임경부의 claim이다.\",\"support\":[{\"window_id\":\"p57:601-679:sentence\",\"trigger\":\"일부러 눈보라 치는 밤을 선택한 것은 당신이 아니었습니까?\"},{\"window_id\":\"p59:0-844:sentence\",\"trigger\":\"당신이 몽란을 죽인 동기를 내 입으로 말해보라는 말이지요\"}]},{\"character_a\":\"나용귀\",\"character_b\":\"박영민\",\"lasting\":true,\"category\":\"attitude\",\"type\":\"hatred\",\"type_question\":true,\"exclusions\":{},\"subject\":\"박영민\",\"assertion_status\":\"claim\",\"attribution\":\"백검사\",\"state\":\"ended\",\"change_type\":\"disclosure\",\"summary\":\"백검사는 박영민(좌장)이 나용귀를 독사같이 싫어하고 미워했다고 주장한다.\",\"rationale\":\"백검사의 대사가 '좌장이 너를 독사와도 같이 싫어하고 미워한 것'이라고 말하므로 백검사의 claim이다. 좌장은 이미 살해되었으므로 관계는 끝난 상태다.\",\"support\":[{\"window_id\":\"p61:346-681:sentence\",\"trigger\":\"좌장이 너를 독사와도 같이 싫어하고 미워한 것이다\"}]}]}",
+  "parsed": {
+    "relations": [
+      {
+        "character_a": "유불란",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "affection",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "유불란",
+        "assertion_status": "claim",
+        "attribution": "유불란",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "유불란은 이몽란을 자기가 가장 사랑하는 사람이라고 말한다(유불란의 주장).",
+        "rationale": "따옴표 안 대사에서 유불란이 몽란을 '자기의 가장 사랑하는 몽란'이라 부르고, 창 끝에 말한 사람이 유불란으로 드러나므로 유불란의 claim이다.",
+        "support": [
+          {
+            "window_id": "p56:118-527:sentence",
+            "trigger": "자기의 가장 사랑하는 몽란"
+          }
+        ]
+      },
+      {
+        "character_a": "유불란",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "affection",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "이몽란",
+        "assertion_status": "claim",
+        "attribution": "임경부",
+        "state": "ended",
+        "change_type": "transition",
+        "summary": "임경부는 이몽란의 마음이 유불란에게서 떠났다고 주장한다.",
+        "rationale": "임경부가 대사에서 몽란이 유불란을 더 사랑했을지 모르나 '그의 마음은 당신에게서 떠나기 시작'했다고 말한다. 따라서 관계가 바뀌었다는 임경부의 claim이다.",
+        "support": [
+          {
+            "window_id": "p59:0-844:sentence",
+            "trigger": "그의 마음은 당신에게서 떠나기 시작하여"
+          }
+        ]
+      },
+      {
+        "character_a": "나용귀",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "affection",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "이몽란",
+        "assertion_status": "claim",
+        "attribution": "임경부",
+        "state": "active",
+        "change_type": "transition",
+        "summary": "임경부는 이몽란의 마음이 나용귀에게로 옮아갔다고 주장한다.",
+        "rationale": "임경부의 대사가 몽란의 마음이 변해 '드디어 나 씨께로 옮아가고야 말았'다고 말한다. 이는 임경부의 claim이며, 유불란은 곧이어 이를 부인한다.",
+        "support": [
+          {
+            "window_id": "p59:0-844:sentence",
+            "trigger": "드디어 나 씨께로 옮아가고야 말았습니다"
+          }
+        ]
+      },
+      {
+        "character_a": "나용귀",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "lust",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "나용귀",
+        "assertion_status": "claim",
+        "attribution": "백검사",
+        "state": "active",
+        "change_type": "disclosure",
+        "summary": "백검사는 나용귀가 이몽란의 사랑을 차지하려 했다고 주장한다.",
+        "rationale": "백검사가 대사에서 나용귀가 몽란에게 사랑을 받아보려다 거절당했다고 말한다. 또 거짓 자백으로 유불란에게 가던 몽란의 사랑을 자기에게로 돌려놓으려 했다고 말하므로 백검사의 claim이다.",
+        "support": [
+          {
+            "window_id": "p61:346-681:sentence",
+            "trigger": "네가 몽란에게 사랑을 받아보려다 거절당한 것"
+          },
+          {
+            "window_id": "p63:33-272:adjacent",
+            "trigger": "유불란 씨에게 흘러가고 있던 몽란의 사랑을 네게로 돌려놓고자 했던 것이다"
+          }
+        ]
+      },
+      {
+        "character_a": "나용귀",
+        "character_b": "유불란",
+        "lasting": true,
+        "category": "attitude",
+        "type": "hatred",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "나용귀",
+        "assertion_status": "fact",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "나용귀는 유불란을 미워한다.",
+        "rationale": "따옴표 밖 서술이 나용귀가 '미움이 가득 찬 눈초리'를 불란에게 던졌다고 직접 말한다.",
+        "support": [
+          {
+            "window_id": "p57:136-285:sentence",
+            "trigger": "미움이 가득 찬 눈초리를 불란에게 던졌다"
+          }
+        ]
+      },
+      {
+        "character_a": "나용귀",
+        "character_b": "유불란",
+        "lasting": true,
+        "category": "adversarial",
+        "type": "hostility",
+        "type_question": true,
+        "exclusions": {
+          "one_off": false
+        },
+        "subject": "유불란",
+        "assertion_status": "claim",
+        "attribution": "백검사",
+        "state": "active",
+        "change_type": "disclosure",
+        "summary": "백검사는 유불란이 『가상범인』으로 나용귀에게 노골적으로 싸움을 걸었다고 주장한다.",
+        "rationale": "백검사가 나용귀에게 하는 대사에서 유불란이 '너무도 노골적으로 네게다 싸움을 걸었다'고 말한다. 이는 범인으로 보는 상대에게 맞선 것으로, 백검사의 claim이다.",
+        "support": [
+          {
+            "window_id": "p62:0-740:sentence",
+            "trigger": "유불란 씨는 타는 불덩어리와 같은 정열을 가슴에 품고 너무도 노골적으로 네게다 싸움을 걸었다"
+          }
+        ]
+      },
+      {
+        "character_a": "유불란",
+        "character_b": "임경부",
+        "lasting": true,
+        "category": "adversarial",
+        "type": "suspicion",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "임경부",
+        "assertion_status": "claim",
+        "attribution": "임경부",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "임경부는 유불란이 계획적으로 몽란을 죽였다고 보고 그렇게 주장한다.",
+        "rationale": "경부가 유불란에게 눈보라 치는 밤을 일부러 고른 것이 당신이라고 몰아세운다. 또 유불란이 몽란을 죽인 동기를 말하겠다고 하여 유불란을 범인으로 다루므로 임경부의 claim이다.",
+        "support": [
+          {
+            "window_id": "p57:601-679:sentence",
+            "trigger": "일부러 눈보라 치는 밤을 선택한 것은 당신이 아니었습니까?"
+          },
+          {
+            "window_id": "p59:0-844:sentence",
+            "trigger": "당신이 몽란을 죽인 동기를 내 입으로 말해보라는 말이지요"
+          }
+        ]
+      },
+      {
+        "character_a": "나용귀",
+        "character_b": "박영민",
+        "lasting": true,
+        "category": "attitude",
+        "type": "hatred",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "박영민",
+        "assertion_status": "claim",
+        "attribution": "백검사",
+        "state": "ended",
+        "change_type": "disclosure",
+        "summary": "백검사는 박영민(좌장)이 나용귀를 독사같이 싫어하고 미워했다고 주장한다.",
+        "rationale": "백검사의 대사가 '좌장이 너를 독사와도 같이 싫어하고 미워한 것'이라고 말하므로 백검사의 claim이다. 좌장은 이미 살해되었으므로 관계는 끝난 상태다.",
+        "support": [
+          {
+            "window_id": "p61:346-681:sentence",
+            "trigger": "좌장이 너를 독사와도 같이 싫어하고 미워한 것이다"
+          }
+        ]
+      }
+    ]
+  }
+}

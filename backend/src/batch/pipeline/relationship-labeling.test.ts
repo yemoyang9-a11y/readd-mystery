@@ -986,3 +986,223 @@ describe('FR-CHR-001: 관계 질문지 — 닫힌 유형 표와 판정 질문', 
     expect(json.indexOf('"type"')).toBeLessThan(json.indexOf('"type_question"'));
   });
 });
+
+// 2026-11-18 대표 결정 "보강 후 반영" — 관형절 방향, 대사·전언 속 관계는 주장(claim)·믿음(belief)으로,
+// 화자가 자기 감정을 말하는 대사는 화자 귀속이 규칙으로 확실할 때만 화자의 주장으로 받는다(사실로는 받지 않는다).
+describe('FR-CHR-001: 보강 — 관형절 방향·대사 속 관계·화자 귀속', () => {
+  const lex = [...lexicon];
+  const run = (text: string, item: (w: string) => unknown, pageNo = 4, kind?: string) => {
+    const pages = [page(pageNo, text)];
+    const candidates = generateInteractionCandidates(pages, lex);
+    const pair = candidates[0];
+    const w =
+      (pair?.windows.find((x) => !kind || x.kind === kind) ?? pair?.windows[0])?.id ?? 'none';
+    return verifyPairLabels({ relations: [item(w)] }, candidates, pages, lex);
+  };
+  const love =
+    (subject: string, extra: Record<string, unknown> = {}) =>
+    (w: string) =>
+      label('서윤', '도현', [{ window_id: w, trigger: '서윤을 끝없이 사랑하는 도현' }], {
+        type: 'affection',
+        subject,
+        summary: `${subject === '도현' ? '도현은 서윤을' : '서윤은 도현을'} 사랑한다.`,
+        ...extra,
+      });
+
+  test('관형절 "서윤을 끝없이 사랑하는 도현" — 피수식 인물(도현)이 주체면 채택, 서윤을 주체로 붙이면 direction_conflict', () => {
+    const text = '서윤이 먼저 웃었고, 서윤을 끝없이 사랑하는 도현은 울었다.';
+    const right = run(text, love('도현'));
+    expect(right.held).toEqual([]);
+    expect(right.relationships[0].character_a_id).toBe('dohyun');
+    const wrong = run(text, love('서윤'));
+    expect(wrong.relationships).toHaveLength(0);
+    expect(wrong.held.map((h) => h.reasons)).toEqual([['direction_conflict']]);
+  });
+
+  test('한 문장으로 묶인 대사 안의 앞 문장 주어("서윤이가 범인이다.")는 뒤 관형절의 주체가 아니다', () => {
+    const text =
+      '“서윤이가 범인이다. 서윤을 끝없이 사랑하는 도현에게 속지 마라.” 하고 민은 생각했다.';
+    const belief = { assertion_status: 'belief', attribution: '민' };
+    const right = run(
+      text,
+      love('도현', { ...belief, summary: '민은 도현이 서윤을 사랑한다고 생각한다.' })
+    );
+    expect(right.held).toEqual([]);
+    expect(right.relationships).toHaveLength(1);
+    const wrong = run(
+      text,
+      love('서윤', { ...belief, summary: '민은 서윤이 도현을 사랑한다고 생각한다.' })
+    );
+    expect(wrong.held.map((h) => h.reasons)).toEqual([['direction_conflict']]);
+  });
+
+  test('"도현은 서윤의 애욕의 대상이 되었다" — 대상 구문은 방향을 판단하지 않는다, 일반 문장의 반대 방향은 그대로 막는다', () => {
+    const passive = run('도현은 서윤의 애욕의 대상이 되었다.', (w) =>
+      label('도현', '서윤', [{ window_id: w, trigger: '서윤의 애욕의 대상이 되었다' }], {
+        type: 'lust',
+        subject: '서윤',
+        summary: '서윤은 도현을 탐낸다.',
+      })
+    );
+    expect(passive.held).toEqual([]);
+    expect(passive.relationships[0].character_a_id).toBe('seoyun');
+    const reversed = run('서윤은 도현을 탐냈다.', (w) =>
+      label('서윤', '도현', [{ window_id: w, trigger: '탐냈다' }], {
+        type: 'lust',
+        subject: '도현',
+        summary: '도현은 서윤을 탐낸다.',
+      })
+    );
+    expect(reversed.held.map((h) => h.reasons)).toEqual([['direction_conflict']]);
+  });
+
+  test('대사 속 관계를 사실(fact)로 단정하면 0건(quoted_speech), 말한 사람의 주장(claim+attribution)으로 적으면 채택', () => {
+    const text = '“민은 윤아를 미워해요.” 하고 수가 말했다.';
+    const support = (w: string) => [{ window_id: w, trigger: '미워해요' }];
+    const asFact = run(text, (w) =>
+      label('민', '윤아', support(w), { type: 'hatred', summary: '민은 윤아를 미워한다.' })
+    );
+    expect(asFact.relationships).toHaveLength(0);
+    expect(asFact.held.map((h) => h.reasons)).toEqual([['factuality_cue:quoted_speech']]);
+    const asClaim = run(text, (w) =>
+      label('민', '윤아', support(w), {
+        type: 'hatred',
+        assertion_status: 'claim',
+        attribution: '수',
+        summary: '수는 민이 윤아를 미워한다고 주장한다.',
+      })
+    );
+    expect(asClaim.held).toEqual([]);
+    expect(asClaim.relationships[0].relationship.semantics).toMatchObject({
+      assertion_status: 'claim',
+      attribution: '수',
+    });
+  });
+
+  test('positive — 서술(따옴표 밖)의 사실 관계는 그대로 채택된다', () => {
+    const out = run('민은 윤아를 미워했다.', (w) =>
+      label('민', '윤아', [{ window_id: w, trigger: '미워' }], { type: 'hatred' })
+    );
+    expect(out.held).toEqual([]);
+  });
+
+  test('화자 본인의 감정 대사("민의 진술. “나는 윤아를 사랑하고 있습니다.”") — 화자의 주장으로만 채택, 사실로는 0건', () => {
+    const text = '민의 진술. “나는 윤아를 사랑하고 있습니다.”';
+    const item = (extra: Record<string, unknown>) => (w: string) =>
+      label('민', '윤아', [{ window_id: w, trigger: '사랑하고 있습니다' }], {
+        type: 'affection',
+        ...extra,
+      });
+    const claim = run(
+      text,
+      item({
+        assertion_status: 'claim',
+        attribution: '민',
+        summary: '민은 윤아를 사랑한다고 주장한다.',
+      }),
+      6,
+      'adjacent'
+    );
+    expect(claim.held).toEqual([]);
+    expect(claim.relationships).toHaveLength(1);
+    const r = claim.relationships[0].relationship;
+    expect(r.evidence.quote).toContain('민의 진술');
+    expect(r.semantics).toMatchObject({ assertion_status: 'claim', attribution: '민' });
+    const fact = run(text, item({ summary: '민은 윤아를 사랑한다.' }), 6, 'adjacent');
+    expect(fact.relationships).toHaveLength(0);
+  });
+
+  test('화자 귀속이 규칙으로 확실하지 않으면(말하는 동사·진술 표지 없음, 주체가 화자가 아님) 0건', () => {
+    const noSpeech = run(
+      '민은 산에 갔다. “나는 윤아를 사랑하고 있습니다.”',
+      (w) =>
+        label('민', '윤아', [{ window_id: w, trigger: '사랑하고 있습니다' }], {
+          type: 'affection',
+          assertion_status: 'claim',
+          attribution: '민',
+          summary: '민은 윤아를 사랑한다고 주장한다.',
+        }),
+      6,
+      'adjacent'
+    );
+    expect(noSpeech.relationships).toHaveLength(0);
+    expect(noSpeech.held[0].reasons).toEqual(['trigger_sentence_lacks_endpoint']);
+    const otherSubject = run(
+      '민의 진술. “나는 윤아를 사랑하고 있습니다.”',
+      (w) =>
+        label('민', '윤아', [{ window_id: w, trigger: '사랑하고 있습니다' }], {
+          type: 'affection',
+          subject: '윤아',
+          assertion_status: 'claim',
+          attribution: '민',
+          summary: '민은 윤아가 민을 사랑한다고 주장한다.',
+        }),
+      6,
+      'adjacent'
+    );
+    expect(otherSubject.relationships).toHaveLength(0);
+  });
+
+  test('다음 문장의 반박 단서는 그 문장 첫머리에 있을 때만 — 멀리 떨어진 "거짓"은 반박이 아니다', () => {
+    const far = run(
+      '서윤은 도현을 미워했다. 그날 밤 아주 늦게 경찰서에서 들은 자백이 거짓이란 것을 모두 알았다.',
+      (w) => label('서윤', '도현', [{ window_id: w, trigger: '미워' }], { type: 'hatred' })
+    );
+    expect(far.held).toEqual([]);
+    const near = run('서윤은 도현을 미워했다. 그것은 모두의 오해였다.', (w) =>
+      label('서윤', '도현', [{ window_id: w, trigger: '미워' }], { type: 'hatred' })
+    );
+    expect(near.held.map((h) => h.reasons)).toEqual([['factuality_cue:refuted_next']]);
+  });
+
+  test('trigger 안 앞 절의 부정("처녀가 아니고")은 뒤 절의 관계를 부정하지 않는다, 관계 자체의 부정은 그대로 0건', () => {
+    const lust = (text: string, trigger: string) =>
+      run(text, (w) =>
+        label('도현', '서윤', [{ window_id: w, trigger }], {
+          type: 'lust',
+          subject: '서윤',
+          summary: '서윤은 도현을 탐낸다.',
+        })
+      );
+    const prior = lust(
+      '도현은 벌써 처녀가 아니고 서윤의 애욕의 대상이 되었던 것이다.',
+      '도현은 벌써 처녀가 아니고 서윤의 애욕의 대상이 되었던 것이다'
+    );
+    expect(prior.held).toEqual([]);
+    const negated = lust(
+      '도현은 서윤의 애욕의 대상이 아니었다.',
+      '도현은 서윤의 애욕의 대상이 아니었다'
+    );
+    expect(negated.relationships).toHaveLength(0);
+    expect(negated.held.map((h) => h.reasons)).toEqual([['factuality_cue:negation']]);
+  });
+
+  test('trigger가 1인칭으로 시작해도("나는 윤아를 사랑하고 있습니다") 화자 규칙이 적용된다', () => {
+    const out = run(
+      '민의 진술. “왜냐고요? 나는 윤아를 사랑하고 있습니다.”',
+      (w) =>
+        label('민', '윤아', [{ window_id: w, trigger: '나는 윤아를 사랑하고 있습니다' }], {
+          type: 'affection',
+          assertion_status: 'claim',
+          attribution: '민',
+          summary: '민은 윤아를 사랑한다고 주장한다.',
+        }),
+      6,
+      'adjacent'
+    );
+    expect(out.held).toEqual([]);
+    expect(out.relationships).toHaveLength(1);
+  });
+
+  test('프롬프트는 대사·전언 속 관계를 claim/belief + 말한 사람으로 적으라고 안내한다', () => {
+    const pages = [page(1, '서윤은 도현을 의심했다.')];
+    const prompt = buildPairLabelPrompt(
+      { chapter_no: 1, title: '첫 장', start_page: 1, end_page: 1 } as never,
+      generateInteractionCandidates(pages, lexicon),
+      lexicon
+    );
+    expect(prompt).toMatch(/따옴표/);
+    expect(prompt).toMatch(/claim/);
+    expect(prompt).toMatch(/attribution/);
+  });
+});

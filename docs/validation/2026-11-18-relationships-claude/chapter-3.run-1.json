@@ -1,73 +1,10 @@
 {
-  "key": "96bb403e25e2ce421426162377bc51a9665251a8d8d136ce3feeb34ee0c7a1b0",
+  "key": "e0f01bced53a823a75e5d9014efbf2031320911bb2bb2c0a6731f10a9bdd6d9d",
   "chapter_no": 3,
   "run": 1,
-  "response": "{\"relations\":[{\"character_a\":\"임경부\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"attitude\",\"type\":\"hatred\",\"type_question\":true,\"exclusions\":{},\"subject\":\"임경부\",\"assertion_status\":\"fact\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"임경부는 이몽란을 미워한다.\",\"rationale\":\"서술이 임경부가 몽란에 대한 미움이 마음을 찌르는 듯함을 깨달았다고 직접 말한다.\",\"support\":[{\"window_id\":\"p46:37-203:sentence\",\"trigger\":\"몽란과 유불란에 대한 미움\"}]},{\"character_a\":\"임경부\",\"character_b\":\"유불란\",\"lasting\":true,\"category\":\"attitude\",\"type\":\"hatred\",\"type_question\":true,\"exclusions\":{},\"subject\":\"임경부\",\"assertion_status\":\"fact\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"임경부는 유불란을 미워한다.\",\"rationale\":\"서술이 임경부가 유불란에 대한 미움이 마음을 찌르는 듯함을 깨달았다고 직접 말한다.\",\"support\":[{\"window_id\":\"p46:37-203:sentence\",\"trigger\":\"몽란과 유불란에 대한 미움\"}]},{\"character_a\":\"임경부\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"adversarial\",\"type\":\"suspicion\",\"type_question\":true,\"exclusions\":{},\"subject\":\"임경부\",\"assertion_status\":\"fact\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"임경부는 이몽란을 좌장을 죽인 범인으로 보아 왔다.\",\"rationale\":\"서술이 임경부가 지금까지 좌장을 죽인 범인을 몽란이라고 생각해 왔다고 직접 말한다. 사람을 범인으로 보는 의심이다.\",\"support\":[{\"window_id\":\"p48:659-848:sentence\",\"trigger\":\"좌장을 죽인 범인을 몽란이라고 생각해오던 임경부\"}]},{\"character_a\":\"유불란\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"romance\",\"type\":\"affection\",\"type_question\":true,\"exclusions\":{},\"subject\":\"유불란\",\"assertion_status\":\"belief\",\"attribution\":\"임경부\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"임경부는 유불란이 이몽란을 끝없이 사랑한다고 믿는다.\",\"rationale\":\"임경부의 독백이 유불란을 '몽란을 끝없이 사랑하는' 사람이라고 말한다. 서술로 확인된 사실이 아니라 임경부의 생각이므로 belief로 둔다.\",\"support\":[{\"window_id\":\"p46:37-203:sentence\",\"trigger\":\"몽란을 끝없이 사랑하는 유불란\"}]}]}",
+  "response": "{\"relations\":[{\"character_a\":\"유불란\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"romance\",\"type\":\"affection\",\"type_question\":true,\"exclusions\":{},\"subject\":\"유불란\",\"assertion_status\":\"belief\",\"attribution\":\"임경부\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"임경부는 유불란이 이몽란을 끝없이 사랑한다고 생각한다.\",\"rationale\":\"임경부의 속생각을 담은 따옴표 안 독백에 '몽란을 끝없이 사랑하는 유불란'이라는 관형절이 있다. 꾸밈을 받는 유불란이 사랑의 주체이므로 판정 질문의 답은 예다. 다만 이것은 임경부의 생각이어서 belief로 적는다.\",\"support\":[{\"window_id\":\"p46:37-203:sentence\",\"trigger\":\"몽란을 끝없이 사랑하는 유불란\"}]},{\"character_a\":\"이몽란\",\"character_b\":\"임경부\",\"lasting\":true,\"category\":\"attitude\",\"type\":\"hatred\",\"type_question\":true,\"exclusions\":{},\"subject\":\"임경부\",\"assertion_status\":\"fact\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"임경부는 이몽란을 미워한다.\",\"rationale\":\"서술자가 따옴표 밖에서 임경부가 '몽란과 유불란에 대한 미움'을 깨달았다고 직접 말한다. 따라서 임경부가 이몽란을 미워한다는 판정 질문의 답은 예다.\",\"support\":[{\"window_id\":\"p46:37-203:sentence\",\"trigger\":\"몽란과 유불란에 대한 미움\"},{\"window_id\":\"p46:37-342:adjacent\",\"trigger\":\"몽란과 유불란에 대한 미움\"}]},{\"character_a\":\"유불란\",\"character_b\":\"임경부\",\"lasting\":true,\"category\":\"attitude\",\"type\":\"hatred\",\"type_question\":true,\"exclusions\":{},\"subject\":\"임경부\",\"assertion_status\":\"fact\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"임경부는 유불란을 미워한다.\",\"rationale\":\"서술자가 따옴표 밖에서 임경부가 '몽란과 유불란에 대한 미움'을 깨달았다고 직접 말한다. 따라서 임경부가 유불란을 미워한다는 판정 질문의 답은 예다.\",\"support\":[{\"window_id\":\"p46:37-203:sentence\",\"trigger\":\"몽란과 유불란에 대한 미움\"},{\"window_id\":\"p46:37-342:adjacent\",\"trigger\":\"몽란과 유불란에 대한 미움\"}]},{\"character_a\":\"이몽란\",\"character_b\":\"임경부\",\"lasting\":true,\"category\":\"adversarial\",\"type\":\"suspicion\",\"type_question\":true,\"exclusions\":{},\"subject\":\"임경부\",\"assertion_status\":\"fact\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"임경부는 이몽란을 좌장을 죽인 범인으로 보아 왔다.\",\"rationale\":\"서술자가 따옴표 밖에서 '좌장을 죽인 범인을 몽란이라고 생각해오던 임경부'라고 말한다. 임경부가 이몽란을 범인으로 보아 왔다는 뜻이므로 판정 질문의 답은 예다.\",\"support\":[{\"window_id\":\"p48:659-848:sentence\",\"trigger\":\"좌장을 죽인 범인을 몽란이라고 생각해오던 임경부\"},{\"window_id\":\"p48:594-848:adjacent\",\"trigger\":\"좌장을 죽인 범인을 몽란이라고 생각해오던 임경부\"}]},{\"character_a\":\"유불란\",\"character_b\":\"임경부\",\"lasting\":true,\"category\":\"adversarial\",\"type\":\"suspicion\",\"type_question\":true,\"exclusions\":{},\"subject\":\"임경부\",\"assertion_status\":\"uncertain\",\"attribution\":\"임경부\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"임경부는 유불란이 이몽란을 죽였는지 확실하지 않다.\",\"rationale\":\"임경부의 대사 '그가 죽였다. 그가 몽란을 죽였다?'는 유불란을 몽란 살해의 범인으로 의심하는 말이다. 그러나 끝이 물음으로 맺어지고 '생각이 쫙 막혔다'는 서술이 이어지므로 의심이 확정되지 않았다. 그래서 uncertain으로 적는다.\",\"support\":[{\"window_id\":\"p48:659-848:sentence\",\"trigger\":\"그가 몽란을 죽였다?\"},{\"window_id\":\"p48:594-848:adjacent\",\"trigger\":\"그가 몽란을 죽였다?\"}]}]}",
   "parsed": {
     "relations": [
-      {
-        "character_a": "임경부",
-        "character_b": "이몽란",
-        "lasting": true,
-        "category": "attitude",
-        "type": "hatred",
-        "type_question": true,
-        "exclusions": {},
-        "subject": "임경부",
-        "assertion_status": "fact",
-        "state": "active",
-        "change_type": "establishment",
-        "summary": "임경부는 이몽란을 미워한다.",
-        "rationale": "서술이 임경부가 몽란에 대한 미움이 마음을 찌르는 듯함을 깨달았다고 직접 말한다.",
-        "support": [
-          {
-            "window_id": "p46:37-203:sentence",
-            "trigger": "몽란과 유불란에 대한 미움"
-          }
-        ]
-      },
-      {
-        "character_a": "임경부",
-        "character_b": "유불란",
-        "lasting": true,
-        "category": "attitude",
-        "type": "hatred",
-        "type_question": true,
-        "exclusions": {},
-        "subject": "임경부",
-        "assertion_status": "fact",
-        "state": "active",
-        "change_type": "establishment",
-        "summary": "임경부는 유불란을 미워한다.",
-        "rationale": "서술이 임경부가 유불란에 대한 미움이 마음을 찌르는 듯함을 깨달았다고 직접 말한다.",
-        "support": [
-          {
-            "window_id": "p46:37-203:sentence",
-            "trigger": "몽란과 유불란에 대한 미움"
-          }
-        ]
-      },
-      {
-        "character_a": "임경부",
-        "character_b": "이몽란",
-        "lasting": true,
-        "category": "adversarial",
-        "type": "suspicion",
-        "type_question": true,
-        "exclusions": {},
-        "subject": "임경부",
-        "assertion_status": "fact",
-        "state": "active",
-        "change_type": "establishment",
-        "summary": "임경부는 이몽란을 좌장을 죽인 범인으로 보아 왔다.",
-        "rationale": "서술이 임경부가 지금까지 좌장을 죽인 범인을 몽란이라고 생각해 왔다고 직접 말한다. 사람을 범인으로 보는 의심이다.",
-        "support": [
-          {
-            "window_id": "p48:659-848:sentence",
-            "trigger": "좌장을 죽인 범인을 몽란이라고 생각해오던 임경부"
-          }
-        ]
-      },
       {
         "character_a": "유불란",
         "character_b": "이몽란",
@@ -81,12 +18,113 @@
         "attribution": "임경부",
         "state": "active",
         "change_type": "establishment",
-        "summary": "임경부는 유불란이 이몽란을 끝없이 사랑한다고 믿는다.",
-        "rationale": "임경부의 독백이 유불란을 '몽란을 끝없이 사랑하는' 사람이라고 말한다. 서술로 확인된 사실이 아니라 임경부의 생각이므로 belief로 둔다.",
+        "summary": "임경부는 유불란이 이몽란을 끝없이 사랑한다고 생각한다.",
+        "rationale": "임경부의 속생각을 담은 따옴표 안 독백에 '몽란을 끝없이 사랑하는 유불란'이라는 관형절이 있다. 꾸밈을 받는 유불란이 사랑의 주체이므로 판정 질문의 답은 예다. 다만 이것은 임경부의 생각이어서 belief로 적는다.",
         "support": [
           {
             "window_id": "p46:37-203:sentence",
             "trigger": "몽란을 끝없이 사랑하는 유불란"
+          }
+        ]
+      },
+      {
+        "character_a": "이몽란",
+        "character_b": "임경부",
+        "lasting": true,
+        "category": "attitude",
+        "type": "hatred",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "임경부",
+        "assertion_status": "fact",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "임경부는 이몽란을 미워한다.",
+        "rationale": "서술자가 따옴표 밖에서 임경부가 '몽란과 유불란에 대한 미움'을 깨달았다고 직접 말한다. 따라서 임경부가 이몽란을 미워한다는 판정 질문의 답은 예다.",
+        "support": [
+          {
+            "window_id": "p46:37-203:sentence",
+            "trigger": "몽란과 유불란에 대한 미움"
+          },
+          {
+            "window_id": "p46:37-342:adjacent",
+            "trigger": "몽란과 유불란에 대한 미움"
+          }
+        ]
+      },
+      {
+        "character_a": "유불란",
+        "character_b": "임경부",
+        "lasting": true,
+        "category": "attitude",
+        "type": "hatred",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "임경부",
+        "assertion_status": "fact",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "임경부는 유불란을 미워한다.",
+        "rationale": "서술자가 따옴표 밖에서 임경부가 '몽란과 유불란에 대한 미움'을 깨달았다고 직접 말한다. 따라서 임경부가 유불란을 미워한다는 판정 질문의 답은 예다.",
+        "support": [
+          {
+            "window_id": "p46:37-203:sentence",
+            "trigger": "몽란과 유불란에 대한 미움"
+          },
+          {
+            "window_id": "p46:37-342:adjacent",
+            "trigger": "몽란과 유불란에 대한 미움"
+          }
+        ]
+      },
+      {
+        "character_a": "이몽란",
+        "character_b": "임경부",
+        "lasting": true,
+        "category": "adversarial",
+        "type": "suspicion",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "임경부",
+        "assertion_status": "fact",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "임경부는 이몽란을 좌장을 죽인 범인으로 보아 왔다.",
+        "rationale": "서술자가 따옴표 밖에서 '좌장을 죽인 범인을 몽란이라고 생각해오던 임경부'라고 말한다. 임경부가 이몽란을 범인으로 보아 왔다는 뜻이므로 판정 질문의 답은 예다.",
+        "support": [
+          {
+            "window_id": "p48:659-848:sentence",
+            "trigger": "좌장을 죽인 범인을 몽란이라고 생각해오던 임경부"
+          },
+          {
+            "window_id": "p48:594-848:adjacent",
+            "trigger": "좌장을 죽인 범인을 몽란이라고 생각해오던 임경부"
+          }
+        ]
+      },
+      {
+        "character_a": "유불란",
+        "character_b": "임경부",
+        "lasting": true,
+        "category": "adversarial",
+        "type": "suspicion",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "임경부",
+        "assertion_status": "uncertain",
+        "attribution": "임경부",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "임경부는 유불란이 이몽란을 죽였는지 확실하지 않다.",
+        "rationale": "임경부의 대사 '그가 죽였다. 그가 몽란을 죽였다?'는 유불란을 몽란 살해의 범인으로 의심하는 말이다. 그러나 끝이 물음으로 맺어지고 '생각이 쫙 막혔다'는 서술이 이어지므로 의심이 확정되지 않았다. 그래서 uncertain으로 적는다.",
+        "support": [
+          {
+            "window_id": "p48:659-848:sentence",
+            "trigger": "그가 몽란을 죽였다?"
+          },
+          {
+            "window_id": "p48:594-848:adjacent",
+            "trigger": "그가 몽란을 죽였다?"
           }
         ]
       }
