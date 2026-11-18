@@ -77,7 +77,8 @@ export function createCommunityRouter({
   community: CommunityRepository;
   /** 공감·인기순·허브. 없으면 그 경로를 열지 않는다 (2026-11-18 대표 지시) */
   engagement?: CommunityEngagementRepository;
-  content: Pick<ContentRepository, 'findReadiness'> & Partial<Pick<ContentRepository, 'findCatalog'>>;
+  content: Pick<ContentRepository, 'findReadiness'> &
+    Partial<Pick<ContentRepository, 'findCatalog'>>;
   cutoff: Pick<CutoffService, 'getCutoffSnapshot'>;
 }): Router {
   const router = express.Router();
@@ -93,7 +94,7 @@ export function createCommunityRouter({
       created_at: row.created_at,
       comment_count: row.comment_count,
       // 삭제된 글은 공감을 받지 않고 개수도 보이지 않는다
-      like_count: row.deleted ? 0 : row.like_count ?? 0,
+      like_count: row.deleted ? 0 : (row.like_count ?? 0),
       liked_by_me: !row.deleted && row.liked_by_me === true,
       is_mine: !row.deleted && row.reader_id === readerId,
       deleted: row.deleted,

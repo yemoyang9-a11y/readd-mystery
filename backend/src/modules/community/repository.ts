@@ -131,7 +131,11 @@ export interface CommunityEngagementRepository {
   /** 공감 취소. 공감 기록이 없어도 글이 보이면 true(멱등), 글이 없으면 false */
   unlikePost(bookId: string, postId: string, readerId: string): Promise<boolean>;
   /** 공감 수와 내 공감 여부 — 공감·취소 직후 응답용 */
-  likeState(bookId: string, postId: string, readerId: string): Promise<{ like_count: number; liked_by_me: boolean }>;
+  likeState(
+    bookId: string,
+    postId: string,
+    readerId: string
+  ): Promise<{ like_count: number; liked_by_me: boolean }>;
   /** 허브 카드의 글 수 — 숨김·삭제 글 제외 */
   countVisiblePosts(bookId: string): Promise<number>;
 }

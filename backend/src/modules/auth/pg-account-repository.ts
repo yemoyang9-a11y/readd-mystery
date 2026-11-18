@@ -109,10 +109,7 @@ export class PgAccountRepository implements AccountRepository {
       });
     } catch (error) {
       const pgError = error as { code?: string; constraint?: string } | null;
-      if (
-        pgError?.code === UNIQUE_VIOLATION &&
-        pgError.constraint === 'user_passwords_email_key'
-      ) {
+      if (pgError?.code === UNIQUE_VIOLATION && pgError.constraint === 'user_passwords_email_key') {
         throw new EmailTakenError();
       }
       throw error;
