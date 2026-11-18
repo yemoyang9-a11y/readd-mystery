@@ -59,7 +59,11 @@ export default function MobileCommunity() {
   return <CommunityScreen key={bookId} bookId={bookId} />;
 }
 
-function CommunityScreen({ bookId }: { bookId: string }) {
+/**
+ * 책 이야기방 본체. 휴대폰은 화면 전체, PC 는 위 줄 메뉴 아래 가운데 단(desktop, E2E #86)에 그린다.
+ * 열림·잠김은 서버가 정한다 — 잠긴 독자는 글 목록·글 수 없이 잠김 안내만 본다 (FR-BRF-005 🚦, FR-SPL-005 🚦).
+ */
+export function CommunityScreen({ bookId, desktop = false }: { bookId: string; desktop?: boolean }) {
   const navigate = useNavigate();
   const backToBook = useBackToBook(bookId);
   const [status, setStatus] = useState<Status>('loading');
@@ -129,12 +133,16 @@ function CommunityScreen({ bookId }: { bookId: string }) {
 
   return (
     <div
-      data-testid="mobile-community"
-      className="min-h-[100dvh] bg-[#0d0a0b] font-dashSans text-[#ece6e0]"
-      style={{
-        paddingTop: 'var(--safe-top)',
-        paddingBottom: 'calc(84px + max(12px, var(--safe-bottom)))',
-      }}
+      data-testid={desktop ? 'book-community' : 'mobile-community'}
+      className={`bg-[#0d0a0b] font-dashSans text-[#ece6e0] ${desktop ? 'min-h-full pb-10' : 'min-h-[100dvh]'}`}
+      style={
+        desktop
+          ? undefined
+          : {
+              paddingTop: 'var(--safe-top)',
+              paddingBottom: 'calc(84px + max(12px, var(--safe-bottom)))',
+            }
+      }
     >
       <header className="flex items-center gap-3 px-4 pb-3 pt-2">
         <button
@@ -147,8 +155,21 @@ function CommunityScreen({ bookId }: { bookId: string }) {
         </button>
         <div className="min-w-0">
           <CaseLabel>Case closed</CaseLabel>
-          <h1 className="m-0 mt-0.5 font-dashSerif text-[20px] font-bold leading-tight">완독자 이야기</h1>
+          <h1 className={`m-0 mt-0.5 font-dashSerif font-bold leading-tight ${desktop ? 'text-[24px]' : 'text-[20px]'}`}>
+            완독자 이야기
+          </h1>
         </div>
+        {desktop && status === 'ready' && !detailOpen ? (
+          <button
+            ref={writeButtonRef}
+            type="button"
+            data-track="community-write"
+            onClick={() => setComposing(true)}
+            className="ml-auto min-h-11 shrink-0 rounded-full bg-[#8f1d35] px-6 text-[15px] font-bold text-white transition-colors hover:bg-[#a3243f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d0a0b]"
+          >
+            글쓰기
+          </button>
+        ) : null}
       </header>
 
       {status === 'locked' ? (
@@ -188,6 +209,7 @@ function CommunityScreen({ bookId }: { bookId: string }) {
           bookId={bookId}
           postId={openPostId}
           onFailure={handleFailure}
+          desktop={desktop}
           onRemoved={() => {
             setOpenPostId(null);
             loadFirstPage();
@@ -328,7 +350,7 @@ function CommunityScreen({ bookId }: { bookId: string }) {
         </>
       ) : null}
 
-      {status === 'ready' && !detailOpen ? (
+      {!desktop && status === 'ready' && !detailOpen ? (
         <div
           className="fixed inset-x-0 bottom-0 z-10 border-t border-[#35292c] bg-[#0d0a0b] px-4 pt-3"
           style={{ paddingBottom: 'max(12px, var(--safe-bottom))' }}

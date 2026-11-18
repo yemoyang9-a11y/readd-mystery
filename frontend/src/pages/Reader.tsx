@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import ReaderView from '../components/Reader/ReaderView';
 import TocPanel from '../components/Reader/TocPanel';
 import SsabiPanel from '../components/Ssabi/SsabiPanel';
@@ -15,6 +15,10 @@ import ReaderPrefsSheet from '../components/Reader/ReaderPrefsSheet';
 import JumpReturnBar from '../components/Reader/JumpReturnBar';
 import TocJumpDialog from '../components/Reader/TocJumpDialog';
 import { useBackToBook } from '../hooks/useBackToBook';
+import { APP_ROUTES, BOOK_ROUTES } from '../utils/routes';
+import { useCommunityAccess } from '../mobile/community/useCommunityAccess';
+import CompletionScreen from '../mobile/community/CompletionScreen';
+import { hasSeenCompletion, markCompletionSeen } from '../mobile/community/completionSeen';
 
 /**
  * 읽기 화면 컨테이너 — S3 · S4 · S5
@@ -54,12 +58,14 @@ function ReadingSession() {
   const {
     entryError,
     retryEntry,
+    frontierConfirm,
     page,
     pageError,
     retryPage,
     currentPage,
     totalPages,
     chapters,
+    bookTitle,
     jumpOrigin,
     returnToOrigin,
     dismissJumpOrigin,
@@ -75,7 +81,27 @@ function ReadingSession() {
     ssabiPanelProps,
   } = useReadingSession(bookId);
   const backToBook = useBackToBook(bookId);
+  const navigate = useNavigate();
   const prefsApi = useReaderPrefs();
+
+  // FR-BRF-005 🚦 — 완독은 서버의 is_complete 로만 안다. 마지막 쪽이 화면에 떴을 때만 묻는다
+  // (휴대폰 읽기 화면과 같은 원천, E2E #86)
+  const onLastPage = page !== null && page.page_no === currentPage && page.next_page === null;
+  const communityAccess = useCommunityAccess(bookId, onLastPage, frontierConfirm);
+  // 완독 화면은 서버가 완독(open)이라고 답했을 때만, 책마다 한 번 저절로 뜬다.
+  // 닫으면 기억하고, 마지막 쪽의 완독 블록으로 다시 연다.
+  const [completionOpen, setCompletionOpen] = useState(false);
+  const completionReturnRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (communityAccess === 'open' && !hasSeenCompletion(bookId)) setCompletionOpen(true);
+    if (communityAccess !== 'open') setCompletionOpen(false);
+  }, [communityAccess, bookId]);
+  function leaveCompletion(then?: () => void) {
+    markCompletionSeen(bookId);
+    setCompletionOpen(false);
+    then?.();
+  }
+  const openCommunity = () => navigate(BOOK_ROUTES.community.replace(':bookId', bookId));
   const [prefsOpen, setPrefsOpen] = useState(false);
   const prefsButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -266,6 +292,19 @@ function ReadingSession() {
           onCancel={cancelTocJump}
         />
       ) : null}
+      {completionOpen && communityAccess === 'open' ? (
+        <CompletionScreen
+          variant="dialog"
+          bookId={bookId}
+          bookTitle={bookTitle ?? ''}
+          totalPages={totalPages}
+          noteCount={ssabiPanelProps.notesFailed ? null : ssabiPanelProps.notes.length}
+          returnFocusRef={completionReturnRef}
+          onCommunity={() => leaveCompletion(openCommunity)}
+          onHome={() => leaveCompletion(() => navigate(APP_ROUTES.home))}
+          onClose={() => leaveCompletion()}
+        />
+      ) : null}
       {prefsOpen ? (
         <ReaderPrefsSheet
           variant="popover"
@@ -311,6 +350,15 @@ function ReadingSession() {
               highlightedQuote={highlightedQuote}
               chapterStart={chapters.find((chapter) => chapter.start_page === page.page_no) ?? null}
               prefs={prefsApi.prefs}
+              onOpenCommunity={communityAccess === 'open' ? openCommunity : undefined}
+              onOpenCompletion={
+                communityAccess === 'open'
+                  ? () => {
+                      completionReturnRef.current = document.activeElement as HTMLElement | null;
+                      setCompletionOpen(true);
+                    }
+                  : undefined
+              }
             />
           ) : pageError ? (
             <div className="flex h-full flex-col items-center justify-center gap-4">

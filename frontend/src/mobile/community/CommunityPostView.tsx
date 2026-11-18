@@ -77,11 +77,14 @@ export default function CommunityPostView({
   postId,
   onFailure,
   onRemoved,
+  desktop = false,
 }: {
   bookId: string;
   postId: string;
   onFailure: (failure: CommunityFailure) => void;
   onRemoved: () => void;
+  /** PC 가운데 단(E2E #86) — 댓글 입력줄을 화면 폭 대신 단 폭에 붙인다 */
+  desktop?: boolean;
 }) {
   const [post, setPost] = useState<CommunityPost | null>(null);
   const [comments, setComments] = useState<CommunityComment[]>([]);
@@ -300,8 +303,8 @@ export default function CommunityPostView({
           event.preventDefault();
           void submitComment();
         }}
-        className="fixed inset-x-0 bottom-0 z-10 flex items-end gap-2 border-t border-[#35292c] bg-[#0d0a0b] px-4 pt-3"
-        style={{ paddingBottom: 'max(12px, var(--safe-bottom))' }}
+        className={`${desktop ? 'sticky' : 'fixed inset-x-0'} bottom-0 z-10 flex items-end gap-2 border-t border-[#35292c] bg-[#0d0a0b] px-4 pt-3`}
+        style={{ paddingBottom: desktop ? '12px' : 'max(12px, var(--safe-bottom))' }}
       >
         <label htmlFor={draftId} className="sr-only">
           댓글 입력
