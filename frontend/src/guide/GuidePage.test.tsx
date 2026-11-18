@@ -134,6 +134,36 @@ test('가이드: 건너뛰기를 누르면 완료 표시 후 홈으로 간다', 
   expect(markOnboarded).toHaveBeenCalledTimes(1);
 });
 
+// 대표 지시 2026-11-18 — 작품을 열려다 가입했으면 첫 안내를 마친 뒤 그 작품으로 이어 간다
+test('가이드: 가입 전에 열려던 작품(state.next)이 있으면 건너뛴 뒤 그 작품으로 간다', async () => {
+  const user = userEvent.setup({ pointerEventsCheck: 0 });
+  render(
+    <MemoryRouter initialEntries={[{ pathname: '/guide', state: { next: '/books/takryu/briefing' } }]}>
+      <Routes>
+        <Route path="/guide" element={<GuidePage />} />
+        <Route path="/" element={<p>진짜 홈 화면</p>} />
+        <Route path="/books/:bookId/briefing" element={<p>작품 브리핑</p>} />
+      </Routes>
+    </MemoryRouter>
+  );
+  await user.click(screen.getByRole('button', { name: '건너뛰기' }));
+  await screen.findByText('작품 브리핑');
+});
+
+test('가이드: 바깥 주소 next 는 따르지 않고 홈으로 간다', async () => {
+  const user = userEvent.setup({ pointerEventsCheck: 0 });
+  render(
+    <MemoryRouter initialEntries={[{ pathname: '/guide', state: { next: '//evil.example' } }]}>
+      <Routes>
+        <Route path="/guide" element={<GuidePage />} />
+        <Route path="/" element={<p>진짜 홈 화면</p>} />
+      </Routes>
+    </MemoryRouter>
+  );
+  await user.click(screen.getByRole('button', { name: '건너뛰기' }));
+  await screen.findByText('진짜 홈 화면');
+});
+
 test('가이드: 홈에서 표지가 아닌 곳(다음 책 화살표)을 눌러도 브리핑으로 넘어가지 않는다', async () => {
   const user = userEvent.setup({ pointerEventsCheck: 0 });
   renderGuide();

@@ -1,4 +1,12 @@
 import { randomBytes, randomUUID } from 'crypto';
+import {
+  consentRequired,
+  isConsentComplete,
+  marketingAgreed,
+  toConsentRecords,
+  type ConsentChoice,
+  type ConsentRecord,
+} from './consents';
 import type { LoginInput, SignupInput } from './credentials';
 import { burnPasswordCheck, hashPassword, verifyPassword } from './password-hash';
 import { signSessionToken } from './session-token';
@@ -35,6 +43,9 @@ export interface NewPasswordAccount {
   /** 소문자로 정규화한 이메일 */
   email: string;
   passwordHash: string;
+  /** 대표 지시 2026-11-18 — 가입 약관 동의. 계정과 같은 트랜잭션에서 저장한다 */
+  consents: ConsentRecord[];
+  consentedAt: Date;
 }
 
 export interface AccountProfile {
@@ -45,6 +56,14 @@ export interface AccountProfile {
 export interface SessionResponse {
   token: string;
   display_name: string | null;
+}
+
+/** 필수 약관 동의 없이 가입·동의 저장을 부름 — 라우터가 먼저 400 으로 거른다 */
+export class ConsentMissingError extends Error {
+  constructor() {
+    super('required consents missing');
+    this.name = 'ConsentMissingError';
+  }
 }
 
 /** 이미 가입된 이메일 — 라우터가 409 EMAIL_TAKEN으로 바꾼다 */
@@ -65,6 +84,9 @@ export interface AccountRepository {
   /** 같은 이메일이 이미 있으면 EmailTakenError */
   createPasswordAccount(input: NewPasswordAccount): Promise<Account>;
   getProfile(userId: string): Promise<AccountProfile>;
+  listConsents(userId: string): Promise<ConsentRecord[]>;
+  /** 같은 종류·버전이 있으면 동의 여부와 시각을 바꾼다 */
+  saveConsents(userId: string, records: ConsentRecord[], at: Date): Promise<void>;
   /** onboarded_at이 비어 있을 때만 채운다 */
   markOnboarded(userId: string, at: Date): Promise<void>;
   saveLoginCode(code: string, userId: string, expiresAt: Date): Promise<void>;
@@ -107,8 +129,10 @@ export class AuthService {
   // 2026-11-18 대표 지시 — 이메일 회원가입
   async signupWithPassword(
     input: SignupInput,
-    deviceId: string | null
+    deviceId: string | null,
+    consents: ConsentChoice
   ): Promise<SessionResponse & { is_new: true }> {
+    if (!isConsentComplete(consents)) throw new ConsentMissingError();
     if (await this.accounts.findPasswordByEmail(input.email)) throw new EmailTakenError();
     const account = await this.accounts.createPasswordAccount({
       userId: randomUUID(),
@@ -116,6 +140,8 @@ export class AuthService {
       displayName: input.displayName,
       email: input.email,
       passwordHash: await hashPassword(input.password),
+      consents: toConsentRecords(consents),
+      consentedAt: this.now(),
     });
     const token = await signSessionToken({ userId: account.user_id, readerId: account.reader_id });
     return { token, display_name: account.display_name, is_new: true };
@@ -134,6 +160,12 @@ export class AuthService {
     if (!account) return null;
     const token = await signSessionToken({ userId: account.user_id, readerId: account.reader_id });
     return { token, display_name: account.display_name };
+  }
+
+  /** 카카오·구글 첫 로그인, 이 변경 전 가입 계정이 동의 화면에서 보낸다 (대표 지시 2026-11-18) */
+  async agreeConsents(userId: string, consents: ConsentChoice): Promise<void> {
+    if (!isConsentComplete(consents)) throw new ConsentMissingError();
+    await this.accounts.saveConsents(userId, toConsentRecords(consents), this.now());
   }
 
   markOnboarded(userId: string): Promise<void> {
@@ -165,15 +197,20 @@ export class AuthService {
     providers: IdentityProvider[];
     email: string | null;
     onboarded: boolean;
+    consent_required: boolean;
+    marketing: boolean;
   } | null> {
     const account = await this.accounts.findByUserId(userId);
     if (!account) return null;
     const profile = await this.accounts.getProfile(userId);
+    const consents = await this.accounts.listConsents(userId);
     return {
       display_name: account.display_name,
       providers: await this.accounts.listProviders(userId),
       email: profile.email,
       onboarded: profile.onboarded,
+      consent_required: consentRequired(consents),
+      marketing: marketingAgreed(consents),
     };
   }
 

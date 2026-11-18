@@ -9,6 +9,7 @@ import {
   type NewPasswordAccount,
   type Provider,
 } from './auth.service';
+import type { ConsentRecord } from './consents';
 
 const UNIQUE_VIOLATION = '23505';
 
@@ -20,6 +21,30 @@ const READING_TABLES = [
   'conversation_history',
   'chatbot_conversation',
 ];
+
+/** user_consents 에 한 문장으로 넣는다. 같은 종류·버전이면 동의 여부와 시각을 바꾼다 */
+async function upsertConsents(
+  db: Pick<Pool, 'query'> | PoolClient,
+  userId: string,
+  records: ConsentRecord[],
+  at: Date
+): Promise<void> {
+  if (records.length === 0) return;
+  await db.query(
+    `INSERT INTO user_consents (user_id, kind, version, agreed, agreed_at)
+     SELECT $1, c.kind, c.version, c.agreed, $5
+       FROM unnest($2::text[], $3::text[], $4::boolean[]) AS c(kind, version, agreed)
+     ON CONFLICT (user_id, kind, version) DO UPDATE
+        SET agreed = EXCLUDED.agreed, agreed_at = EXCLUDED.agreed_at`,
+    [
+      userId,
+      records.map((r) => r.kind),
+      records.map((r) => r.version),
+      records.map((r) => r.agreed),
+      at,
+    ]
+  );
+}
 
 export class PgAccountRepository implements AccountRepository {
   constructor(private readonly pool: Pool) {}
@@ -101,6 +126,8 @@ export class PgAccountRepository implements AccountRepository {
           `INSERT INTO user_passwords (user_id, email, password_hash) VALUES ($1, $2, $3)`,
           [input.userId, input.email, input.passwordHash]
         );
+        // 대표 지시 2026-11-18 — 약관 동의는 계정과 같은 트랜잭션. 저장에 실패하면 가입도 되돌린다
+        await upsertConsents(client, input.userId, input.consents, input.consentedAt);
         return {
           user_id: input.userId,
           reader_id: input.readerId,
@@ -125,6 +152,18 @@ export class PgAccountRepository implements AccountRepository {
       [userId]
     );
     return rows[0] ?? { email: null, onboarded: false };
+  }
+
+  async listConsents(userId: string): Promise<ConsentRecord[]> {
+    const { rows } = await this.pool.query<ConsentRecord>(
+      `SELECT kind, version, agreed FROM user_consents WHERE user_id = $1`,
+      [userId]
+    );
+    return rows;
+  }
+
+  async saveConsents(userId: string, records: ConsentRecord[], at: Date): Promise<void> {
+    await upsertConsents(this.pool, userId, records, at);
   }
 
   async markOnboarded(userId: string, at: Date): Promise<void> {

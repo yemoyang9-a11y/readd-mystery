@@ -1,5 +1,6 @@
 import type { Pool } from 'pg';
 import { EmailTakenError } from './auth.service';
+import type { ConsentRecord } from './consents';
 import { PgAccountRepository } from './pg-account-repository';
 
 const READING_TABLES = [
@@ -92,6 +93,11 @@ describe('PgAccountRepository', () => {
     displayName: '독자',
     email: 'reader@example.com',
     passwordHash: 'scrypt$hash',
+    consents: [
+      { kind: 'terms', version: 'v1', agreed: true },
+      { kind: 'marketing', version: 'v1', agreed: false },
+    ] as ConsentRecord[],
+    consentedAt: new Date('2026-11-18T00:00:00.000Z'),
   };
 
   test('이메일 가입은 users·user_passwords를 한 트랜잭션으로 넣고 user_identities(OAuth 전용)는 건드리지 않는다', async () => {
@@ -101,10 +107,54 @@ describe('PgAccountRepository', () => {
       'BEGIN',
       'INSERT INTO users',
       'INSERT INTO user_passwords',
+      'INSERT INTO user_consents',
       'COMMIT',
     ]);
     expect(statements.some((s) => s.text.includes('user_identities'))).toBe(false);
     expect(statements[2].values).toEqual(['user-1', 'reader@example.com', 'scrypt$hash']);
+  });
+
+  test('대표 지시 2026-11-18: 이메일 가입의 약관 동의는 계정과 같은 트랜잭션에서 저장한다', async () => {
+    const { pool, statements } = fakePool();
+    await new PgAccountRepository(pool).createPasswordAccount(PASSWORD_ACCOUNT);
+    const insert = statements.find((s) => s.text.includes('INSERT INTO user_consents'));
+    expect(insert?.values).toEqual([
+      'user-1',
+      ['terms', 'marketing'],
+      ['v1', 'v1'],
+      [true, false],
+      PASSWORD_ACCOUNT.consentedAt,
+    ]);
+  });
+
+  test('약관 동의 저장이 실패하면 계정 생성도 되돌린다', async () => {
+    const { pool, statements } = fakePool('INSERT INTO user_consents');
+    await expect(
+      new PgAccountRepository(pool).createPasswordAccount(PASSWORD_ACCOUNT)
+    ).rejects.toThrow();
+    expect(statements[statements.length - 1].text).toBe('ROLLBACK');
+  });
+
+  test('약관 동의 저장은 같은 종류·버전이면 동의 여부와 시각을 바꾼다', async () => {
+    const { pool, statements } = fakePool();
+    const at = new Date('2026-11-18T01:00:00.000Z');
+    await new PgAccountRepository(pool).saveConsents('user-1', PASSWORD_ACCOUNT.consents, at);
+    expect(statements[0].text).toContain('INSERT INTO user_consents');
+    expect(statements[0].text).toContain('ON CONFLICT (user_id, kind, version) DO UPDATE');
+    expect(statements[0].values).toEqual([
+      'user-1',
+      ['terms', 'marketing'],
+      ['v1', 'v1'],
+      [true, false],
+      at,
+    ]);
+  });
+
+  test('약관 동의 조회는 그 계정 것만 읽는다', async () => {
+    const { pool, statements } = fakePool();
+    await expect(new PgAccountRepository(pool).listConsents('user-1')).resolves.toEqual([]);
+    expect(statements[0].text).toContain('FROM user_consents WHERE user_id = $1');
+    expect(statements[0].values).toEqual(['user-1']);
   });
 
   test('이메일 고유 제약 위반은 EmailTakenError로 바꾸고 되돌린다', async () => {

@@ -28,11 +28,18 @@ function parseEmail(value: unknown): string | null {
   return email.length <= EMAIL_MAX_LENGTH && EMAIL_PATTERN.test(email) ? email : null;
 }
 
+/**
+ * 가입 비밀번호 규칙 — 8자 이상, 영문과 숫자를 모두 포함 (대표 지시 2026-11-18, 플랫폼 조사:
+ * docs/context/research-2026-11-18-signup-fields.md 4장). 로그인에는 적용하지 않는다 —
+ * 규칙이 생기기 전에 가입한 계정도 그대로 로그인한다.
+ */
 function validPassword(value: unknown): value is string {
   return (
     typeof value === 'string' &&
     value.length >= PASSWORD_MIN_LENGTH &&
-    value.length <= PASSWORD_MAX_LENGTH
+    value.length <= PASSWORD_MAX_LENGTH &&
+    /[A-Za-z]/.test(value) &&
+    /[0-9]/.test(value)
   );
 }
 
@@ -41,7 +48,10 @@ export function parseSignup(body: unknown): Parsed<SignupInput> {
   const email = parseEmail(input.email);
   if (!email) return { ok: false, message: 'invalid email' };
   if (!validPassword(input.password)) {
-    return { ok: false, message: `password must be ${PASSWORD_MIN_LENGTH}+ characters` };
+    return {
+      ok: false,
+      message: `password must be ${PASSWORD_MIN_LENGTH}+ characters with letters and digits`,
+    };
   }
   const displayName = typeof input.display_name === 'string' ? input.display_name.trim() : '';
   const nameLength = [...displayName].length;

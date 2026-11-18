@@ -90,6 +90,8 @@ describe('AuthService', () => {
       providers: ['kakao'],
       email: null,
       onboarded: false,
+      consent_required: true,
+      marketing: false,
     });
   });
 

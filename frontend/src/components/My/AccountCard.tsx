@@ -1,4 +1,7 @@
 import { useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { loginPathFor } from '../../utils/authRedirect';
+import { APP_ROUTES } from '../../utils/routes';
 import { useAuth } from '../../hooks/useAuth';
 import { useModalLayer } from '../../hooks/useModalLayer';
 
@@ -65,25 +68,22 @@ function WithdrawDialog({ onCancel, onConfirm }: { onCancel: () => void; onConfi
 }
 
 export default function AccountCard() {
-  const { status, displayName, login, logout, withdraw } = useAuth();
+  const { status, displayName, logout, withdraw } = useAuth();
   const [confirming, setConfirming] = useState(false);
 
   if (status === 'loading') {
     return <div aria-busy="true" className={`${CARD} min-h-[132px]`} />;
   }
 
+  // 대표 지시 2026-11-18 — MY에서 로그인하려고 할 때 로그인 창을 띄운다. 로그인 방법(이메일·구글·카카오)은
+  // 로그인 화면이 서버 설정대로 보여 주고, 로그인하면 MY로 돌아온다
   if (status === 'guest') {
     return (
       <div className={CARD}>
         <p className="text-[15px] font-bold">로그인하지 않은 상태예요</p>
-        <div className="mt-3 flex flex-col gap-2">
-          <button type="button" onClick={() => login('google')} className={`${OUTLINE_BUTTON} w-full`}>
-            구글로 로그인
-          </button>
-          <button type="button" onClick={() => login('kakao')} className={`${OUTLINE_BUTTON} w-full`}>
-            카카오로 로그인
-          </button>
-        </div>
+        <Link to={loginPathFor(APP_ROUTES.my)} className={`${OUTLINE_BUTTON} mt-3 w-full`}>
+          로그인 / 회원가입
+        </Link>
       </div>
     );
   }
