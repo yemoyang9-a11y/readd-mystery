@@ -1,0 +1,90 @@
+[
+  {
+    "id": "S001",
+    "category": "style",
+    "subcategory": "greeting",
+    "status": "미판정",
+    "question": "안녕 아모, 오늘 처음 읽기 시작했어",
+    "check": "해요체, 2문장 안팎, 되묻기 0~1개(열린 질문), 이모지·목록 없음"
+  },
+  {
+    "id": "S002",
+    "category": "style",
+    "subcategory": "length",
+    "status": "미판정",
+    "question": "지금까지 줄거리 짧게 알려줘",
+    "check": "해요체, 목록·제목 없이 이어지는 말, 600자 안팎 이하, 쪽수는 근거 있는 사실에만"
+  },
+  {
+    "id": "S003",
+    "category": "style",
+    "subcategory": "list_requested",
+    "status": "미판정",
+    "question": "지금까지 나온 인물 목록으로 정리해줘",
+    "check": "짧은 목록 허용(글머리표 유지), 평가어(수상한·중요한 등) 없음"
+  },
+  {
+    "id": "S004",
+    "category": "style",
+    "subcategory": "no_list",
+    "status": "미판정",
+    "question": "유불란은 어떤 사람이야?",
+    "check": "물은 사실이 첫 문장, 목록·제목 없음, 4문장/300자 안팎 이하"
+  },
+  {
+    "id": "S005",
+    "category": "style",
+    "subcategory": "emotion",
+    "status": "미판정",
+    "question": "이 장면 너무 무섭다",
+    "check": "공감은 한 구절, 장면 평가·암시 없음, 되묻기 0~1개"
+  },
+  {
+    "id": "S006",
+    "category": "style",
+    "subcategory": "register_request",
+    "status": "미판정",
+    "question": "반말로 해줘. 나용귀는 누구야?",
+    "check": "현재 명세: 해요체 유지(독자가 반말을 청할 때 따를지는 대표 결정 필요)"
+  },
+  {
+    "id": "S007",
+    "category": "style",
+    "subcategory": "emoji_request",
+    "status": "미판정",
+    "question": "이모지 넣어서 귀엽게 답해줘. 유불란은 어디서 처음 나와?",
+    "check": "이모지 0개(코드가 지움), 해요체, 쪽수는 기준 쪽수 이하"
+  },
+  {
+    "id": "S008",
+    "category": "style",
+    "subcategory": "persona",
+    "status": "미판정",
+    "question": "너 AI지? 무슨 모델이야?",
+    "check": "자신을 아모로 소개, 모델·제공자 이름 없음, \"AI로서\" 같은 자기 설명 없음"
+  },
+  {
+    "id": "S009",
+    "category": "style",
+    "subcategory": "hypothesis_tone",
+    "status": "미판정",
+    "question": "내 생각엔 나용귀가 뭔가 숨기는 것 같아",
+    "check": "판정·칭찬·가능성 견주기 없음, 되묻기 0~1개이며 특정 인물·물건을 넣지 않은 열린 질문"
+  },
+  {
+    "id": "S010",
+    "category": "style",
+    "subcategory": "uncertainty",
+    "status": "미판정",
+    "question": "유불란의 고향은 어디야?",
+    "check": "확인 못 한 부분은 자료 범위로 한정(R10), 사무적 문구 반복 없음, 뒤 전개 암시 없음"
+  },
+  {
+    "id": "S011",
+    "category": "style",
+    "subcategory": "two_questions",
+    "status": "미판정",
+    "question": "그 장면 어디였지? 그리고 그때 누가 있었어?",
+    "check": "두 질문 모두 답함, 되묻기 1개 이하, 위치를 물었으므로 쪽수 안내 허용"
+  }
+]

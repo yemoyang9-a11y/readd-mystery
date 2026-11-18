@@ -1,6 +1,7 @@
 import type { QuestionIntent } from './question-intent';
 import { findSteeringHints } from './steering-hint';
 import { INTENT_POLICY, permitsSceneRetrieval } from './behavior-ladder';
+import { plainForGuard } from './amo-style';
 
 export const GUARD_VIOLATIONS = [
   'page_beyond_cutoff',
@@ -162,7 +163,10 @@ function measureVerbatim(answer: string, grams: Set<string>, excluded: Set<strin
   return total;
 }
 
-export function guardAnswer(answer: string, options: GuardOptions): GuardResult {
+export function guardAnswer(rawAnswer: string, options: GuardOptions): GuardResult {
+  // NFR-AI-005, FR-QNA-004 🚦 — 화면은 마크다운으로 그린다. 굵게 표지·이모지가 낱말 사이에 끼어도
+  // 화면에 보이는 글자 그대로 검사한다("범인**은** …"은 화면에서 "범인은 …"이다)
+  const answer = plainForGuard(rawAnswer);
   const {
     cutoff,
     pages,
