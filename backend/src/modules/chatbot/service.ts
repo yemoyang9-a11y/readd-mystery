@@ -15,6 +15,16 @@ import { classifyQuestion, isSceneLocationRequest } from './harness/question-int
 import { guardAnswer, type GuardViolation } from './harness/output-guard';
 import { takeSentences } from './harness/sentence-buffer';
 import { INTENT_POLICY, fixedAnswerFor, retryNoticeFor } from './harness/behavior-ladder';
+import {
+  AMO_STYLE_RETRY_NOTICE,
+  STYLE_REGENERATE,
+  amoTurnGuidance,
+  checkAmoStyle,
+  normalizeAmoText,
+  readerAskedForList,
+  type StyleContext,
+  type StyleFinding,
+} from './harness/amo-style';
 
 const MOCK_MODE = process.env.MOCK_MODE === 'true';
 
@@ -74,6 +84,14 @@ export async function* handleQuery(
   // NFR-AI-005, 결정 23: 유형별 응답 방식·지침·막는 위반은 행동 단계표에서 읽는다
   const policy = INTENT_POLICY[intent];
   const blocking: ReadonlySet<GuardViolation> = new Set(policy.blocking);
+  // NFR-AI-005, 대표 지시 2026-11-18: 아모 말투·형식. 근거 범위에는 관여하지 않는다(R4)
+  const styleContext: StyleContext = {
+    intent,
+    allowsOpenQuestion: policy.allowed.includes('ask_open_question'),
+    query,
+  };
+  const listRequested = readerAskedForList(query);
+  const styleRegenerate: ReadonlySet<StyleFinding> = new Set(STYLE_REGENERATE);
   // This payload is loaded by the server route; still enforce K at the final boundary.
   currentPageText =
     currentPageText &&
@@ -234,6 +252,7 @@ export async function* handleQuery(
     }
     fullPrompt += buildNotesSection(notes, K, query);
     fullPrompt += policy.guidance;
+    fullPrompt += amoTurnGuidance(styleContext);
     fullPrompt += `\n\n# 사용자 질문\n\n${query}`;
     fullPrompt = fullPrompt.replace(/^\n+/, '');
 
@@ -300,27 +319,41 @@ export async function* handleQuery(
     let modelCalls = 1;
     const attemptViolations: GuardViolation[][] = [];
     let fixedAnswer = false;
+    // NFR-AI-005: 시도마다의 형식 검사 결과(고친 것 + 기록). 하네스 로그와 따로 남긴다
+    const styleFindings: StyleFinding[][] = [];
 
     if (policy.response !== 'sentence_stream') {
       // FR-QNA-004 🚦 NFR-AI-005
       let attemptPrompt = fullPrompt;
       for (let attempt = 0; ; attempt++) {
-        let text = '';
-        for await (const chunk of generateChunks(attemptPrompt)) text += chunk;
+        let raw = '';
+        for await (const chunk of generateChunks(attemptPrompt)) raw += chunk;
+        if (!raw.trim()) throw new Error('CHATBOT_EMPTY_RESPONSE');
+        // 이모지·청하지 않은 목록 표지를 먼저 고치고, 독자에게 나갈 그 글을 출력 검사에 넘긴다
+        const normalized = normalizeAmoText(raw, { listRequested });
+        const text = normalized.text;
         if (!text.trim()) throw new Error('CHATBOT_EMPTY_RESPONSE');
         const violations = guardAgainst(text);
         attemptViolations.push(violations);
-        if (!violations.some((violation) => blocking.has(violation))) {
+        const style = [...normalized.applied, ...checkAmoStyle(text, styleContext)];
+        styleFindings.push(style);
+        const blocked = violations.some((violation) => blocking.has(violation));
+        // 되묻기 여러 개는 첫 시도에서만 재생성한다. 재생성 답에 남아도 막지 않는다
+        const restyle = attempt === 0 && style.some((finding) => styleRegenerate.has(finding));
+        if (!blocked && !restyle) {
           responseText = text;
           break;
         }
-        if (attempt === 1) {
+        if (blocked && attempt === 1) {
           responseText = fixedAnswerFor(violations.filter((v) => blocking.has(v)));
           fixedAnswer = true;
           break;
         }
         modelCalls++;
-        attemptPrompt = fullPrompt + retryNoticeFor(violations);
+        attemptPrompt =
+          fullPrompt +
+          (blocked ? retryNoticeFor(violations) : '') +
+          (restyle ? AMO_STYLE_RETRY_NOTICE : '');
       }
       yield responseText;
     } else {
@@ -329,6 +362,15 @@ export async function* handleQuery(
       // 뒤에만 내보낸다. 위반 문장은 내보내지 않고 끊은 뒤 고정 답변으로 맺는다.
       // 이 경로는 재생성하지 않는다(모델 호출 1회).
       let blocked: GuardViolation[] | undefined;
+      const streamStyle: StyleFinding[] = [];
+      // 문장마다 형식을 고친 뒤 검사한다(재생성 없음). 고친 결과 빈 문장은 내보내지 않는다
+      const tidy = (sentence: string): string => {
+        const normalized = normalizeAmoText(sentence, { listRequested });
+        normalized.applied.forEach((finding) => {
+          if (!streamStyle.includes(finding)) streamStyle.push(finding);
+        });
+        return normalized.text;
+      };
       const release = (sentence: string): boolean => {
         const violations = guardAgainst(responseText + sentence);
         if (violations.some((violation) => blocking.has(violation))) {
@@ -342,12 +384,15 @@ export async function* handleQuery(
       stream: for await (const chunk of generateChunks(fullPrompt)) {
         const { sentences, rest } = takeSentences(pending + chunk);
         pending = rest;
-        for (const sentence of sentences) {
+        for (const raw of sentences) {
+          const sentence = tidy(raw);
+          if (!sentence) continue;
           if (!release(sentence)) break stream;
           yield sentence;
         }
       }
-      if (!blocked && pending && release(pending)) yield pending;
+      const tail = !blocked && pending ? tidy(pending) : '';
+      if (tail && release(tail)) yield tail;
 
       if (blocked) {
         const answer = fixedAnswerFor(blocked.filter((violation) => blocking.has(violation)));
@@ -360,6 +405,11 @@ export async function* handleQuery(
         if (!responseText.trim()) throw new Error('CHATBOT_EMPTY_RESPONSE');
         attemptViolations.push(guardAgainst(responseText));
       }
+      // 문장 단위 경로는 이미 나간 글을 되돌릴 수 없으므로 형식 검사는 기록만 한다
+      styleFindings.push([
+        ...streamStyle,
+        ...(fixedAnswer ? [] : checkAmoStyle(responseText, styleContext)),
+      ]);
     }
 
     if (conversationId != null) {
@@ -367,43 +417,46 @@ export async function* handleQuery(
       else await recordTurns(conversationId, query, responseText, K);
     }
 
-    await logQuery({
-      timestamp: new Date(),
-      device_id: deviceId,
-      book_id: bookId,
-      cutoff_page: K,
-      query,
-      quote,
-      input_records: {
-        chapter_summaries: context.chapter_summaries.map((ch) => ch.title),
-        current_chapter_pages: [], // TODO
-        characters: context.entities.characters.map((c) => c.id),
-        relationships: context.entities.relationships.map((r) => r.id),
-        character_notes: context.entities.character_notes.map((n) => n.id),
-        terms: context.entities.terms.map((t) => t.id),
-        events: context.entities.events.map((e) => e.id),
-        background: context.background ? 'included' : 'none',
+    await logQuery(
+      {
+        timestamp: new Date(),
+        device_id: deviceId,
+        book_id: bookId,
+        cutoff_page: K,
+        query,
+        quote,
+        input_records: {
+          chapter_summaries: context.chapter_summaries.map((ch) => ch.title),
+          current_chapter_pages: [], // TODO
+          characters: context.entities.characters.map((c) => c.id),
+          relationships: context.entities.relationships.map((r) => r.id),
+          character_notes: context.entities.character_notes.map((n) => n.id),
+          terms: context.entities.terms.map((t) => t.id),
+          events: context.entities.events.map((e) => e.id),
+          background: context.background ? 'included' : 'none',
+        },
+        search_selected_pages: searchResults.map((r) => ({
+          page_no: r.page_no,
+          distance: r.distance,
+        })),
+        no_evidence: false,
+        is_complete: isComplete,
+        model: modelSelection.modelId,
+        logical_model_calls: MOCK_MODE ? 0 : modelCalls,
+        harness: {
+          intent,
+          violations: attemptViolations,
+          regenerated: modelCalls > 1,
+          fixed_answer: fixedAnswer,
+        },
+        output_ref: `chatbot-${Date.now()}`,
+        tokens: {
+          input: 0, // TODO: 실제 토큰 수
+          output: responseText.length, // 임시
+        },
       },
-      search_selected_pages: searchResults.map((r) => ({
-        page_no: r.page_no,
-        distance: r.distance,
-      })),
-      no_evidence: false,
-      is_complete: isComplete,
-      model: modelSelection.modelId,
-      logical_model_calls: MOCK_MODE ? 0 : modelCalls,
-      harness: {
-        intent,
-        violations: attemptViolations,
-        regenerated: modelCalls > 1,
-        fixed_answer: fixedAnswer,
-      },
-      output_ref: `chatbot-${Date.now()}`,
-      tokens: {
-        input: 0, // TODO: 실제 토큰 수
-        output: responseText.length, // 임시
-      },
-    });
+      { amo_style: { findings: styleFindings } }
+    );
   } catch (error) {
     console.error('[Chatbot] Query failed', { bookId, query, K, error });
     throw error;
@@ -413,7 +466,11 @@ export async function* handleQuery(
   }
 }
 
-async function logQuery(log: ChatbotQueryLog): Promise<void> {
+async function logQuery(
+  log: ChatbotQueryLog,
+  // NFR-AI-005, 대표 지시 2026-11-18: 아모 형식 검사 기록(시도별). 공용 로그 형식(shared/types)은 바꾸지 않는다
+  extra: { amo_style?: { findings: StyleFinding[][] } } = {}
+): Promise<void> {
   // NFR-OBS-005: preserve every record ID in one physical stdout line.
   console.log(
     '[Chatbot] Query log',
@@ -432,6 +489,7 @@ async function logQuery(log: ChatbotQueryLog): Promise<void> {
       model: log.model,
       logical_model_calls: log.logical_model_calls ?? 0,
       harness: log.harness,
+      ...extra,
       output_ref: log.output_ref,
       tokens: log.tokens,
     })
