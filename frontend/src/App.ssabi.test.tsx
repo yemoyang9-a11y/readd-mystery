@@ -1,6 +1,11 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
+import { setAuthToken } from './utils/storage';
+
+// 2026-11-18 로그인 관문 — 앱 화면 테스트는 로그인한 독자로 시작한다 (앱이 토큰을 저장하는 방식 그대로)
+beforeEach(() => setAuthToken('test-session-token'));
+afterEach(() => localStorage.clear());
 
 /**
  * 싸비 데이터 연결 — mock 대역 기준.

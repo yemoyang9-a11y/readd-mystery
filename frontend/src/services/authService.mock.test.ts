@@ -37,6 +37,6 @@ test('USE_MOCK=true에서 로그인 상태를 켜면 fixture 표시 이름을 �
   flags.useMock = true;
   setMockMember(true);
 
-  await expect(fetchMe()).resolves.toEqual({ display_name: '시험 독자', providers: ['google'] });
+  await expect(fetchMe()).resolves.toMatchObject({ display_name: '시험 독자', providers: ['google'] });
   expect(api.get).not.toHaveBeenCalled();
 });

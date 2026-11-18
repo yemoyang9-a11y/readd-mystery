@@ -1,4 +1,5 @@
 import type { Pool } from 'pg';
+import { EmailTakenError } from './auth.service';
 import { PgAccountRepository } from './pg-account-repository';
 
 const READING_TABLES = [
@@ -83,5 +84,61 @@ describe('PgAccountRepository', () => {
     expect(statements[0].text).toContain('expires_at > $2');
     expect(statements[0].text).toContain('RETURNING user_id');
     expect(statements[0].values).toEqual(['code-1', now]);
+  });
+
+  const PASSWORD_ACCOUNT = {
+    userId: 'user-1',
+    readerId: 'reader-1',
+    displayName: '독자',
+    email: 'reader@example.com',
+    passwordHash: 'scrypt$hash',
+  };
+
+  test('이메일 가입은 users·user_identities·user_passwords를 한 트랜잭션으로 넣는다', async () => {
+    const { pool, statements } = fakePool();
+    await new PgAccountRepository(pool).createPasswordAccount(PASSWORD_ACCOUNT);
+    expect(statements.map((s) => s.text.split(' (')[0])).toEqual([
+      'BEGIN',
+      'INSERT INTO users',
+      'INSERT INTO user_identities',
+      'INSERT INTO user_passwords',
+      'COMMIT',
+    ]);
+    expect(statements[2].values).toEqual(['reader@example.com', 'user-1']);
+    expect(statements[3].values).toEqual(['user-1', 'reader@example.com', 'scrypt$hash']);
+  });
+
+  test('이메일 고유 제약 위반은 EmailTakenError로 바꾸고 되돌린다', async () => {
+    const statements: string[] = [];
+    const query = jest.fn(async (text: string) => {
+      statements.push(text);
+      if (text.includes('INSERT INTO user_passwords')) {
+        throw Object.assign(new Error('duplicate'), {
+          code: '23505',
+          constraint: 'user_passwords_email_key',
+        });
+      }
+      return { rows: [], rowCount: 0 };
+    });
+    const pool = { query, connect: jest.fn(async () => ({ query, release: jest.fn() })) };
+    await expect(
+      new PgAccountRepository(pool as unknown as Pool).createPasswordAccount(PASSWORD_ACCOUNT)
+    ).rejects.toBeInstanceOf(EmailTakenError);
+    expect(statements).toContain('ROLLBACK');
+  });
+
+  test('다른 오류는 그대로 던진다', async () => {
+    const { pool } = fakePool('INSERT INTO users');
+    await expect(
+      new PgAccountRepository(pool).createPasswordAccount(PASSWORD_ACCOUNT)
+    ).rejects.not.toBeInstanceOf(EmailTakenError);
+  });
+
+  test('안내 완료는 비어 있을 때만 채운다', async () => {
+    const { pool, statements } = fakePool();
+    const at = new Date('2026-11-18T00:00:00.000Z');
+    await new PgAccountRepository(pool).markOnboarded('user-1', at);
+    expect(statements[0].text).toContain('COALESCE(onboarded_at, $2)');
+    expect(statements[0].values).toEqual(['user-1', at]);
   });
 });
