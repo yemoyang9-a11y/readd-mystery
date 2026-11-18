@@ -61,13 +61,23 @@ describe('FR-CHR-001: 관계도는 관계만 보여 준다', () => {
     const out = await serviceReturning([
       edge('love', '사랑한다', {}),
       edge('doubt', '의심한다', { relation_key: 'suspicion' }),
-      edge('marriage', '남편이다', { kind: 'family', relation_key: 'marriage', direction: 'undirected' }),
+      edge('marriage', '남편이다', {
+        kind: 'family',
+        relation_key: 'marriage',
+        direction: 'undirected',
+      }),
       edge('friend', '친구다', { kind: 'social', relation_key: 'friendship' }),
       edge('legacy', '아는 사이', null),
       edge('hand', '손을 맞잡는다', { kind: 'action', temporal_scope: 'event' }),
     ]).getGraph('book', 46);
     expect(out.edges.map((e) => e.id)).toEqual(['love', 'doubt', 'marriage', 'friend', 'legacy']);
-    expect(out.history?.map((e) => e.id)).toEqual(['love', 'doubt', 'marriage', 'friend', 'legacy']);
+    expect(out.history?.map((e) => e.id)).toEqual([
+      'love',
+      'doubt',
+      'marriage',
+      'friend',
+      'legacy',
+    ]);
     expect(out.applied_cutoff).toBe(46);
   });
 });

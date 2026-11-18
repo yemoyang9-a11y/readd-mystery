@@ -675,7 +675,11 @@ describe('FR-CHR-001: 자주 함께 나오는데 관계 0건인 인물은 검수
   const candidates = generateInteractionCandidates(pages, lexicon);
 
   test('관계 0건 인물(민) → 목록에 1건, 함께 나온 근거 창 수와 상대가 실린다', () => {
-    const out = uncoveredCharacters(candidates, [{ character_a_id: 'seoyun', character_b_id: 'dohyun' }], 2);
+    const out = uncoveredCharacters(
+      candidates,
+      [{ character_a_id: 'seoyun', character_b_id: 'dohyun' }],
+      2
+    );
     expect(out.map((c) => c.character_id)).toEqual(['min']);
     expect(out[0].windows).toBeGreaterThanOrEqual(2);
     expect([...out[0].partners].sort()).toEqual(['도현', '서윤']);

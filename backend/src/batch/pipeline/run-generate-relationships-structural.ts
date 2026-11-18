@@ -330,7 +330,9 @@ export async function runStructuralRelationships(argv: string[] = process.argv.s
   if (uncovered.length > 0)
     console.warn(
       '[검수] 자주 함께 나오는데 관계 0건:',
-      uncovered.map((c) => `${c.name}(근거 창 ${c.windows}, 상대 ${c.partners.join('·')})`).join(', ')
+      uncovered
+        .map((c) => `${c.name}(근거 창 ${c.windows}, 상대 ${c.partners.join('·')})`)
+        .join(', ')
     );
   const report = {
     version: STRUCTURAL_LABEL_VERSION,

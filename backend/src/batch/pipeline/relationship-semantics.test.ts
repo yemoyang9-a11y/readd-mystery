@@ -270,22 +270,18 @@ test('FR-ADM-005: 구조 검증 통과가 의미 검수의 통과를 대신할 �
 });
 
 test('FR-DAT-005: 등록은 canonical 방향과 의미 근거를 JSON으로 함께 저장한다', async () => {
-  const query = jest
-    .fn()
-    .mockImplementation(async (sql: string, params?: unknown[]) => ({
-      rows: sql.includes('RETURNING id') ? [{ id: params?.[0] }] : [],
-    }));
+  const query = jest.fn().mockImplementation(async (sql: string, params?: unknown[]) => ({
+    rows: sql.includes('RETURNING id') ? [{ id: params?.[0] }] : [],
+  }));
   await registerGeneratedContent({ query }, bookData() as never);
   const insert = query.mock.calls.find(([sql]) => sql.includes('INSERT INTO relationships'));
   expect(JSON.parse(insert![1][6])).toMatchObject({ direction: 'b_to_a', evidence });
 });
 
 test('FR-ADM-005: 기존 공개 데이터는 재등록이 쓰기 시작하기 전에 비공개 검수 상태가 된다', async () => {
-  const query = jest
-    .fn()
-    .mockImplementation(async (sql: string, params?: unknown[]) => ({
-      rows: sql.includes('RETURNING id') ? [{ id: params?.[0] }] : [],
-    }));
+  const query = jest.fn().mockImplementation(async (sql: string, params?: unknown[]) => ({
+    rows: sql.includes('RETURNING id') ? [{ id: params?.[0] }] : [],
+  }));
   await registerGeneratedContent({ query }, bookData() as never);
   expect(query.mock.calls.filter(([sql]) => /^(UPDATE|INSERT|DELETE)/.test(sql))[0][0]).toMatch(
     /UPDATE books SET ssabi_ready = false/
@@ -431,7 +427,11 @@ test('FR-CHR-001: 한 번 일어난 행동(kind=action 또는 temporal_scope=eve
       relationships: [
         candidate({
           label: '손을 맞잡는다',
-          semantics: semantic({ kind: 'action', relation_key: 'physical_contact', temporal_scope: 'event' }),
+          semantics: semantic({
+            kind: 'action',
+            relation_key: 'physical_contact',
+            temporal_scope: 'event',
+          }),
         }),
         candidate({
           label: '손을 맞잡는다',
@@ -448,10 +448,8 @@ test('FR-CHR-001: 한 번 일어난 행동(kind=action 또는 temporal_scope=eve
 });
 
 test('positive — 지속되는 감정·태도(사랑·의심)는 관계로 채택된다', () => {
-  const out = validateGroundedChapter(
-    { relationships: [candidate()] },
-    [page],
-    { requireRelationshipSemantics: true }
-  );
+  const out = validateGroundedChapter({ relationships: [candidate()] }, [page], {
+    requireRelationshipSemantics: true,
+  });
   expect(out.relationships).toHaveLength(1);
 });
