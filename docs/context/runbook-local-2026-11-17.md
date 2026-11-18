@@ -56,16 +56,16 @@ npx ts-node --transpile-only --compiler-options '{"module":"commonjs"}' ../evalu
 
 지금은 "검색 상위 4쪽 + 앞뒤 쪽 2쪽"이다. 3번의 공격 질문 결과와 평소 질문 10개 정도의 답을 보고, 앞뒤 쪽이 현재 장 원문과 겹쳐 자리만 차지하는지 본다. 바꿀 값은 `backend/src/modules/chatbot/vector-search.ts`의 `SEARCH_CONFIG`(`topN: 6` 전체, `seedLimit: 4` 검색 몫)다.
 
-## 5. 배포 (보류 중 — 할 때만)
+## 5. 배포 (2026-11-18 바뀜 — GitHub Pages)
 
-화면은 GitHub Actions가 자동으로 배포한다. GitHub 저장소 → Settings → Secrets and variables → Actions에 아래를 넣으면, 그다음 main의 화면 변경부터 배포된다(바로 배포하려면 Actions 탭에서 "Deploy Frontend to Cloudflare Pages"를 수동 실행).
+화면은 GitHub Pages, 서버는 Fly.io 로 GitHub Actions 가 자동 배포한다. 처음 한 번만:
 
-| 종류 | 이름 | 값 |
-| --- | --- | --- |
-| Secret | `CLOUDFLARE_API_TOKEN` | Cloudflare → My Profile → API Tokens에서 만든 토큰. 권한: Account · Cloudflare Pages · Edit |
-| Secret | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare 대시보드 오른쪽의 Account ID |
-| Variable | `CLOUDFLARE_PAGES_PROJECT` | 피벗 후 Pages 프로젝트 이름 |
-| Variable | `VITE_API_URL` | 서버 주소 `https://<fly 앱 이름>.fly.dev` (끝에 `/api` 없음) |
-| Secret | `FLY_API_TOKEN` | 서버 자동 배포용. `fly tokens create deploy -x 999999h` |
+1. GitHub 저장소 → Settings → General 맨 아래 Danger Zone → **Change visibility → Public**
+2. Settings → **Pages** → Build and deployment → Source: **GitHub Actions**
+3. Settings → Secrets and variables → Actions → **Secrets** → `FLY_API_TOKEN` (fly.io → 앱 ssabi-api → Tokens → Create deploy token)
+4. fly.io → 앱 ssabi-api → **Secrets**: `CORS_ORIGIN` 에 `https://yemoyang9-a11y.github.io` 추가(쉼표로 여러 개 가능), `DATABASE_URL` 이 피벗 후 DB(`rntzmaarbtzjgzknqfve`)인지 확인
+5. Actions 탭 → "Deploy Frontend to GitHub Pages" → **Run workflow** (처음 한 번 수동 실행). 이후는 main 의 화면 변경 때마다 자동
 
-**배포 전에 확인할 것:** 운영 DB에 마이그레이션 017~022가 들어가 있다(2026-11-17 적용 완료). 서버(Fly)의 `CORS_ORIGIN`이 새 화면 주소와 맞는지.
+화면 주소: https://yemoyang9-a11y.github.io/readd-mystery/
+
+로그인(구글·카카오)을 쓰면 각 개발자 콘솔의 허용 주소에도 새 주소를 넣어야 한다.

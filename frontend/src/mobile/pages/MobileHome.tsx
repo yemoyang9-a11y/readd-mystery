@@ -9,6 +9,7 @@ import { briefingPath } from '../../utils/routes';
 import ProgressBar from '../../components/Reader/ProgressBar';
 import BookCarousel3D from '../components/BookCarousel3D';
 import type { BookSummary, BriefingResponse } from '../../types';
+import { withBase } from '../../utils/assetUrl';
 
 const FROM_HOME = { fromHome: true };
 
@@ -63,7 +64,7 @@ function ContinueCard({ book }: { book: BookSummary }) {
       {/* 캐러셀·작품 보기 버튼이 첫 화면 밖으로 밀리지 않게 카드 높이를 표지 62px 에 맞춘다 */}
       <span className="h-[62px] w-11 shrink-0 overflow-hidden rounded-[6px]">
         {book.cover_url ? (
-          <img src={book.cover_url} alt={`${book.title} 표지`} className="size-full object-cover" />
+          <img src={withBase(book.cover_url)} alt={`${book.title} 표지`} className="size-full object-cover" />
         ) : (
           <span
             aria-hidden="true"

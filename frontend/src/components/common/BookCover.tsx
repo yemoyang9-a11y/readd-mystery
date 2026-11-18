@@ -1,5 +1,6 @@
 import TypographicCover from './TypographicCover';
 import type { BookSummary } from '../../types';
+import { withBase } from '../../utils/assetUrl';
 
 const FRAME_WIDTH = {
   thumb: 'w-[44px] flex-none',
@@ -20,7 +21,7 @@ export default function BookCover({
       className={`${FRAME_WIDTH[size]} aspect-[2/3] overflow-hidden rounded-dash-row-cover [&>div]:!h-full [&>div]:!w-full`}
     >
       {book.cover_url ? (
-        <img src={book.cover_url} alt={`${book.title} 표지`} className="h-full w-full object-cover" />
+        <img src={withBase(book.cover_url)} alt={`${book.title} 표지`} className="h-full w-full object-cover" />
       ) : (
         <TypographicCover
           title={book.title}

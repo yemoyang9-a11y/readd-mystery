@@ -78,7 +78,12 @@ export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
     },
     { path: '*', element: <RouteFade>{isMobile ? <MobileNotFound /> : <NotFound />}</RouteFade> },
   ];
-  return createBrowserRouter(routes.map((route) => ({ errorElement: routeError, ...route })));
+  // GitHub Pages 는 /<저장소>/ 아래에 올라간다 — 빌드 기준 경로(BASE_URL)를 라우터 기준으로 쓴다
+  const basename = (import.meta.env.BASE_URL ?? '/').replace(/\/$/, '') || '/';
+  return createBrowserRouter(
+    routes.map((route) => ({ errorElement: routeError, ...route })),
+    { basename }
+  );
 }
 
 export default function App() {

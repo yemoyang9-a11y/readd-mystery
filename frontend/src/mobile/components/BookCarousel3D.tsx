@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, PointerEvent } from 'react';
 import type { ShowcaseBook } from '../../data/homeShowcase';
 import './book3d.css';
+import { withBase } from '../../utils/assetUrl';
 
 const SWIPE_MIN = 40;
 const MOVE_MIN = 8;
@@ -32,7 +33,7 @@ function poseOf(d: number): { transform: string; brightness: number; opacity: nu
 function Cover({ book }: { book: ShowcaseBook }) {
   return (
     <img
-      src={book.cover}
+      src={withBase(book.cover)}
       alt=""
       draggable={false}
     />

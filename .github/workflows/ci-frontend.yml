@@ -1,5 +1,5 @@
 # 프론트엔드 PR 검증: 린트·단위 시험·빌드·휴대폰/PC 브라우저 시험.
-# 운영 배포는 main 전용 deploy-frontend.yml에서 별도로 수행한다.
+# 운영 배포는 main 전용 deploy-pages.yml(GitHub Pages)에서 별도로 수행한다.
 
 name: Frontend CI
 

@@ -32,7 +32,7 @@
 | 항목 | 상태 | 메모 |
 | --- | --- | --- |
 | 커뮤니티 운영 정책(나머지) | 출시 뒤 필요하면 (대표 결정 2026-11-17) | 신고 처리는 정함(관리자 화면 + 서로 다른 독자 3명 신고 시 자동 숨김, 2026-11-17). 남은 것: 차단·금칙어·신고당한 글쓴이 안내 없음. 글 수정 불가(삭제만), 익명 별명 "독자 xxxx" 고정, 휴대폰 전용 — 이대로 갈지 |
-| 화면 자동 배포에 필요한 저장소 설정 | 보류 (2026-11-17 대표: 지금은 배포하지 않음) | `deploy-frontend.yml` 추가됨. GitHub 저장소 Settings → Secrets and variables → Actions 에 Secrets `CLOUDFLARE_API_TOKEN`·`CLOUDFLARE_ACCOUNT_ID`, Variables `CLOUDFLARE_PAGES_PROJECT`·`VITE_API_URL` 등록 전까지 배포 단계는 건너뛴다. 서버 자동 배포(`deploy-backend.yml`)도 `FLY_API_TOKEN` 이 없어 배포 단계에서 실패 중 |
+| 자동 배포 켜기 | 대표 작업 필요 (2026-11-18) | 화면은 GitHub Pages(`deploy-pages.yml`, 저장소 공개 전제). ① 저장소를 Public 으로 ② Settings → Pages → Source "GitHub Actions" ③ Secrets 에 `FLY_API_TOKEN`(서버 자동 배포) ④ Fly 앱 ssabi-api 의 Secrets `CORS_ORIGIN` 에 `https://yemoyang9-a11y.github.io` 추가, `DATABASE_URL` 이 피벗 후 DB(rntzmaarbtzjgzknqfve)인지 확인. 화면 주소: https://yemoyang9-a11y.github.io/readd-mystery/ |
 | 검색 결과 6쪽의 구성 | 결정 필요 (실측 뒤) | 순위 융합 상위 4쪽 + 그 앞뒤 쪽 2쪽으로 바꿨다(전에는 검색 6쪽). 근거 없는 선택이라 실제 질문으로 비교해야 한다. 앞뒤 쪽이 현재 장 원문과 겹치면 자리만 차지한다 |
 
 ## 3. 조건부 작업

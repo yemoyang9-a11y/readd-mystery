@@ -11,6 +11,7 @@
  * · 'row'(대시보드 재설계 목록 행, 84×118px, 모서리 없음). hero/row는 2026-08-23 시안이
  * 확정한 대시보드 전용 dash-* 톤을 쓴다.
  */
+import { withBase } from '../../utils/assetUrl';
 export default function TypographicCover({
   title,
   author,
@@ -61,7 +62,7 @@ export default function TypographicCover({
   if (coverUrl) {
     return (
       <img
-        src={coverUrl}
+        src={withBase(coverUrl)}
         alt={`${title} 표지`}
         className={`${heightClass} ${widthClass}${roundedClass}${shadowClass} object-cover${dim}`}
       />

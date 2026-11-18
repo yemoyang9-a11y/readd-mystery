@@ -4,6 +4,9 @@ import react from '@vitejs/plugin-react';
 
 // VITE_API_URL 로 백엔드를 가리킨다 (.env.example 참조)
 export default defineConfig({
+  // 배포 기준 경로. GitHub Pages(프로젝트 페이지)는 /readd-mystery/ — 워크플로가 VITE_BASE 로 넘긴다.
+  // 로컬·테스트는 '/'.
+  base: process.env.VITE_BASE ?? '/',
   plugins: [react()],
   server: {
     port: 5173,

@@ -1,0 +1,84 @@
+# 프론트엔드 배포 — GitHub Pages (2026-11-18 대표 결정: 저장소 공개 + GitHub CI/CD)
+#
+# main 의 frontend/ 가 바뀌면 테스트 → 빌드 → GitHub Pages 에 올린다. 테스트가 깨지면 배포하지 않는다.
+# 주소: https://<계정>.github.io/<저장소>/  (프로젝트 페이지라 하위 경로 아래에 올라간다 — VITE_BASE)
+#
+# ⚠️ 처음 한 번: 저장소 Settings → Pages → Build and deployment → Source 를 "GitHub Actions" 로.
+# 서버 주소는 저장소 Variables 의 VITE_API_URL(없으면 https://ssabi-api.fly.dev).
+# 서버(Fly) 의 CORS_ORIGIN 에 https://<계정>.github.io 를 넣어야 화면이 서버에 접속된다.
+# 비밀값은 쓰지 않는다 — VITE_* 값은 번들에 그대로 들어가 공개되므로 키를 넣지 않는다.
+
+name: Deploy Frontend to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: 테스트·빌드
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Update npm (npm 10.x npm-ci EBADPLATFORM 회귀 회피)
+        run: npm install -g npm@11
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      # 테스트가 깨진 화면은 배포하지 않는다
+      - name: Test
+        working-directory: frontend
+        run: npm test
+
+      - name: Build
+        working-directory: frontend
+        env:
+          VITE_BASE: /${{ github.event.repository.name }}/
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://ssabi-api.fly.dev' }}
+          VITE_USE_MOCK: 'false'
+        run: npm run build
+
+      # SPA 경로(/books/... 새로고침)도 앱이 받도록 404.html 을 index.html 로 둔다
+      - name: SPA fallback
+        working-directory: frontend
+        run: |
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+  deploy:
+    name: GitHub Pages 배포
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
