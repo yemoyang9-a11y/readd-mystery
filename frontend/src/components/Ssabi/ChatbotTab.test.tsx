@@ -650,12 +650,12 @@ describe('ChatbotTab 빈 화면 추천 질문', () => {
     onNewChat: () => {},
   };
 
-  it('대화가 없으면 고정 추천 질문 3개와 판정하지 않는다는 한 줄을 보여 준다', () => {
+  it('대화가 없으면 고정 추천 질문 3개를 보여 주고, 회색 부연 설명은 없다 (2026-11-18 대표 지시)', () => {
     render(<ChatbotTab {...emptyProps} onAsk={() => {}} />);
     const group = screen.getByRole('group', { name: '추천 질문' });
     const chips = Array.from(group.querySelectorAll('button'));
     expect(chips.map((chip) => chip.textContent)).toEqual(SUGGESTIONS);
-    expect(screen.getByText('아모는 추리가 맞는지 판정하지 않아요')).toBeInTheDocument();
+    expect(screen.queryByText('아모는 추리가 맞는지 판정하지 않아요')).toBeNull();
   });
 
   it('NFR-AI-005: 추천 질문에 범인·정답 판정을 유도하는 문장이 없다', () => {

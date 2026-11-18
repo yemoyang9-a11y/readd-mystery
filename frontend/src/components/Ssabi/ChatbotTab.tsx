@@ -152,7 +152,6 @@ export const SUGGESTED_QUESTIONS = [
   '내 노트랑 관련된 장면 있어?',
 ] as const;
 
-export const NO_VERDICT_NOTE = '아모는 추리가 맞는지 판정하지 않아요';
 
 export default function ChatbotTab({
   answer = '',
@@ -486,26 +485,6 @@ export default function ChatbotTab({
                     {DEFAULT_GREETING}
                   </p>
                 </div>
-                {/* 2026-11-17 대표 결정 — 고정 추천 질문. 누르면 입력칸만 채운다(전송 안 함) */}
-                <div className="pt-5">
-                  <div role="group" aria-label="추천 질문" className="flex flex-wrap gap-2">
-                    {SUGGESTED_QUESTIONS.map((suggestion) => (
-                      <button
-                        key={suggestion}
-                        type="button"
-                        data-track="chat-suggestion"
-                        onClick={() => {
-                          setQuery(suggestion);
-                          inputRef.current?.focus();
-                        }}
-                        className="rounded-full border border-brief-rule bg-white px-3 py-1.5 text-left font-dashSans text-[11px] font-bold text-brief-muted mobile:min-h-11 mobile:text-[13px]"
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="mb-0 mt-3 font-dashSans text-[11px] text-brief-muted mobile:text-xs">{NO_VERDICT_NOTE}</p>
-                </div>
               </>
             ) : (
               bubbles.map((turn, i) =>
@@ -546,8 +525,28 @@ export default function ChatbotTab({
             ) : null}
           </div>
 
+          {/* 2026-11-17 대표 결정 — 고정 추천 질문. 누르면 입력칸만 채운다(전송 안 함).
+              2026-11-18 대표 지시 — 입력창 바로 위에 둔다 */}
+          {bubbles.length === 0 ? (
+            <div role="group" aria-label="추천 질문" className="mt-3 flex flex-wrap gap-2">
+              {SUGGESTED_QUESTIONS.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  data-track="chat-suggestion"
+                  onClick={() => {
+                    setQuery(suggestion);
+                    inputRef.current?.focus();
+                  }}
+                  className="rounded-full border border-brief-rule bg-white px-3 py-1.5 text-left font-dashSans text-[11px] font-bold text-brief-muted mobile:min-h-11 mobile:text-[13px]"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <form
-            className="mt-4 flex items-end gap-2 rounded-3xl border border-brief-rule bg-white py-1.5 pl-4 pr-1.5 focus-within:border-brief-accent"
+            className="mt-2 flex items-end gap-2 rounded-3xl border border-brief-rule bg-white py-1 pl-4 pr-1 focus-within:border-brief-accent"
             onSubmit={(event) => {
               event.preventDefault();
               if (!query.trim() || streaming) return;
@@ -580,7 +579,7 @@ export default function ChatbotTab({
                   event.currentTarget.form?.requestSubmit();
                 }
               }}
-              className="max-h-32 flex-1 resize-none overflow-y-auto bg-transparent py-1 text-xs leading-[1.6] mobile:max-h-[9.6rem] mobile:text-[16px] text-brief-ink outline-none placeholder:text-brief-muted"
+              className="max-h-32 min-h-9 flex-1 resize-none overflow-y-auto bg-transparent py-2 text-xs leading-5 mobile:max-h-[9.6rem] mobile:text-[16px] mobile:leading-5 text-brief-ink outline-none placeholder:text-brief-muted"
               // 2026-11-18 대표 지시 — 한 줄에 들어가는 짧은 문구. 스포일러 약속은 첫 인사에서 한다
               placeholder="아모에게 물어보세요"
             />
@@ -589,7 +588,7 @@ export default function ChatbotTab({
               disabled={streaming || (requireTextToSend && !query.trim())}
               aria-label="질문 보내기"
               // 글이 있으면 강조색, 없으면 회색 — 흐린 분홍(opacity) 대신 상태를 색으로 구분한다
-              className={`flex h-8 w-8 shrink-0 items-center justify-center self-end rounded-full transition-colors mobile:h-11 mobile:w-11 ${
+              className={`flex h-9 w-9 shrink-0 items-center justify-center self-end rounded-full transition-colors ${
                 query.trim() && !streaming
                   ? 'bg-brief-accent text-white active:scale-95'
                   : 'bg-brief-rule text-brief-muted'
