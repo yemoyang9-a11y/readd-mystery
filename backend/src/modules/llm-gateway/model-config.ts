@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { CLAUDE_CLI_CONFIG, isClaudeCliTask } from './claude-cli-provider';
 
 // NFR-AI-001: load local configuration before capturing provider/model defaults.
 dotenv.config();
@@ -36,13 +37,15 @@ if (LLM_PROVIDER === 'openai' && !VALID_OPENAI_EFFORTS.includes(DEFAULT_EFFORT))
 
 export const EFFORT_ENABLED = DEFAULT_EFFORT !== '';
 
-/** NFR-AI-001: all existing task names retain a single configurable model. */
+/**
+ * NFR-AI-001: API 제공자(LLM_PROVIDER)로 가는 작업 → 모델. 관계 추출(generate_relationship*)은 여기 없다 —
+ * 2026-11-18 대표 지시로 OpenAI 경로를 지우고 Claude 구독(CLAUDE_CLI_TASKS)으로만 간다.
+ */
 export const MODEL_CONFIG = {
   chatbot: DEFAULT_MODEL,
   recap: DEFAULT_MODEL,
   generate_summary: DEFAULT_MODEL,
   generate_character: DEFAULT_MODEL,
-  generate_relationship: DEFAULT_MODEL,
   generate_background: DEFAULT_MODEL,
   generate_term: DEFAULT_MODEL,
   generate_event: DEFAULT_MODEL,
@@ -65,6 +68,7 @@ const METRIC_TASK_ALIASES: Record<string, keyof typeof MODEL_CONFIG> = {
 };
 
 export function getModelForTask(task: string): string {
+  if (isClaudeCliTask(task)) return CLAUDE_CLI_CONFIG.model;
   const model = MODEL_CONFIG[(METRIC_TASK_ALIASES[task] ?? task) as keyof typeof MODEL_CONFIG];
   if (!model) {
     console.warn(`Unknown task: ${task}, falling back to default model`);

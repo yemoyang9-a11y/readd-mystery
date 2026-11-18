@@ -17,7 +17,6 @@ import { splitBook } from './split';
 import {
   buildSummaryPrompt,
   buildCharacterPrompt,
-  buildRelationshipPrompt,
   buildBackgroundPrompt,
   buildTermPrompt,
   parseJsonResponse,
@@ -124,35 +123,9 @@ async function main(): Promise<void> {
   results.character_review = validatedCharacters.review;
   results.raw_character_candidates = characterOut;
 
-  const knownNames = validatedCharacters.characters.map((c) => c.name);
-
-  // 3) 관계
-  console.log('\n--- ③ 관계 ---');
-  const relOut = await callJson<{
-    relationships: {
-      character_a: string;
-      character_b: string;
-      label: string;
-      established_page: number;
-    }[];
-  }>(
-    'generate_relationship',
-    buildRelationshipPrompt(chapter, pages, knownNames),
-    chapter.chapter_no
-  );
-  console.log(JSON.stringify(relOut, null, 1));
-  reportPageBounds(
-    '관계',
-    validateGroundedChapter(relOut, pages, {
-      requireRelationshipSemantics: true,
-    }).relationships.map((r) => r.established_page)
-  );
-  const validatedRelationships = validateGroundedChapter(relOut, pages, {
-    requireRelationshipSemantics: true,
-  });
-  results.relationships = { relationships: validatedRelationships.relationships };
-  results.relationship_review = validatedRelationships.review;
-  results.raw_relationship_candidates = relOut;
+  // 3) 관계 — 표본에서는 만들지 않는다. 관계는 구조 방식 + Claude 구독으로만 만든다(2026-11-18 대표 지시):
+  //    run-generate-relationships-structural.ts (docs/relationship-pipeline.md)
+  console.log('\n--- ③ 관계 — 표본에서 생략(run-generate-relationships-structural.ts) ---');
 
   // 4) 배경지식 · 소개 (장 무관, 책 전체 1회)
   console.log('\n--- ④ 배경지식 · 소개 ---');
