@@ -68,7 +68,10 @@ export class PgAccountRepository implements AccountRepository {
 
   async listProviders(userId: string): Promise<IdentityProvider[]> {
     const { rows } = await this.pool.query<{ provider: IdentityProvider }>(
-      `SELECT provider FROM user_identities WHERE user_id = $1 ORDER BY provider`,
+      `SELECT provider FROM (
+         SELECT provider FROM user_identities WHERE user_id = $1
+         UNION SELECT 'email' FROM user_passwords WHERE user_id = $1
+       ) p ORDER BY provider`,
       [userId]
     );
     return rows.map((row) => row.provider);
@@ -92,10 +95,8 @@ export class PgAccountRepository implements AccountRepository {
           `INSERT INTO users (user_id, reader_id, display_name) VALUES ($1, $2, $3)`,
           [input.userId, input.readerId, input.displayName]
         );
-        await client.query(
-          `INSERT INTO user_identities (provider, provider_user_id, user_id) VALUES ('email', $1, $2)`,
-          [input.email, input.userId]
-        );
+        // 이메일 계정은 user_passwords 한 곳에만 둔다 — user_identities 는 OAuth 전용으로 남겨
+        // 기존 provider 제약을 바꾸지 않는다(마이그레이션 023 을 추가 전용으로)
         await client.query(
           `INSERT INTO user_passwords (user_id, email, password_hash) VALUES ($1, $2, $3)`,
           [input.userId, input.email, input.passwordHash]
@@ -110,8 +111,7 @@ export class PgAccountRepository implements AccountRepository {
       const pgError = error as { code?: string; constraint?: string } | null;
       if (
         pgError?.code === UNIQUE_VIOLATION &&
-        (pgError.constraint === 'user_passwords_email_key' ||
-          pgError.constraint === 'user_identities_pkey')
+        pgError.constraint === 'user_passwords_email_key'
       ) {
         throw new EmailTakenError();
       }

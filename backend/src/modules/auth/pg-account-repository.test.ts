@@ -94,18 +94,17 @@ describe('PgAccountRepository', () => {
     passwordHash: 'scrypt$hash',
   };
 
-  test('이메일 가입은 users·user_identities·user_passwords를 한 트랜잭션으로 넣는다', async () => {
+  test('이메일 가입은 users·user_passwords를 한 트랜잭션으로 넣고 user_identities(OAuth 전용)는 건드리지 않는다', async () => {
     const { pool, statements } = fakePool();
     await new PgAccountRepository(pool).createPasswordAccount(PASSWORD_ACCOUNT);
     expect(statements.map((s) => s.text.split(' (')[0])).toEqual([
       'BEGIN',
       'INSERT INTO users',
-      'INSERT INTO user_identities',
       'INSERT INTO user_passwords',
       'COMMIT',
     ]);
-    expect(statements[2].values).toEqual(['reader@example.com', 'user-1']);
-    expect(statements[3].values).toEqual(['user-1', 'reader@example.com', 'scrypt$hash']);
+    expect(statements.some((s) => s.text.includes('user_identities'))).toBe(false);
+    expect(statements[2].values).toEqual(['user-1', 'reader@example.com', 'scrypt$hash']);
   });
 
   test('이메일 고유 제약 위반은 EmailTakenError로 바꾸고 되돌린다', async () => {

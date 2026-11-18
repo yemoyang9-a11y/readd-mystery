@@ -4,8 +4,9 @@ import { join } from 'path';
 const sql = readFileSync(join(__dirname, '../../../migrations/023_email_auth.sql'), 'utf8');
 
 describe('023_email_auth 마이그레이션 — 2026-11-18 대표 지시', () => {
-  test("user_identities.provider에 'email'을 허용한다", () => {
-    expect(sql).toMatch(/CHECK \(provider IN \('google', 'kakao', 'email'\)\)/);
+  test('추가 전용 — user_identities 제약을 지우거나 바꾸지 않는다', () => {
+    expect(sql).not.toMatch(/DROP\s+CONSTRAINT/i);
+    expect(sql).not.toMatch(/ALTER TABLE user_identities/i);
   });
 
   test('user_passwords는 users를 참조하고 계정이 지워지면 함께 지워진다', () => {
