@@ -26,6 +26,8 @@ export interface MockApiOptions {
   authMember?: boolean;
   /** /auth/me 가 저장된 토큰을 거절한다(401) — 지워진 계정·만료된 토큰 (E2E #89) */
   authRejected?: boolean;
+  /** 로그인하지 않은 비회원으로 시작한다 — 토큰을 심지 않는다 (대표 지시 2026-11-18 로그인 시점) */
+  guest?: boolean;
   positions?: Record<string, PositionResponse>;
 }
 
@@ -140,11 +142,15 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
   const failPages = new Set(opts.failPages ?? []);
   let briefingFailures = 0;
   const log: ApiLog = { progress: [], pageFetches: [], entries: 0, recapStreams: 0, events: [] };
-  // 2026-11-18 첫 접속 로그인 관문 — 시험 독자는 이미 로그인하고 가이드를 마친 상태로 시작한다
-  await page.addInitScript(() => {
-    localStorage.setItem('ssabi.auth_token', 'e2e-session-token');
+  // 작품을 여는 화면은 로그인이 필요하다(대표 지시 2026-11-18) — 시험 독자는 이미 로그인하고 가이드를
+  // 마친 상태로 시작한다. guest 를 고른 시험만 토큰 없이 시작한다
+  await page.addInitScript((guest) => {
+    // 새로 고침마다 다시 심지 않는다 — 시험 안에서 로그아웃·가입한 상태를 지킨다
+    if (sessionStorage.getItem('e2e.seeded')) return;
+    sessionStorage.setItem('e2e.seeded', '1');
+    if (!guest) localStorage.setItem('ssabi.auth_token', 'e2e-session-token');
     localStorage.setItem('readd.onboarded', '1');
-  });
+  }, opts.guest ?? false);
   const briefingRecap = opts.briefingRecap ?? 'saved';
   let cutoff = startPage;
   const extraPages: Record<string, number | undefined> = { [DONE_BOOK.book_id]: 20 };
@@ -199,8 +205,22 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
       // 시험 독자는 로그인한 상태로 시작한다(위 addInitScript). 토큰이 없거나 거절하도록 고른 시험만 401이다.
       // E2E #89 — 앱을 열 때 /auth/me 로 토큰을 확인하므로, 토큰이 있는데 401이면 로그아웃된다.
       if (opts.authRejected || !request.headers()['authorization']) return json(route, { error: 'UNAUTHORIZED' }, 401);
-      return json(route, { display_name: opts.authMember ? '시험 독자' : null, providers: ['google'] });
+      return json(route, {
+        display_name: opts.authMember ? '시험 독자' : null,
+        providers: ['google'],
+        onboarded: true,
+        consent_required: false,
+      });
     }
+
+    // 대표 지시 2026-11-18 — 이메일 가입. 서버처럼 필수 약관 동의가 빠지면 400 CONSENT_REQUIRED
+    if (method === 'POST' && path === '/auth/signup') {
+      const body = request.postDataJSON() as { consents?: Record<string, unknown> };
+      const missing = ['terms', 'privacy', 'age14'].filter((kind) => body.consents?.[kind] !== true);
+      if (missing.length > 0) return json(route, { error: 'CONSENT_REQUIRED', missing }, 400);
+      return json(route, { token: 'e2e-signup-token', display_name: '새 독자', is_new: true }, 201);
+    }
+    if (method === 'POST' && path === '/auth/me/onboarded') return json(route, {}, 204);
 
     const match = path.match(/^\/books\/([^/]+)(\/.*)$/);
     const bookId = match?.[1] ?? '';

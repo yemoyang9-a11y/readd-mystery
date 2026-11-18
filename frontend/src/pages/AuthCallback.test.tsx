@@ -1,12 +1,24 @@
 import { StrictMode } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import AuthCallback from './AuthCallback';
 import { exchangeLoginCode, fetchMe } from '../services/authService';
 import { getAuthToken } from '../utils/storage';
+import { LOGIN_NEXT_STORAGE_KEY } from '../utils/authRedirect';
 import { createAppRouter } from '../App';
 
 vi.mock('../services/authService', () => ({ exchangeLoginCode: vi.fn(), fetchMe: vi.fn() }));
+
+function Where({ label }: { label: string }) {
+  const location = useLocation();
+  return (
+    <div>
+      {label}
+      <span data-testid="search">{location.search}</span>
+      <span data-testid="state">{JSON.stringify(location.state)}</span>
+    </div>
+  );
+}
 
 function renderCallback(strict = false) {
   const tree = (
@@ -14,8 +26,10 @@ function renderCallback(strict = false) {
       <Routes>
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/" element={<div>홈 화면</div>} />
-        <Route path="/guide" element={<div>가이드 화면</div>} />
+        <Route path="/guide" element={<Where label="가이드 화면" />} />
         <Route path="/login" element={<div>로그인 화면</div>} />
+        <Route path="/consent" element={<Where label="동의 화면" />} />
+        <Route path="/books/:bookId/briefing" element={<Where label="작품 브리핑" />} />
       </Routes>
     </MemoryRouter>
   );
@@ -28,7 +42,61 @@ describe('AuthCallback', () => {
     vi.mocked(fetchMe).mockReset();
     vi.mocked(fetchMe).mockResolvedValue({ display_name: '독자', providers: ['kakao'], onboarded: true });
     localStorage.clear();
+    sessionStorage.clear();
     window.location.hash = '';
+  });
+
+  // 대표 지시 2026-11-18 — 작품을 열려다 카카오·구글로 로그인했으면 그 작품으로 돌아간다
+  it('로그인 전에 남긴 가려던 주소로 돌아가고, 남긴 주소는 한 번 쓰면 지운다', async () => {
+    window.location.hash = '#code=one-time';
+    sessionStorage.setItem(LOGIN_NEXT_STORAGE_KEY, '/books/takryu/briefing');
+    vi.mocked(exchangeLoginCode).mockResolvedValue({ token: 'jwt', display_name: '독자' });
+
+    renderCallback();
+
+    expect(await screen.findByText('작품 브리핑')).toBeInTheDocument();
+    expect(sessionStorage.getItem(LOGIN_NEXT_STORAGE_KEY)).toBeNull();
+  });
+
+  it('카카오·구글 첫 로그인으로 약관 동의가 없으면 동의 화면으로 가려던 주소를 들고 간다', async () => {
+    window.location.hash = '#code=one-time';
+    sessionStorage.setItem(LOGIN_NEXT_STORAGE_KEY, '/books/takryu/briefing');
+    vi.mocked(exchangeLoginCode).mockResolvedValue({ token: 'jwt', display_name: '독자' });
+    vi.mocked(fetchMe).mockResolvedValue({
+      display_name: '독자',
+      providers: ['kakao'],
+      onboarded: false,
+      consent_required: true,
+    });
+
+    renderCallback();
+
+    expect(await screen.findByText('동의 화면')).toBeInTheDocument();
+    expect(screen.getByTestId('search')).toHaveTextContent(
+      `?next=${encodeURIComponent('/books/takryu/briefing')}`
+    );
+  });
+
+  it('가이드 전인 독자는 가려던 주소를 state 로 들고 가이드로 간다', async () => {
+    window.location.hash = '#code=one-time';
+    sessionStorage.setItem(LOGIN_NEXT_STORAGE_KEY, '/books/takryu/briefing');
+    vi.mocked(exchangeLoginCode).mockResolvedValue({ token: 'jwt', display_name: '독자' });
+    vi.mocked(fetchMe).mockResolvedValue({ display_name: '독자', providers: ['kakao'], onboarded: false });
+
+    renderCallback();
+
+    expect(await screen.findByText('가이드 화면')).toBeInTheDocument();
+    expect(screen.getByTestId('state')).toHaveTextContent('{"next":"/books/takryu/briefing"}');
+  });
+
+  it('바깥 주소가 남아 있으면 따르지 않고 홈으로 간다', async () => {
+    window.location.hash = '#code=one-time';
+    sessionStorage.setItem(LOGIN_NEXT_STORAGE_KEY, '//evil.example');
+    vi.mocked(exchangeLoginCode).mockResolvedValue({ token: 'jwt', display_name: '독자' });
+
+    renderCallback();
+
+    expect(await screen.findByText('홈 화면')).toBeInTheDocument();
   });
 
   it('1회용 코드를 교환해 토큰을 저장하고, 가이드를 마친 독자는 홈으로 보낸다', async () => {

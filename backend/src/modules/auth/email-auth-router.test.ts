@@ -3,11 +3,13 @@ import type { AddressInfo } from 'net';
 import express from 'express';
 import { FakeAccountRepository } from '../../../tests/unit/auth/fakes';
 import { createAuthRouter } from './auth-router';
+import { CONSENT_VERSION } from './consents';
 import { AuthService } from './auth.service';
 import { createRateLimiter, type RateLimiter } from './rate-limit';
 import { verifySessionToken } from './session-token';
 
 const DEVICE_ID = '11111111-1111-4111-8111-111111111111';
+const CONSENTS = { terms: true, privacy: true, age14: true, marketing: false };
 const OAUTH_ENV = [
   'GOOGLE_CLIENT_ID',
   'GOOGLE_CLIENT_SECRET',
@@ -73,7 +75,13 @@ describe('이메일 인증 라우터 — 2026-11-18 대표 지시', () => {
   function signup(body: Record<string, unknown> = {}, headers: Record<string, string> = {}) {
     return post(
       '/auth/signup',
-      { email: 'reader@example.com', password: 'secret-pass', display_name: '독자', ...body },
+      {
+        email: 'reader@example.com',
+        password: 'secret-pass1',
+        display_name: '독자',
+        consents: CONSENTS,
+        ...body,
+      },
       { 'X-Device-Id': DEVICE_ID, ...headers }
     );
   }
@@ -96,13 +104,70 @@ describe('이메일 인증 라우터 — 2026-11-18 대표 지시', () => {
 
     test.each([
       [{ email: 'nope' }],
-      [{ password: 'short' }],
+      [{ password: 'short1' }],
+      [{ password: 'onlyletters' }],
+      [{ password: '1234567890' }],
       [{ display_name: '' }],
       [{ display_name: '가'.repeat(21) }],
     ])('잘못된 입력은 400이고 계정을 만들지 않는다 %#', async (override) => {
       const response = await signup(override);
       expect(response.status).toBe(400);
       expect(accounts.accounts).toHaveLength(0);
+    });
+
+    test.each([
+      [{ privacy: true, age14: true }, ['terms']],
+      [{ terms: true, age14: true }, ['privacy']],
+      [{ terms: true, privacy: true }, ['age14']],
+      [{}, ['terms', 'privacy', 'age14']],
+    ])(
+      '필수 약관 동의가 빠지면 400 CONSENT_REQUIRED이고 계정을 만들지 않는다 %#',
+      async (consents, missing) => {
+        const response = await signup({ consents });
+        expect(response.status).toBe(400);
+        await expect(response.json()).resolves.toMatchObject({
+          error: 'CONSENT_REQUIRED',
+          missing,
+        });
+        expect(accounts.accounts).toHaveLength(0);
+        expect(accounts.consents).toHaveLength(0);
+      }
+    );
+
+    test('동의 묶음 없이 보내면 400 CONSENT_REQUIRED다', async () => {
+      const response = await post(
+        '/auth/signup',
+        { email: 'reader@example.com', password: 'secret-pass1', display_name: '독자' },
+        { 'X-Device-Id': DEVICE_ID }
+      );
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toMatchObject({ error: 'CONSENT_REQUIRED' });
+      expect(accounts.accounts).toHaveLength(0);
+    });
+
+    test('필수 동의를 모두 하면 201이고 네 종류 동의를 현재 버전·시각과 함께 저장한다', async () => {
+      const response = await signup({ consents: { ...CONSENTS, marketing: true } });
+      expect(response.status).toBe(201);
+      const userId = accounts.accounts[0].user_id;
+      expect(
+        accounts.consents.map(({ userId: id, kind, agreed }) => ({ id, kind, agreed }))
+      ).toEqual([
+        { id: userId, kind: 'terms', agreed: true },
+        { id: userId, kind: 'privacy', agreed: true },
+        { id: userId, kind: 'age14', agreed: true },
+        { id: userId, kind: 'marketing', agreed: true },
+      ]);
+      for (const record of accounts.consents) {
+        expect(record.version).toBe(CONSENT_VERSION);
+        expect(record.agreedAt).toBeInstanceOf(Date);
+      }
+    });
+
+    test('마케팅 수신은 선택이다 — 빼고 가입해도 201이고 거절로 남는다', async () => {
+      const { marketing: _skip, ...required } = CONSENTS;
+      const response = await signup({ consents: required });
+      expect(response.status).toBe(201);
+      expect(accounts.consents.find((record) => record.kind === 'marketing')?.agreed).toBe(false);
     });
   });
 
@@ -111,7 +176,7 @@ describe('이메일 인증 라우터 — 2026-11-18 대표 지시', () => {
       await signup();
       const response = await post('/auth/login', {
         email: 'READER@example.com',
-        password: 'secret-pass',
+        password: 'secret-pass1',
       });
       expect(response.status).toBe(200);
       const body = (await response.json()) as { token: string };
@@ -127,7 +192,7 @@ describe('이메일 인증 라우터 — 2026-11-18 대표 지시', () => {
       });
       const unknown = await post('/auth/login', {
         email: 'nobody@example.com',
-        password: 'secret-pass',
+        password: 'secret-pass1',
       });
       expect(wrong.status).toBe(401);
       expect(unknown.status).toBe(401);
@@ -200,6 +265,8 @@ describe('이메일 인증 라우터 — 2026-11-18 대표 지시', () => {
         providers: ['email'],
         email: 'reader@example.com',
         onboarded: false,
+        consent_required: false,
+        marketing: false,
       });
     });
 

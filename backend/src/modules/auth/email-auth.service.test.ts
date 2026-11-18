@@ -6,7 +6,8 @@ import { createRateLimiter } from './rate-limit';
 import { verifySessionToken } from './session-token';
 
 const DEVICE_A = '11111111-1111-4111-8111-111111111111';
-const SIGNUP = { email: 'reader@example.com', password: 'secret-pass', displayName: '독자' };
+const SIGNUP = { email: 'reader@example.com', password: 'secret-pass1', displayName: '독자' };
+const CONSENTS = { terms: true, privacy: true, age14: true, marketing: false };
 
 describe('이메일 회원가입·로그인 — 2026-11-18 대표 지시', () => {
   let accounts: FakeAccountRepository;
@@ -25,41 +26,63 @@ describe('이메일 회원가입·로그인 — 2026-11-18 대표 지시', () =>
   });
 
   test('회원가입한 계정의 reader_id는 로그인 전 기기 id다', async () => {
-    const session = await service.signupWithPassword(SIGNUP, DEVICE_A);
+    const session = await service.signupWithPassword(SIGNUP, DEVICE_A, CONSENTS);
     expect(session.is_new).toBe(true);
     expect(session.display_name).toBe('독자');
     await expect(verifySessionToken(session.token)).resolves.toMatchObject({ readerId: DEVICE_A });
   });
 
   test('이미 다른 계정의 reader_id인 기기로 가입하면 새 reader_id를 받는다', async () => {
-    await service.signupWithPassword(SIGNUP, DEVICE_A);
+    await service.signupWithPassword(SIGNUP, DEVICE_A, CONSENTS);
     const second = await service.signupWithPassword(
       { ...SIGNUP, email: 'other@example.com' },
-      DEVICE_A
+      DEVICE_A,
+      CONSENTS
     );
     const claims = await verifySessionToken(second.token);
     expect(claims?.readerId).not.toBe(DEVICE_A);
   });
 
   test('기기 id가 없으면 새 reader_id로 가입한다', async () => {
-    const session = await service.signupWithPassword(SIGNUP, null);
+    const session = await service.signupWithPassword(SIGNUP, null, CONSENTS);
     const claims = await verifySessionToken(session.token);
     expect(claims?.readerId).toMatch(/^[0-9a-f-]{36}$/);
   });
 
+  test('대표 지시 2026-11-18: 가입하면 약관 동의 네 종류를 가입 시각으로 함께 저장한다', async () => {
+    await service.signupWithPassword(SIGNUP, DEVICE_A, { ...CONSENTS, marketing: true });
+    expect(
+      accounts.consents.map(({ kind, agreed, agreedAt }) => ({ kind, agreed, agreedAt }))
+    ).toEqual([
+      { kind: 'terms', agreed: true, agreedAt: clock },
+      { kind: 'privacy', agreed: true, agreedAt: clock },
+      { kind: 'age14', agreed: true, agreedAt: clock },
+      { kind: 'marketing', agreed: true, agreedAt: clock },
+    ]);
+  });
+
+  test('필수 동의가 빠진 채로 서비스를 부르면 계정을 만들지 않는다', async () => {
+    await expect(
+      service.signupWithPassword(SIGNUP, DEVICE_A, { ...CONSENTS, age14: false })
+    ).rejects.toThrow();
+    expect(accounts.accounts).toHaveLength(0);
+  });
+
   test('같은 이메일로 다시 가입하면 EmailTakenError', async () => {
-    await service.signupWithPassword(SIGNUP, DEVICE_A);
-    await expect(service.signupWithPassword(SIGNUP, null)).rejects.toBeInstanceOf(EmailTakenError);
+    await service.signupWithPassword(SIGNUP, DEVICE_A, CONSENTS);
+    await expect(service.signupWithPassword(SIGNUP, null, CONSENTS)).rejects.toBeInstanceOf(
+      EmailTakenError
+    );
   });
 
   test('비밀번호는 평문으로 저장하지 않는다', async () => {
-    await service.signupWithPassword(SIGNUP, DEVICE_A);
+    await service.signupWithPassword(SIGNUP, DEVICE_A, CONSENTS);
     expect(accounts.passwords[0].passwordHash).not.toContain(SIGNUP.password);
     expect(accounts.passwords[0].passwordHash.startsWith('scrypt$')).toBe(true);
   });
 
   test('맞는 비밀번호로 로그인하면 가입 때와 같은 reader_id 토큰을 준다', async () => {
-    await service.signupWithPassword(SIGNUP, DEVICE_A);
+    await service.signupWithPassword(SIGNUP, DEVICE_A, CONSENTS);
     const session = await service.loginWithPassword({
       email: SIGNUP.email,
       password: SIGNUP.password,
@@ -69,7 +92,7 @@ describe('이메일 회원가입·로그인 — 2026-11-18 대표 지시', () =>
   });
 
   test('틀린 비밀번호와 없는 이메일은 둘 다 null이다', async () => {
-    await service.signupWithPassword(SIGNUP, DEVICE_A);
+    await service.signupWithPassword(SIGNUP, DEVICE_A, CONSENTS);
     await expect(
       service.loginWithPassword({ email: SIGNUP.email, password: 'wrong-pass' })
     ).resolves.toBeNull();
@@ -79,13 +102,15 @@ describe('이메일 회원가입·로그인 — 2026-11-18 대표 지시', () =>
   });
 
   test('getMe는 이메일과 안내 완료 여부를 준다', async () => {
-    const session = await service.signupWithPassword(SIGNUP, DEVICE_A);
+    const session = await service.signupWithPassword(SIGNUP, DEVICE_A, CONSENTS);
     const { userId } = (await verifySessionToken(session.token))!;
     await expect(service.getMe(userId)).resolves.toEqual({
       display_name: '독자',
       providers: ['email'],
       email: SIGNUP.email,
       onboarded: false,
+      consent_required: false,
+      marketing: false,
     });
 
     await service.markOnboarded(userId);
@@ -93,7 +118,7 @@ describe('이메일 회원가입·로그인 — 2026-11-18 대표 지시', () =>
   });
 
   test('안내 완료는 처음 표시한 시각을 유지한다', async () => {
-    const session = await service.signupWithPassword(SIGNUP, DEVICE_A);
+    const session = await service.signupWithPassword(SIGNUP, DEVICE_A, CONSENTS);
     const { userId } = (await verifySessionToken(session.token))!;
     await service.markOnboarded(userId);
     const first = accounts.onboardedAt.get(userId);
@@ -103,7 +128,7 @@ describe('이메일 회원가입·로그인 — 2026-11-18 대표 지시', () =>
   });
 
   test('탈퇴하면 비밀번호 기록도 지운다', async () => {
-    const session = await service.signupWithPassword(SIGNUP, DEVICE_A);
+    const session = await service.signupWithPassword(SIGNUP, DEVICE_A, CONSENTS);
     const claims = (await verifySessionToken(session.token))!;
     await service.withdraw(claims.userId, claims.readerId);
     expect(accounts.passwords).toHaveLength(0);
@@ -130,27 +155,41 @@ describe('비밀번호 해시', () => {
 describe('입력 검사', () => {
   test('이메일은 앞뒤 공백을 빼고 소문자로 바꾼다', () => {
     expect(
-      parseSignup({ email: '  Reader@Example.COM ', password: '12345678', display_name: ' 독자 ' })
+      parseSignup({ email: '  Reader@Example.COM ', password: 'abcd1234', display_name: ' 독자 ' })
     ).toEqual({
       ok: true,
-      value: { email: 'reader@example.com', password: '12345678', displayName: '독자' },
+      value: { email: 'reader@example.com', password: 'abcd1234', displayName: '독자' },
     });
   });
 
   test.each([
-    [{ email: 'not-an-email', password: '12345678', display_name: '독자' }],
-    [{ email: 'a@b.co', password: '1234567', display_name: '독자' }],
-    [{ email: 'a@b.co', password: '12345678', display_name: '   ' }],
-    [{ email: 'a@b.co', password: '12345678', display_name: '가'.repeat(21) }],
-    [{ email: 'a@b.co', password: 12345678, display_name: '독자' }],
+    [{ email: 'not-an-email', password: 'abcd1234', display_name: '독자' }],
+    [{ email: 'a@b.co', password: 'abcd123', display_name: '독자' }],
+    [{ email: 'a@b.co', password: 'abcd1234', display_name: '   ' }],
+    [{ email: 'a@b.co', password: 'abcd1234', display_name: '가'.repeat(21) }],
+    [{ email: 'a@b.co', password: 1234567890, display_name: '독자' }],
+    [{ email: 'a@b.co', password: 'abcdefgh', display_name: '독자' }],
+    [{ email: 'a@b.co', password: '12345678', display_name: '독자' }],
     [null],
   ])('잘못된 회원가입 입력은 거절한다 %#', (body) => {
     expect(parseSignup(body).ok).toBe(false);
   });
 
+  test('비밀번호는 8자 이상이고 영문과 숫자를 모두 포함해야 한다 (가입만)', () => {
+    expect(parseSignup({ email: 'a@b.co', password: 'abc12345', display_name: '독자' }).ok).toBe(
+      true
+    );
+    expect(
+      parseSignup({ email: 'a@b.co', password: '비밀번호abc123', display_name: '독자' }).ok
+    ).toBe(true);
+    expect(parseSignup({ email: 'a@b.co', password: 'abc1234', display_name: '독자' }).ok).toBe(
+      false
+    );
+  });
+
   test('닉네임은 20자까지 허용한다', () => {
     expect(
-      parseSignup({ email: 'a@b.co', password: '12345678', display_name: '가'.repeat(20) }).ok
+      parseSignup({ email: 'a@b.co', password: 'abcd1234', display_name: '가'.repeat(20) }).ok
     ).toBe(true);
   });
 

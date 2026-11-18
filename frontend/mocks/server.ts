@@ -205,7 +205,14 @@ export function mockPositionResponse(bookId: string): MockResult<PositionRespons
   };
 }
 
-const MOCK_MEMBER: AuthMe = { display_name: '시험 독자', providers: ['google'], email: null, onboarded: true };
+const MOCK_MEMBER: AuthMe = {
+  display_name: '시험 독자',
+  providers: ['google'],
+  email: null,
+  onboarded: true,
+  consent_required: false,
+  marketing: false,
+};
 const MOCK_TOKEN_PREFIX = 'mock-session-';
 let mockAccount: AuthMe | null = null;
 
@@ -223,7 +230,29 @@ export function mockMeResponse(): MockResult<AuthMe> {
 }
 
 // 2026-11-18 — 로그인 화면 대역. 이메일 형식과 8자 이상 비밀번호면 성공한다 (개발용)
-type MockAuthResult<T> = { status: 200; body: T } | { status: 400 | 401 };
+type MockAuthResult<T> =
+  | { status: 200; body: T }
+  | { status: 400; body?: { error: string; missing?: string[] } }
+  | { status: 401 };
+
+type MockConsents = { terms: boolean; privacy: boolean; age14: boolean; marketing: boolean };
+
+/** 서버와 같은 필수 약관 — 빠지면 400 CONSENT_REQUIRED (대표 지시 2026-11-18) */
+function mockMissingConsents(consents: MockConsents | undefined): string[] {
+  return (['terms', 'privacy', 'age14'] as const).filter((kind) => consents?.[kind] !== true);
+}
+
+export function mockAgreeConsents(
+  consents: MockConsents
+): { status: 204; body?: undefined } | { status: 400 | 401; body: { error: string; missing?: string[] } } {
+  const missing = mockMissingConsents(consents);
+  if (missing.length > 0) return { status: 400, body: { error: 'CONSENT_REQUIRED', missing } };
+  if (!mockAccount && !localStorage.getItem(STORAGE_KEYS.authToken)) {
+    return { status: 401, body: { error: 'UNAUTHORIZED' } };
+  }
+  if (mockAccount) mockAccount = { ...mockAccount, consent_required: false, marketing: consents.marketing };
+  return { status: 204 };
+}
 
 function mockToken(): string {
   return `${MOCK_TOKEN_PREFIX}${Date.now().toString(36)}`;
@@ -237,12 +266,22 @@ export function mockSignupResponse(input: {
   email: string;
   password: string;
   displayName: string;
+  consents?: MockConsents;
 }): MockAuthResult<{ token: string; display_name: string; is_new: boolean }> {
   const name = input.displayName.trim();
   if (!mockCredentialsValid(input.email, input.password) || name.length < 1 || name.length > 20) {
     return { status: 400 };
   }
-  mockAccount = { display_name: name, providers: ['email'], email: input.email.trim().toLowerCase(), onboarded: false };
+  const missing = mockMissingConsents(input.consents);
+  if (missing.length > 0) return { status: 400, body: { error: 'CONSENT_REQUIRED', missing } };
+  mockAccount = {
+    display_name: name,
+    providers: ['email'],
+    email: input.email.trim().toLowerCase(),
+    onboarded: false,
+    consent_required: false,
+    marketing: input.consents?.marketing === true,
+  };
   return { status: 200, body: { token: mockToken(), display_name: name, is_new: true } };
 }
 
@@ -251,7 +290,14 @@ export function mockLoginResponse(
   password: string
 ): MockAuthResult<{ token: string; display_name: string | null }> {
   if (!mockCredentialsValid(email, password)) return { status: 401 };
-  mockAccount ??= { display_name: '시험 독자', providers: ['email'], email: email.trim().toLowerCase(), onboarded: true };
+  mockAccount ??= {
+    display_name: '시험 독자',
+    providers: ['email'],
+    email: email.trim().toLowerCase(),
+    onboarded: true,
+    consent_required: false,
+    marketing: false,
+  };
   return { status: 200, body: { token: mockToken(), display_name: mockAccount.display_name } };
 }
 

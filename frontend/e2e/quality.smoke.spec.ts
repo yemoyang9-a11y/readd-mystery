@@ -88,22 +88,63 @@ test('관리자: 별도 화면 코드를 불러와도 인증 화면을 거친다
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test('첫 접속: 로그인하지 않은 독자에게는 로그인·회원가입 화면이 먼저 뜬다', async ({ browser }) => {
-  const context = await browser.newContext();
-  const page = await context.newPage();
+// 대표 지시 2026-11-18 — 처음부터 로그인 창을 띄우지 않는다. 작품을 열 때·MY에서 로그인할 때만 띄운다
+test('첫 접속: 비회원도 홈·MY를 로그인 화면 없이 연다', async ({ page }) => {
+  await installMockApi(page, { guest: true });
   await page.goto('/');
-  await expect(page).toHaveURL(/\/login/);
-  await expect(page.getByRole('button', { name: '로그인' }).first()).toBeVisible();
-  await expect(page.getByText('회원가입').first()).toBeVisible();
-  await context.close();
+  await expect(page.getByText('탁류', { exact: true }).first()).toBeVisible();
+  await expect(page).not.toHaveURL(/\/login/);
+  await expect(page.getByTestId('login-screen')).toHaveCount(0);
+
+  await page.goto('/my');
+  await expect(page.getByText('로그인하지 않은 상태예요')).toBeVisible();
+  await page.getByRole('link', { name: '로그인 / 회원가입' }).click();
+  await expect(page).toHaveURL(/\/login\?next=%2Fmy$/);
+  await expect(page.getByTestId('login-screen')).toBeVisible();
+  await page.getByRole('button', { name: '닫기' }).click();
+  await expect(page).toHaveURL(/\/my$/);
 });
 
-test('E2E #89: 저장된 토큰의 계정이 없으면(401) 앱을 열 때 로그인 화면으로 간다', async ({ page }) => {
+test('첫 접속: 비회원이 작품을 열면 로그인 화면이 뜨고, 닫으면 홈으로 돌아간다', async ({ page }) => {
+  await installMockApi(page, { guest: true });
+  await page.goto(`/books/${BOOK_ID}/read`);
+  await expect(page).toHaveURL(new RegExp(`/login\\?next=${encodeURIComponent(`/books/${BOOK_ID}/read`)}$`));
+  await expect(page.getByTestId('login-screen')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole('button', { name: '닫기' }).click();
+  await expect(page).toHaveURL(/\/$/);
+});
+
+test('가입: 필수 약관에 동의하지 않으면 버튼 위에 알리고, 동의하면 가입해 첫 안내로 간다', async ({ page }) => {
+  await installMockApi(page, { guest: true });
+  await page.goto(`/login?mode=signup&next=${encodeURIComponent(`/books/${BOOK_ID}/briefing`)}`);
+  await page.getByLabel('이메일').fill('new@example.com');
+  await page.getByLabel('비밀번호', { exact: true }).fill('secret-pass1');
+  await page.getByLabel('비밀번호 확인').fill('secret-pass1');
+  await page.getByLabel('닉네임').fill('새 독자');
+  await page.getByRole('button', { name: '가입하기' }).click();
+  await expect(page.getByRole('alert')).toHaveText(/필수 약관에 모두 동의해 주세요/);
+  await expect(page).toHaveURL(/\/login/);
+
+  await page.getByRole('button', { name: '이용약관 보기' }).click();
+  const sheet = page.getByRole('dialog', { name: '이용약관 (초안)' });
+  await expect(sheet).toBeVisible();
+  await sheet.getByRole('button', { name: '닫기' }).click();
+  await expect(sheet).toHaveCount(0);
+
+  await page.getByRole('checkbox', { name: '전체 동의' }).check();
+  await page.getByRole('button', { name: '가입하기' }).click();
+  await expect(page).toHaveURL(/\/guide$/);
+  expect(await page.evaluate(() => localStorage.getItem('ssabi.auth_token'))).toBe('e2e-signup-token');
+});
+
+test('E2E #89: 저장된 토큰의 계정이 없으면(401) 앱을 열 때 토큰을 지우고 비회원으로 둘러본다', async ({ page }) => {
   await installMockApi(page, { authRejected: true });
   await page.goto('/');
-  await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByTestId('login-screen')).toBeVisible();
-  expect(await page.evaluate(() => localStorage.getItem('ssabi.auth_token'))).toBeNull();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('ssabi.auth_token'))).toBeNull();
+  await expect(page).not.toHaveURL(/\/login/);
+  await page.goto('/my');
+  await expect(page.getByText('로그인하지 않은 상태예요')).toBeVisible();
 });
 
 test('E2E #89: /auth/me 가 네트워크 오류면 로그아웃시키지 않는다', async ({ page }) => {
@@ -115,10 +156,11 @@ test('E2E #89: /auth/me 가 네트워크 오류면 로그아웃시키지 않는�
   expect(await page.evaluate(() => localStorage.getItem('ssabi.auth_token'))).not.toBeNull();
 });
 
-test('E2E #81: MY에서 로그아웃하면 next 없이 /login 으로 간다', async ({ page }) => {
+test('E2E #81: MY에서 로그아웃하면 MY에 남아 비회원 카드로 바뀐다', async ({ page }) => {
   await installMockApi(page, { authMember: true });
   await page.goto('/my');
   await page.getByRole('button', { name: '로그아웃' }).click();
-  await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByTestId('login-screen')).toBeVisible();
+  await expect(page).toHaveURL(/\/my$/);
+  await expect(page.getByText('로그인하지 않은 상태예요')).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('ssabi.auth_token'))).toBeNull();
 });

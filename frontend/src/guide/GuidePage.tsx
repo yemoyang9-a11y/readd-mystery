@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { safeNextPath } from '../utils/authRedirect';
 import BookCarousel3D from '../mobile/components/BookCarousel3D';
 import MobileBriefingView from '../mobile/components/MobileBriefingView';
 import MobileReaderView from '../mobile/components/MobileReaderView';
@@ -53,6 +54,9 @@ const TWO_DAYS_AGO = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(
  */
 export default function GuidePage() {
   const navigate = useNavigate();
+  // 대표 지시 2026-11-18 — 작품을 열려다 가입했으면 안내를 마친 뒤 그 작품으로 이어 간다
+  const { state } = useLocation();
+  const next = safeNextPath((state as { next?: string } | null)?.next);
   const viewport = useVisualViewport();
   const [stepAt, setStepAt] = useState(0);
   const [screen, setScreen] = useState<Screen>('home');
@@ -95,7 +99,7 @@ export default function GuidePage() {
     if (finished.current) return;
     finished.current = true;
     await markOnboarded();
-    navigate('/', { replace: true });
+    navigate(next, { replace: true });
   }
 
   const addNote = async (draft: NoteDraft) => {

@@ -285,6 +285,61 @@ describe('auth router', () => {
         providers: ['google'],
         email: null,
         onboarded: false,
+        // 대표 지시 2026-11-18 — 카카오·구글 첫 로그인은 약관 동의를 아직 받지 않았다
+        consent_required: true,
+        marketing: false,
+      });
+    });
+
+    describe('POST /auth/me/consents — 카카오·구글 첫 로그인 뒤 약관 동의', () => {
+      function postConsents(token: string | null, consents: unknown) {
+        return fetch(`${baseUrl}/auth/me/consents`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : { 'X-Device-Id': DEVICE_ID }),
+          },
+          body: JSON.stringify({ consents }),
+        });
+      }
+
+      test('필수 셋에 동의하면 204이고 /auth/me 의 consent_required가 false가 된다', async () => {
+        const token = await loginAndGetToken();
+        const response = await postConsents(token, {
+          terms: true,
+          privacy: true,
+          age14: true,
+          marketing: true,
+        });
+        expect(response.status).toBe(204);
+        expect(accounts.consents.map((record) => record.kind)).toEqual([
+          'terms',
+          'privacy',
+          'age14',
+          'marketing',
+        ]);
+        const me = await get('/auth/me', { Authorization: `Bearer ${token}` });
+        await expect(me.json()).resolves.toMatchObject({
+          consent_required: false,
+          marketing: true,
+        });
+      });
+
+      test('필수 동의가 빠지면 400 CONSENT_REQUIRED이고 아무것도 저장하지 않는다', async () => {
+        const token = await loginAndGetToken();
+        const response = await postConsents(token, { terms: true, privacy: true });
+        expect(response.status).toBe(400);
+        await expect(response.json()).resolves.toMatchObject({
+          error: 'CONSENT_REQUIRED',
+          missing: ['age14'],
+        });
+        expect(accounts.consents).toHaveLength(0);
+      });
+
+      test('토큰 없이 보내면 401이다', async () => {
+        const response = await postConsents(null, { terms: true, privacy: true, age14: true });
+        expect(response.status).toBe(401);
+        expect(accounts.consents).toHaveLength(0);
       });
     });
 

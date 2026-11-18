@@ -8,6 +8,7 @@ import {
   type NewPasswordAccount,
   type Provider,
 } from '../../../src/modules/auth/auth.service';
+import type { ConsentRecord } from '../../../src/modules/auth/consents';
 
 export class FakeAccountRepository implements AccountRepository {
   accounts: Account[] = [];
@@ -16,6 +17,7 @@ export class FakeAccountRepository implements AccountRepository {
   onboardedAt = new Map<string, Date>();
   codes = new Map<string, { userId: string; expiresAt: Date }>();
   deletedReaders: string[] = [];
+  consents: (ConsentRecord & { userId: string; agreedAt: Date })[] = [];
 
   async findByIdentity(provider: Provider, providerUserId: string): Promise<Account | null> {
     const identity = this.identities.find(
@@ -70,6 +72,7 @@ export class FakeAccountRepository implements AccountRepository {
       email: input.email,
       passwordHash: input.passwordHash,
     });
+    await this.saveConsents(input.userId, input.consents, input.consentedAt);
     return account;
   }
 
@@ -78,6 +81,22 @@ export class FakeAccountRepository implements AccountRepository {
       email: this.passwords.find((p) => p.userId === userId)?.email ?? null,
       onboarded: this.onboardedAt.has(userId),
     };
+  }
+
+  async listConsents(userId: string): Promise<ConsentRecord[]> {
+    return this.consents
+      .filter((c) => c.userId === userId)
+      .map(({ kind, version, agreed }) => ({ kind, version, agreed }));
+  }
+
+  async saveConsents(userId: string, records: ConsentRecord[], at: Date): Promise<void> {
+    for (const record of records) {
+      const existing = this.consents.find(
+        (c) => c.userId === userId && c.kind === record.kind && c.version === record.version
+      );
+      if (existing) Object.assign(existing, { agreed: record.agreed, agreedAt: at });
+      else this.consents.push({ ...record, userId, agreedAt: at });
+    }
   }
 
   async markOnboarded(userId: string, at: Date): Promise<void> {
@@ -102,6 +121,7 @@ export class FakeAccountRepository implements AccountRepository {
     this.accounts = this.accounts.filter((a) => a.user_id !== userId);
     this.identities = this.identities.filter((i) => i.userId !== userId);
     this.passwords = this.passwords.filter((p) => p.userId !== userId);
+    this.consents = this.consents.filter((c) => c.userId !== userId);
     this.deletedReaders.push(readerId);
   }
 

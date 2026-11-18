@@ -1,4 +1,4 @@
-import { fetchProviders, login, logout, markOnboarded, signup } from './authService';
+import { agreeConsents, fetchProviders, login, logout, markOnboarded, signup } from './authService';
 import { api } from './api';
 import { setMockMember } from '../../mocks/server';
 import { getAuthToken, setAuthToken } from '../utils/storage';
@@ -13,6 +13,8 @@ vi.mock('../utils/constants', async (original) => ({
   },
 }));
 
+const CONSENTS = { terms: true, privacy: true, age14: true, marketing: false };
+
 beforeEach(() => {
   vi.mocked(api.get).mockReset();
   vi.mocked(api.post).mockReset();
@@ -22,14 +24,14 @@ beforeEach(() => {
 });
 
 describe('이메일 로그인 서비스 — 2026-11-18 대표 지시', () => {
-  test('signup은 POST /auth/signup에 display_name으로 보내고 토큰을 저장한다', async () => {
+  test('signup은 POST /auth/signup에 display_name·약관 동의로 보내고 토큰을 저장한다', async () => {
     vi.mocked(api.post).mockResolvedValue({ data: { token: 'jwt-1', display_name: '독자', is_new: true } });
-    await expect(signup({ email: 'a@b.co', password: 'secret-pass', displayName: '독자' })).resolves.toMatchObject({
-      is_new: true,
-    });
+    await expect(
+      signup({ email: 'a@b.co', password: 'secret-pass1', displayName: '독자', consents: CONSENTS })
+    ).resolves.toMatchObject({ is_new: true });
     expect(vi.mocked(api.post).mock.calls[0]).toEqual([
       '/auth/signup',
-      { email: 'a@b.co', password: 'secret-pass', display_name: '독자' },
+      { email: 'a@b.co', password: 'secret-pass1', display_name: '독자', consents: CONSENTS },
     ]);
     expect(getAuthToken()).toBe('jwt-1');
   });
@@ -65,9 +67,27 @@ describe('이메일 로그인 서비스 — 2026-11-18 대표 지시', () => {
     expect(getAuthToken()).toBeNull();
   });
 
+  test('agreeConsents는 POST /auth/me/consents에 동의 묶음을 보낸다', async () => {
+    vi.mocked(api.post).mockResolvedValue({ data: undefined });
+    await agreeConsents({ ...CONSENTS, marketing: true });
+    expect(vi.mocked(api.post).mock.calls).toEqual([
+      ['/auth/me/consents', { consents: { ...CONSENTS, marketing: true } }],
+    ]);
+  });
+
+  test('USE_MOCK=true여도 필수 약관 동의가 없으면 가입하지 않는다(400)', async () => {
+    flags.useMock = true;
+    await expect(
+      signup({ email: 'a@b.co', password: 'secret-pass1', displayName: '독자', consents: { ...CONSENTS, age14: false } })
+    ).rejects.toMatchObject({ response: { status: 400, data: { error: 'CONSENT_REQUIRED' } } });
+    expect(getAuthToken()).toBeNull();
+  });
+
   test('USE_MOCK=true면 네트워크 없이 8자 이상 비밀번호로 가입·로그인된다', async () => {
     flags.useMock = true;
-    await expect(signup({ email: 'a@b.co', password: 'secret-pass', displayName: '독자' })).resolves.toMatchObject({
+    await expect(
+      signup({ email: 'a@b.co', password: 'secret-pass1', displayName: '독자', consents: CONSENTS })
+    ).resolves.toMatchObject({
       display_name: '독자',
       is_new: true,
     });

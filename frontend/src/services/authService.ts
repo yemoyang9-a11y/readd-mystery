@@ -2,6 +2,7 @@ import { AxiosError, type AxiosResponse } from 'axios';
 import { api, ensureDeviceId } from './api';
 import { API_BASE_URL, USE_MOCK } from '../utils/constants';
 import { clearAuthToken, setAuthToken } from '../utils/storage';
+import type { ConsentChoice } from '../utils/consents';
 
 export type AuthProvider = 'google' | 'kakao';
 
@@ -17,7 +18,13 @@ export interface AuthMe {
   email?: string | null;
   /** 첫 안내(/guide)를 마쳤는지. 옛 서버는 보내지 않는다 */
   onboarded?: boolean;
+  /** 현재 버전 필수 약관 동의가 없는지 — 카카오·구글 첫 로그인, 옛 계정 (대표 지시 2026-11-18) */
+  consent_required?: boolean;
+  /** 마케팅 정보 수신 동의 여부 */
+  marketing?: boolean;
 }
+
+export type { ConsentChoice, ConsentKind } from '../utils/consents';
 
 /** 로그인 화면에 보여 줄 방법 — 'email'은 항상, OAuth는 서버에 설정된 것만 */
 export type LoginMethod = 'email' | AuthProvider;
@@ -26,10 +33,11 @@ export interface SignupInput {
   email: string;
   password: string;
   displayName: string;
+  consents: ConsentChoice;
 }
 
-function mockFailure(status: number): AxiosError {
-  return new AxiosError('mock', 'ERR_BAD_REQUEST', undefined, null, { status } as AxiosResponse);
+function mockFailure(status: number, data?: unknown): AxiosError {
+  return new AxiosError('mock', 'ERR_BAD_REQUEST', undefined, null, { status, data } as AxiosResponse);
 }
 
 /** 로그인을 끝내고 돌아올 이 화면의 주소 — GitHub Pages 처럼 하위 경로에 배포돼도 맞게 돌아온다 */
@@ -86,13 +94,14 @@ export async function signup(input: SignupInput): Promise<AuthSession & { is_new
   if (USE_MOCK) {
     const { mockSignupResponse } = await import('../../mocks/server');
     const result = mockSignupResponse(input);
-    if (result.status !== 200) throw mockFailure(result.status);
+    if (result.status !== 200) throw mockFailure(result.status, 'body' in result ? result.body : undefined);
     session = result.body;
   } else {
     const { data } = await api.post<AuthSession & { is_new: boolean }>('/auth/signup', {
       email: input.email,
       password: input.password,
       display_name: input.displayName,
+      consents: input.consents,
     });
     session = data;
   }
@@ -116,6 +125,17 @@ export async function login(email: string, password: string): Promise<AuthSessio
   return session;
 }
 
+/** 카카오·구글 첫 로그인 뒤 동의 화면에서 약관 동의를 남긴다 (대표 지시 2026-11-18) */
+export async function agreeConsents(consents: ConsentChoice): Promise<void> {
+  if (USE_MOCK) {
+    const { mockAgreeConsents } = await import('../../mocks/server');
+    const result = mockAgreeConsents(consents);
+    if (result.status !== 204) throw mockFailure(result.status, result.body);
+    return;
+  }
+  await api.post('/auth/me/consents', { consents });
+}
+
 /** 첫 안내를 마쳤다고 서버에 남긴다. 여러 번 불러도 된다 */
 export async function markOnboarded(): Promise<void> {
   if (USE_MOCK) {
@@ -126,7 +146,7 @@ export async function markOnboarded(): Promise<void> {
   await api.post('/auth/me/onboarded');
 }
 
-/** 독자가 직접 로그아웃한다 — 관문은 가려던 주소 없이 /login 으로 보낸다 (E2E #81) */
+/** 독자가 직접 로그아웃한다 — 작품 화면에 있었으면 관문이 홈으로 보낸다 (대표 지시 2026-11-18) */
 export function logout(): void {
   clearAuthToken('logout');
 }

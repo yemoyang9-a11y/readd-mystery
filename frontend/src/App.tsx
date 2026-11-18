@@ -8,8 +8,10 @@ import BookDetail from './pages/BookDetail';
 import NotFound from './pages/NotFound';
 import AuthCallback from './pages/AuthCallback';
 import Login from './pages/Login';
+import Consent from './pages/Consent';
 import RequireSession from './components/auth/RequireSession';
-import { LOGIN_PATH, PUBLIC_ROUTE_PATHS } from './utils/authRedirect';
+import { CONSENT_PATH, LOGIN_PATH, requiresLogin } from './utils/authRedirect';
+import { verifyStoredSession } from './services/sessionCheck';
 import MobileHome from './mobile/pages/MobileHome';
 import MobileFeedback from './mobile/pages/MobileFeedback';
 import MobileCommunityHub from './mobile/pages/MobileCommunityHub';
@@ -30,7 +32,8 @@ async function fadedPage(load: Promise<{ default: ComponentType }>) {
   return { element: <RouteFade><Page /></RouteFade> };
 }
 
-// 2026-11-18 대표 지시 — 세션 토큰이 없으면 공개 경로 밖의 화면은 /login 으로 보낸다
+// 대표 지시 2026-11-18 — 처음부터 로그인 창을 띄우지 않는다. 작품을 여는 경로(브리핑·읽기·책 이야기방)만
+// 세션 토큰이 없으면 /login 으로 보낸다. 나머지(홈·검색·서재·작품 소개·허브·MY·가이드)는 비회원도 연다.
 function gate<T extends Pick<RouteObject, 'element' | 'Component'>>(route: T): T {
   const { Component, element } = route;
   if (Component) return { ...route, Component: undefined, element: <RequireSession><Component /></RequireSession> };
@@ -39,7 +42,8 @@ function gate<T extends Pick<RouteObject, 'element' | 'Component'>>(route: T): T
 }
 
 function requireSession(route: RouteObject): RouteObject {
-  if (route.path && PUBLIC_ROUTE_PATHS.includes(route.path)) return route;
+  if (route.children) return { ...route, children: route.children.map(requireSession) };
+  if (!requiresLogin(route.path)) return route;
   const { lazy } = route;
   if (!lazy) return gate(route);
   return { ...gate(route), lazy: async () => gate(await lazy()) };
@@ -100,6 +104,8 @@ export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
       ? [{ path: BOOK_ROUTES.community, lazy: () => fadedPage(import('./mobile/pages/MobileCommunity')) }]
       : []),
     { path: LOGIN_PATH, element: <Login /> },
+    // 대표 지시 2026-11-18 — 카카오·구글 첫 로그인 뒤 약관 동의 (research-2026-11-18-signup-fields.md 4장)
+    { path: CONSENT_PATH, element: <Consent /> },
     { path: '/auth/callback', element: <AuthCallback /> },
     // 2026-11-18 대표 지시 — 데모 책으로 직접 눌러 보는 첫 이용 가이드
     { path: '/guide', lazy: () => fadedPage(import('./guide/GuidePage')) },
@@ -146,6 +152,10 @@ export default function App() {
 
   // FR-ADM-005
   useEffect(() => initAnalytics(router), [router]);
+  // E2E #89 — 저장된 토큰이 지워진 계정의 것이면 앱을 열 때 한 번 정리한다(둘러보기 화면에도 관문이 없으므로)
+  useEffect(() => {
+    void verifyStoredSession();
+  }, []);
 
   return (
     <ErrorBoundary>

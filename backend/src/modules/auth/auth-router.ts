@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto';
 import express, { Request, Response, Router } from 'express';
 import { EmailTakenError, type AuthService, type Provider } from './auth.service';
+import { parseConsents, type ConsentKind } from './consents';
 import { parseLogin, parseSignup } from './credentials';
 import type { OAuthProviders } from './oauth-providers';
 import { createRateLimiter, rateLimit, type RateLimiter } from './rate-limit';
@@ -84,6 +85,13 @@ function sendInternalError(res: Response) {
   return res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
 }
 
+// 대표 지시 2026-11-18 — 필수 약관 동의가 빠지면 무엇이 빠졌는지 알려 준다
+function sendConsentRequired(res: Response, missing: ConsentKind[]) {
+  return res
+    .status(400)
+    .json({ error: 'CONSENT_REQUIRED', message: 'Required consents missing', missing });
+}
+
 function sendUnauthorized(res: Response) {
   return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Login required' });
 }
@@ -120,10 +128,16 @@ export function createAuthRouter({
       const parsed = parseSignup(req.body);
       if (!parsed.ok)
         return res.status(400).json({ error: 'BAD_REQUEST', message: parsed.message });
+      const consents = parseConsents(req.body?.consents);
+      if (!consents.ok) return sendConsentRequired(res, consents.missing);
 
       try {
         // 로그인 전 기기의 독서 기록을 이어 쓴다 — OAuth 첫 로그인과 같은 규칙
-        const session = await service.signupWithPassword(parsed.value, deviceIdFrom(req));
+        const session = await service.signupWithPassword(
+          parsed.value,
+          deviceIdFrom(req),
+          consents.value
+        );
         return res.status(201).json(session);
       } catch (error) {
         if (error instanceof EmailTakenError) {
@@ -267,6 +281,22 @@ export function createAuthRouter({
       return me ? res.json(me) : sendUnauthorized(res);
     } catch (error) {
       console.error('[API] auth me error', { error });
+      return sendInternalError(res);
+    }
+  });
+
+  // 대표 지시 2026-11-18 — 카카오·구글 첫 로그인(또는 이 변경 전 가입 계정)의 약관 동의
+  router.post('/auth/me/consents', attachReaderIdentity(), async (req: Request, res: Response) => {
+    const session = getSession(req);
+    if (!session) return sendUnauthorized(res);
+    const consents = parseConsents(req.body?.consents);
+    if (!consents.ok) return sendConsentRequired(res, consents.missing);
+
+    try {
+      await service.agreeConsents(session.userId, consents.value);
+      return res.status(204).send();
+    } catch (error) {
+      console.error('[API] auth consents error', { error });
       return sendInternalError(res);
     }
   });
