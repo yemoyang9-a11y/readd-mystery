@@ -205,7 +205,7 @@ describe('FR-PRG-001: 모바일 읽기 화면 한 번 탭 = 본문만', () => {
     expectControlsShown();
 
     fireEvent.click(screen.getAllByRole('button', { name: '싸비 열기' })[0]);
-    expect(await screen.findByText('아모의 가이드북')).toBeInTheDocument();
+    expect(await screen.findByRole('tablist', { name: '싸비' })).toBeInTheDocument();
     tap();
     expect(screen.getByRole('button', { name: '뒤로 가기' })).toBeInTheDocument();
   });

@@ -279,6 +279,7 @@ export default function GuidePage() {
             </div>
           )}
           <SsabiPanel
+            bookTitle={DEMO_TITLE}
             sessionEpoch={1}
             onTabChange={noop}
             graph={DEMO_GRAPH}

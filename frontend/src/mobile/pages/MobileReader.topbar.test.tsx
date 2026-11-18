@@ -138,7 +138,7 @@ describe('모바일 읽기 화면 윗줄', () => {
     await openedAt(11);
     expect(screen.queryByText(/까지 (읽음|알고)/)).toBeNull();
     await user.click(screen.getAllByRole('button', { name: '싸비 열기' })[0]);
-    expect(await screen.findByText('아모의 가이드북')).toBeInTheDocument();
+    expect(await screen.findByRole('tablist', { name: '싸비' })).toBeInTheDocument();
     expect(screen.queryByText(/까지 (읽음|알고)/)).toBeNull();
   });
 

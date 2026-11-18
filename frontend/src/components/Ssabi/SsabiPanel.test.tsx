@@ -105,18 +105,19 @@ describe('싸비 사이드창', () => {
     expect(screen.queryByText(/정주사/)).not.toBeInTheDocument();
   });
 
-  it('2026-11-11 사용자 결정: 기준점이 있어도 헤더에 "까지 읽음" 글자가 0건이다', () => {
-    render(<SsabiPanel {...baseProps} {...({ appliedCutoff: 79 } as object)} />);
-    expect(screen.getByText('아모의 가이드북')).toBeInTheDocument();
-    expect(screen.queryByText(/까지 읽음/)).not.toBeInTheDocument();
+  it('승인 시안(2026-11-18): 헤더는 책 제목 — 읽은 범위 글자("까지 읽음"·"쪽까지")는 0건, 시안에 없는 "아모의 가이드북"도 0건', () => {
+    render(<SsabiPanel {...baseProps} bookTitle="가상범인" {...({ appliedCutoff: 79 } as object)} />);
+    expect(screen.getByRole('heading', { name: '가상범인' })).toBeInTheDocument();
+    expect(screen.queryByText(/까지 읽음|쪽까지/)).not.toBeInTheDocument();
+    expect(screen.queryByText('아모의 가이드북')).not.toBeInTheDocument();
   });
 
   it('polish: 헤더가 여닫기 버튼(Reader가 그리는 고정 위치, size-9)과 겹치지 않을 오른쪽 여백을 확보한다', () => {
-    render(<SsabiPanel {...baseProps} />);
     // 실측(브라우저): 배지 오른쪽 끝이 버튼 왼쪽 끝과 정확히 같은 x좌표에서 겹쳤다 — pr-20으로 고쳤다.
     // 2026-08-26: 제목이 아모 얼굴과 함께 그룹 div로 한 겹 더 감싸여 parentElement로는
     // 더 이상 안 닿는다 — closest로 pr-20 조상을 직접 찾는다.
-    expect(screen.getByText('아모의 가이드북').closest('.pr-20')).not.toBeNull();
+    render(<SsabiPanel {...baseProps} bookTitle="가상범인" />);
+    expect(screen.getByRole('heading', { name: '가상범인' }).closest('.pr-20')).not.toBeNull();
   });
 
   it('승인 시안: 탭은 칸을 똑같이 나눈 밑줄 탭 — 고른 탭만 강조색 글자·밑줄', () => {

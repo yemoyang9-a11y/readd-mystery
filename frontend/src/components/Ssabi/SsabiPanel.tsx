@@ -11,7 +11,6 @@ import type {
   TimelineResponse,
 } from '../../types';
 import { resolveSsabiTab } from '../../utils/ssabiTab';
-import AmoSherlock from '../common/AmoSherlock';
 import NotesTab from './NotesTab';
 import TimelineTab from './TimelineTab';
 import RelationshipTab from './RelationshipTab';
@@ -40,6 +39,7 @@ const TAB_ORDER: SsabiTab[] = ['notes', 'timeline', 'relationship', 'chatbot'];
  * 본문 페이지를 옮기는 수단을 갖지 않아 FR-SVB-005 를 구조로 지킨다.
  */
 export default function SsabiPanel({
+  bookTitle = null,
   sessionEpoch,
   initialTab = null,
   initialTabEpoch = null,
@@ -75,6 +75,8 @@ export default function SsabiPanel({
   frontierConfirm = null,
   onFrontierConfirm,
 }: {
+  /** 패널 머리에 보일 책 제목 (승인 시안 2026-11-18) */
+  bookTitle?: string | null;
   sessionEpoch: number;
   /**
    * 재마운트 시 이어서 쓸 "마지막 탭" 기억과, 그 값을 기록한 시점의 sessionEpoch
@@ -165,20 +167,15 @@ export default function SsabiPanel({
       {/* 여닫기 버튼은 이 헤더 우측에 겹쳐 보이지만 Reader 가 고정 위치로 그린다 —
           패널이 닫혀도 같은 자리에 남아야 하므로 패널 안에 두지 않는다 */}
       <div
-        className={`flex items-center justify-between gap-2 pb-5 pl-6 pr-20 pt-6 mobile:flex-wrap mobile:gap-y-2 ${compactHeader ? 'hidden' : ''}`}
+        className={`flex items-center justify-between gap-2 pb-5 pl-20 pr-20 pt-6 mobile:flex-wrap mobile:gap-y-2 ${compactHeader ? 'hidden' : ''}`}
       >
         {/*
          * pr-20(80px) — 여닫기 버튼은 Reader가 이 헤더와 같은 줄, 같은 우측 여백(right-6)에
          * 고정 위치로 그린다(size-9=36px). px-6만 쓰면 이 배지의 오른쪽 끝이 버튼과 정확히
          * 같은 x좌표에서 겹친다 — 버튼 폭(36px) + 여유(20px)만큼 오른쪽을 비워 겹침을 막는다.
          */}
-        {/* 헤더에 아모 얼굴 추가(2026-08-26, 사용자 요청 — 캐릭터를 디자인 전반에 더
-            드러내고 싶다고 함). 챗봇 탭 답변 아바타·여닫기 버튼과 같은 이미지를 써서
-            패널 전체에서 "아모"가 하나의 캐릭터로 일관되게 보이게 한다. */}
-        <div className="flex items-center gap-2 mobile:shrink-0">
-          <AmoSherlock className="h-9 w-auto shrink-0" />
-          <h2 className="whitespace-nowrap font-dashSerif text-base font-extrabold text-brief-ink">아모의 가이드북</h2>
-        </div>
+        {/* 승인 시안(2026-11-18): 헤더는 책 제목만. 읽은 범위 문구는 넣지 않는다(대표 지시, 2026-11-11 결정 유지) */}
+        <h2 className="flex min-h-9 min-w-0 flex-1 items-center justify-center truncate font-dashSans text-[15px] font-bold text-brief-ink">{bookTitle ?? ''}</h2>
       </div>
 
       {/* 키보드가 열려 헤더를 접은 동안(compactHeader)은 입력 칸 자리를 지키려고 잠시 숨긴다 */}

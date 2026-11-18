@@ -465,6 +465,7 @@ export function useReadingSession(bookId: string): ReadingSessionState {
     highlightedQuote,
     quote: handleQuote,
     ssabiPanelProps: {
+      bookTitle,
       sessionEpoch: session?.session_epoch ?? 0,
       initialTab: tabMemory?.tab ?? null,
       initialTabEpoch: tabMemory?.epoch ?? null,
