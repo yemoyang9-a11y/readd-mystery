@@ -87,7 +87,6 @@ function MobileReadingSession() {
             ? () => navigate(BOOK_ROUTES.community.replace(':bookId', bookId))
             : undefined
         }
-        communityLocked={communityAccess === 'locked'}
         onBack={backToBook}
       />
     );

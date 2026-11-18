@@ -76,10 +76,7 @@ export default function AccountCard() {
     return (
       <div className={CARD}>
         <p className="text-[15px] font-bold">로그인하지 않은 상태예요</p>
-        <p className="mb-3 mt-1 break-keep text-[13px] text-dash-muted">
-          지금 읽은 기록은 이 기기에만 남아요. 로그인하면 다른 기기에서도 이어 읽을 수 있어요.
-        </p>
-        <div className="flex flex-col gap-2">
+        <div className="mt-3 flex flex-col gap-2">
           <button type="button" onClick={() => login('google')} className={`${OUTLINE_BUTTON} w-full`}>
             구글로 로그인
           </button>

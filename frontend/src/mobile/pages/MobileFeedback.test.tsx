@@ -18,7 +18,9 @@ test('피드백: 의견을 적어 제출하면 감사 문구가 나오고 하나
   render(<MobileFeedback />);
   const submit = screen.getByRole('button', { name: '제출' });
   expect(submit).toBeDisabled();
-  await user.type(screen.getByLabelText('여러분의 소중한 의견 남겨주시면 감사하겠습니다.'), '좋아요');
+  // 회색 부연 문구는 두지 않는다 (2026-11-18 대표 지시) — 입력칸 이름은 화면 낭독용으로만 둔다
+  expect(screen.queryByText('여러분의 소중한 의견 남겨주시면 감사하겠습니다.')).toBeNull();
+  await user.type(screen.getByLabelText('의견'), '좋아요');
   await user.click(submit);
   expect(post).toHaveBeenCalledTimes(1);
   expect(await screen.findByRole('status')).toHaveTextContent('소중한 의견 감사합니다.');

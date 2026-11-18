@@ -57,7 +57,9 @@ describe('COMMUNITY: 읽기 화면의 커뮤니티 진입은 서버의 is_comple
     renderReader();
     await lastPageShown();
 
-    expect(await screen.findByText('앞부분까지 모두 읽으면 완독자 이야기가 열려요')).toBeInTheDocument();
+    await waitFor(() => expect(fetchPositionMock).toHaveBeenCalled());
+    // 미완독 안내 문구도 두지 않는다 (2026-11-18 대표 지시)
+    expect(screen.queryByText('앞부분까지 모두 읽으면 완독자 이야기가 열려요')).toBeNull();
     expect(screen.queryByText('완독했어요')).toBeNull();
     expect(screen.queryByRole('button', { name: '다른 독자들과 이야기하기' })).toBeNull();
     expect(document.querySelector('[data-track="community-open"]')).toBeNull();

@@ -49,8 +49,8 @@ export default function MobileFeedback() {
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
-            <label htmlFor={inputId} className="block break-keep text-[15px] leading-snug text-dash-muted">
-              여러분의 소중한 의견 남겨주시면 감사하겠습니다.
+            <label htmlFor={inputId} className="sr-only">
+              의견
             </label>
             <textarea
               id={inputId}
@@ -59,7 +59,7 @@ export default function MobileFeedback() {
               maxLength={MAX_MESSAGE_LENGTH}
               onChange={(event) => setMessage(event.target.value)}
               placeholder="의견을 적어 주세요"
-              className="mt-3 block h-52 w-full resize-none rounded-dash-card border border-dash-line bg-dash-paper p-3 text-[16px] leading-relaxed text-dash-ink outline-none placeholder:text-dash-muted focus:border-brief-accent"
+              className="block h-52 w-full resize-none rounded-dash-card border border-dash-line bg-dash-paper p-3 text-[16px] leading-relaxed text-dash-ink outline-none placeholder:text-dash-muted focus:border-brief-accent"
             />
             {status === 'failed' ? (
               <p role="alert" className="mt-3 break-keep text-[13px] text-dash-muted">
