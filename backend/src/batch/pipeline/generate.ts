@@ -93,16 +93,30 @@ export function buildRelationshipPrompt(
 ${buildPageTaggedText(pages)}`;
 }
 
-/** 배경지식·소개 — FR-DAT-006, R5(상한 없음, 1페이지 시점에도 안전해야 함) */
-export function buildBackgroundPrompt(title: string, author: string): string {
-  return `${author}의 장편소설 「${title}」(1937~1938년 조선일보 연재)에 대한 배경지식과 책 소개를 작성하라.
+/**
+ * 배경지식·소개 — FR-DAT-006, R5(상한 없음, 1페이지 시점에도 안전해야 함)
+ * 2026-11-18 E2E #28: 예전 프롬프트가 「탁류」의 무대(미두장·군산)와 연재 정보를 모든 책에 고정으로 넣어
+ * 「가상범인」 소개가 탁류 내용이 됐다. 이제 그 책의 첫 페이지 원문만 근거로 준다(첫 페이지 밖은 넣지 않는다).
+ */
+export function buildBackgroundPrompt(
+  title: string,
+  author: string,
+  openingPages: Page[] = []
+): string {
+  const firstPage = openingPages.filter((p) => p.page_no === 1);
+  const source = firstPage.length
+    ? `\n\n--- 작품 첫 페이지 원문 (무대·소재는 여기서 확인되는 것만 쓴다) ---\n${buildPageTaggedText(firstPage)}`
+    : '';
+  return `${author}의 소설 「${title}」에 대한 배경지식과 책 소개를 작성하라.
 
-절대 규칙: 이 소설의 결말, 구체적 사건, 인물의 운명·관계 변화를 절대 언급하지 마라. 이 책을 1페이지도 읽지 않은 독자가 봐도 완전히 안전해야 한다.
-- background: 시대 배경(1930년대 일제강점기 조선), 작품의 소재·무대(미두장, 군산), 읽기 포인트(문체 특징 등). 사건 언급 금지
+절대 규칙: 이 소설의 결말, 구체적 사건 전개, 인물의 운명·관계 변화를 절대 언급하지 마라. 이 책을 1페이지도 읽지 않은 독자가 봐도 완전히 안전해야 한다.
+- 다른 작품의 무대·인물·소재를 가져오지 마라. 작품의 무대·소재는 아래 첫 페이지 원문에서 확인되는 것만 쓴다.
+- 발표 연도·매체·연재 정보는 확실히 아는 경우에만 쓰고, 모르면 쓰지 마라.
+- background: 시대 배경, 작품의 무대·소재(첫 페이지에서 확인되는 것), 읽기 포인트(문체 특징 등). 사건 전개 언급 금지
 - intro: 작품을 소개하는 글. 줄거리 요약이나 결말 암시 없이, 어떤 분위기·주제의 작품인지만
 
 출력은 아래 JSON 형식만 반환하라. 다른 설명·마크다운 코드블록 없이 JSON 텍스트만 출력하라.
-{"background": "...", "intro": "..."}`;
+{"background": "...", "intro": "..."}${source}`;
 }
 
 /** 용어 — FR-DAT-007 */

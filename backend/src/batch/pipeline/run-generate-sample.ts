@@ -158,7 +158,11 @@ async function main(): Promise<void> {
   console.log('\n--- ④ 배경지식 · 소개 ---');
   const bgOut = await callJson<{ background: string; intro: string }>(
     'generate_background',
-    buildBackgroundPrompt(title, author),
+    buildBackgroundPrompt(
+      title,
+      author,
+      allPages.filter((p) => p.page_no === 1)
+    ),
     '배경'
   );
   console.log(JSON.stringify(bgOut, null, 1));

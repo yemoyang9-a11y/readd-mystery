@@ -52,6 +52,14 @@ describe('프롬프트 빌더 — 장 번호·제목·원문이 포함되는지'
     expect(p).toContain('덮어쓰지');
   });
 
+  test('R5: 배경지식 프롬프트는 다른 작품의 무대(미두장·군산)나 고정 연재 정보를 넣지 않고, 첫 페이지 원문만 근거로 준다 (2026-11-18 E2E #28)', () => {
+    const p = buildBackgroundPrompt('가상범인', '김내성', [pages[0]]);
+    expect(p).not.toMatch(/미두장|군산|조선일보/);
+    expect(p).toContain('첫 페이지 내용.');
+    // 첫 페이지 밖의 원문은 넣지 않는다 — 0쪽 독자에게도 안전해야 한다
+    expect(p).not.toContain(pages[1].content);
+  });
+
   test('배경지식 프롬프트가 결말 언급 금지를 명시한다', () => {
     const p = buildBackgroundPrompt('탁류', '채만식');
     expect(p).toContain('결말');

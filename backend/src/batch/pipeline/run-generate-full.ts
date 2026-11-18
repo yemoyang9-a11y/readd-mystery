@@ -541,7 +541,8 @@ function verifierLexicon(state: GenerationState): VerifierCharacter[] {
 async function loadOrGenerateBackground(
   outDir: string,
   title: string,
-  author: string
+  author: string,
+  openingPages: Page[]
 ): Promise<{ background: string; intro: string }> {
   const filePath = path.join(outDir, 'background.json');
   if (fs.existsSync(filePath)) {
@@ -552,7 +553,7 @@ async function loadOrGenerateBackground(
   console.log('[생성] 배경지식·소개 게이트웨이 호출 중...');
   const out = await callJson<{ background: string; intro: string }>(
     'generate_background',
-    buildBackgroundPrompt(title, author),
+    buildBackgroundPrompt(title, author, openingPages),
     '배경'
   );
   fs.writeFileSync(filePath, JSON.stringify(out, null, 2), 'utf-8');
@@ -819,7 +820,12 @@ export async function generateFullBook(
 
   await applyReaderTexts(state, allEvents, OUT_DIR);
 
-  const background = await loadOrGenerateBackground(OUT_DIR, title, author);
+  const background = await loadOrGenerateBackground(
+    OUT_DIR,
+    title,
+    author,
+    allPages.filter((p) => p.page_no === 1)
+  );
 
   const combined = {
     book_id: BOOK_ID,
