@@ -125,6 +125,50 @@ export function graphEdgeLabel(edge: GraphEdge): string {
     .join(' ');
 }
 
+/**
+ * FR-CHR-001 (2026-11-17 시안): 선 위 이름표는 "부부·친구·연인"처럼 짧은 이름이다.
+ * 생성 단계의 label 은 구체적인 술어("남편이다")라 카드 문장에 남기고, 이름표만 관계 키로 줄인다.
+ * 표에 없는 키는 원래 label 을 그대로 쓴다 — 뜻을 지어내지 않는다.
+ */
+const SHORT_RELATION_NAMES: Record<string, string> = {
+  marriage: '부부',
+  friendship: '친구',
+  affection: '사랑',
+  romance: '연인',
+  hatred: '미움',
+  lust: '욕망',
+  physical_contact: '손잡음',
+  rescue: '구하려 함',
+  parenthood: '부모·자식',
+  sibling: '형제자매',
+  employment: '고용',
+  suspicion: '의심',
+  rivalry: '경쟁',
+  jealousy: '질투',
+};
+
+export function graphPillLabel(edge: GraphEdge): string {
+  const key = edge.semantics?.relation_key;
+  return (key && SHORT_RELATION_NAMES[key]) || edge.label;
+}
+
+/** 같은 두 사람 사이 관계 이름표를 하나로 묶는다 — 키는 정렬한 두 인물 id */
+export function groupPillLabels(edges: readonly GraphEdge[]): Map<string, string> {
+  const names = new Map<string, string[]>();
+  for (const edge of edges) {
+    const pair = JSON.stringify([edge.source, edge.target].sort());
+    const list = names.get(pair) ?? [];
+    const name = graphPillLabel(edge);
+    if (!list.includes(name)) list.push(name);
+    names.set(pair, list);
+  }
+  const out = new Map<string, string>();
+  for (const [pair, list] of names) {
+    out.set(pair, list.slice(0, 2).join(' · ') + (list.length > 2 ? ` +${list.length - 2}` : ''));
+  }
+  return out;
+}
+
 export interface EdgePath {
   edge: GraphEdge;
   key: string;

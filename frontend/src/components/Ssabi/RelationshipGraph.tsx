@@ -1,8 +1,8 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalLayer } from '../../hooks/useModalLayer';
-import type { GraphResponse } from '../../types';
-import { edgePointAt, graphEdgeLabel, makeEdgePaths } from './graphEdges';
+import type { GraphEdge, GraphResponse } from '../../types';
+import { edgePointAt, graphEdgeLabel, graphPillLabel, groupPillLabels, makeEdgePaths } from './graphEdges';
 import {
   boundingBox,
   computeDegrees,
@@ -552,14 +552,35 @@ export default function RelationshipGraph({
    * (가운데 → 양옆), 그래도 겹치면 그 이름표만 뺀다. 고른 선의 이름표가 가장 먼저 자리를 잡는다.
    */
   const edgeLabels = useMemo(() => {
+    // 같은 두 사람 사이 선이 여럿이면 이름표는 한 쌍에 하나 — 묶은 짧은 이름을 단다 (FR-CHR-001 시안)
+    const pairNames = groupPillLabels(edgePaths.map(({ edge }) => edge));
+    const pairOf = (edge: GraphEdge) => JSON.stringify([edge.source, edge.target].sort());
+    const seenPairs = new Set<string>();
     const candidates = edgePaths
       .filter(
         ({ edge, key }) =>
           key === validSelectedEdgeKey ||
           (validSelectedId !== null && (edge.source === validSelectedId || edge.target === validSelectedId))
       )
+      .sort(
+        (a, b) =>
+          Number(b.key === validSelectedEdgeKey) - Number(a.key === validSelectedEdgeKey) ||
+          b.length - a.length
+      )
+      .filter(({ edge, key }) => {
+        if (key === validSelectedEdgeKey) {
+          seenPairs.add(pairOf(edge));
+          return true;
+        }
+        if (seenPairs.has(pairOf(edge))) return false;
+        seenPairs.add(pairOf(edge));
+        return true;
+      })
       .map((entry) => {
-        const label = entry.edge.label;
+        const label =
+          entry.key === validSelectedEdgeKey
+            ? graphPillLabel(entry.edge)
+            : (pairNames.get(pairOf(entry.edge)) ?? graphPillLabel(entry.edge));
         const width = estimateTextWidth(label, EDGE_LABEL_CHAR_PX * k * labelScale) + 14 * k;
         const height = (EDGE_LABEL_FONT_PX * labelScale + 9) * k;
         return { entry, key: entry.key, label, width, height };
