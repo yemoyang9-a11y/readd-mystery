@@ -25,9 +25,16 @@ export function setAuthToken(token: string): void {
   localStorage.setItem(STORAGE_KEYS.authToken, token);
 }
 
-export function clearAuthToken(): void {
+/**
+ * 토큰이 지워진 까닭. 'logout' 은 독자가 직접 로그아웃·탈퇴한 경우, 'expired' 는 서버가
+ * 거절(401)했거나 계정이 없어진 경우다. 관문은 'logout' 일 때만 가려던 주소(next)를 버린다
+ * (E2E #81 — 로그아웃 뒤 다시 로그인하면 홈에서 새로 시작한다).
+ */
+export type AuthClearReason = 'logout' | 'expired';
+
+export function clearAuthToken(reason: AuthClearReason = 'expired'): void {
   localStorage.removeItem(STORAGE_KEYS.authToken);
-  window.dispatchEvent(new Event(AUTH_TOKEN_CLEARED_EVENT));
+  window.dispatchEvent(new CustomEvent<{ reason: AuthClearReason }>(AUTH_TOKEN_CLEARED_EVENT, { detail: { reason } }));
 }
 
 export function authHeaders(): Record<string, string> {

@@ -24,6 +24,8 @@ export interface MockApiOptions {
   failInfo?: boolean;
   pageDelayMs?: number;
   authMember?: boolean;
+  /** /auth/me 가 저장된 토큰을 거절한다(401) — 지워진 계정·만료된 토큰 (E2E #89) */
+  authRejected?: boolean;
   positions?: Record<string, PositionResponse>;
 }
 
@@ -194,8 +196,10 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
     }
 
     if (method === 'GET' && path === '/auth/me') {
-      if (!opts.authMember) return json(route, { error: 'UNAUTHORIZED' }, 401);
-      return json(route, { display_name: '시험 독자', providers: ['google'] });
+      // 시험 독자는 로그인한 상태로 시작한다(위 addInitScript). 토큰이 없거나 거절하도록 고른 시험만 401이다.
+      // E2E #89 — 앱을 열 때 /auth/me 로 토큰을 확인하므로, 토큰이 있는데 401이면 로그아웃된다.
+      if (opts.authRejected || !request.headers()['authorization']) return json(route, { error: 'UNAUTHORIZED' }, 401);
+      return json(route, { display_name: opts.authMember ? '시험 독자' : null, providers: ['google'] });
     }
 
     const match = path.match(/^\/books\/([^/]+)(\/.*)$/);

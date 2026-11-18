@@ -126,6 +126,7 @@ export async function markOnboarded(): Promise<void> {
   await api.post('/auth/me/onboarded');
 }
 
+/** 독자가 직접 로그아웃한다 — 관문은 가려던 주소 없이 /login 으로 보낸다 (E2E #81) */
 export function logout(): void {
-  clearAuthToken();
+  clearAuthToken('logout');
 }

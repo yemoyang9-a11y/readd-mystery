@@ -40,10 +40,11 @@ export function useAuth() {
   }, []);
 
   const login = useCallback((provider: AuthProvider) => startLogin(provider), []);
-  const logout = useCallback(() => clearAuthToken(), []);
+  // E2E #81 — 직접 로그아웃·탈퇴는 'logout' 으로 지워 관문이 next 없이 /login 으로 보낸다
+  const logout = useCallback(() => clearAuthToken('logout'), []);
   const withdraw = useCallback(async () => {
     await deleteAccount();
-    clearAuthToken();
+    clearAuthToken('logout');
   }, []);
 
   return { ...state, login, logout, withdraw };
