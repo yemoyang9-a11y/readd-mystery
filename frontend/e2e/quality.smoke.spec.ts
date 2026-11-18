@@ -84,7 +84,7 @@ test('관리자: 별도 화면 코드를 불러와도 인증 화면을 거친다
   await installMockApi(page);
   await page.goto('/admin/books');
   await expect(page.getByRole('heading', { name: 'RE:ADD 관리자' })).toBeVisible();
-  await expect(page.getByLabel('관리자 토큰')).toBeVisible();
+  await expect(page.getByLabel('관리자 비밀번호')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 

@@ -1,6 +1,12 @@
 import { createContext, useCallback, useContext, useMemo, useState, type FormEvent } from 'react';
 import { NavLink, Outlet } from 'react-router';
-import { AdminApiError, adminRequest, loadAdminToken, saveAdminToken } from './adminApi';
+import {
+  AdminApiError,
+  adminLogin,
+  adminRequest,
+  loadAdminToken,
+  saveAdminToken,
+} from './adminApi';
 
 interface AdminContextValue {
   call: <T = unknown>(
@@ -20,8 +26,9 @@ export function useAdmin(): AdminContextValue {
 
 function gateMessage(err: unknown): string {
   if (err instanceof AdminApiError) {
-    if (err.status === 401) return '토큰이 맞지 않습니다';
-    if (err.status === 503) return '서버에 관리자 토큰이 설정되어 있지 않습니다';
+    if (err.status === 401) return '비밀번호가 맞지 않습니다';
+    if (err.status === 429) return '시도가 너무 많습니다. 잠시 뒤 다시 해 주세요';
+    if (err.status === 503) return '서버에 관리자 비밀번호가 설정되어 있지 않습니다';
     return err.message;
   }
   return '확인하지 못했습니다';
@@ -34,12 +41,13 @@ function TokenGate({ onAccepted }: { onAccepted: (token: string) => void }) {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    const token = value.trim();
-    if (!token) return;
+    const password = value;
+    if (!password.trim()) return;
     setBusy(true);
     setError(null);
     try {
-      await adminRequest(token, '/jobs');
+      // 2026-11-18 대표 지시 — 비밀번호 하나로 들어간다. 저장하는 것은 서버가 준 세션 토큰뿐이다
+      const token = await adminLogin(password);
       saveAdminToken(token);
       onAccepted(token);
     } catch (err) {
@@ -56,16 +64,13 @@ function TokenGate({ onAccepted }: { onAccepted: (token: string) => void }) {
         className="w-full max-w-[420px] rounded-card border border-line bg-surface p-8 shadow-card"
       >
         <h1 className="font-serif text-[22px] font-extrabold">RE:ADD 관리자</h1>
-        <p className="mt-2 text-[13px] text-muted">
-          서버에 설정된 관리자 토큰을 입력하세요. 이 브라우저에만 저장됩니다.
-        </p>
-        <label htmlFor="admin-token" className="mt-6 block text-[13px] font-bold">
-          관리자 토큰
+        <label htmlFor="admin-password" className="mt-6 block text-[13px] font-bold">
+          관리자 비밀번호
         </label>
         <input
-          id="admin-token"
+          id="admin-password"
           type="password"
-          autoComplete="off"
+          autoComplete="current-password"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           className="mt-2 w-full rounded-lg border border-line bg-canvas px-3 py-2.5 text-[15px] outline-none focus:border-ink"

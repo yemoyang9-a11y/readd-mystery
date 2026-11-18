@@ -16,6 +16,7 @@ import { pool } from './config/database';
 import { createNotesRoutes } from './modules/notes/composition';
 import { createCommunityRoutes } from './modules/community/composition';
 import { adminRouter, resumeIngestJobs } from './modules/ingest/composition';
+import { adminLoginRouter } from './modules/ingest/admin-auth';
 import { createAnalyticsIngestRouter } from './modules/analytics/ingest-router';
 import { createPgEventStore } from './modules/analytics/event-store';
 
@@ -78,6 +79,8 @@ app.use((req, res, next) => {
 });
 
 // FR-ADM-006 🚦
+// 2026-11-18 대표 지시 — 관리자 비밀번호 로그인(POST /admin/login)은 관리자 인증 앞에 둔다
+app.use('/admin', adminLoginRouter());
 app.use('/admin', adminRouter);
 
 // FR-ADM-005

@@ -56,41 +56,62 @@ function renderAdmin(path: string) {
   return render(<RouterProvider router={router} />);
 }
 
-describe('admin gate', () => {
-  it('FR-ADM-006: 토큰이 없으면 입력 화면만 보이고 관리자 API를 부르지 않는다', () => {
+describe('admin gate — 2026-11-18 대표 지시: 비밀번호 하나로 들어간다', () => {
+  const PASSWORD = 'mystery-2026';
+  const SESSION = 's'.repeat(60);
+  const loginHandler: typeof handler = (url, init) => {
+    if (url.endsWith('/admin/login')) {
+      const body = JSON.parse(String(init.body ?? '{}')) as { password?: string };
+      return body.password === PASSWORD
+        ? json(200, { token: SESSION, expires_in: 43200 })
+        : json(401, { error: 'UNAUTHORIZED', message: 'x' });
+    }
+    const auth = (init.headers as Record<string, string>).Authorization;
+    return auth === `Bearer ${SESSION}`
+      ? json(200, [])
+      : json(401, { error: 'UNAUTHORIZED', message: 'x' });
+  };
+
+  it('FR-ADM-006: 로그인 전에는 비밀번호 입력 화면만 보이고 관리자 API를 부르지 않는다', () => {
     renderAdmin('/admin/books');
-    expect(screen.getByLabelText('관리자 토큰')).toBeInTheDocument();
+    expect(screen.getByLabelText('관리자 비밀번호')).toHaveAttribute('type', 'password');
     expect(screen.queryByRole('navigation', { name: '관리자 메뉴' })).not.toBeInTheDocument();
     expect(calls).toHaveLength(0);
   });
 
-  it('FR-ADM-006: 틀린 토큰은 저장하지 않고 안내하며, 맞는 토큰은 저장 후 화면을 연다', async () => {
+  it('FR-ADM-006: 틀린 비밀번호는 저장 0건·안내, 맞는 비밀번호는 서버가 준 세션을 저장하고 화면을 연다', async () => {
     const user = userEvent.setup();
-    handler = (_url, init) => {
-      const auth = (init.headers as Record<string, string>).Authorization;
-      return auth === `Bearer ${TOKEN}`
-        ? json(200, [])
-        : json(401, { error: 'UNAUTHORIZED', message: 'x' });
-    };
+    handler = loginHandler;
     renderAdmin('/admin/books');
 
-    await user.type(screen.getByLabelText('관리자 토큰'), 'wrong');
+    await user.type(screen.getByLabelText('관리자 비밀번호'), 'wrong-password');
     await user.click(screen.getByRole('button', { name: '들어가기' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('토큰이 맞지 않습니다');
+    expect(await screen.findByRole('alert')).toHaveTextContent('비밀번호가 맞지 않습니다');
     expect(localStorage.getItem(ADMIN_TOKEN_KEY)).toBeNull();
 
-    await user.clear(screen.getByLabelText('관리자 토큰'));
-    await user.type(screen.getByLabelText('관리자 토큰'), TOKEN);
+    await user.clear(screen.getByLabelText('관리자 비밀번호'));
+    await user.type(screen.getByLabelText('관리자 비밀번호'), PASSWORD);
     await user.click(screen.getByRole('button', { name: '들어가기' }));
     expect(await screen.findByRole('heading', { name: '도서 관리' })).toBeInTheDocument();
-    expect(localStorage.getItem(ADMIN_TOKEN_KEY)).toBe(TOKEN);
+    // 비밀번호 자체는 브라우저에 남기지 않는다 — 서버가 준 세션 토큰만
+    expect(localStorage.getItem(ADMIN_TOKEN_KEY)).toBe(SESSION);
+    expect(JSON.stringify(localStorage)).not.toContain(PASSWORD);
   });
 
-  it('FR-ADM-006: 저장된 토큰이 서버에서 401이면 다시 입력 화면으로 돌아간다', async () => {
+  it('시도가 너무 많으면(429) 잠시 뒤 다시 하라고 안내한다', async () => {
+    const user = userEvent.setup();
+    handler = () => json(429, { error: 'TOO_MANY_REQUESTS', message: 'x' });
+    renderAdmin('/admin/books');
+    await user.type(screen.getByLabelText('관리자 비밀번호'), 'whatever-1');
+    await user.click(screen.getByRole('button', { name: '들어가기' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('잠시 뒤 다시');
+  });
+
+  it('FR-ADM-006: 저장된 세션이 서버에서 401(만료·비밀번호 변경)이면 다시 입력 화면으로 돌아간다', async () => {
     localStorage.setItem(ADMIN_TOKEN_KEY, TOKEN);
     handler = () => json(401, { error: 'UNAUTHORIZED', message: 'x' });
     renderAdmin('/admin/books');
-    expect(await screen.findByLabelText('관리자 토큰')).toBeInTheDocument();
+    expect(await screen.findByLabelText('관리자 비밀번호')).toBeInTheDocument();
     expect(localStorage.getItem(ADMIN_TOKEN_KEY)).toBeNull();
   });
 });

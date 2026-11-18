@@ -67,6 +67,33 @@ export async function adminRequest<T = unknown>(
   return data as T;
 }
 
+/**
+ * 관리자 비밀번호 로그인 — 2026-11-18 대표 지시. 비밀번호는 저장하지 않고 서버가 준 세션 토큰(12시간)만 저장한다.
+ * FR-ADM-006 🚦
+ */
+export async function adminLogin(password: string): Promise<string> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}/admin/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+  } catch {
+    throw new AdminApiError(0, 'NETWORK', '서버에 연결할 수 없습니다');
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || typeof data.token !== 'string') {
+    throw new AdminApiError(
+      res.status,
+      data.error ?? 'ERROR',
+      data.message ?? `요청 실패 (${res.status})`,
+      data
+    );
+  }
+  return data.token;
+}
+
 export type JobStatus = 'queued' | 'running' | 'failed' | 'review_ready' | 'published';
 
 export interface JobSummary {
