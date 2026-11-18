@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import AccountCard from '../components/My/AccountCard';
 import ReaderPrefsControls from '../components/Reader/ReaderPrefsControls';
 import FeedbackEntry from '../components/Feedback/FeedbackEntry';
@@ -23,6 +24,13 @@ export default function My() {
           <ReaderPrefsControls {...prefsApi} tone="dash" />
         </div>
       </section>
+      <Link
+        to="/guide"
+        className="mt-8 flex min-h-12 items-center justify-between rounded-dash-card border border-dash-line bg-dash-card px-4 font-dashSans text-[15px] font-bold text-dash-ink"
+      >
+        이용 가이드 다시 보기
+        <span aria-hidden="true">›</span>
+      </Link>
       {isMobile ? null : <FeedbackEntry variant="modal" />}
     </div>
   );

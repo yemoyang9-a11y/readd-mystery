@@ -65,6 +65,8 @@ export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
       lazy: () => fadedPage(isMobile ? import('./mobile/pages/MobileCommunity') : Promise.resolve({ default: NotFound })),
     },
     { path: '/auth/callback', element: <AuthCallback /> },
+    // 2026-11-18 대표 지시 — 데모 책으로 직접 눌러 보는 첫 이용 가이드
+    { path: '/guide', lazy: () => fadedPage(import('./guide/GuidePage')) },
     // FR-ADM-006 🚦
     {
       path: '/admin',
