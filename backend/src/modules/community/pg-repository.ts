@@ -3,6 +3,7 @@ import {
   AUTO_HIDE_REPORT_THRESHOLD,
   type CommentRow,
   type CommunityAdminRepository,
+  type CommunityEngagementRepository,
   type CommunityModerationRepository,
   type CommunityRepository,
   type ModerationItem,
@@ -20,12 +21,29 @@ export interface QueryClient {
 // 같은 쿼리를 쓰는 편이 가장 단순하고 새는 곳이 없다. — 대표 결정 2026-11-17
 const COMMENT_VISIBLE = `c.deleted_at IS NULL AND c.hidden_at IS NULL`;
 
-const POST_SELECT = `
+// 공감 수 — 숨김·삭제 글은 0 (2026-11-18 대표 지시, migration 024)
+const LIKE_COUNT = `(CASE WHEN p.deleted_at IS NULL AND p.hidden_at IS NULL
+   THEN (SELECT count(*)::int FROM community_post_likes l WHERE l.post_id = p.post_id)
+   ELSE 0 END)`;
+
+/** viewerParam — liked_by_me 를 계산할 독자 ID 의 자리표시자($n). 없으면 false */
+function postSelect(viewerParam: string | null): string {
+  const liked = viewerParam
+    ? `(p.deleted_at IS NULL AND p.hidden_at IS NULL AND EXISTS (
+         SELECT 1 FROM community_post_likes l
+          WHERE l.post_id = p.post_id AND l.reader_id = ${viewerParam}::uuid))`
+    : 'false';
+  return `
   SELECT p.seq::int AS seq, p.post_id, p.reader_id, p.kind, p.body, p.created_at,
          (p.deleted_at IS NOT NULL) AS deleted,
          (SELECT count(*)::int FROM community_comments c
-           WHERE c.post_id = p.post_id AND ${COMMENT_VISIBLE}) AS comment_count
+           WHERE c.post_id = p.post_id AND ${COMMENT_VISIBLE}) AS comment_count,
+         ${LIKE_COUNT} AS like_count,
+         ${liked} AS liked_by_me
     FROM community_posts p`;
+}
+
+const POST_SELECT = postSelect(null);
 
 const VISIBLE = `(p.hidden_at IS NULL AND (p.deleted_at IS NULL OR EXISTS (
   SELECT 1 FROM community_comments c WHERE c.post_id = p.post_id AND ${COMMENT_VISIBLE})))`;
@@ -45,6 +63,8 @@ function toPost(row: any): PostRow {
     created_at: new Date(row.created_at).toISOString(),
     deleted: row.deleted,
     comment_count: row.comment_count,
+    like_count: row.like_count ?? 0,
+    liked_by_me: row.liked_by_me === true,
   };
 }
 
@@ -58,19 +78,88 @@ function toComment(row: any): CommentRow {
   };
 }
 
-export function createPgCommunityRepository(db: QueryClient): CommunityRepository {
+export function createPgCommunityRepository(
+  db: QueryClient
+): CommunityRepository & CommunityEngagementRepository {
   return {
-    async listPosts(bookId, { kind, before, limit }) {
+    async listPosts(bookId, { kind, before, offset, sort, viewerId, limit }) {
+      if (sort === 'popular') {
+        // 인기순 — 공감 많은 순, 같으면 최신순. 공감을 못 받는 삭제 글(댓글이 남은 것)은 뒤로 간다
+        const { rows } = await db.query(
+          `${postSelect('$5')}
+            WHERE p.book_id = $1 AND ${VISIBLE}
+              AND ($2::text IS NULL OR p.kind = $2)
+            ORDER BY like_count DESC, p.seq DESC
+            OFFSET $3 LIMIT $4`,
+          [bookId, kind ?? null, offset ?? 0, limit, viewerId ?? null]
+        );
+        return rows.map(toPost);
+      }
       const { rows } = await db.query(
-        `${POST_SELECT}
+        `${postSelect('$5')}
           WHERE p.book_id = $1 AND ${VISIBLE}
             AND ($2::text IS NULL OR p.kind = $2)
             AND ($3::bigint IS NULL OR p.seq < $3)
           ORDER BY p.seq DESC
           LIMIT $4`,
-        [bookId, kind ?? null, before ?? null, limit]
+        [bookId, kind ?? null, before ?? null, limit, viewerId ?? null]
       );
       return rows.map(toPost);
+    },
+
+    async likePost(bookId, postId, readerId) {
+      // 숨김·삭제되지 않은 이 도서의 글에만 공감한다. 이미 공감했으면 그대로 둔다(PK)
+      const { rows } = await db.query(
+        `WITH target AS (
+           SELECT post_id FROM community_posts
+            WHERE post_id = $1 AND book_id = $2 AND deleted_at IS NULL AND hidden_at IS NULL
+         ), ins AS (
+           INSERT INTO community_post_likes (post_id, reader_id)
+           SELECT post_id, $3 FROM target
+           ON CONFLICT (post_id, reader_id) DO NOTHING
+         )
+         SELECT post_id FROM target`,
+        [postId, bookId, readerId]
+      );
+      return rows.length > 0;
+    },
+
+    async unlikePost(bookId, postId, readerId) {
+      const { rows } = await db.query(
+        `WITH target AS (
+           SELECT post_id FROM community_posts
+            WHERE post_id = $1 AND book_id = $2 AND deleted_at IS NULL AND hidden_at IS NULL
+         ), del AS (
+           DELETE FROM community_post_likes l
+            USING target t WHERE l.post_id = t.post_id AND l.reader_id = $3
+         )
+         SELECT post_id FROM target`,
+        [postId, bookId, readerId]
+      );
+      return rows.length > 0;
+    },
+
+    async likeState(bookId, postId, readerId) {
+      // 같은 문장 안의 쓰기(CTE)는 이 조회에 보이지 않으므로 공감·취소 뒤에 따로 묻는다
+      const { rows } = await db.query(
+        `SELECT ${LIKE_COUNT} AS like_count,
+                EXISTS (SELECT 1 FROM community_post_likes l
+                         WHERE l.post_id = p.post_id AND l.reader_id = $3::uuid) AS liked_by_me
+           FROM community_posts p WHERE p.post_id = $1 AND p.book_id = $2`,
+        [postId, bookId, readerId]
+      );
+      return rows.length === 0
+        ? { like_count: 0, liked_by_me: false }
+        : { like_count: rows[0].like_count, liked_by_me: rows[0].liked_by_me };
+    },
+
+    async countVisiblePosts(bookId) {
+      const { rows } = await db.query(
+        `SELECT count(*)::int AS n FROM community_posts
+          WHERE book_id = $1 AND deleted_at IS NULL AND hidden_at IS NULL`,
+        [bookId]
+      );
+      return rows[0].n;
     },
 
     async getPost(bookId, postId) {

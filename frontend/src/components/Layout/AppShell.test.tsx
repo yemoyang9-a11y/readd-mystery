@@ -33,12 +33,13 @@ function renderShell(path: string, props: { isMobile: boolean; nav?: boolean }) 
   return render(<RouterProvider router={router} />);
 }
 
-test('NFR-USE: 모바일 틀은 주 메뉴 3개(홈·피드백·MY)를 글자와 함께 보여 준다', () => {
+test('NFR-USE: 모바일 틀은 주 메뉴 4개(홈·커뮤니티·피드백·MY)를 글자와 함께 보여 준다 (2026-11-18 커뮤니티 허브 추가)', () => {
   renderShell('/', { isMobile: true });
   const nav = screen.getByRole('navigation', { name: '주 메뉴' });
   const links = within(nav).getAllByRole('link');
-  expect(links.map((link) => link.textContent)).toEqual(['홈', '피드백', 'MY']);
+  expect(links.map((link) => link.textContent)).toEqual(['홈', '커뮤니티', '피드백', 'MY']);
   expect(within(nav).getByRole('link', { name: '홈' })).toHaveAttribute('href', '/');
+  expect(within(nav).getByRole('link', { name: '커뮤니티' })).toHaveAttribute('href', '/community');
   expect(within(nav).getByRole('link', { name: '피드백' })).toHaveAttribute('href', '/feedback');
   expect(within(nav).getByRole('link', { name: 'MY' })).toHaveAttribute('href', '/my');
 });

@@ -41,13 +41,14 @@ describe('최상위 경로', () => {
     ).toBe('/books/takryu/briefing');
   });
 
-  test('APP_ROUTES는 홈·검색·서재·MY·피드백·작품 주소를 정의한다', () => {
+  test('APP_ROUTES는 홈·검색·서재·MY·피드백·커뮤니티·작품 주소를 정의한다', () => {
     expect(APP_ROUTES).toEqual({
       home: '/',
       search: '/search',
       shelf: '/shelf',
       my: '/my',
       feedback: '/feedback',
+      community: '/community',
       book: '/books/:bookId',
     });
   });

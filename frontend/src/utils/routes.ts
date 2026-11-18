@@ -13,6 +13,8 @@ export const APP_ROUTES = {
   shelf: '/shelf',
   my: '/my',
   feedback: '/feedback',
+  /** 커뮤니티 허브 — 도서별 완독자 이야기방 입구 (2026-11-18 대표 지시) */
+  community: '/community',
   book: '/books/:bookId',
 } as const;
 

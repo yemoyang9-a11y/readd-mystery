@@ -30,6 +30,8 @@ function post(overrides: Partial<CommunityPost> = {}): CommunityPost {
     nickname: '독자 a1b2',
     created_at: new Date().toISOString(),
     comment_count: 2,
+    like_count: 0,
+    liked_by_me: false,
     is_mine: false,
     deleted: false,
     ...overrides,

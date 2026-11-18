@@ -6,8 +6,10 @@ import { createCommunityRouter } from './router';
 
 export function createCommunityRoutes(pool: Pool) {
   const db = { query: (sql: string, params?: unknown[]) => pool.query(sql, params) };
+  const community = createPgCommunityRepository(db);
   return createCommunityRouter({
-    community: createPgCommunityRepository(db),
+    community,
+    engagement: community,
     content: createPgContentRepository(db),
     cutoff: createReadingStateServices(pool).cutoffService,
   });

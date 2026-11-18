@@ -11,6 +11,7 @@ import {
 } from '../../services/communityService';
 import { DeleteDialog, ReportDialog } from './CommunityConfirmDialogs';
 import { KIND_LABEL, relativeTime } from './communityFormat';
+import LikeButton from './LikeButton';
 
 const MAX_COMMENT_LENGTH = 1000;
 
@@ -234,6 +235,21 @@ export default function CommunityPostView({
         >
           {post.body}
         </p>
+        {post.deleted ? null : (
+          <div className="-mb-2 -ml-3 mt-2 flex">
+            <LikeButton
+              tone="detail"
+              bookId={bookId}
+              postId={post.post_id}
+              state={{ like_count: post.like_count, liked_by_me: post.liked_by_me }}
+              onChange={(next) => setPost((prev) => (prev ? { ...prev, ...next } : prev))}
+              onFailure={(failure) => {
+                if (failure === 'locked') onFailure(failure);
+                else if (failure === 'not_found') onRemoved();
+              }}
+            />
+          </div>
+        )}
       </article>
 
       <h3 className="m-0 px-5 pb-2 pt-6 text-[14px] font-bold text-[#a89e9a]">댓글 {comments.length}</h3>
