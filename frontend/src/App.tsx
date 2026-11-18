@@ -1,5 +1,5 @@
 import { useEffect, useState, type ComponentType } from 'react';
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, type RouteObject } from 'react-router-dom';
 import Home from './pages/Home';
 import Search from './pages/Search';
 import Shelf from './pages/Shelf';
@@ -13,6 +13,7 @@ import MobileBookRedirect from './mobile/pages/MobileBookRedirect';
 import MobileNotFound from './mobile/pages/MobileNotFound';
 import { isMobileDevice } from './mobile/device';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import RouteError from './components/common/RouteError';
 import Loading from './components/common/Loading';
 import AppShell from './components/Layout/AppShell';
 import RouteFade from './components/Layout/RouteFade';
@@ -31,7 +32,9 @@ async function fadedPage(load: Promise<{ default: ComponentType }>) {
  * (FR-BRF-001, 절대 규칙 8번). 경로 패턴은 utils/routes 한 곳에서만 정의한다.
  */
 export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
-  return createBrowserRouter([
+  // 나눠 받기 실패·경로 오류를 한국어 안내로 받는다 — 모든 최상위 경로에 단다
+  const routeError = <RouteError />;
+  const routes: RouteObject[] = [
     // NFR-USE
     {
       element: <AppShell isMobile={isMobile} />,
@@ -74,7 +77,8 @@ export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
       ],
     },
     { path: '*', element: <RouteFade>{isMobile ? <MobileNotFound /> : <NotFound />}</RouteFade> },
-  ]);
+  ];
+  return createBrowserRouter(routes.map((route) => ({ errorElement: routeError, ...route })));
 }
 
 export default function App() {
