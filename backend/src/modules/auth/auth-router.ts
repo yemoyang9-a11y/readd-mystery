@@ -1,13 +1,34 @@
 import { randomBytes } from 'crypto';
 import express, { Request, Response, Router } from 'express';
-import type { AuthService, Provider } from './auth.service';
+import { EmailTakenError, type AuthService, type Provider } from './auth.service';
+import { parseLogin, parseSignup } from './credentials';
 import type { OAuthProviders } from './oauth-providers';
+import { createRateLimiter, rateLimit, type RateLimiter } from './rate-limit';
 import { attachReaderIdentity, getSession, UUID_PATTERN } from './reader-id.middleware';
 import { signLoginState, verifyLoginState } from './session-token';
 
 const NONCE_COOKIE = 'ssabi_login_nonce';
 const NONCE_COOKIE_PATH = '/auth';
 const NONCE_COOKIE_MAX_AGE_MS = 10 * 60 * 1000;
+const CREDENTIAL_ATTEMPTS_PER_MINUTE = 10;
+
+/** OAuth 제공자는 클라이언트 id와 비밀 값이 둘 다 있을 때만 쓸 수 있다 */
+const OAUTH_ENV: Record<Provider, [string, string]> = {
+  google: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
+  kakao: ['KAKAO_CLIENT_ID', 'KAKAO_CLIENT_SECRET'],
+};
+
+export function availableLoginMethods(env: NodeJS.ProcessEnv = process.env): string[] {
+  const oauth = (Object.keys(OAUTH_ENV) as Provider[]).filter((provider) =>
+    OAUTH_ENV[provider].every((name) => Boolean(env[name]))
+  );
+  return ['email', ...oauth];
+}
+
+function deviceIdFrom(req: Request): string | null {
+  const header = req.headers['x-device-id'];
+  return typeof header === 'string' && UUID_PATTERN.test(header) ? header : null;
+}
 
 export interface AuthConfig {
   frontendOrigin: string;
@@ -46,12 +67,69 @@ export function createAuthRouter({
   service,
   providers,
   loadConfig,
+  credentialLimiter = createRateLimiter({
+    limit: CREDENTIAL_ATTEMPTS_PER_MINUTE,
+    windowMs: 60_000,
+  }),
 }: {
   service: AuthService;
   providers: OAuthProviders;
   loadConfig: () => AuthConfig;
+  credentialLimiter?: RateLimiter;
 }): Router {
   const router = express.Router();
+
+  // 2026-11-18 대표 지시 — 로그인 화면이 보여 줄 방법. 이메일은 항상 쓸 수 있다
+  router.get('/auth/providers', (_req: Request, res: Response) => {
+    res.json({ providers: availableLoginMethods() });
+  });
+
+  router.post(
+    '/auth/signup',
+    rateLimit(credentialLimiter, 'credentials'),
+    async (req: Request, res: Response) => {
+      const parsed = parseSignup(req.body);
+      if (!parsed.ok)
+        return res.status(400).json({ error: 'BAD_REQUEST', message: parsed.message });
+
+      try {
+        // 로그인 전 기기의 독서 기록을 이어 쓴다 — OAuth 첫 로그인과 같은 규칙
+        const session = await service.signupWithPassword(parsed.value, deviceIdFrom(req));
+        return res.status(201).json(session);
+      } catch (error) {
+        if (error instanceof EmailTakenError) {
+          return res
+            .status(409)
+            .json({ error: 'EMAIL_TAKEN', message: 'Email already registered' });
+        }
+        console.error('[API] auth signup error', { error });
+        return sendInternalError(res);
+      }
+    }
+  );
+
+  router.post(
+    '/auth/login',
+    rateLimit(credentialLimiter, 'credentials'),
+    async (req: Request, res: Response) => {
+      const parsed = parseLogin(req.body);
+      if (!parsed.ok)
+        return res.status(400).json({ error: 'BAD_REQUEST', message: parsed.message });
+
+      try {
+        const session = await service.loginWithPassword(parsed.value);
+        if (!session) {
+          return res
+            .status(401)
+            .json({ error: 'INVALID_CREDENTIALS', message: 'Invalid email or password' });
+        }
+        return res.json(session);
+      } catch (error) {
+        console.error('[API] auth login error', { error });
+        return sendInternalError(res);
+      }
+    }
+  );
 
   router.get('/auth/:provider/start', async (req: Request, res: Response) => {
     const provider = parseProvider(req.params.provider);
@@ -151,6 +229,19 @@ export function createAuthRouter({
       return me ? res.json(me) : sendUnauthorized(res);
     } catch (error) {
       console.error('[API] auth me error', { error });
+      return sendInternalError(res);
+    }
+  });
+
+  router.post('/auth/me/onboarded', attachReaderIdentity(), async (req: Request, res: Response) => {
+    const session = getSession(req);
+    if (!session) return sendUnauthorized(res);
+
+    try {
+      await service.markOnboarded(session.userId);
+      return res.status(204).send();
+    } catch (error) {
+      console.error('[API] auth onboarded error', { error });
       return sendInternalError(res);
     }
   });

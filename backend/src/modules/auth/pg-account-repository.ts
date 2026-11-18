@@ -1,5 +1,16 @@
 import type { Pool, PoolClient } from 'pg';
-import type { Account, AccountRepository, NewAccount, Provider } from './auth.service';
+import {
+  EmailTakenError,
+  type Account,
+  type AccountProfile,
+  type AccountRepository,
+  type IdentityProvider,
+  type NewAccount,
+  type NewPasswordAccount,
+  type Provider,
+} from './auth.service';
+
+const UNIQUE_VIOLATION = '23505';
 
 const READING_TABLES = [
   'reading_position',
@@ -55,12 +66,75 @@ export class PgAccountRepository implements AccountRepository {
     });
   }
 
-  async listProviders(userId: string): Promise<Provider[]> {
-    const { rows } = await this.pool.query<{ provider: Provider }>(
+  async listProviders(userId: string): Promise<IdentityProvider[]> {
+    const { rows } = await this.pool.query<{ provider: IdentityProvider }>(
       `SELECT provider FROM user_identities WHERE user_id = $1 ORDER BY provider`,
       [userId]
     );
     return rows.map((row) => row.provider);
+  }
+
+  // 2026-11-18 대표 지시 — 이메일 회원가입·로그인
+  async findPasswordByEmail(
+    email: string
+  ): Promise<{ user_id: string; password_hash: string } | null> {
+    const { rows } = await this.pool.query<{ user_id: string; password_hash: string }>(
+      `SELECT user_id, password_hash FROM user_passwords WHERE email = $1`,
+      [email]
+    );
+    return rows[0] ?? null;
+  }
+
+  async createPasswordAccount(input: NewPasswordAccount): Promise<Account> {
+    try {
+      return await this.inTransaction(async (client) => {
+        await client.query(
+          `INSERT INTO users (user_id, reader_id, display_name) VALUES ($1, $2, $3)`,
+          [input.userId, input.readerId, input.displayName]
+        );
+        await client.query(
+          `INSERT INTO user_identities (provider, provider_user_id, user_id) VALUES ('email', $1, $2)`,
+          [input.email, input.userId]
+        );
+        await client.query(
+          `INSERT INTO user_passwords (user_id, email, password_hash) VALUES ($1, $2, $3)`,
+          [input.userId, input.email, input.passwordHash]
+        );
+        return {
+          user_id: input.userId,
+          reader_id: input.readerId,
+          display_name: input.displayName,
+        };
+      });
+    } catch (error) {
+      const pgError = error as { code?: string; constraint?: string } | null;
+      if (
+        pgError?.code === UNIQUE_VIOLATION &&
+        (pgError.constraint === 'user_passwords_email_key' ||
+          pgError.constraint === 'user_identities_pkey')
+      ) {
+        throw new EmailTakenError();
+      }
+      throw error;
+    }
+  }
+
+  async getProfile(userId: string): Promise<AccountProfile> {
+    const { rows } = await this.pool.query<{ email: string | null; onboarded: boolean }>(
+      `SELECT p.email, (u.onboarded_at IS NOT NULL) AS onboarded
+         FROM users u
+         LEFT JOIN user_passwords p ON p.user_id = u.user_id
+        WHERE u.user_id = $1`,
+      [userId]
+    );
+    return rows[0] ?? { email: null, onboarded: false };
+  }
+
+  async markOnboarded(userId: string, at: Date): Promise<void> {
+    await this.pool.query(
+      `UPDATE users SET onboarded_at = COALESCE(onboarded_at, $2) WHERE user_id = $1`,
+      [userId, at]
+    );
   }
 
   async saveLoginCode(code: string, userId: string, expiresAt: Date): Promise<void> {

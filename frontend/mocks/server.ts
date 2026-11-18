@@ -21,6 +21,7 @@ import {
   mockRelationships,
 } from './fixtures';
 import { AxiosError, type AxiosResponse } from 'axios';
+import { STORAGE_KEYS } from '../src/utils/constants';
 import type { AuthMe } from '../src/services/authService';
 import type { PositionResponse } from '../src/services/positionService';
 import type {
@@ -204,16 +205,58 @@ export function mockPositionResponse(bookId: string): MockResult<PositionRespons
   };
 }
 
-let mockMember = false;
+const MOCK_MEMBER: AuthMe = { display_name: '시험 독자', providers: ['google'], email: null, onboarded: true };
+const MOCK_TOKEN_PREFIX = 'mock-session-';
+let mockAccount: AuthMe | null = null;
 
 export function setMockMember(on: boolean): void {
-  mockMember = on;
+  mockAccount = on ? { ...MOCK_MEMBER } : null;
 }
 
 export function mockMeResponse(): MockResult<AuthMe> {
-  return mockMember
-    ? { status: 200, body: { display_name: '시험 독자', providers: ['google'] } }
+  if (mockAccount) return { status: 200, body: mockAccount };
+  // 새로 고침 뒤에도 대역 로그인 토큰이 남아 있으면 로그인 상태로 둔다 (개발용)
+  const token = localStorage.getItem(STORAGE_KEYS.authToken);
+  return token?.startsWith(MOCK_TOKEN_PREFIX)
+    ? { status: 200, body: { ...MOCK_MEMBER, providers: ['email'] } }
     : { status: 401 };
+}
+
+// 2026-11-18 — 로그인 화면 대역. 이메일 형식과 8자 이상 비밀번호면 성공한다 (개발용)
+type MockAuthResult<T> = { status: 200; body: T } | { status: 400 | 401 };
+
+function mockToken(): string {
+  return `${MOCK_TOKEN_PREFIX}${Date.now().toString(36)}`;
+}
+
+function mockCredentialsValid(email: string, password: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && password.length >= 8;
+}
+
+export function mockSignupResponse(input: {
+  email: string;
+  password: string;
+  displayName: string;
+}): MockAuthResult<{ token: string; display_name: string; is_new: boolean }> {
+  const name = input.displayName.trim();
+  if (!mockCredentialsValid(input.email, input.password) || name.length < 1 || name.length > 20) {
+    return { status: 400 };
+  }
+  mockAccount = { display_name: name, providers: ['email'], email: input.email.trim().toLowerCase(), onboarded: false };
+  return { status: 200, body: { token: mockToken(), display_name: name, is_new: true } };
+}
+
+export function mockLoginResponse(
+  email: string,
+  password: string
+): MockAuthResult<{ token: string; display_name: string | null }> {
+  if (!mockCredentialsValid(email, password)) return { status: 401 };
+  mockAccount ??= { display_name: '시험 독자', providers: ['email'], email: email.trim().toLowerCase(), onboarded: true };
+  return { status: 200, body: { token: mockToken(), display_name: mockAccount.display_name } };
+}
+
+export function mockMarkOnboarded(): void {
+  if (mockAccount) mockAccount = { ...mockAccount, onboarded: true };
 }
 
 // FR-PRG-001

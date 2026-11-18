@@ -1,6 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
+import { setAuthToken } from './utils/storage';
+
+// 2026-11-18 로그인 관문 — 앱 화면 테스트는 로그인한 독자로 시작한다 (앱이 토큰을 저장하는 방식 그대로)
+beforeEach(() => setAuthToken('test-session-token'));
+afterEach(() => localStorage.clear());
 
 /**
  * '이어서 읽기' 회귀 (UC-28, FR-PRG-003 🚦)

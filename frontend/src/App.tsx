@@ -7,6 +7,9 @@ import My from './pages/My';
 import BookDetail from './pages/BookDetail';
 import NotFound from './pages/NotFound';
 import AuthCallback from './pages/AuthCallback';
+import Login from './pages/Login';
+import RequireSession from './components/auth/RequireSession';
+import { LOGIN_PATH, PUBLIC_ROUTE_PATHS } from './utils/authRedirect';
 import MobileHome from './mobile/pages/MobileHome';
 import MobileFeedback from './mobile/pages/MobileFeedback';
 import MobileBookRedirect from './mobile/pages/MobileBookRedirect';
@@ -24,6 +27,21 @@ import { initAnalytics } from './services/analytics';
 async function fadedPage(load: Promise<{ default: ComponentType }>) {
   const { default: Page } = await load;
   return { element: <RouteFade><Page /></RouteFade> };
+}
+
+// 2026-11-18 대표 지시 — 세션 토큰이 없으면 공개 경로 밖의 화면은 /login 으로 보낸다
+function gate<T extends Pick<RouteObject, 'element' | 'Component'>>(route: T): T {
+  const { Component, element } = route;
+  if (Component) return { ...route, Component: undefined, element: <RequireSession><Component /></RequireSession> };
+  if (element) return { ...route, element: <RequireSession>{element}</RequireSession> };
+  return route;
+}
+
+function requireSession(route: RouteObject): RouteObject {
+  if (route.path && PUBLIC_ROUTE_PATHS.includes(route.path)) return route;
+  const { lazy } = route;
+  if (!lazy) return gate(route);
+  return { ...gate(route), lazy: async () => gate(await lazy()) };
 }
 
 /**
@@ -64,6 +82,7 @@ export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
       path: BOOK_ROUTES.community,
       lazy: () => fadedPage(isMobile ? import('./mobile/pages/MobileCommunity') : Promise.resolve({ default: NotFound })),
     },
+    { path: LOGIN_PATH, element: <Login /> },
     { path: '/auth/callback', element: <AuthCallback /> },
     // 2026-11-18 대표 지시 — 데모 책으로 직접 눌러 보는 첫 이용 가이드
     { path: '/guide', lazy: () => fadedPage(import('./guide/GuidePage')) },
@@ -83,7 +102,7 @@ export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
   // GitHub Pages 는 /<저장소>/ 아래에 올라간다 — 빌드 기준 경로(BASE_URL)를 라우터 기준으로 쓴다
   const basename = (import.meta.env.BASE_URL ?? '/').replace(/\/$/, '') || '/';
   return createBrowserRouter(
-    routes.map((route) => ({ errorElement: routeError, ...route })),
+    routes.map((route) => ({ errorElement: routeError, ...requireSession(route) })),
     { basename }
   );
 }

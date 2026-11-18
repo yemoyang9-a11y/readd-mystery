@@ -88,6 +88,8 @@ describe('AuthService', () => {
     await expect(service.getMe(account.user_id)).resolves.toEqual({
       display_name: '카카오 독자',
       providers: ['kakao'],
+      email: null,
+      onboarded: false,
     });
   });
 

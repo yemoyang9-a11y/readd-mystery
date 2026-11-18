@@ -233,6 +233,8 @@ describe('auth router', () => {
       await expect(response.json()).resolves.toEqual({
         display_name: '독자',
         providers: ['google'],
+        email: null,
+        onboarded: false,
       });
     });
 
