@@ -191,3 +191,15 @@ export const DEMO_COMMUNITY_POSTS = [
   { id: 'p2', kind: '감상', nickname: '호숫가', body: '범인보다 박 집사의 떨리던 손이 오래 남네요. 마지막 장면이 따뜻했어요.', comments: 2 },
   { id: 'p3', kind: '질문', nickname: '태엽', body: '복도 끝 벽시계는 언제부터 있었던 걸까요? 다시 읽어 보니 2장에서야 나오네요.', comments: 1 },
 ];
+
+/** 데모 책의 이웃 쪽 표 — 화면 안 고정 본문이라 미리 적어 둔다. 실제 책은 서버가 준다 (FR-BRF-005) */
+export const DEMO_NEIGHBORS: Record<number, { prev: number | null; next: number | null }> = {
+  1: { prev: null, next: 2 },
+  2: { prev: 1, next: 3 },
+  3: { prev: 2, next: 4 },
+  4: { prev: 3, next: 5 },
+  5: { prev: 4, next: 6 },
+  6: { prev: 5, next: 7 },
+  7: { prev: 6, next: 8 },
+  8: { prev: 7, next: null },
+};

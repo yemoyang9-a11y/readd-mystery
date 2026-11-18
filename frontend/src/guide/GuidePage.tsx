@@ -30,6 +30,7 @@ import {
   DEMO_START_PAGE,
   DEMO_TITLE,
   DEMO_TOTAL_PAGES,
+  DEMO_NEIGHBORS,
 } from './demoBook';
 
 type Screen = 'home' | 'briefing' | 'reader' | 'community';
@@ -214,9 +215,8 @@ export default function GuidePage() {
             content={DEMO_PAGES[page]}
             currentPage={page}
             totalPages={DEMO_TOTAL_PAGES}
-            // 데모 책은 화면 안의 고정 본문이라 이웃 쪽을 여기서 정한다 — 실제 책은 서버가 준다
-            prevPage={page > 1 ? page - 1 : null}
-            nextPage={page < DEMO_TOTAL_PAGES ? page + 1 : null}
+            prevPage={DEMO_NEIGHBORS[page]?.prev ?? null}
+            nextPage={DEMO_NEIGHBORS[page]?.next ?? null}
             onMove={setPage}
             highlightedQuote={clueShown ? DEMO_CLUE : null}
             chapterStart={DEMO_CHAPTERS.find((chapter) => chapter.start_page === page) ?? null}
