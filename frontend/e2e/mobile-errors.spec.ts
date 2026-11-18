@@ -49,7 +49,9 @@ test.describe('모바일 404·오류 화면', () => {
     await open(page, STATES[0]);
     await page.getByRole('button', { name: '서재로' }).tap();
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByRole('region', { name: '신작' }).getByRole('link', { name: '탁류' })).toBeVisible();
+    // 2026-11-17 입체 책 홈 — 휴대폰 홈은 이어 읽기 카드와 "이번 달 추리소설" 무대다
+    await expect(page.getByRole('link', { name: /^이어서 읽기, 탁류,/ })).toBeVisible();
+    await expect(page.getByRole('group', { name: '이번 달 추리소설' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: '주 메뉴' })).toBeVisible();
   });
 
@@ -80,7 +82,8 @@ test.describe('모바일 404·오류 화면', () => {
       [SAFE_TOP, SAFE_BOTTOM]
     );
     await page.goto('/');
-    const first = page.getByRole('region', { name: '이어 읽기' }).getByRole('link', { name: '탁류' });
+    // 2026-11-17 홈 이어 읽기 카드 — 휴대폰 홈의 첫 조작 요소
+    const first = page.getByRole('link', { name: /^이어서 읽기, 탁류,/ });
     await expect(first).toBeVisible();
     expect((await first.boundingBox())!.y).toBeGreaterThanOrEqual(SAFE_TOP - 1);
 

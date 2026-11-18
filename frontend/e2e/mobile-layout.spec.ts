@@ -53,20 +53,21 @@ const STATES: { name: string; open: (page: Page) => Promise<void> }[] = [
     },
   },
   { name: 'quote', open: selectWords },
-  {
-    name: 'ssabi-recap',
-    open: async (page) => {
+  // 2026-11-18 싸비 4탭 — 리캡 탭이 없어지고 추리 노트·타임라인 탭이 생겼다(리캡은 브리핑에서만)
+  ...(['추리 노트', '타임라인'] as const).map((tabName) => ({
+    name: `ssabi-${tabName === '추리 노트' ? 'notes' : 'timeline'}`,
+    open: async (page: Page) => {
       await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
-      await page.getByRole('tab', { name: '리캡' }).click();
-      await expect(page.getByRole('tabpanel')).toContainText('줄거리');
+      await page.getByRole('tab', { name: tabName, exact: true }).click();
+      await expect(page.getByRole('tab', { name: tabName, exact: true })).toHaveAttribute('aria-selected', 'true');
       await page.waitForTimeout(600);
     },
-  },
+  })),
   {
     name: 'ssabi-chat',
     open: async (page) => {
       await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
-      await page.getByRole('tab', { name: '챗봇' }).click();
+      await page.getByRole('tab', { name: 'AI 챗봇' }).click();
       await expect(page.getByRole('textbox', { name: '질문' })).toBeVisible();
       await page.waitForTimeout(600);
     },
@@ -75,7 +76,7 @@ const STATES: { name: string; open: (page: Page) => Promise<void> }[] = [
     name: 'ssabi-chat-keyboard',
     open: async (page) => {
       await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
-      await page.getByRole('tab', { name: '챗봇' }).click();
+      await page.getByRole('tab', { name: 'AI 챗봇' }).click();
       await page.getByRole('textbox', { name: '질문' }).click();
       await showKeyboard(page, 300);
       await page.waitForTimeout(600);
@@ -91,7 +92,8 @@ for (const state of STATES) {
     expect(await noHorizontalScroll(page), 'C1 가로 스크롤').toBe(true);
     const textScope = state.name.startsWith('ssabi') ? '[data-testid="mobile-ssabi"]' : '[data-testid="mobile-reader"]';
     expect(await overflowingTexts(page, textScope), 'C2 글자 넘침·잘림').toEqual([]);
-    expect(await smallTapTargets(page), 'C4 누르는 영역').toEqual([]);
+    // 보내기 버튼은 2026-11-18 대표 지시(b210f89)로 입력칸 한 줄 높이(36px)라 44px 점검에서 뺀다
+    expect(await smallTapTargets(page, '[aria-label="질문 보내기"]'), 'C4 누르는 영역').toEqual([]);
 
     await page.screenshot({ path: `test-results/screens/${testInfo.project.name}-${state.name}.png` });
   });

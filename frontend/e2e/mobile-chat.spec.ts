@@ -15,7 +15,7 @@ async function openChat(page: Page) {
   await page.goto(`/books/${BOOK_ID}/read`);
   await expect(page.getByRole('article')).toContainText('15쪽.');
   await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
-  await page.getByRole('tab', { name: '챗봇' }).click();
+  await page.getByRole('tab', { name: 'AI 챗봇' }).click();
   const input = page.getByRole('textbox', { name: '질문' });
   await expect(input).toBeVisible();
   await page.getByRole('tabpanel').evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)));
@@ -54,14 +54,17 @@ test('G13: 긴 질문은 6줄까지 늘어나다가 입력창 안에서 스크�
   expect(scrollHeight).toBeGreaterThan(clientHeight);
 });
 
-test('입력창은 16px, 보내기 버튼은 44px이고 빈 입력에서는 비활성', async ({ page }) => {
+// 2026-11-18 대표 지시(b210f89) — 보내기 버튼은 입력칸 한 줄 높이(36px)에 맞춘다
+test('입력창은 16px, 보내기 버튼은 입력칸 한 줄 높이(36px)이고 빈 입력에서는 비활성', async ({ page }) => {
   const input = await openChat(page);
   const size = await input.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
   expect(size).toBeGreaterThanOrEqual(16);
   const send = page.getByRole('button', { name: '질문 보내기' });
   const box = (await send.boundingBox())!;
-  expect(box.width).toBeGreaterThanOrEqual(44);
-  expect(box.height).toBeGreaterThanOrEqual(44);
+  const inputBox = (await input.boundingBox())!;
+  expect(box.width).toBeGreaterThanOrEqual(36);
+  expect(box.height).toBeGreaterThanOrEqual(36);
+  expect(Math.abs(box.height - inputBox.height)).toBeLessThanOrEqual(1);
   await expect(send).toBeDisabled();
   await input.fill('초봉은 누구야');
   await expect(send).toBeEnabled();
@@ -72,7 +75,8 @@ test('Review fix 1: 화면을 확대해도 키보드로 오판하지 않아 손�
   await zoomPage(page, 1.5);
   await page.waitForTimeout(300);
   await expect(page.getByRole('button', { name: /^싸비 (열기|닫기)$/ })).toBeVisible();
-  await expect(page.getByRole('heading', { name: '아모의 가이드북' })).toBeVisible();
+  // 2026-11-18 대표 지시 — 싸비 패널 머리는 책 제목이다
+  await expect(page.getByRole('heading', { level: 2, name: '탁류' })).toBeVisible();
 });
 
 test('Review fix 4: 키보드가 열리면 홈 막대 여백을 두지 않는다', async ({ page }) => {
@@ -85,20 +89,8 @@ test('Review fix 4: 키보드가 열리면 홈 막대 여백을 두지 않는다
     .toBe('0px');
 });
 
-test('Review fix 5: 관계도 검색창을 다시 눌러도 포커스가 유지된다', async ({ page }) => {
-  await openChat(page);
-  await page.getByRole('tab', { name: '인물 관계도' }).click();
-  const search = page.getByPlaceholder('검색');
-  await search.tap();
-  await expect(search).toBeFocused();
-  await search.evaluate((el) => {
-    (window as unknown as { __blurs: number }).__blurs = 0;
-    el.addEventListener('blur', () => ((window as unknown as { __blurs: number }).__blurs += 1));
-  });
-  await search.tap();
-  await expect(search).toBeFocused();
-  expect(await page.evaluate(() => (window as unknown as { __blurs: number }).__blurs)).toBe(0);
-});
+// 'Review fix 5: 관계도 검색창 포커스' 시험은 지웠다 — 2026-11-18 승인 시안(A안)대로 관계도에서 검색창을
+// 뺐다(tasks.md 5장, docs/validation/2026-11-18-ssabi-approved/).
 
 test('피드백: 키보드가 올라와도 시트 아래로 본문이 보이지 않는다', async ({ page }) => {
   const input = await openChat(page);

@@ -29,15 +29,47 @@ test('G10: 목차 손잡이로 리스트를 펼치고, 장을 고르면 이동 �
   await expect(current).toContainText('생활 제일과');
   await expect(current).toBeInViewport();
 
+  const claims: Array<string | null> = [];
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().endsWith(`/books/${BOOK_ID}/progress`)) {
+      claims.push((request.postDataJSON() as { claim?: string | null }).claim ?? null);
+    }
+  });
   await list.getByRole('button', { name: /신판 흥보전/ }).click();
+  // 2026-11-17 대표 결정(A + C안) — 기준점(15쪽)보다 뒤 장을 고르면 확인 창이 뜬다. 이동만 하면 읽음 확인은 보내지 않는다
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await expect(pageInput).toHaveValue('15');
+  await dialog.getByRole('button', { name: '이동만 하기' }).click();
   await expect(pageInput).toHaveValue('21');
   await expect(list).toHaveCount(0);
-  expect(log.progress.at(-1)).toBe(21);
+  await expect.poll(() => log.progress.at(-1)).toBe(21);
+  expect(claims.at(-1)).toBeNull();
 
   await handle.click();
   await expect(page.getByTestId('toc-list')).toBeVisible();
   await handle.click();
   await expect(page.getByTestId('toc-list')).toHaveCount(0);
+});
+
+// 위 G10(이동만 하기 → claim 없음)의 짝 — 독자가 앞부분을 읽었다고 답하면 그 이동에만 claim: read_through 가 실린다.
+// 숫자(기준점)는 보내지 않는다 — 인정할 쪽은 서버가 정한다 (절대 규칙 8, FR-PRG-003 🚦)
+test('FR-PRG-003: 확인 창에서 "앞부분은 이미 읽었어요"를 고르면 그 쪽 이동에 claim read_through 를 싣는다', async ({ page }) => {
+  const { log, pageInput } = await open(page);
+  const bodies: Array<Record<string, unknown>> = [];
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().endsWith(`/books/${BOOK_ID}/progress`)) {
+      bodies.push(request.postDataJSON() as Record<string, unknown>);
+    }
+  });
+  await page.getByRole('button', { name: /^목차 (열기|닫기)$/ }).click();
+  await page.getByTestId('toc-list').getByRole('button', { name: /신판 흥보전/ }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: '앞부분은 이미 읽었어요' }).click();
+  await expect(pageInput).toHaveValue('21');
+  await expect.poll(() => log.progress.at(-1)).toBe(21);
+  await expect.poll(() => bodies.at(-1)?.claim).toBe('read_through');
+  expect(Object.keys(bodies.at(-1)!)).not.toContain('cutoff');
 });
 
 test('G11: 리스트를 연 채로 넘기면 현재 장 강조가 바뀐다', async ({ page }) => {

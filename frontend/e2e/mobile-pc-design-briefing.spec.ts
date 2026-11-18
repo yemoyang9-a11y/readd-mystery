@@ -24,11 +24,12 @@ test.describe('브리핑 — PC와 같은 디자인', () => {
     expect(box.height).toBeGreaterThanOrEqual(44);
   });
 
-  test('A15: PC와 같은 구분선 3개', async ({ page }) => {
+  // 2026-11-17 추리 노트 브리핑 표시(노트 칸 추가)로 PC 브리핑(BriefingView)도 구분선이 4개다
+  test('A15: PC와 같은 구분선 4개', async ({ page }) => {
     await openBriefing(page);
     const rules = page.getByTestId('brief-rule');
-    await expect(rules).toHaveCount(3);
-    for (let i = 0; i < 3; i++) {
+    await expect(rules).toHaveCount(4);
+    for (let i = 0; i < 4; i++) {
       await expectClasses(rules.nth(i), [i === 0 ? 'my-5' : 'my-7', 'h-[2px]', 'w-full', 'rounded-[1px]', 'bg-brief-rule']);
     }
   });
