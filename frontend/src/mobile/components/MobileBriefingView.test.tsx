@@ -125,21 +125,25 @@ test('브리핑에 내 추리 노트 목록이 쪽수와 함께 나오고, 없�
   expect(region).toHaveTextContent('가설');
 });
 
-// 2026-11-17 대표 결정 — 11-16 시안에서 뺀 진도 카드·목차를 되살린다 (PRODUCT.md 브리핑 정의)
-test('FR-BRF-005: 진도 카드는 서버가 준 장·전체 쪽수·퍼센트를 그대로 보여 준다 — 프론트 재계산 없음', () => {
-  // current_page/total_pages(15/20=75%)와 일부러 다른 percent 를 준다 — 화면이 직접 나누면 75%가 나온다
-  render(
+// 2026-11-18 대표 지시 — "브리핑 화면에서 어디까지 읽었는지 보고하는거 저거 빼고 현재 아모 빼".
+// 진도 카드(장 제목·전체 쪽수·진도 바 위 아모·퍼센트)를 통째로 뺀다. 헤더·리캡·이어서 읽기는 남는다
+test('2026-11-18: 다시 온 독자 브리핑에 진도 카드·진도 바·아모 표지·퍼센트가 없다', () => {
+  const { container } = render(
     <MobileBriefingView
       {...baseProps}
       briefing={briefing({ progress: { current_page: 15, total_pages: 20, percent: 42.4 } })}
     />
   );
-  const card = screen.getByRole('region', { name: '진도' });
-  expect(card).toHaveTextContent('제2장 생활 제일과');
-  expect(card).toHaveTextContent('20쪽');
-  expect(within(card).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '42.4');
-  expect(card).toHaveTextContent('42%');
-  expect(card).not.toHaveTextContent('75%');
+  expect(screen.queryByRole('region', { name: '진도' })).toBeNull();
+  expect(screen.queryByRole('progressbar')).toBeNull();
+  expect(screen.queryByText('42%')).toBeNull();
+  expect(screen.queryByText('20쪽')).toBeNull();
+  expect(container.querySelector('img[src*="amo"], [data-testid*="runner"]')).toBeNull();
+  // 남는 것 (positive 쌍)
+  expect(screen.getByRole('heading', { name: /다시 오셨네요/ })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: '그동안 이런 이야기였어요' })).toBeInTheDocument();
+  expect(screen.getByText('정주사는 미두장에서 재산을 잃었다.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '이어서 읽기' })).toBeInTheDocument();
 });
 
 test('FR-NAV-001: 브리핑 목차는 전체 장을 보여 주고 서버가 준 지금 장을 표시하며, 고르면 그 장 첫 쪽으로 간다', async () => {

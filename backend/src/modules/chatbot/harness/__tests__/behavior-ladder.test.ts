@@ -16,7 +16,11 @@ import {
   HARNESS_PREDICTION_ANSWER,
   HARNESS_VERBATIM_ANSWER,
 } from '../messages';
-import { HARNESS_RETRY_NOTICE, HINT_RETRY_NOTICE, VERBATIM_RETRY_NOTICE } from '../../response-policy';
+import {
+  HARNESS_RETRY_NOTICE,
+  HINT_RETRY_NOTICE,
+  VERBATIM_RETRY_NOTICE,
+} from '../../response-policy';
 
 const pages = [{ page_no: 12, content: '그는 천천히 장갑을 벗고 창가에 놓인 편지를 집어 들었다.' }];
 
@@ -40,28 +44,36 @@ describe('아모 행동 단계표 (NFR-AI-005, 결정 23)', () => {
       '범인이 누구야?',
       '앞으로 어떻게 될까?',
       '오늘 날씨 어때?',
+      '내 노트 보여?',
     ]) {
       expect(INTENT_POLICY[classifyQuestion(question)]).toBeDefined();
     }
   });
 
   test('NFR-AI-005: 유형별 응답 방식은 지금 동작과 같다', () => {
-    expect(
-      Object.fromEntries(QUESTION_INTENTS.map((i) => [i, INTENT_POLICY[i].response]))
-    ).toEqual({
-      fact: 'guarded',
-      verify_hypothesis: 'guarded',
-      culprit_or_ending: 'guarded',
-      prediction: 'fixed',
-      outside: 'sentence_stream',
-    });
+    expect(Object.fromEntries(QUESTION_INTENTS.map((i) => [i, INTENT_POLICY[i].response]))).toEqual(
+      {
+        fact: 'guarded',
+        verify_hypothesis: 'guarded',
+        culprit_or_ending: 'guarded',
+        prediction: 'fixed',
+        outside: 'sentence_stream',
+        // 대표 지시 2026-11-18 — 독자 노트 요청도 전체 생성 후 검사한다
+        reader_notes: 'guarded',
+      }
+    );
     expect(INTENT_POLICY.prediction.fixed?.answer).toBe(HARNESS_PREDICTION_ANSWER);
     // 가설·범인 질문에서만 "맞아요"류를 판정으로 본다
-    expect(
-      QUESTION_INTENTS.filter((intent) => INTENT_POLICY[intent].strictVerdict).sort()
-    ).toEqual(['culprit_or_ending', 'prediction', 'verify_hypothesis']);
+    expect(QUESTION_INTENTS.filter((intent) => INTENT_POLICY[intent].strictVerdict).sort()).toEqual(
+      ['culprit_or_ending', 'prediction', 'reader_notes', 'verify_hypothesis']
+    );
     // 전체 생성 후 검사하는 유형은 모든 위반이 막는 위반이다
-    for (const intent of ['fact', 'verify_hypothesis', 'culprit_or_ending'] as const) {
+    for (const intent of [
+      'fact',
+      'verify_hypothesis',
+      'culprit_or_ending',
+      'reader_notes',
+    ] as const) {
       expect([...INTENT_POLICY[intent].blocking].sort()).toEqual([...GUARD_VIOLATIONS].sort());
     }
     // outside는 인용 출처 불일치만 로그로 남기고 나머지는 막는다
@@ -97,7 +109,7 @@ describe('아모 행동 단계표 (NFR-AI-005, 결정 23)', () => {
       const copying = action === 'copy_source_over_limit';
       const answer = copying ? longPage : rule.example;
       const source = copying ? [{ page_no: 12, content: longPage }] : pages;
-      for (const intent of ['verify_hypothesis', 'culprit_or_ending'] as const) {
+      for (const intent of ['verify_hypothesis', 'culprit_or_ending', 'reader_notes'] as const) {
         const found = guardAnswer(answer, { cutoff: 40, pages: source, intent }).violations;
         expect({ action, hit: found.some((v) => rule.violations.includes(v)) }).toEqual({
           action,

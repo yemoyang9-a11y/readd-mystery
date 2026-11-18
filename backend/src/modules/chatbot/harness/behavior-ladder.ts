@@ -4,6 +4,7 @@ import {
   HARNESS_FIXED_ANSWER,
   HARNESS_PREDICTION_ANSWER,
   HARNESS_VERBATIM_ANSWER,
+  readerNotesEmptyAnswer,
 } from './messages';
 import { HARNESS_RETRY_NOTICE, HINT_RETRY_NOTICE, VERBATIM_RETRY_NOTICE } from '../response-policy';
 
@@ -164,6 +165,16 @@ export interface IntentPolicy {
   /** 질문 뒤에 붙는 유형별 지침. 없으면 빈 문자열 */
   guidance: string;
   allowed: ReadonlyArray<AllowedAction>;
+  /**
+   * 독자 노트 요청(대표 지시 2026-11-18). 있으면 서비스가 노트(K 이하)를 먼저 조회하고,
+   * 없으면 모델을 부르지 않고 emptyAnswer(K)로 답한다. 있으면 scope(K)를 지침 뒤에 붙인다.
+   * 조회 실패는 "노트가 없다"로 바꾸지 않고 실패로 끝낸다 (FR-SPL-005 🚦).
+   */
+  readerNotes?: {
+    emptyAnswer: (cutoff: number) => string;
+    tag: string;
+    scope: (cutoff: number) => string;
+  };
 }
 
 export const INTENT_POLICY: Record<QuestionIntent, IntentPolicy> = {
@@ -216,6 +227,27 @@ export const INTENT_POLICY: Record<QuestionIntent, IntentPolicy> = {
     blocking: ALL_VIOLATIONS.filter((violation) => violation !== 'quote_not_in_source'),
     guidance: '',
     allowed: ['answer_outside_book', 'ask_open_question'],
+  },
+  // 대표 지시 2026-11-18 — "내 노트 보여?"·"내가 적은 가설 정리해 줘". 노트를 보여 주되(결정 23 '가설
+  // 기록·정리') 가설이 맞는지는 말하지 않는다. 노트 자체가 범인 추측일 수 있어 "맞아요"류도 판정으로 본다
+  reader_notes: {
+    response: 'guarded',
+    strictVerdict: true,
+    blocking: ALL_VIOLATIONS,
+    guidance:
+      '\n\n## 질문 유형 지침 (독자 노트 요청)\n\n독자가 자기가 쓴 노트를 보여 달라거나 정리해 달라고 했습니다. 위 "독자가 적은 노트"에 있는 노트를 쪽수와 함께 답하세요. 노트를 옮길 때는 독자가 쓴 글을 큰따옴표(“ ”) 안에 그대로 옮기고, 여러 개면 짧게 묶어 정리하세요. 노트가 가설이나 범인 추측이어도 맞는지·그럴듯한지·가능성이 있는지 말하지 말고, 범인을 지목하거나 암시하지 마세요. 노트와 관련된 장면이 근거 자료에 있으면 쪽수와 함께 사실만 이어 주세요. "노트가 보이지 않는다"고 말하지 마세요.',
+    allowed: [
+      'show_reader_notes',
+      'restate_facts_within_cutoff',
+      'retrieve_scene',
+      'ask_open_question',
+    ],
+    readerNotes: {
+      emptyAnswer: readerNotesEmptyAnswer,
+      tag: 'reader-notes-empty',
+      scope: (cutoff) =>
+        `\n노트는 독자가 차례로 읽은 ${cutoff}쪽까지 적은 것만 들어옵니다. 그보다 뒤 쪽 노트가 있는지는 알 수 없으니 있다·없다고 단정하지 말고, 물으면 그 쪽까지 차례로 읽으면 같이 볼 수 있다고만 말하세요.`,
+    },
   },
 };
 

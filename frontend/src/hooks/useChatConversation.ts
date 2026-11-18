@@ -68,7 +68,8 @@ export function useChatConversation(
   );
 
   const ask = useCallback(
-    async (query: string, page: number, seq: number, quote?: string) => {
+    // fromPage — 이 쪽 직전에 화면에 떠 있던 쪽. 질문에 동봉하는 진도의 사실 보고 (FR-PRG-003 🚦, 대표 지시 2026-11-18)
+    async (query: string, page: number, seq: number, quote?: string, fromPage?: number | null) => {
       const token = ++generation.current;
       historyRequest.current++;
       setHistoryLoading(false);
@@ -83,7 +84,8 @@ export function useChatConversation(
           page,
           seq,
           conversationId ?? undefined,
-          quote
+          quote,
+          fromPage
         )) {
           if (token !== generation.current) continue;
           if (frame.type === 'delta') {

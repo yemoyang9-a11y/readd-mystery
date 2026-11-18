@@ -137,8 +137,22 @@ describe('암시형 답변은 재생성 1회 뒤 고정 답변으로 바뀐다 (
   });
 
   test('NFR-AI-005: 독자 노트에 없는 같은 문장은 0건 나간다', async () => {
+    // 대표 지시 2026-11-18: K 이하 노트가 하나도 없으면 노트 요청은 모델을 부르지 않는다(아래 테스트).
+    // 모델 답을 검사하는 이 경로를 그대로 시험하려고 K 이하에 다른 노트 하나를 둔다
+    const otherNote: NotesReader = {
+      listNotes: async (_reader, _book, cutoff) =>
+        [{ page_no: 5, kind: null, body: '편지 봉투 색' }].filter((n) => n.page_no <= cutoff),
+    };
     answers(quoting, quoting);
-    expect(await runChunks('내가 적은 노트 보여줘', 40)).toEqual([HARNESS_FIXED_ANSWER]);
+    expect(await runChunks('내가 적은 노트 보여줘', 40, otherNote)).toEqual([HARNESS_FIXED_ANSWER]);
     expect(harnessLog().violations[1]).toContain('steering_hint');
+  });
+
+  test('NFR-AI-005: K 이하 노트가 없으면 모델을 부르지 않으므로 같은 문장은 0건 나간다', async () => {
+    answers(quoting, quoting);
+    const out = (await runChunks('내가 적은 노트 보여줘', 40)).join('');
+    expect(out).not.toContain(noteBody);
+    expect(out).not.toMatch(/단서/u);
+    expect(llmStream).not.toHaveBeenCalled();
   });
 });

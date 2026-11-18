@@ -263,6 +263,14 @@ function compact(text: string): string {
  * trusted는 호출자가 이미 K 이하로 고른 글만 넘긴다 — 여기서 저장소를 읽지 않는다 (R4, 절대 규칙 7).
  */
 export function stripTrustedQuotes(answer: string, trusted: ReadonlyArray<string>): string {
+  return stripTrustedQuotedSpans(answer, trusted).replace(READER_AUTHORED, ' ');
+}
+
+/**
+ * 따옴표 안의 글이 trusted에 그대로 있을 때 그 따옴표 부분만 지운다. 따옴표 밖 글은 한 글자도 바꾸지
+ * 않는다 — 판정 표현 검사(output-guard)가 독자 노트를 옮긴 부분만 빼는 데 쓴다 (대표 지시 2026-11-18).
+ */
+export function stripTrustedQuotedSpans(answer: string, trusted: ReadonlyArray<string>): string {
   const sources = trusted.map(compact);
   let text = answer;
   for (const pattern of QUOTES) {
@@ -273,7 +281,7 @@ export function stripTrustedQuotes(answer: string, trusted: ReadonlyArray<string
         : whole;
     });
   }
-  return text.replace(READER_AUTHORED, ' ');
+  return text;
 }
 
 export function findSteeringHints(

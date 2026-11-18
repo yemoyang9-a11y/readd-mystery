@@ -20,7 +20,12 @@ export async function* askChatbot(
   page: number,
   seq: number,
   conversationId?: number,
-  quote?: string
+  quote?: string,
+  /**
+   * 이 쪽 직전에 화면에 떠 있던 쪽. 진도 이벤트와 같은 사실 보고다 — 질문할 때도 차례 넘김이 서버에 닿게
+   * 한다(대표 지시 2026-11-18). 없으면 싣지 않는다. 기준점 숫자는 보내지 않는다 (절대 규칙 2·8번, FR-PRG-003 🚦)
+   */
+  fromPage?: number | null
 ): AsyncGenerator<SseFrame> {
   if (USE_MOCK) {
     const { mockStreamFrames, mockChatAnswer } = await import('../../mocks/server');
@@ -35,7 +40,14 @@ export async function* askChatbot(
       'X-Device-Id': getDeviceId() ?? '',
       ...authHeaders(),
     },
-    body: JSON.stringify({ query, quote, page, seq, conversationId }),
+    body: JSON.stringify({
+      query,
+      quote,
+      page,
+      seq,
+      conversationId,
+      ...(typeof fromPage === 'number' ? { from_page: fromPage } : {}),
+    }),
   });
 
   if (response.status === 401) clearAuthToken();

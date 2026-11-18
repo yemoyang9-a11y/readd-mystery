@@ -26,6 +26,20 @@ function writtenAt(note: ReaderNote): number {
   return Number.isNaN(time) ? 0 : time;
 }
 
+/** FR-SPL-002 🚦 — 챗봇이 볼 수 있는 노트(기준 쪽수 K 이하). 조회 쿼리에도 같은 조건이 있다 */
+export function notesWithinCutoff(notes: ReaderNote[], K: number): ReaderNote[] {
+  return notes.filter((note) => note.page_no >= 1 && note.page_no <= K);
+}
+
+/**
+ * 대표 지시 2026-11-18 — 독자가 노트를 언급했는데 K 이하 노트가 없을 때 넣는 안내.
+ * 모델이 "노트가 대화에 보이지 않는다"고 잘못 말하지 않게, 노트는 차례로 읽은 쪽까지 적은 것만
+ * 들어온다는 사실만 알린다. K보다 뒤 노트가 있는지는 조회하지 않는다 (절대 규칙 7).
+ */
+export function buildNoNotesNotice(K: number): string {
+  return `\n\n## 독자가 적은 노트\n\n독자가 ${K}쪽까지 적은 노트는 없습니다. 노트는 독자가 차례로 읽은 쪽(${K}쪽)까지 적은 것만 여기에 들어오며, 그보다 뒤 쪽에 노트가 있는지는 알 수 없습니다. "노트가 보이지 않는다"고 말하지 말고, 필요하면 "${K}쪽까지 적은 노트는 아직 없어요. 그보다 뒤 쪽 노트는 그 쪽까지 차례로 읽으시면 같이 볼 수 있어요"처럼 말하세요.`;
+}
+
 /**
  * FR-SPL-002 🚦 R4 — 챗봇에 넣을 독자 노트를 고른다.
  * 1) 기준 쪽수 K 이하만 남긴다(조회 쿼리에도 같은 조건이 있고, 여기서 한 번 더 건다).
@@ -36,14 +50,12 @@ function writtenAt(note: ReaderNote): number {
  */
 export function buildNotesSection(notes: ReaderNote[], K: number, question = ''): string {
   const questionStems = [...new Set(tokens(question).map(stem))];
-  const ranked = notes
-    .filter((note) => note.page_no >= 1 && note.page_no <= K)
-    .map((note, order) => ({
-      note,
-      order,
-      score: overlap(questionStems, note.body),
-      at: writtenAt(note),
-    }));
+  const ranked = notesWithinCutoff(notes, K).map((note, order) => ({
+    note,
+    order,
+    score: overlap(questionStems, note.body),
+    at: writtenAt(note),
+  }));
   if (ranked.length === 0) return '';
 
   const recent = [...ranked]

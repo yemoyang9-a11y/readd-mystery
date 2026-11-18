@@ -4,7 +4,6 @@ import { resolveBriefingView } from '../utils/briefingView';
 import { EMPTY_RECAP_MESSAGE } from '../utils/constants';
 import { parseRecapParagraphs } from '../utils/recapText';
 import { splitHighlighted } from '../components/Ssabi/highlightNames';
-import ProgressBar from '../components/Reader/ProgressBar';
 import TypographicCover from '../components/common/TypographicCover';
 import BriefingNotes from '../components/Ssabi/BriefingNotes';
 import { formatSinceLastRead } from '../utils/sinceLastRead';
@@ -130,47 +129,18 @@ export default function BriefingView({
         </div>
       </div>
 
-      <section
-        aria-label="진도"
-        className="mt-6 rounded-brief-panel bg-white p-5 shadow-brief-soft-sm"
-      >
-        {/* 2026-08-26, 사용자 제보 — 장 제목 앞에 "제N장"이 안 붙어 있었다(실제 백엔드는
-            title에 장 번호를 안 섞어 보낸다, mock만 우연히 title에 미리 박아 둬서 로컬에서는
-            안 드러났었다 — mocks/fixtures.ts 주석 참고). chapter_no로 직접 접두어를 만든다.
-            아래쪽 여백(mb-6)도 같이 늘렸다 — 러너 아모가 위로 튈 때 이 줄과 겹쳤다. */}
-        <div className="mb-6 flex items-center justify-between font-dashSans text-sm">
-          <b className="font-semibold text-brief-ink">
-            제{briefing.current_chapter.chapter_no}장 {briefing.current_chapter.title}
-          </b>
-          {/* 전체 페이지 수 — 우상단(2026-08-25, 사용자 요청. 대시보드 히어로와 같은
-              정보를 보여주되, 이 화면은 챕터 제목이 이미 좌상단을 쓰고 있어 퍼센트를
-              바 아래로 내리고 이 자리를 전체 페이지 수로 채웠다). briefing.progress에
-              total_pages가 이미 있어(API_CONTRACT, 서버 계산값) 그대로 쓴다 — 대시보드와
-              달리 여기는 계약에서 뺀 적이 없는 필드다. */}
-          {/* 2026-08-26, 사용자 요청 — 위 날짜 라벨·아래 퍼센트와 같은 회색으로 */}
-          <span className="font-semibold text-[#555]">
-            {briefing.progress.total_pages}쪽
-          </span>
-        </div>
-        {/* 2026-08-26, 사용자 요청 — 진도 바 위에서 아모가 뛰어가는 느낌 */}
-        <ProgressBar percent={briefing.progress.percent} tone="brief" size="md" runner />
-        {/* FR-BRF-001 */}
-        {/* 2026-08-26, 사용자 제보 — 러너 아모가 아래로 겹치며 이 줄도 가렸다. 여백을
-            mt-2 → mt-6으로 늘렸다. */}
-        <div className="mt-6 font-dashSans text-sm font-semibold text-[#555]">
-          {briefing.progress.percent}%
-        </div>
-        <div className="mt-4 flex justify-end">
-          <button
-            type="button"
-            data-track="마저 읽기"
-            onClick={onContinue}
-            className="rounded-full border border-brief-ink bg-transparent px-3.5 py-2 font-dashSans text-xs font-bold text-brief-ink transition-colors hover:bg-[rgba(31,31,31,0.05)] active:bg-[rgba(31,31,31,0.1)]"
-          >
-            이어서 읽기
-          </button>
-        </div>
-      </section>
+      {/* 2026-11-18 대표 지시 — 어디까지 읽었는지 알리는 진도 카드(장·전체 쪽수·진도 바 위 아모·퍼센트)를
+          뺐다(모바일 브리핑과 같다). 그 카드 안에 있던 '이어서 읽기'만 남긴다 (FR-BRF-001, FR-SPL-005 🚦) */}
+      <div className="mt-6 flex justify-end">
+        <button
+          type="button"
+          data-track="마저 읽기"
+          onClick={onContinue}
+          className="rounded-full border border-brief-ink bg-transparent px-3.5 py-2 font-dashSans text-xs font-bold text-brief-ink transition-colors hover:bg-[rgba(31,31,31,0.05)] active:bg-[rgba(31,31,31,0.1)]"
+        >
+          이어서 읽기
+        </button>
+      </div>
 
       <div className="my-7 h-[2px] w-full rounded-[1px] bg-brief-rule" />
 

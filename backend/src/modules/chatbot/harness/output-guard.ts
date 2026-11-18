@@ -1,5 +1,5 @@
 import type { QuestionIntent } from './question-intent';
-import { findSteeringHints } from './steering-hint';
+import { findSteeringHints, stripTrustedQuotedSpans } from './steering-hint';
 import { INTENT_POLICY, permitsSceneRetrieval } from './behavior-ladder';
 import { plainForGuard } from './amo-style';
 
@@ -204,7 +204,11 @@ export function guardAnswer(rawAnswer: string, options: GuardOptions): GuardResu
   // 유형별 엄격도는 행동 단계표에서 읽는다. 유형을 모르면 공통 판정 표현만 본다
   const strict = intent !== undefined && INTENT_POLICY[intent].strictVerdict;
   const patterns = strict ? [...ALWAYS_VERDICT, ...HYPOTHESIS_VERDICT] : ALWAYS_VERDICT;
-  if (patterns.some((pattern) => pattern.test(answer))) violations.push('verdict_phrase');
+  // 대표 지시 2026-11-18 — 독자 노트(K 이하로 이미 고른 것)를 따옴표 안에 그대로 옮긴 부분은 독자 자신의
+  // 글이라 판정 표현으로 세지 않는다("누가 범인일까 …" 노트를 읽어 주면 "범인일"이 잡혀 고정 답변이
+  // 나갔다). 따옴표 밖 아모의 말은 그대로 검사한다 — 판정·지목은 노트를 옮겨도 통과하지 않는다
+  const verdictText = stripTrustedQuotedSpans(answer, readerNotes);
+  if (patterns.some((pattern) => pattern.test(verdictText))) violations.push('verdict_phrase');
 
   // NFR-AI-005, 결정 23: 판정 낱말 없이 추리를 이끄는 암시(다시 보라·주목하라·중요한 단서·칭찬 확인)
   // 대표 결정 2026-11-17: 다시 보기 권유는 장면 위치를 물었을 때(retrieve_scene)만 허용
