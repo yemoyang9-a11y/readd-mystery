@@ -114,6 +114,10 @@ const markdownComponents = {
  * 쓴다(2026-08-25, 사용자 요청) — 진도 바 색상 통일 때 고른 색을 챗봇에도 재사용해
  * 화면 간 강조색을 맞췄다.
  *
+ * 아모의 말(답변 말풍선·기본 인사 멘트)은 `font-amo`(IBM Plex Sans KR) 글꼴을 쓴다
+ * (2026-11-18 대표 지시 — "AI 챗봇 관련 글꼴로"). 독자 말풍선·추천 질문 칩(독자가 보낼
+ * 질문)·안내 문구·입력창은 그대로 둔다. 한글 행간은 1.65로 조금 넓혔다.
+ *
  * 싸비 답변을 마크다운으로 렌더한다(2026-08-25 "**굵게**"만 → 2026-08-26 헤더·리스트까지,
  * markdownComponents 참고). 사용자 말풍선(turn.text 그대로)에는 적용하지 않는다 —
  * 사용자가 입력한 텍스트를 마크다운으로 재해석할 이유가 없다.
@@ -478,7 +482,7 @@ export default function ChatbotTab({
               <>
                 <div className="flex items-end gap-2">
                   <AmoSherlock className="h-11 w-auto shrink-0 translate-y-3" />
-                  <p className="w-fit max-w-[76%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink">
+                  <p className="w-fit max-w-[76%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] font-amo text-xs leading-[1.65] text-brief-ink">
                     {DEFAULT_GREETING}
                   </p>
                 </div>
@@ -515,7 +519,7 @@ export default function ChatbotTab({
                 ) : (
                   <div key={i} className="flex items-end gap-2">
                     <AmoSherlock className="h-11 w-auto shrink-0 translate-y-3" />
-                    <div className="w-fit max-w-[76%] rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink">
+                    <div className="w-fit max-w-[76%] rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] font-amo text-xs leading-[1.65] text-brief-ink">
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm, remarkBreaks]}
                         components={markdownComponents}

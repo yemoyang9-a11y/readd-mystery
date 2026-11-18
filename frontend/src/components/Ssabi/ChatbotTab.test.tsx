@@ -123,6 +123,28 @@ describe('ChatbotTab', () => {
     expect(bubble).toHaveClass('border-brief-rule');
   });
 
+  it('2026-11-18 대표 지시: 아모 답변·인사 말풍선은 font-amo(IBM Plex Sans KR) 글꼴을 쓰고, 독자 말풍선은 쓰지 않는다', () => {
+    const { rerender } = render(
+      <ChatbotTab
+        streaming={false}
+        error={null}
+        onAsk={() => {}}
+        turns={[
+          { role: 'user', text: '정주사가 누구야' },
+          { role: 'assistant', text: '정 주사는 **초봉**의 아버지예요.' },
+        ]}
+      />
+    );
+    expect(screen.getByText(/의 아버지예요/).closest('.font-amo')).not.toBeNull();
+    expect(screen.getByText('정주사가 누구야').closest('.font-amo')).toBeNull();
+
+    // 질문 전 인사 멘트도 아모의 말이다
+    rerender(<ChatbotTab streaming={false} error={null} onAsk={() => {}} turns={[]} />);
+    expect(
+      screen.getByText('안녕하세요, 아모예요. 지금까지 읽은 내용 안에서 궁금한 걸 물어보세요.')
+    ).toHaveClass('font-amo');
+  });
+
   it('2026-08-26: 한글 조합 중(IME) Enter는 제출하지 않는다 — 사용자 제보("마지막 글자가 다시 남는다")', () => {
     const onAsk = vi.fn();
     render(<ChatbotTab answer="" streaming={false} error={null} onAsk={onAsk} />);

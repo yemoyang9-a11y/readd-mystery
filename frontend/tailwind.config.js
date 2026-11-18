@@ -74,6 +74,10 @@ export default {
         dashSans: ['Pretendard', 'system-ui', 'sans-serif'],
         hand: ['"Nanum Pen Script"', 'cursive'],
         dashMono: ['"DM Mono"', 'monospace'],
+        // 아모(챗봇) 답변 글꼴(2026-11-18 대표 지시 — "AI 챗봇 느낌의 구글 폰트로").
+        // 책 본문(명조)·독자 말풍선(Gothic A1)과 다른 산세리프라 아모의 말이 소설·독자의 말과
+        // 구분된다. 글꼴을 못 받으면 Pretendard → 시스템 고딕으로 내려간다.
+        amo: ['"IBM Plex Sans KR"', 'Pretendard', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
         card: '16px',
