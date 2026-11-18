@@ -187,9 +187,9 @@ export const DEMO_AMO_ANSWER = `4쪽에 적어 둔 노트와 이어지는 장면
 이 단서가 무엇을 뜻하는지는 제가 정하지 않을게요. 지금까지 읽은 4쪽 안에서 같이 짚어 볼 수 있어요.`;
 
 export const DEMO_COMMUNITY_POSTS = [
-  { id: 'p1', kind: '추리', nickname: '빗소리', body: '괘종시계가 멈춘 시각이 처음부터 마음에 걸렸어요. 다들 언제 눈치채셨어요?', comments: 4 },
+  { id: 'p1', kind: '범인 추리', nickname: '빗소리', body: '괘종시계가 멈춘 시각이 처음부터 마음에 걸렸어요. 다들 언제 눈치채셨어요?', comments: 4 },
   { id: 'p2', kind: '감상', nickname: '호숫가', body: '범인보다 박 집사의 떨리던 손이 오래 남네요. 마지막 장면이 따뜻했어요.', comments: 2 },
-  { id: 'p3', kind: '질문', nickname: '태엽', body: '복도 끝 벽시계는 언제부터 있었던 걸까요? 다시 읽어 보니 2장에서야 나오네요.', comments: 1 },
+  { id: 'p3', kind: '범인 추리', nickname: '태엽', body: '복도 끝 벽시계는 언제부터 있었던 걸까요? 다시 읽어 보니 2장에서야 나오네요.', comments: 1 },
 ];
 
 /** 데모 책의 이웃 쪽 표 — 화면 안 고정 본문이라 미리 적어 둔다. 실제 책은 서버가 준다 (FR-BRF-005) */

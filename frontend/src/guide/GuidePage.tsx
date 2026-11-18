@@ -13,6 +13,7 @@ import type { QuoteSelectionPopover } from '../hooks/useQuoteSelection';
 import type { ChatbotConversationTurn, NoteDraft, ReadingNote } from '../types';
 import { markOnboarded } from '../services/onboardingService';
 import GuideCoach from './GuideCoach';
+import { CaseLabel } from '../mobile/components/CaseMotifs';
 import { GUIDE_STEPS } from './guideSteps';
 import {
   DEMO_AMO_ANSWER,
@@ -326,25 +327,29 @@ export default function GuidePage() {
 
 /** 완독자 커뮤니티 — 데모 글 몇 개만 보여 주는 가벼운 복제 화면(실제 게시판을 부르지 않는다) */
 function GuideCommunity() {
+  // 실제 완독자 이야기 화면(MobileCommunity)과 같은 모양 — 미스터리 브랜딩 (2026-11-18)
   return (
     <div
       data-testid="guide-community"
       className="min-h-[100dvh] bg-[#0d0a0b] font-dashSans text-[#ece6e0]"
-      style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'calc(80px + var(--safe-bottom))' }}
+      style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'calc(84px + var(--safe-bottom))' }}
     >
-      <header className="flex h-14 items-center gap-2 px-2">
-        <span aria-hidden="true" className="flex size-11 items-center justify-center rounded-full border border-[#35292c]">
+      <header className="flex items-center gap-3 px-4 pb-3 pt-2">
+        <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-full border border-[#35292c] bg-[#1e1618]">
           <svg viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9.5 4.8 6.5 8 9.5 11.2" />
           </svg>
         </span>
-        <h1 className="m-0 min-w-0 flex-1 truncate text-[16px] font-bold">{DEMO_TITLE} 커뮤니티</h1>
+        <div className="min-w-0">
+          <CaseLabel>Case closed</CaseLabel>
+          <h1 className="m-0 mt-0.5 truncate font-dashSerif text-[20px] font-bold leading-tight">{DEMO_TITLE} 완독자 이야기</h1>
+        </div>
       </header>
-      <div className="flex gap-2 overflow-x-auto px-4 pb-3 pt-1">
-        {['전체', '추리', '감상', '질문'].map((label, i) => (
+      <div className="flex gap-1.5 px-4 pb-3">
+        {['전체', '범인 추리', '감상'].map((label, i) => (
           <span
             key={label}
-            className={`flex min-h-11 shrink-0 items-center rounded-full border px-4 text-[14px] font-bold ${
+            className={`flex min-h-11 shrink-0 items-center rounded-full border px-3.5 text-[14px] font-bold ${
               i === 0 ? 'border-[#c4475f] bg-[#1e1618] text-[#e58a9b]' : 'border-[#35292c] text-[#a89e9a]'
             }`}
           >
@@ -352,15 +357,25 @@ function GuideCommunity() {
           </span>
         ))}
       </div>
-      <ul className="m-0 flex list-none flex-col gap-3 p-0">
+      <ul className="m-0 flex list-none flex-col gap-3 px-4">
         {DEMO_COMMUNITY_POSTS.map((post) => (
-          <li key={post.id} className="mx-4 rounded-[14px] bg-[#fbfaf9] p-4 text-[#1a1415]">
+          <li key={post.id} className="rounded-[14px] border border-[#35292c] bg-[#1e1618] px-4 pt-4 text-[#ece6e0]">
             <span className="flex items-center gap-2">
-              <span className="rounded-md bg-[#f6e3e7] px-2 py-0.5 text-[12px] font-bold text-[#8f1d35]">{post.kind}</span>
+              <span
+                className={`inline-flex h-6 items-center rounded-[4px] border px-2 text-[12px] font-bold tracking-[0.06em] ${
+                  post.kind === '범인 추리'
+                    ? 'border-[#c4475f]/60 bg-[#2d161d] text-[#e58a9b]'
+                    : 'border-[#4a3f41] bg-[#2a2224] text-[#d8cfca]'
+                }`}
+              >
+                {post.kind}
+              </span>
               <span className="text-[13px] font-bold">{post.nickname}</span>
             </span>
-            <span className="mt-2 block break-words text-[15px] leading-[1.65]">{post.body}</span>
-            <span className="mt-2 block text-[12px] text-[#6f6466]">댓글 {post.comments}</span>
+            <span className="mt-2 block break-words pb-3 text-[15px] leading-[1.65]">{post.body}</span>
+            <span className="flex min-h-11 items-center border-t border-[#35292c]/70 text-[13px] font-bold text-[#a89e9a]">
+              댓글 {post.comments}
+            </span>
           </li>
         ))}
       </ul>

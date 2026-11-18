@@ -20,8 +20,8 @@ type Target = { type: CommunityReportTarget; id: string };
 export function KindTag({ kind }: { kind: CommunityPost['kind'] }) {
   return (
     <span
-      className={`inline-flex h-6 items-center rounded-full px-2.5 text-[12px] font-bold ${
-        kind === 'theory' ? 'bg-[#f3e3e7] text-[#8f1d35]' : 'bg-[#ece6e2] text-[#4a3f41]'
+      className={`inline-flex h-6 items-center rounded-[4px] border px-2 text-[12px] font-bold tracking-[0.06em] ${
+        kind === 'theory' ? 'border-[#c4475f]/60 bg-[#2d161d] text-[#e58a9b]' : 'border-[#4a3f41] bg-[#2a2224] text-[#d8cfca]'
       }`}
     >
       {KIND_LABEL[kind]}
@@ -41,7 +41,7 @@ function ItemMenu({ label, onReport }: { label: string; onReport: () => void }) 
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((value) => !value)}
-        className="flex size-11 items-center justify-center rounded-full text-[#6f6466] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8f1d35]"
+        className="flex size-11 items-center justify-center rounded-full text-[#a89e9a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b]"
       >
         <span aria-hidden="true" className="text-[20px] leading-none">
           ⋯
@@ -51,7 +51,7 @@ function ItemMenu({ label, onReport }: { label: string; onReport: () => void }) 
         <div
           id={menuId}
           role="menu"
-          className="absolute right-0 top-11 z-10 min-w-[120px] rounded-[12px] border border-[#d9d1cc] bg-white py-1 shadow-lg"
+          className="absolute right-0 top-11 z-10 min-w-[120px] rounded-[12px] border border-[#35292c] bg-transparent py-1 shadow-lg"
         >
           <button
             type="button"
@@ -61,7 +61,7 @@ function ItemMenu({ label, onReport }: { label: string; onReport: () => void }) 
               setOpen(false);
               onReport();
             }}
-            className="flex min-h-11 w-full items-center px-4 text-left text-[14px] text-[#1a1415] focus-visible:bg-[#f3e3e7] focus-visible:outline-none"
+            className="flex min-h-11 w-full items-center px-4 text-left text-[14px] text-[#ece6e0] focus-visible:bg-[#2d161d] focus-visible:outline-none"
           >
             신고하기
           </button>
@@ -199,12 +199,12 @@ export default function CommunityPostView({
     <>
       <article
         aria-label="게시글"
-        className="mx-4 rounded-[14px] bg-[#fbfaf9] p-4 text-[#1a1415]"
+        className="mx-4 rounded-[14px] border border-[#35292c] bg-[#1e1618] p-4 text-[#ece6e0]"
       >
         <header className="flex items-center gap-2">
           {post.deleted ? null : <KindTag kind={post.kind} />}
           <span className="text-[13px] font-bold">{post.nickname}</span>
-          <span className="text-[12px] text-[#6f6466]">{relativeTime(post.created_at)}</span>
+          <span className="text-[12px] text-[#a89e9a]">{relativeTime(post.created_at)}</span>
           <span className="flex-1" />
           {post.is_mine ? (
             <button
@@ -213,7 +213,7 @@ export default function CommunityPostView({
                 remember();
                 setDeleting({ type: 'post', id: post.post_id });
               }}
-              className="min-h-11 px-3 text-[13px] font-bold text-[#8f1d35] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8f1d35]"
+              className="min-h-11 px-3 text-[13px] font-bold text-[#e58a9b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b]"
             >
               삭제
             </button>
@@ -230,7 +230,7 @@ export default function CommunityPostView({
         <p
           data-no-track
           className={`m-0 mt-3 whitespace-pre-wrap break-words text-[16px] leading-[1.75] ${
-            post.deleted ? 'text-[#6f6466]' : ''
+            post.deleted ? 'text-[#a89e9a]' : ''
           }`}
         >
           {post.body}
@@ -257,11 +257,11 @@ export default function CommunityPostView({
         {comments.map((comment) => (
           <li
             key={comment.comment_id}
-            className="rounded-[12px] bg-[#fbfaf9] px-4 py-3 text-[#1a1415]"
+            className="rounded-[12px] border border-[#35292c] bg-[#1e1618] px-4 py-3 text-[#ece6e0]"
           >
             <div className="flex items-center gap-2">
               <span className="text-[13px] font-bold">{comment.nickname}</span>
-              <span className="text-[12px] text-[#6f6466]">{relativeTime(comment.created_at)}</span>
+              <span className="text-[12px] text-[#a89e9a]">{relativeTime(comment.created_at)}</span>
               <span className="flex-1" />
               {comment.is_mine ? (
                 <button
@@ -270,7 +270,7 @@ export default function CommunityPostView({
                     remember();
                     setDeleting({ type: 'comment', id: comment.comment_id });
                   }}
-                  className="min-h-11 px-3 text-[13px] font-bold text-[#8f1d35] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8f1d35]"
+                  className="min-h-11 px-3 text-[13px] font-bold text-[#e58a9b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b]"
                 >
                   삭제
                 </button>
@@ -313,7 +313,7 @@ export default function CommunityPostView({
           maxLength={MAX_COMMENT_LENGTH}
           onChange={(event) => setDraft(event.target.value)}
           placeholder="댓글을 남겨 보세요"
-          className="max-h-28 min-h-11 flex-1 resize-none rounded-[12px] border border-[#35292c] bg-[#fbfaf9] px-3 py-[10px] text-[16px] leading-6 text-[#1a1415] outline-none placeholder:text-[#8a7f81] focus-visible:ring-2 focus-visible:ring-[#c4475f]"
+          className="max-h-28 min-h-11 flex-1 resize-none rounded-[12px] border border-[#35292c] bg-[#1e1618] px-3 py-[10px] text-[16px] leading-6 text-[#ece6e0] outline-none placeholder:text-[#8a7f81] focus-visible:ring-2 focus-visible:ring-[#c4475f]"
         />
         <button
           type="submit"

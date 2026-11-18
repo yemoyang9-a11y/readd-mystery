@@ -5,6 +5,7 @@ import type { CommunityHubBook } from '../../types';
 import { resolveCoverUrl } from '../../utils/coverOverrides';
 import { BOOK_ROUTES, briefingPath } from '../../utils/routes';
 import { withBase } from '../../utils/assetUrl';
+import { CaseLabel } from '../components/CaseMotifs';
 
 type Status = 'loading' | 'ready' | 'error';
 
@@ -27,8 +28,11 @@ function HubCard({ book }: { book: CommunityHubBook }) {
       data-track={open ? 'hub-community-open' : 'hub-community-locked'}
       data-testid={`hub-book-${book.book_id}`}
       aria-label={open ? `${book.title} 이야기방, 글 ${book.post_count}개` : `${book.title}, 끝까지 읽으면 열려요`}
-      className="flex items-center gap-3.5 rounded-dash-card border border-dash-line bg-dash-card p-3 pr-4 transition-colors active:bg-dash-ink/10"
+      className={`relative flex items-center gap-3.5 overflow-hidden rounded-dash-card border p-3 pr-4 transition-colors active:bg-dash-ink/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b] ${
+        open ? 'border-dash-line bg-dash-card' : 'border-dashed border-[#4a3237] bg-transparent'
+      }`}
     >
+      {open ? <span aria-hidden="true" className="absolute inset-y-0 left-0 w-[3px] bg-[#c4475f]" /> : null}
       {/* 표지가 없으면 지어내지 않고 제목을 명조로 조판한다 (DESIGN.md) — 홈 이어 읽기 카드와 같은 방식 */}
       <span className={`h-[62px] w-11 shrink-0 overflow-hidden rounded-[6px] ${open ? '' : 'opacity-55'}`}>
         {coverUrl ? (
@@ -99,7 +103,8 @@ export default function MobileCommunityHub() {
 
   return (
     <div data-testid="community-hub" className="mx-auto w-full max-w-[560px] px-4 py-5 font-dashSans text-dash-ink">
-      <h1 className="m-0 font-dashSerif text-[24px] font-bold">커뮤니티</h1>
+      <CaseLabel>Case files</CaseLabel>
+      <h1 className="m-0 mt-1 font-dashSerif text-[24px] font-bold">커뮤니티</h1>
 
       {status === 'loading' ? (
         <p role="status" className="m-0 py-16 text-center text-[14px] text-dash-muted">
@@ -128,7 +133,7 @@ export default function MobileCommunityHub() {
 
       {status === 'ready' && opened.length > 0 ? (
         <section aria-labelledby="hub-open" className="mt-5">
-          <h2 id="hub-open" className="m-0 mb-2.5 text-[14px] font-bold text-dash-ink">
+          <h2 id="hub-open" className="m-0 mb-2.5 text-[14px] font-bold tracking-[0.02em] text-dash-ink">
             완독한 책
           </h2>
           <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
@@ -143,7 +148,7 @@ export default function MobileCommunityHub() {
 
       {status === 'ready' && locked.length > 0 ? (
         <section aria-labelledby="hub-locked" className="mt-7">
-          <h2 id="hub-locked" className="m-0 mb-2.5 text-[14px] font-bold text-dash-ink">
+          <h2 id="hub-locked" className="m-0 mb-2.5 text-[14px] font-bold tracking-[0.02em] text-dash-ink">
             끝까지 읽으면 열려요
           </h2>
           <ul className="m-0 flex list-none flex-col gap-2.5 p-0">

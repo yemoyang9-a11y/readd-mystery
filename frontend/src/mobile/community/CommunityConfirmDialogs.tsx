@@ -20,7 +20,7 @@ export function DeleteDialog({
         <button
           type="button"
           onClick={onClose}
-          className="min-h-11 rounded-full border border-[#d9d1cc] bg-white text-[15px] font-bold text-[#1a1415]"
+          className="min-h-11 rounded-full border border-[#35292c] bg-transparent text-[15px] font-bold text-[#ece6e0]"
         >
           취소
         </button>
@@ -66,8 +66,8 @@ export function ReportDialog({
             onClick={() => setReason(item)}
             className={`min-h-11 rounded-[12px] border px-4 text-left text-[15px] ${
               reason === item
-                ? 'border-[#8f1d35] bg-[#f3e3e7] font-bold text-[#8f1d35]'
-                : 'border-[#d9d1cc] bg-white text-[#1a1415]'
+                ? 'border-[#c4475f] bg-[#2d161d] font-bold text-[#e58a9b]'
+                : 'border-[#35292c] bg-transparent text-[#ece6e0]'
             }`}
           >
             {item}
@@ -75,7 +75,7 @@ export function ReportDialog({
         ))}
       </div>
       {state === 'failed' ? (
-        <p role="alert" className="m-0 mt-2 text-[13px] text-[#8f1d35]">
+        <p role="alert" className="m-0 mt-2 text-[13px] text-[#e58a9b]">
           신고를 보내지 못했어요. 잠시 후 다시 시도해 주세요.
         </p>
       ) : null}
@@ -83,7 +83,7 @@ export function ReportDialog({
         <button
           type="button"
           onClick={onClose}
-          className="min-h-11 rounded-full border border-[#d9d1cc] bg-white text-[15px] font-bold text-[#1a1415]"
+          className="min-h-11 rounded-full border border-[#35292c] bg-transparent text-[15px] font-bold text-[#ece6e0]"
         >
           취소
         </button>
