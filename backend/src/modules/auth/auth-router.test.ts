@@ -9,6 +9,7 @@ import { signLoginState, signSessionToken, verifySessionToken } from './session-
 const DEVICE_ID = '11111111-1111-4111-8111-111111111111';
 const FRONTEND = 'https://app.test';
 const API = 'https://api.test';
+const PAGES_ORIGIN = 'https://owner.github.io';
 
 describe('auth router', () => {
   let server: Server;
@@ -31,7 +32,11 @@ describe('auth router', () => {
             `https://provider.test/${provider}?state=${encodeURIComponent(state)}&redirect_uri=${encodeURIComponent(redirectUri)}`,
           exchangeCode,
         },
-        loadConfig: () => ({ frontendOrigin: FRONTEND, redirectBase: API }),
+        loadConfig: () => ({
+          frontendOrigin: FRONTEND,
+          redirectBase: API,
+          allowedReturnOrigins: [PAGES_ORIGIN],
+        }),
       })
     );
     await new Promise<void>((resolve) => {
@@ -200,6 +205,51 @@ describe('auth router', () => {
       );
       const response = await callback('google', { state, code: 'c' }, 'ssabi_login_nonce=n1');
       expect(response.status).toBe(400);
+    });
+  });
+
+  describe('로그인을 시작한 화면으로 돌아가기 (return_to, 2026-11-18 카카오 로그인 뒤 옛 화면으로 가던 문제)', () => {
+    async function startWith(returnTo: string) {
+      const response = await get(
+        `/auth/kakao/start?device_id=${DEVICE_ID}&return_to=${encodeURIComponent(returnTo)}`
+      );
+      return response;
+    }
+
+    test('허용된 오리진의 하위 경로로 시작하면 콜백도 그 경로의 /auth/callback 으로 돌아온다', async () => {
+      const start = await startWith(`${PAGES_ORIGIN}/readd-mystery`);
+      expect(start.status).toBe(302);
+      const location = new URL(start.headers.get('location') as string);
+      const state = location.searchParams.get('state') as string;
+      const cookie = (start.headers.get('set-cookie') as string).split(';')[0];
+      const done = await callback('kakao', { state, code: 'provider-code' }, cookie);
+      const back = new URL(done.headers.get('location') as string);
+      expect(back.origin + back.pathname).toBe(`${PAGES_ORIGIN}/readd-mystery/auth/callback`);
+      expect(new URLSearchParams(back.hash.slice(1)).get('code')).toBeTruthy();
+    });
+
+    test('취소해도 시작한 화면으로 돌아온다', async () => {
+      const start = await startWith(`${PAGES_ORIGIN}/readd-mystery/`);
+      const location = new URL(start.headers.get('location') as string);
+      const state = location.searchParams.get('state') as string;
+      const cookie = (start.headers.get('set-cookie') as string).split(';')[0];
+      const done = await callback('kakao', { state, error: 'access_denied' }, cookie);
+      expect(done.headers.get('location')).toBe(
+        `${PAGES_ORIGIN}/readd-mystery/auth/callback#error=cancelled`
+      );
+    });
+
+    test('허용 목록에 없는 오리진은 400 — 다른 사이트로 코드를 보내지 않는다', async () => {
+      expect((await startWith('https://evil.test/readd-mystery')).status).toBe(400);
+      expect((await startWith('javascript:alert(1)')).status).toBe(400);
+      expect((await startWith('https://user:pw@owner.github.io/x')).status).toBe(400);
+    });
+
+    test('return_to 가 없으면 예전처럼 FRONTEND_ORIGIN 으로 간다', async () => {
+      const { state, cookie } = await startLogin('kakao');
+      const done = await callback('kakao', { state, code: 'provider-code' }, cookie);
+      const back = new URL(done.headers.get('location') as string);
+      expect(back.origin + back.pathname).toBe(`${FRONTEND}/auth/callback`);
     });
   });
 

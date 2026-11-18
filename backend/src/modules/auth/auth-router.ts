@@ -33,6 +33,35 @@ function deviceIdFrom(req: Request): string | null {
 export interface AuthConfig {
   frontendOrigin: string;
   redirectBase: string;
+  /** 로그인 뒤 돌아갈 수 있는 화면 오리진(CORS_ORIGIN 과 같은 목록). FRONTEND_ORIGIN 은 늘 허용 */
+  allowedReturnOrigins?: string[];
+}
+
+/**
+ * 로그인을 시작한 화면 주소를 확인한다(2026-11-18 — 카카오 로그인 뒤 옛 배포 주소로 가던 문제).
+ * 허용된 오리진의 http(s) 주소만, 계정 정보·쿼리·해시 없이 오리진 + 경로로 줄여 돌려준다.
+ * 허용되지 않으면 null — 다른 사이트로 1회용 코드를 보내지 않는다.
+ */
+function parseReturnTo(value: string, config: AuthConfig): string | null {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+  if (url.username || url.password) return null;
+  const allowed = new Set(
+    [config.frontendOrigin, ...(config.allowedReturnOrigins ?? [])].map((o) => {
+      try {
+        return new URL(o).origin;
+      } catch {
+        return o;
+      }
+    })
+  );
+  if (!allowed.has(url.origin)) return null;
+  return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
 }
 
 function parseProvider(value: string): Provider | null {
@@ -141,9 +170,18 @@ export function createAuthRouter({
     }
 
     try {
-      const { redirectBase } = loadConfig();
+      const config = loadConfig();
+      const { redirectBase } = config;
+      let returnTo: string | undefined;
+      if (typeof req.query.return_to === 'string') {
+        const parsed = parseReturnTo(req.query.return_to, config);
+        if (!parsed) {
+          return res.status(400).json({ error: 'BAD_REQUEST', message: 'invalid return_to' });
+        }
+        returnTo = parsed;
+      }
       const nonce = randomBytes(16).toString('base64url');
-      const state = await signLoginState({ provider, deviceId, nonce });
+      const state = await signLoginState({ provider, deviceId, nonce, returnTo });
       res.cookie(NONCE_COOKIE, nonce, {
         httpOnly: true,
         sameSite: 'lax',
@@ -174,7 +212,7 @@ export function createAuthRouter({
 
     try {
       const { frontendOrigin, redirectBase } = loadConfig();
-      const callbackPage = `${frontendOrigin}/auth/callback`;
+      const callbackPage = `${state.returnTo ?? frontendOrigin}/auth/callback`;
       const cancelledPage = `${callbackPage}#error=cancelled`;
       res.clearCookie(NONCE_COOKIE, { path: NONCE_COOKIE_PATH });
 

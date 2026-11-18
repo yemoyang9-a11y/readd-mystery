@@ -11,7 +11,11 @@ function loadAuthConfig(): AuthConfig {
   if (!frontendOrigin || !redirectBase) {
     throw new Error('FRONTEND_ORIGIN and AUTH_REDIRECT_BASE must be set');
   }
-  return { frontendOrigin, redirectBase };
+  const allowedReturnOrigins = (process.env.CORS_ORIGIN ?? '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter((o) => o.length > 0);
+  return { frontendOrigin, redirectBase, allowedReturnOrigins };
 }
 
 export function createAuthRoutes(pool: Pool): Router {

@@ -54,9 +54,9 @@ test('세션이 없으면 나눠 받는 읽기 화면도 /login 으로 간다', 
 
 test('OAuth 콜백과 관리자 화면은 세션 없이 열린다', async () => {
   const callback = renderAt('/auth/callback');
-  // 코드가 없으면 /my 로 보내고, 세션이 없으니 그다음 관문에서 /login 으로 간다
+  // 콜백 화면 자체는 관문 없이 열리고, 코드가 없으면 곧장 /login 으로 보낸다
   await waitFor(() => expect(callback.state.location.pathname).toBe('/login'));
-  expect(callback.state.location.search).toBe('?next=%2Fmy');
+  expect(callback.state.location.search).toBe('');
 
   const admin = renderAt('/admin/books');
   await act(() => vi.dynamicImportSettled());

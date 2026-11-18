@@ -16,6 +16,8 @@ export interface LoginState {
   provider: Provider;
   deviceId: string;
   nonce: string;
+  /** 로그인을 시작한 화면의 주소(오리진 + 하위 경로). 허용 목록을 통과한 값만 들어온다 */
+  returnTo?: string;
 }
 
 function signingKey(): Uint8Array {
@@ -68,7 +70,12 @@ export async function verifySessionToken(token: string): Promise<SessionClaims |
 
 export function signLoginState(state: LoginState, issuedAt = new Date()): Promise<string> {
   return sign(
-    { provider: state.provider, device_id: state.deviceId, nonce: state.nonce },
+    {
+      provider: state.provider,
+      device_id: state.deviceId,
+      nonce: state.nonce,
+      ...(state.returnTo ? { rt: state.returnTo } : {}),
+    },
     LOGIN_STATE_AUDIENCE,
     LOGIN_STATE_LIFETIME_SECONDS,
     issuedAt
@@ -84,5 +91,10 @@ export async function verifyLoginState(token: string): Promise<LoginState | null
   ) {
     return null;
   }
-  return { provider: payload.provider, deviceId: payload.device_id, nonce: payload.nonce };
+  return {
+    provider: payload.provider,
+    deviceId: payload.device_id,
+    nonce: payload.nonce,
+    ...(typeof payload.rt === 'string' ? { returnTo: payload.rt } : {}),
+  };
 }

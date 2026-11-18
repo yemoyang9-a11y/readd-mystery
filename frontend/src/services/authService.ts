@@ -32,8 +32,14 @@ function mockFailure(status: number): AxiosError {
   return new AxiosError('mock', 'ERR_BAD_REQUEST', undefined, null, { status } as AxiosResponse);
 }
 
+/** 로그인을 끝내고 돌아올 이 화면의 주소 — GitHub Pages 처럼 하위 경로에 배포돼도 맞게 돌아온다 */
+function currentAppBase(): string {
+  return `${window.location.origin}${import.meta.env.BASE_URL}`.replace(/\/+$/, '');
+}
+
 export function buildLoginUrl(provider: AuthProvider): string {
-  return `${API_BASE_URL}/auth/${provider}/start?device_id=${encodeURIComponent(ensureDeviceId())}`;
+  const params = new URLSearchParams({ device_id: ensureDeviceId(), return_to: currentAppBase() });
+  return `${API_BASE_URL}/auth/${provider}/start?${params.toString()}`;
 }
 
 export function startLogin(provider: AuthProvider): void {

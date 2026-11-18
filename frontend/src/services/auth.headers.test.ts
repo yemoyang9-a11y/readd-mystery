@@ -107,11 +107,12 @@ describe('Authorization 헤더', () => {
     expect(frames).toEqual([expect.objectContaining({ type: 'error' })]);
   });
 
-  it('로그인 시작 주소에 제공자와 이 기기의 device_id가 들어간다', async () => {
+  it('로그인 시작 주소에 제공자, 이 기기의 device_id, 돌아올 이 화면 주소(return_to)가 들어간다', async () => {
     const { config } = await api.get('/x', { adapter: okAdapter });
     const deviceId = config.headers['X-Device-Id'] as string;
-    expect(buildLoginUrl('kakao')).toBe(
-      `https://api.test/auth/kakao/start?device_id=${encodeURIComponent(deviceId)}`
-    );
+    const url = new URL(buildLoginUrl('kakao'));
+    expect(url.origin + url.pathname).toBe('https://api.test/auth/kakao/start');
+    expect(url.searchParams.get('device_id')).toBe(deviceId);
+    expect(url.searchParams.get('return_to')).toBe(window.location.origin);
   });
 });
