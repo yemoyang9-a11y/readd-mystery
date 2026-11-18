@@ -58,3 +58,27 @@ describe('FR-CHR-001: 관계도 선 위 이름표는 시안처럼 짧은 이름'
     expect(groupPillLabels(edges).get(JSON.stringify(['a', 'b']))).toBe('사랑 · 미움 +1');
   });
 });
+
+import { render, screen } from '@testing-library/react';
+import RelationDetails from './RelationDetails';
+
+describe('FR-CHR-001: 이어진 사람 카드의 관계 이름도 짧은 이름', () => {
+  it('marriage 관계 카드는 "남편이다" 대신 "부부"', () => {
+    const marriage = edge('a', 'b', '남편이다', 'marriage');
+    render(
+      <RelationDetails
+        graph={{
+          nodes: [
+            { id: 'a', name: '박영민', aliases: [], established_page: 1 },
+            { id: 'b', name: '이몽란', aliases: [], established_page: 1 },
+          ],
+          edges: [marriage],
+        } as never}
+        selectedId="a"
+        selectedEdgeKey={null}
+      />
+    );
+    expect(screen.getByText('부부')).toBeInTheDocument();
+    expect(screen.queryByText('남편이다')).toBeNull();
+  });
+});

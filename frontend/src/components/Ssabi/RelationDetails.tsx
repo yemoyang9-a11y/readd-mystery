@@ -1,5 +1,5 @@
 import type { GraphEdge, GraphResponse } from '../../types';
-import { currentGraphEdges, graphEdgeKey } from './graphEdges';
+import { currentGraphEdges, graphEdgeKey, graphPillLabel } from './graphEdges';
 
 /** 받침 있는 이름은 '과', 없으면 '와'. 한글이 아닌 끝 글자는 '와'. 조사는 괄호 앞 이름에 맞추고 `shown` 뒤에 붙인다. */
 function withParticle(name: string, shown: string = name): string {
@@ -55,7 +55,7 @@ export default function RelationDetails({
           <li className="rounded-brief-card border border-[#ff5c7d] bg-white p-3">
             <div className="flex items-center gap-2">
               <span className="rounded-md bg-brief-accent-soft px-2 py-0.5 text-xs font-bold text-brief-accent">
-                {selectedEdge.label}
+                {graphPillLabel(selectedEdge)}
               </span>
               {status ? (
                 <span className="ml-auto rounded-md border border-brief-rule px-1.5 py-px text-[11px] text-brief-muted">
@@ -97,7 +97,7 @@ export default function RelationDetails({
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold">{names.get(otherId)}</span>
                   <span className="rounded-md bg-brief-accent-soft px-2 py-0.5 text-xs font-bold text-brief-accent">
-                    {edge.label}
+                    {graphPillLabel(edge)}
                   </span>
                   {status ? (
                     <span className="ml-auto rounded-md border border-brief-rule px-1.5 py-px text-[11px] text-brief-muted">
