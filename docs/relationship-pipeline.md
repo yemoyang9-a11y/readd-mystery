@@ -37,3 +37,14 @@ Any registration or correction of already public generated content clears readin
 ## Reporting verification
 
 Report code checks, real model generation, public-data mutation, and deployment separately. A passing test does not prove a model ran; a hand-authored source-grounded fixture is not model output; a local database is not the public content store. Failed authentication must be reported as failed generation, even when the environment reports a configured key. Preserve actual source/evidence reports and never substitute synthetic success.
+
+## Structural candidates + evidence-window labeling (2026-11-18)
+
+`run-generate-relationships-structural.ts` is the literature-based alternative to letting the LLM choose pairs (see `docs/context/research-2026-11-18-relationship-extraction.md`). Characters/aliases come from the existing extraction. `interaction-candidates.ts` deterministically proposes pairs only where two characters co-occur in a sentence, in adjacent sentences, or in an attributed dialogue exchange (no LLM). The LLM sees only those pairs and their evidence windows, and must cite a window id plus an exact trigger inside it. `relationship-labeling.ts` rejects pairs with no structural candidate, checks that the trigger sentence names both endpoints, holds `fact` labels whose trigger clause/sentence carries negation, reportative, modal or source cues (or is refuted in the next sentence), and holds clear reversed directions (Korean case particles, English word order). **The established page is the earliest verified evidence page; an LLM-claimed earlier page is ignored**, and when the two self-consistency runs disagree the later page wins. Output then passes the existing `validateGroundedChapter` contract, optional adversarial verifier, `mergeRelationships`, and the same review/replacement flow above. No schema change.
+
+```sh
+npx ts-node --transpile-only src/batch/pipeline/run-generate-relationships-structural.ts --input source.json --out data/generated/structural/new-run
+npx ts-node --transpile-only src/batch/pipeline/run-generate-relationships-structural.ts --book <bookId> --file <raw.txt> [--verifier] [--candidates-only]
+```
+
+Structural checks still cannot prove a label's meaning: in the injected-candidate worst case (any window word as trigger) 6 of 13 wrong candidates pass. Semantic review remains mandatory.

@@ -1,0 +1,125 @@
+{
+  "mode": "candidate-recall-only (no LLM)",
+  "counts": {
+    "gold": 6,
+    "pair_is_candidate": 6,
+    "sentence_window_on_gold_page": 6,
+    "window_overlaps_gold_quote": 6,
+    "first_window_after_gold_page": 0
+  },
+  "rows": [
+    {
+      "case": "takryu-p91",
+      "pair": [
+        "김씨",
+        "초봉이"
+      ],
+      "relation_key": "jealousy",
+      "gold_page": 91,
+      "candidate": true,
+      "first_window_page": 91,
+      "sentence_window_on_gold_page": true,
+      "window_kinds_on_gold_page": [
+        "sentence",
+        "sentence",
+        "adjacent"
+      ],
+      "window_overlaps_gold_quote": true,
+      "gold_quote_chars": 383,
+      "candidate_pairs_in_input": 6
+    },
+    {
+      "case": "takryu-p129",
+      "pair": [
+        "형보",
+        "초봉이"
+      ],
+      "relation_key": "possessive_desire",
+      "gold_page": 129,
+      "candidate": true,
+      "first_window_page": 129,
+      "sentence_window_on_gold_page": true,
+      "window_kinds_on_gold_page": [
+        "sentence",
+        "sentence",
+        "sentence",
+        "sentence"
+      ],
+      "window_overlaps_gold_quote": true,
+      "gold_quote_chars": 43,
+      "candidate_pairs_in_input": 10
+    },
+    {
+      "case": "austen-jealousy",
+      "pair": [
+        "Miss Bingley",
+        "Elizabeth"
+      ],
+      "relation_key": "jealousy",
+      "gold_page": 1,
+      "candidate": true,
+      "first_window_page": 1,
+      "sentence_window_on_gold_page": true,
+      "window_kinds_on_gold_page": [
+        "sentence"
+      ],
+      "window_overlaps_gold_quote": true,
+      "gold_quote_chars": 185,
+      "candidate_pairs_in_input": 4
+    },
+    {
+      "case": "austen-negated-envy",
+      "pair": [
+        "Kitty",
+        "Miss Lucas"
+      ],
+      "relation_key": "envy",
+      "gold_page": 1,
+      "candidate": true,
+      "first_window_page": 1,
+      "sentence_window_on_gold_page": true,
+      "window_kinds_on_gold_page": [
+        "sentence"
+      ],
+      "window_overlaps_gold_quote": true,
+      "gold_quote_chars": 170,
+      "candidate_pairs_in_input": 15
+    },
+    {
+      "case": "austen-negated-envy",
+      "pair": [
+        "Lydia",
+        "Miss Lucas"
+      ],
+      "relation_key": "envy",
+      "gold_page": 1,
+      "candidate": true,
+      "first_window_page": 1,
+      "sentence_window_on_gold_page": true,
+      "window_kinds_on_gold_page": [
+        "sentence"
+      ],
+      "window_overlaps_gold_quote": true,
+      "gold_quote_chars": 170,
+      "candidate_pairs_in_input": 15
+    },
+    {
+      "case": "austen-belief-attribution",
+      "pair": [
+        "Miss Bingley",
+        "Elizabeth"
+      ],
+      "relation_key": "jealousy",
+      "gold_page": 1,
+      "candidate": true,
+      "first_window_page": 1,
+      "sentence_window_on_gold_page": true,
+      "window_kinds_on_gold_page": [
+        "sentence"
+      ],
+      "window_overlaps_gold_quote": true,
+      "gold_quote_chars": 284,
+      "candidate_pairs_in_input": 1
+    }
+  ]
+}

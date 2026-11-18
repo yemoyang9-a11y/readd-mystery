@@ -69,3 +69,40 @@ npx ts-node --transpile-only --compiler-options '{"module":"commonjs"}' ../evalu
 화면 주소: https://yemoyang9-a11y.github.io/readd-mystery/
 
 로그인(구글·카카오)을 쓰면 각 개발자 콘솔의 허용 주소에도 새 주소를 넣어야 한다.
+
+## 6. 논문 기반 인물 관계 추출 실측 (2026-11-18 추가, tasks.md T12)
+
+새 방식은 코드가 두 인물이 원문에서 함께 드러난 곳만 후보로 만들고, AI는 그 근거 조각에만 관계 이름을 붙인다. 설명: [research-2026-11-18-relationship-extraction.md](research-2026-11-18-relationship-extraction.md). DB에는 쓰지 않는다.
+
+인물·별칭은 기존 전체 생성 결과(`data/generated/gasangbeomin/full/all-resolved.json`)를 쓴다. 이 파일이 없으면 먼저 전체 생성을 한 번 돌린다(비용 큼, 이미 있으면 건너뜀):
+
+```bash
+npx ts-node --transpile-only src/batch/pipeline/run-generate-full.ts --book gasangbeomin --file data/raw/gasangbeomin.txt --title 가상범인 --author 김내성
+```
+
+① AI 호출 없이 후보와 기존 관계 비교 (무료):
+
+```bash
+npx ts-node --transpile-only src/batch/pipeline/run-generate-relationships-structural.ts --book gasangbeomin --file data/raw/gasangbeomin.txt --candidates-only --out data/generated/gasangbeomin/structural-candidates
+```
+
+`comparison-with-existing.json`의 `no_structural_evidence`(기존 관계 중 두 인물이 한 번도 함께 나오지 않은 행)와 `established_before_first_cooccurrence`(확립 쪽이 첫 동시 등장보다 이른 행 = 스포일러 위험)를 본다.
+
+② 실제 라벨 (후보가 있는 장마다 AI 2회 + 관계마다 검토 1회):
+
+```bash
+npx ts-node --transpile-only src/batch/pipeline/run-generate-relationships-structural.ts --book gasangbeomin --file data/raw/gasangbeomin.txt --verifier
+```
+
+결과는 `data/generated/gasangbeomin/structural-relationships/`의 `structural-relationships.json`(채택·보류 사유·근거 창), `all-resolved.structural.json`(관계만 바꾼 검수용 산출물). 다시 돌리면 캐시를 재생해 AI를 부르지 않는다. 프롬프트·모델을 바꿨다면 `--out`으로 새 폴더를 준다.
+
+③ 정답이 있는 발췌 5건으로 정확도 (탁류 2쪽, Austen 3발췌):
+
+```bash
+for f in takryu-p91 takryu-p129 austen-jealousy austen-negated-envy austen-belief-attribution; do
+  npx ts-node --transpile-only src/batch/pipeline/run-generate-relationships-structural.ts --input ../evaluation/relationships/model-inputs/$f.json --out data/generated/structural/$f --verifier
+done
+node ../evaluation/relationships/check-structural-metrics.cjs data/generated/structural/*/structural-relationships.json --out data/generated/structural/metrics.json
+```
+
+`early_established`가 0이어야 한다(정답보다 이르게 잡힌 관계 = 스포일러). 정밀도·재현율과 보류 목록(`held`)을 tasks.md T12에 적는다. 교체·공개는 기존 검수 절차(`docs/relationship-pipeline.md`)를 따른다.

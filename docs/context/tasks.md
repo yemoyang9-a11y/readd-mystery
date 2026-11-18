@@ -1,6 +1,6 @@
 # 작업 문서 — 남은 작업과 미결 사항
 
-마지막 갱신: 2026-11-18 (종합 리뷰 반영, 최신 대표 결정 유지)
+마지막 갱신: 2026-11-18 (종합 리뷰 반영, 최신 대표 결정 유지, 논문 기반 관계 추출 T12 추가)
 
 **남은 작업, 진행 상태, 아직 정하지 않은 것은 이 문서 한 곳에서만 관리한다. 대표 컴퓨터에서 할 실측·배포 순서는 [runbook-local-2026-11-17.md](runbook-local-2026-11-17.md).** `CLAUDE.md`에는 규칙만 두고 할 일·진행 상태를 적지 않는다. `handoff-*.md`는 그날 세션의 인수인계 기록이며, 할 일 목록의 원본은 이 문서다.
 
@@ -27,6 +27,7 @@
 | T3 | 공격 질문 시험 전체 판정 | 결정 필요 | 130건 중 117건은 사람이 읽지 않았다. 판정 방식·담당이 미정. 출시 전에 필요. 이번 하네스 변경 뒤 다시 실행해야 한다 | `evaluation/chatbot-harness/` |
 | T12 | 이메일 로그인 운영 준비 | 대표·조정자 작업 필요 (2026-11-18) | ① 마이그레이션 023(`user_passwords`, provider 'email', `users.onboarded_at`) DB 적용 ② 비밀번호 재설정·이메일 인증 없음(메일 발송 서비스 미정) ③ 시도 제한은 서버 한 대 메모리 기준(IP당 분당 10회, Fly-Client-IP). 서버를 늘리면 공유 저장소가 필요 ④ 구글·카카오 버튼은 `*_CLIENT_ID`·`*_CLIENT_SECRET`이 둘 다 있을 때만 보인다 | `backend/src/modules/auth/`, `frontend/src/pages/Login.tsx` |
 | C1 | 마이그레이션 024(커뮤니티 공감) 적용 | 사용자 요청 시 | `backend/migrations/024_community_likes.sql`. 적용 전에는 커뮤니티 글 목록 조회가 `community_post_likes` 없음으로 실패한다 — 서버 배포와 같이 적용해야 한다 | `modules/community/pg-repository.ts` |
+| T13 | 논문 기반 인물 관계 추출 실제 모델 실행 (「가상범인」) | 로컬 필요 (대표 컴퓨터, 비용 발생) | 구조적 후보 + 근거 창 라벨링을 구현·단위 시험했으나 실제 모델 출력은 0건. ① `--candidates-only`로 기존 관계와 비교(LLM 0회) ② 라벨 실행(후보 있는 장마다 2회 + `--verifier`) ③ 발췌 5건 실행 후 `check-structural-metrics.cjs`로 정밀도·재현율·이른 확립 0건 확인 ④ 보류 목록(특히 `trigger_sentence_lacks_endpoint`)으로 재현율 손실 판단. 명령은 [runbook](runbook-local-2026-11-17.md) 6장. 그 뒤 `run-generate-full`의 관계 단계를 새 방식으로 바꿀지 **결정 필요** | [조사·설계](research-2026-11-18-relationship-extraction.md), `batch/pipeline/run-generate-relationships-structural.ts` |
 | T6 | 운영 배포 | 사용자 요청 시 | 운영 주소(https://ssabi-d4c.pages.dev, https://ssabi-api.fly.dev)는 피벗 전 버전이다. 피벗 후 Cloudflare 배포가 따로 있는지 확인 중(API 토큰이 유효하지 않아 아직 못 봄) | [README.md](README.md) 3장 |
 
 ## 2. 작업과 별개로 결정이 필요한 것

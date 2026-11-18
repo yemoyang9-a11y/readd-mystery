@@ -72,6 +72,20 @@ node evaluation/relationships/check-established-page.cjs <추출 결과.json> [�
 - 정답에만 있는 관계(`missing`)와 추출에만 있는 관계(`unmatched`)는 수만 센다. 정답 표에 없는 관계는 이른지 늦은지 판정하지 못한다.
 - 이 스크립트는 LLM·DB를 부르지 않는다. 지표 함수(`established-page-metric.ts`)의 단위 시험은 `backend/tests/unit/relationship-established-page.test.ts`에 있다. 실제 추출 결과에 대한 실행은 아직 하지 않았다.
 
+### 구조적 관계 추출 평가 (2026-11-18 추가, 구현자 작성)
+
+새 파이프라인(구조적 상호작용 후보 + 근거 창 라벨링, [조사 문서](../../docs/context/research-2026-11-18-relationship-extraction.md))용 도구다. 아래 셋은 독립 평가자가 아니라 **구현자가 작성**했다. `oracle.json`·`reviewed-source-candidates.json`은 그대로 쓰고 고치지 않았다. 모두 LLM·DB 호출 0회.
+
+```bash
+node evaluation/relationships/probe-structural.cjs results/structural-candidate-probes.json   # 주입 후보 21건
+node evaluation/relationships/check-candidate-recall.cjs results/structural-candidate-recall.json  # 후보 단계 재현율
+node evaluation/relationships/check-structural-metrics.cjs <structural-relationships.json ...>  # 정밀도·재현율·이른 확립
+```
+
+- `probe-structural.cjs` — `probe-validator.cjs`와 같은 21건을 새 결정적 검사에 넣는다. 새 계약은 LLM이 근거 창 id와 창 속 정확한 낱말(trigger)을 대야 해서 `injected-triggers.json`(구현자가 고른 그럴듯한 인용 낱말)을 쓴다. 이 선택이 결과를 좌우할 수 있어 **창 속 모든 낱말을 trigger로 시도하는 최악 조건**도 함께 낸다. 2026-11-18: 그럴듯한 조건 **틀린 후보 채택 0/13**(기존 구조 검사 11/13), 맞는 후보 잘못 보류 1/8, 최악 조건 틀린 후보 **6/13 통과**. 21건은 설계 중에 본 자료라 표본 밖 성능이 아니다. 종료 코드 1은 잘못 보류 1건 때문이다.
+- `check-candidate-recall.cjs` — 정답 6관계의 두 인물이 후보 쌍인지, 정답 쪽에 근거 창이 있는지. 2026-11-18: 6/6.
+- `check-structural-metrics.cjs` — `run-generate-relationships-structural.ts`의 결과(`structural-relationships.json`)를 `reviewed-source-candidates.json`과 비교해 정밀도·재현율과 **정답보다 이른 확립 페이지 수**를 낸다. 이른 확립이 1건이라도 있거나 맞힌 관계가 0건이면 종료 코드 1. 관계 키 동의어는 `structural-metrics.ts`의 `RELATION_KEY_SYNONYMS`(jealousy=envy 등)만. 실제 모델 출력이 아직 없어 **수치 없음** — 실행 방법은 `docs/context/runbook-local-2026-11-17.md` 6장.
+
 UI harness는 frontend 디렉터리에서 `node node_modules/vite/bin/vite.js ../evaluation/relationships/ui-harness --config ../evaluation/relationships/ui-harness/vite.config.mjs --host 127.0.0.1 --port 5186 --strictPort`로 시작한다. 이후 루트에서 `node evaluation/relationships/check-ui.cjs`, `node evaluation/relationships/check-source-flow-ui.cjs`, `node evaluation/relationships/check-control-overlap.cjs`를 실행한다. source-flow 검사는 `/workspace/relationship-validation/source-flow/*.graph.json`의 실제 로컬 SQL 출력 파일을 읽는다. 이 출력의 증거 사본은 `results/source-flow/`에도 보존했다.
 
 최종 판정과 정확한 검증 범위는 [final-evaluation.md](final-evaluation.md)에 있다.
