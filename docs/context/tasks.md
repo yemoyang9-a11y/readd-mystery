@@ -17,9 +17,7 @@
 
 | # | 작업 | 상태 | 막힌 곳 · 다음 행동 | 관련 |
 | --- | --- | --- | --- | --- |
-| R1 | 마이그레이션 재실행 안전성 | 진행 가능 (운영 적용은 별도) | 이력 없이 019를 재실행하면 비어 있는 read_pages가 current_page까지 채워짐. 기존 적용 이력 확정·ledger·트랜잭션·재실행 통합 시험 필요 | [종합 리뷰](../reviews/2026-11-18-repository-review.md) |
 | R2 | 업로드 원문 영속 보관·다중 worker 점유 | 진행 가능 (설계 필요) | 이번 수정은 비루트 쓰기 권한·같은 프로세스 중복 retry만 해결. 저장소/DB lease와 재시작·머신 교체 복구 시험 필요 | `modules/ingest/`, `fly.toml` |
-| R4 | 남은 의존성 Moderate 경고 | 진행 가능 | production audit의 High/Critical은 패치 업데이트로 0건. Router 7 및 uuid 호환성 전환·회귀 검증 후 남은 3개 패키지 경고 해소 | [종합 리뷰](../reviews/2026-11-18-repository-review.md) |
 | R3 | 실제 브라우저·PostgreSQL 통합 검증 | 진행 중 | PR에 12개 Chromium smoke·Docker 비루트 검사 추가. 실제 iOS/VoiceOver·가상 키보드·DB 경합은 별도 검증 필요. 실제 AI 실측은 기존 대표 직접 실행 결정 유지 | [종합 리뷰](../reviews/2026-11-18-repository-review.md) |
 | T8 | 로컬 DB 적용과 실데이터 확인 | 로컬 필요 | ① 마이그레이션 017(reader_text)·018(recap 길이 로그)·019(차례 읽기 기준점)·020(리캡 이름 검사 로그)·021(노트 종류)·022(커뮤니티 신고 숨김) — **2026-11-17 Supabase `readd-mystery`에 적용 완료**(대표 승인). 다른 DB(로컬 등)를 쓰면 거기에도 적용 ② 「가상범인」 독자용 문장 백필 dry-run ③ 장면 단위 사건 추출 1장 실행(`run-generate-sample.ts --chapter 1`)으로 장면 수·검수 후보 수·비용 확인 ④ 휴대폰 화면으로 실제 동작 확인(목차 확인 창·싸비 확인 카드 포함) | `docs/superpowers/handoff/2026-11-17-ssabi-notes-home3d.md` |
 | T9 | 장면 단위 사건 추출 비용 | 결정 필요 (T8 ③ 뒤) | 장면마다 장 처음부터 다시 읽혀 입력이 장면 수에 비례해 늘어난다(1장 20장면 가정 시 약 23만 자). 실측 뒤 "앞 장면 1~2개 + 대상 장면"으로 줄일지 정한다(스포일러 측면은 같음, 맥락은 줄어듦). **비교 방법** — `run-generate-sample.ts --chapter 1`(또는 `run-generate-full.ts`, 사건 캐시 재생이면 AI 호출 없음)을 돌리면 `[사건 입력]` 로그에 창별 원문 입력 글자 수(`full`·`recent:1`·`recent:2`)가 함께 찍히고, 실제로 줄여서 돌려 보려면 `--scene-window recent:1`(또는 환경 변수 `EVENT_SCENE_WINDOW`)을 준다 — 기본은 `full` 그대로다 | `batch/pipeline/event-scenes.ts` |
@@ -61,6 +59,8 @@
 
 | 날짜 | 작업 | 커밋 |
 | --- | --- | --- |
+| 2026-11-18 | R4 운영 의존성 경고 0건 — 프론트 react-router-dom 6 → react-router 7(첫 화면 로딩 표시 유지 `hydrateFallbackElement`), 백엔드 uuid 11(이름 기반 v5 ID가 바뀌지 않음을 시험으로 고정, 무작위 ID는 `crypto.randomUUID`). 개발 도구 경고는 범위 밖 | 6a45cbb |
+| 2026-11-18 | R1 마이그레이션 재실행 안전 — `schema_migrations` 이력·잠금·파일별 트랜잭션, 이력 없는 기존 DB는 거부하고 baseline 안내, 019는 열을 처음 만들 때만 채움. 실제 PostgreSQL 시험 11건. **운영 DB baseline은 대표가 runbook 7절대로 한 번 해야 026 이후 적용 가능** | cd90f12 |
 | 2026-11-18 | 인물관계도는 관계만(대표 지시) — 추출 프롬프트에서 행동(action)·일회성(event) 종류 삭제, 검증이 행동 라벨 보류(`one_off_action`), 관계도 조회가 저장된 행동 행 제외(운영 「가상범인」 4건), "A는 B를 의심했다"는 태도 관계로 인정. 새 의심·신뢰 같은 관계를 실제로 채우려면 T13(관계 추출 재실행)이 필요 | (이 커밋) |
 | 2026-11-18 | 공격 질문 시험(`run-attacks.ts`)이 진도를 `{page, seq}`만 보내 새 기준점 규칙에서 K=0으로 시험되던 문제 — `claim: 'read_through'`를 보내고, 서버가 돌려준 `applied_cutoff`가 `--cutoff`와 다르면 그 공격을 오류로 남김(`--cutoff`는 1 이상). T3 재실행 전제 | (이 커밋) |
 | 2026-11-18 | 챗봇이 독자 노트 질문에 답한다(대표 지시) — 질문 유형 `reader_notes`(판정·범인·예측 요청이 섞이면 원래 유형), 노트를 따옴표로 옮긴 부분은 판정 표현 검사에서 뺌(따옴표 밖은 그대로 검사), K 이하 노트가 없으면 모델 없이 "차례로 읽은 K쪽까지 적은 노트만 같이 본다"고 답함, 챗봇 요청에 동봉한 진도에 from_page 를 실음. 브리핑 진도 카드(진도 바·아모·퍼센트) 삭제(모바일·데스크톱), 답하는 중 아모 하나 + 말풍선 점 표시. 캡처 `docs/validation/2026-11-18-chat-briefing/` | (이 커밋) |
