@@ -42,9 +42,7 @@ describe('싸비 데이터 연결 (mock 기준)', () => {
       await goToReaderWithSsabi();
 
       // 21페이지 진입 → K = 21. 22페이지에서 처음 나오는 고태수는 아직 안 보인다.
-      await waitFor(() =>
-        expect(screen.getByRole('heading', { name: /^\d+명$/ })).toBeInTheDocument()
-      );
+      await waitFor(() => expect(screen.getByRole('button', { name: '정주사' })).toBeInTheDocument());
       expect(screen.queryByText(/고태수/)).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: '고태수' })).not.toBeInTheDocument();
 

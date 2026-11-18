@@ -13,9 +13,6 @@
   :root {
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
-    /* 가로로 눕힌 휴대폰의 노치 자리 — 관계도 전체화면(E2E #51)이 쓴다 */
-    --safe-left: env(safe-area-inset-left, 0px);
-    --safe-right: env(safe-area-inset-right, 0px);
     --dash-ink: 31 31 31;
     --dash-muted: 119 119 119;
     --dash-line: 222 222 222;

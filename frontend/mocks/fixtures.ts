@@ -83,6 +83,16 @@ export const mockChapters: ChapterSummary[] = [
   { chapter_no: 3, title: '신판 흥부전', start_page: 21, end_page: 30 },
 ];
 
+/**
+ * 장 간략 요약 — 서버 chapter_summaries 대역. 타임라인은 다 읽은 장(end_page <= K)에만 싣는다
+ * (FR-SPL-002 🚦, 결정 31). 운영 「가상범인」처럼 장마다 요약이 있는 모양을 흉내 낸 mock 문장이다.
+ */
+export const mockChapterSummaries: Record<number, string> = {
+  1: '정 주사가 군산 미두장에서 쌀 시세에 돈을 걸다 잃어요. 집안 살림은 점점 기울어요.',
+  2: '정 주사의 딸 초봉이 약국에서 일하며 남승재와 가까워지고, 집에는 혼담이 들어와요.',
+  3: '초봉의 혼사가 정해지고 고태수가 집안에 드나들기 시작해요.',
+};
+
 /** 인물 — first_page 가 상한 필터의 기준이다 (FR-SPL-002 🚦) */
 export const mockCharacters = [
   { id: 'jeong', name: '정주사', first_appearance_page: 1 },
@@ -107,17 +117,40 @@ export const mockAliases = [
   { character_id: 'taesu', alias: '초봉의 남편', alias_type: 'kinship', first_appearance_page: 26 },
 ];
 
+/** mock 관계의 의미(서버 semantics 대역). reader 는 검증을 통과한 독자용 문장(reader_summary) 자리다 */
+export interface MockRelationship {
+  id: string;
+  a: string;
+  b: string;
+  label: string;
+  established_page: number;
+  semantic: {
+    kind: 'family' | 'social' | 'emotion' | 'action';
+    status: 'fact' | 'belief' | 'claim';
+    direction: 'a_to_b' | 'b_to_a' | 'mutual' | 'undirected';
+    reader: string;
+  };
+}
+
 /**
  * 관계 — 이력형이라 같은 쌍에 행이 여럿일 수 있다 (A6).
  * 표시는 확립 페이지 <= K 중 **최신 1개**만 (FR-CHR-001 🚦).
  */
-export const mockRelationships = [
-  { id: 'r1', a: 'jeong', b: 'chobong', label: '부녀', established_page: 3 },
-  { id: 'r2', a: 'jeong', b: 'gyebong', label: '부녀', established_page: 8 },
-  { id: 'r3', a: 'chobong', b: 'seungjae', label: '이웃', established_page: 13 },
+export const mockRelationships: MockRelationship[] = [
+  { id: 'r1', a: 'jeong', b: 'chobong', label: '부녀', established_page: 3,
+    semantic: { kind: 'family', status: 'fact', direction: 'undirected', reader: '정 주사는 초봉의 아버지예요.' } },
+  { id: 'r2', a: 'jeong', b: 'gyebong', label: '부녀', established_page: 8,
+    semantic: { kind: 'family', status: 'fact', direction: 'undirected', reader: '계봉은 정 주사의 작은딸이에요.' } },
+  { id: 'r3', a: 'chobong', b: 'seungjae', label: '이웃', established_page: 13,
+    semantic: { kind: 'social', status: 'fact', direction: 'undirected', reader: '초봉과 남승재는 한 동네에서 지내며 자주 마주쳐요.' } },
+  /** 의심·주장(점선) 예 — 사실로 확인되지 않은 관계 */
+  { id: 'r6', a: 'jeong', b: 'seungjae', label: '사윗감으로 점찍음', established_page: 15,
+    semantic: { kind: 'emotion', status: 'belief', direction: 'a_to_b', reader: '정 주사는 남승재를 사윗감으로 생각하는 것 같아요. 사실인지는 아직 몰라요.' } },
   /** 라벨이 바뀌는 쌍 — K=22 면 약혼, K=28 이면 부부 하나만 나와야 한다 */
-  { id: 'r4', a: 'chobong', b: 'taesu', label: '약혼', established_page: 22 },
-  { id: 'r5', a: 'chobong', b: 'taesu', label: '부부', established_page: 28 },
+  { id: 'r4', a: 'chobong', b: 'taesu', label: '약혼', established_page: 22,
+    semantic: { kind: 'social', status: 'fact', direction: 'mutual', reader: '초봉과 고태수는 혼인을 약속했어요.' } },
+  { id: 'r5', a: 'chobong', b: 'taesu', label: '부부', established_page: 28,
+    semantic: { kind: 'family', status: 'fact', direction: 'mutual', reader: '초봉과 고태수는 부부가 됐어요.' } },
 ];
 
 export const mockCharacterNotes = [

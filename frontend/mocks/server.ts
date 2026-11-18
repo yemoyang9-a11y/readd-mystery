@@ -15,6 +15,7 @@ import {
   mockBookInfos,
   mockCatalog,
   mockChapters,
+  mockChapterSummaries,
   mockCharacterNotes,
   mockCharacters,
   mockPageContent,
@@ -375,25 +376,46 @@ export function mockGraphResponse(page?: number): GraphResponse {
     // 양 끝 노드가 결과 집합에 있을 때만 (FR-SPL-005 🚦 심층 방어)
     .filter((rel) => nodeIds.has(rel.a) && nodeIds.has(rel.b))
     .map((rel) => ({
+      id: rel.id,
       source: rel.a,
       target: rel.b,
       label: rel.label,
       established_page: rel.established_page,
+      // 서버 relationship semantics v2 대역 — 실선(사실)/점선(의심·주장)과 독자용 문장
+      semantics: {
+        version: 2 as const,
+        direction: rel.semantic.direction,
+        kind: rel.semantic.kind,
+        relation_key: rel.id,
+        summary: rel.label,
+        reader_summary: rel.semantic.reader,
+        assertion_status: rel.semantic.status,
+        temporal_scope: 'ongoing' as const,
+        state: 'active' as const,
+        evidence: { source_page: rel.established_page, quote: '(mock 근거)', start_char: 0, end_char: 8 },
+      },
     }));
 
-  return { nodes, edges };
+  return { nodes, edges, applied_cutoff: k };
 }
 
-/** 서버 쿼리의 대역 — 사건 정리 (장 시작 쪽·사건 발생 쪽 <= K) */
+/**
+ * 서버 쿼리의 대역 — 타임라인. 장은 시작 쪽 <= K, 장 요약·사건은 다 읽은 장(end_page <= K)만
+ * (FR-SPL-002 🚦, 결정 31). 사건 설명은 독자용 문장(reader_description) 자리이고, 없으면 null.
+ */
 const mockTimelineEvents = [
-  { id: 'mock-event-3', event: '정 주사가 미두장에 가요', description: '정 주사가 쌀 시세에 돈을 걸어요.', occurrence_page: 3 },
-  { id: 'mock-event-14', event: '딸의 혼담이 나와요', description: '정 주사의 딸에게 혼담이 들어와요.', occurrence_page: 14 },
-  { id: 'mock-event-24', event: '살림이 기울어요', description: null, occurrence_page: 24 },
+  { id: 'mock-event-3', event: '정 주사가 미두장에 감', description: '정 주사가 쌀 시세에 돈을 걸어요.', occurrence_page: 3 },
+  { id: 'mock-event-7', event: '미두에서 돈을 잃음', description: '시세가 떨어져 정 주사가 건 돈을 거의 다 잃어요.', occurrence_page: 7 },
+  { id: 'mock-event-13', event: '초봉과 남승재의 만남', description: '약국에서 일하는 초봉이 이웃 남승재와 인사를 나눠요.', occurrence_page: 13 },
+  { id: 'mock-event-18', event: '혼담이 들어옴', description: '정 주사네 집에 초봉의 혼담이 들어와요.', occurrence_page: 18 },
+  { id: 'mock-event-20', event: '살림이 기욺', description: null, occurrence_page: 20 },
+  { id: 'mock-event-24', event: '고태수의 첫 방문', description: '고태수가 정 주사네 집에 처음 찾아와요.', occurrence_page: 24 },
 ];
 
 export function mockTimelineResponse(page?: number): TimelineResponse {
   if (page !== undefined) currentPage = page;
   const { cutoff: k } = snapshot(page);
+  const completedChapters = mockChapters.filter((c) => c.end_page <= k);
   return {
     chapters: mockChapters
       .filter((c) => c.start_page <= k)
@@ -403,8 +425,13 @@ export function mockTimelineResponse(page?: number): TimelineResponse {
         start_page,
         end_page,
         completed: end_page <= k,
+        summary: end_page <= k ? (mockChapterSummaries[chapter_no] ?? null) : null,
       })),
-    events: mockTimelineEvents.filter((e) => e.occurrence_page <= k),
+    events: mockTimelineEvents.filter(
+      (e) =>
+        e.occurrence_page <= k &&
+        completedChapters.some((c) => c.start_page <= e.occurrence_page && e.occurrence_page <= c.end_page)
+    ),
     applied_cutoff: k,
   };
 }
@@ -481,7 +508,12 @@ export function mockChatAnswer(query: string): string {
   return `${mentioned.name}에 대해 ${cutoff}페이지까지의 내용으로 답하면, 아직 드러난 것은 많지 않습니다. (mock 답변)`;
 }
 
-const mockNotes: ReadingNote[] = [];
+/** 추리 노트 대역 — 화면 확인용 예시 3개(독자가 적은 것처럼). 서버는 독자별로 따로 갖는다 */
+const mockNotes: ReadingNote[] = [
+  { note_id: 'mock-note-7', page_no: 7, kind: 'clue', resolved: false, body: '정 주사가 미두장에 갈 때마다 같은 사람을 만난다.', created_at: '2026-11-18T00:00:00.000Z', updated_at: '2026-11-18T00:00:00.000Z' },
+  { note_id: 'mock-note-18', page_no: 18, kind: 'hypothesis', resolved: false, body: '혼담이 너무 빠르다. 누군가 서두르는 것 아닐까?', created_at: '2026-11-18T00:00:00.000Z', updated_at: '2026-11-18T00:00:00.000Z' },
+  { note_id: 'mock-note-20', page_no: 20, kind: 'clue', resolved: false, body: '남승재는 혼담 이야기에 아무 말도 하지 않았다.', created_at: '2026-11-18T00:00:00.000Z', updated_at: '2026-11-18T00:00:00.000Z' },
+];
 
 export function mockListNotes(): ReadingNote[] {
   return [...mockNotes].sort((a, b) => a.page_no - b.page_no);

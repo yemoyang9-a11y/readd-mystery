@@ -171,10 +171,11 @@ components:
 - **Selected:** `active`(#111111) 배경 + 흰 글씨.
 - **Unselected:** `line-subtle` 테두리 + `surface` 배경 + `faint` 텍스트.
 
-### Ssabi Tabs (패널 내부 3탭)
-- **Style:** `rounded-cover`(8px), `px-3 py-2`, 12px.
-- **Selected:** `ssabi-soft` 배경 + `ssabi` 테두리 1px + `ssabi` 텍스트.
-- **Unselected:** 투명 테두리 + `muted` 텍스트. 필터 탭과 달리 배경색으로 채우지 않는다 — 싸비 영역은 좀 더 조용한 선택 신호를 쓴다.
+### Ssabi Tabs (패널 내부 4탭, 2026-11-18 대표 승인 시안 A안)
+- **순서:** 추리 노트 · 타임라인 · 인물관계도 · AI 챗봇.
+- **Style:** 칸을 똑같이 나눈 밑줄 탭(`flex-1`), 12.5px, 아래에 `brief-rule` 1px 선.
+- **Selected:** 강조색(`brief-accent`) 글자·굵게 + 같은 색 밑줄 2px.
+- **Unselected:** 투명 밑줄 + `brief-muted` 글자. 배경색으로 채우지 않는다 — 싸비 영역은 조용한 선택 신호를 쓴다.
 
 ### Cards
 - **Book Card:** 312px 고정폭, `rounded-card`(16px), `p-card`(18px), `shadow-card`. 미완비 도서는 버튼 자체를 disabled로 막는다(단순 스타일이 아니라 실제 클릭 차단).

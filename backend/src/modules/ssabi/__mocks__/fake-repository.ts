@@ -26,9 +26,11 @@ export interface TimelineFixtureEvent extends TimelineEvent {
 }
 
 export interface SsabiFixture {
-  /** completed 는 조회 시 cutoff 로 정해지므로 픽스처에는 두지 않는다 */
-  timelineChapters?: (Omit<TimelineChapter, 'completed'> & { book_id: string })[];
+  /** completed·summary 는 조회 시 cutoff 로 정해지므로 장 픽스처에는 두지 않는다 */
+  timelineChapters?: (Omit<TimelineChapter, 'completed' | 'summary'> & { book_id: string })[];
   timelineEvents?: TimelineFixtureEvent[];
+  /** chapter_summaries 대역 — 장 요약 표는 장 표와 따로 있다 */
+  timelineChapterSummaries?: { book_id: string; chapter_no: number; summary: string }[];
   characters: Character[];
   relationships: Relationship[];
   aliases: Alias[];
@@ -56,6 +58,13 @@ export class FakeSsabiRepository implements SsabiRepository {
         start_page,
         end_page,
         completed: end_page <= cutoff,
+        // FR-SPL-002 🚦 결정 31: 다 읽은 장일 때만 요약 표를 찾는다 (pg 의 JOIN 조건과 같다)
+        summary:
+          end_page <= cutoff
+            ? ((this.fixture.timelineChapterSummaries ?? []).find(
+                (s) => s.book_id === bookId && s.chapter_no === chapter_no
+              )?.summary ?? null)
+            : null,
       }));
     const events = (this.fixture.timelineEvents ?? [])
       .filter(
@@ -373,9 +382,17 @@ export function createTestFixture(): SsabiFixture {
     occurrence_page: page,
   }));
 
+  // 3장 요약은 일부러 없다 — 다 읽은 장이라도 요약이 없으면 null 이어야 한다
+  const timelineChapterSummaries = [
+    { book_id: 'takryu', chapter_no: 1, summary: '1장 요약' },
+    { book_id: 'takryu', chapter_no: 2, summary: '2장 요약' },
+    { book_id: 'other-book', chapter_no: 1, summary: '다른 책 요약' },
+  ];
+
   return {
     timelineChapters,
     timelineEvents,
+    timelineChapterSummaries,
     characters,
     relationships,
     aliases,

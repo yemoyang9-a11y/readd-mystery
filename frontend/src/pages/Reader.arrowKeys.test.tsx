@@ -195,6 +195,8 @@ describe('FR-PRG-001: PC 읽기 화면 방향키 이동', () => {
     const input = await openedAt(25);
     fireEvent.click(screen.getByRole('button', { name: '싸비 열기' }));
     await screen.findAllByRole('tab');
+    // 관계도 탭에는 시안대로 버튼 요소가 없다(그래프 인물은 svg 안) — 버튼이 있는 추리 노트 탭에서 확인한다
+    fireEvent.click(screen.getByRole('tab', { name: '추리 노트' }));
     const panelButtons = Array.from(
       document.querySelectorAll<HTMLElement>('#ssabi-panel button:not([role="tab"])')
     );

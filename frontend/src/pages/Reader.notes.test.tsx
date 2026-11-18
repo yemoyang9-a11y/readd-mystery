@@ -32,7 +32,7 @@ describe('Reader — 추리 노트 탭', () => {
     streamCalls = 0;
   });
 
-  it('패널 탭은 추리 노트·인물관계도·AI 챗봇 셋이고 리캡 생성은 호출되지 않는다', async () => {
+  it('패널 탭은 추리 노트·타임라인·인물관계도·AI 챗봇 넷이고 리캡 생성은 호출되지 않는다 (결정 31)', async () => {
     const user = userEvent.setup();
     renderReader();
     await screen.findByRole('article');
@@ -44,6 +44,7 @@ describe('Reader — 추리 노트 탭', () => {
 
     expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual([
       '추리 노트',
+      '타임라인',
       '인물관계도',
       'AI 챗봇',
     ]);
@@ -58,7 +59,7 @@ describe('Reader — 추리 노트 탭', () => {
     await user.click(screen.getByRole('button', { name: '싸비 열기' }));
     await user.click(screen.getByRole('tab', { name: '추리 노트' }));
 
-    await user.click(screen.getByRole('button', { name: '+ 단서·가설 적기' }));
+    await user.click(screen.getByRole('button', { name: '단서·가설 적기' }));
     const dialog = screen.getByRole('dialog', { name: '단서·가설 적기' });
     const page = within(dialog).getByLabelText('쪽수') as HTMLInputElement;
     const startPage = Number(page.value);

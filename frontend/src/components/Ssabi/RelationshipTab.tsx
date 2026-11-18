@@ -3,168 +3,46 @@ import type { GraphResponse } from '../../types';
 import Loading from '../common/Loading';
 import RelationshipGraph from './RelationshipGraph';
 import RelationDetails from './RelationDetails';
-import { filterMajorCharacters, graphMilestones, graphUpTo } from './graphFilter';
 import { centralNodeIndex } from './graphLayout';
 
 /**
- * 인물 관계도 탭 — 기본 탭 (FR-SVB-002)
+ * 인물관계도 탭 — 2026-11-17 시안 `docs/superpowers/specs/mockups-2026-11-17/readd-relationship-simple.html`,
+ * 2026-11-18 대표 지시로 시안 그대로만 남겼다.
  *
- * 지도형 리디자인(2026-08-24, `docs-local/reader-map-graph.html` 구조 반영) — 인물
- * 카드는 항상 목록으로 보이되, **그래프에서 인물을 선택했을 때만 그 인물의 관계 태그가
- * 펼쳐진다.** 카드를 눌러도 같은 선택 상태를 공유한다(그래프 쪽 클릭과 동등) — 이 선택
- * 상태(`selected`)는 이 컴포넌트가 소유하고, RelationshipGraph에는 controlled prop으로
- * 내려준다. 추후 "본문에서 인물명을 누르면 관계도가 그 인물로 포커싱"되는 기능이
- * 들어올 자리도 여기다 — 그 기능은 이 `setSelected`를 그대로 호출하면 된다.
+ * 제목 질문 "지금 누가 누구와 엮여 있을까요" → 그래프 → 선 모양 범례 한 줄 → "{중심 인물}과 이어진 사람" 카드.
+ * 시안에 없는 주요인물/전체 토글·인물 수·검색창·인물 목록·시점 되감기 막대·확대/축소/전체 보기/전체화면 버튼과
+ * 배율(%) 표시는 없앴다. 손가락으로 끌기·벌려 확대하기만 보이지 않는 조작으로 남는다(RelationshipGraph).
  *
- * ⚠️ 정책 변경(2026-08-24) — 예전엔 "관계" 섹션이 선택과 무관하게 항상 전부 펼쳐져
- *    있었다(NFR-USE-006: 라벨을 글자로 병기, 색상만으로 구분하지 않는다). 그 요구
- *    자체는 여전히 지킨다 — 다만 "항상 전부"가 아니라 "선택하면 텍스트로 나온다"로
- *    바뀌었다. 목업이 채택한 방식을 그대로 따른 것이라 팀 승인 없이 되돌리지 않는다.
- *    관련 테스트(RelationshipTab.test.tsx)도 이 정책에 맞춰 같이 고쳤다.
- *
- * ## 되감기 슬라이더
- *
- * 읽은 범위 안에서 과거 시점의 관계도를 볼 수 있게 한다. 서버가 이미 기준점 이하로 걸러
- * 내려보냈으므로 이건 **받은 데이터 안의 표시 필터**이고, 서버에 다시 묻지 않는다.
- * 눈금을 받은 데이터에서 만들기 때문에 조작 가능한 오른쪽 끝이 곧 현재 진도이며,
- * 그 너머는 막힌 게 아니라 **존재하지 않는다** (graphFilter.ts 주석 참조).
- *
- * 트랙 자체는 1페이지~전체 분량(`totalPages`)까지 그려서 "책 전체 대비 지금 어디까지
- * 왔는지" 감을 준다(2026-08-25, 사용자 요청). 다만 손잡이가 실제로 움직이는 구간은
- * 여전히 `milestones`(=읽은 범위) 안으로 한정한다 — 조작 가능한 `<input type="range">`
- * 자체는 그대로 두고, 그 뒤에 "아직 못 읽은 구간"을 나타내는 비활성 막대를 이어붙이는
- * 방식이다. 두 막대의 폭은 `flexGrow`에 **정수 그대로**(진도 페이지 수, 남은 페이지 수)를
- * 준다 — `/전체` 나눗셈으로 비율(%)을 직접 계산하지 않는다. 절대 규칙 2번("기준점
- * 결정기 밖에서 % 계산 금지, 프론트 포함")이 겨냥하는 건 스포일러 상한과 관련된 진도율
- * 계산인데, 나눗셈으로 값을 만들면 그 계산과 형식적으로 겹쳐 보일 여지가 있어 피했다 —
- * flexbox가 두 정수 비(比)로 폭을 알아서 나누게 두는 쪽을 택함(브라우저의 레이아웃
- * 계산이지 우리 코드의 진도율 계산이 아니다). `totalPages`는 목차(전체 챕터) 기준이라
- * 애초에 상한 대상이 아니다(R3 — 목차는 전체 상시 노출).
- *
- * ⚠️ 폴리시(2026-08-25, 사용자 제보) — 브라우저 기본 `<input type="range">` 트랙은
- *    자체 높이·여백이 인접 막대(`h-1.5` div)와 안 맞아 이어 붙여도 진행바가 둘로 쪼개져
- *    보였다. `appearance-none`으로 기본 트랙을 지우고 `::-webkit-slider-thumb`/
- *    `::-moz-range-thumb`/`::-moz-range-track`을 직접 그려 옆 막대와 같은 h-1.5·둥근
- *    모양을 맞췄다 — 두 막대가 맞닿는 안쪽 모서리는 각지게, 트랙 전체의 바깥쪽 끝만
- *    둥글게 해서 하나로 이어진 막대처럼 보이게 한다.
- *
- * ⚠️ 폴리시 2(2026-08-25, 사용자 재제보) — 위 수정 후에도 파란 구간과 회색 구간이
- *    수직으로 안 맞아 보였다. `<input>`의 기본 `display`가 `inline-block`이라 아래에
- *    글꼴 하강폭만큼 여백이 남아 flex 줄 높이가 인접 `div`보다 커지고, `items-center`가
- *    그 늘어난 줄 안에서 두 막대를 서로 다른 위치로 정렬한 것이었다(실측: 2px 차이,
- *    getBoundingClientRect로 확인). `block`을 추가해 그 여백을 없애 해결.
- *
- * ⚠️ 시안의 인물 카드에는 역할과 설명 2줄이 있으나 `GraphNode` 계약에 그 필드가 없다.
- *    없는 데이터를 지어내지 않는다 (CLAUDE.md 6장). 계약이 주는 별칭을 그 자리에 놓는다.
- *
- * ## 주요인물 / 전체 토글 (2026-08-25)
- *
- * 진도가 쌓일수록 인물이 계속 늘어난다 — mock 30명 규모로 확인. `filterMajorCharacters`
- * (graphFilter.ts)로 연결 수(degree)가 두드러진 인물만 남긴 "주요인물" 모드를 추가한다.
- * 그래프·카드 리스트·"인물 N" 표시 개수가 전부 같은 `displayed` 값 하나를 공유한다 —
- * 그래프엔 8명, 목록엔 30개처럼 서로 다르게 보이지 않는다.
- *
- * **기본값은 "주요인물"이다.** 두 번 조정을 거쳤다 —
- * 1차(절대 임계값, degree 4 미만은 뺀다): 아무도 못 넘는 진도 초반엔 전체를 자동
- * 대체하는 폴백을 뒀는데, 첫 인물이 임계값을 넘는 순간 "전체 N명"에서 "1~2명"으로
- * 뚝 떨어졌다("사람이 많다가 어느 순간 확 줄어드는 현상").
- * 2차(연결 수 상위 8명 고정): 뚝 떨어지는 문제는 없앴지만, 이번엔 진짜 주요 인물이
- * 8명을 넘는 시점에도 무조건 8명에서 잘렸다("중요한 인물이 8명 이상인 경우도 많을
- * 텐데").
- * 지금은 그 둘을 최소 보장선으로 섞는다 — 상한은 `max(8, degree 4 이상인 인원 수)`다
- * (`filterMajorCharacters`의 `MAJOR_CHARACTER_FLOOR`/`MAJOR_CHARACTER_MIN_DEGREE`
- * 주석 참고). degree 4 이상인 인물은 등수상 항상 상위권이라 8명 아래에서도 위에서도
- * 뚝 떨어지는 지점이 생기지 않는다. 그래서 폴백·안내 문구 분기는 여전히 필요 없다.
- *
- * 검색은 모드와 무관하게 항상 `shown.nodes`(되감긴 범위 전체) 대상이다 — "주요인물"에
- * 걸러진 인물도 검색으로는 찾아 포커싱할 수 있어야 완전히 숨겨지지 않는다(`focusOn`이
- * 걸러진 인물을 고르면 "전체"로 전환한다).
- *
- * ## 토글 위치 기억 (2026-08-25, 사용자 요청)
- *
- * "싸비를 열고 닫아도, 다른 탭에 갔다 와도 세션 동안은 고른 토글이 유지돼야 한다"는
- * 요청이다. 이 컴포넌트는 싸비 탭을 바꿀 때마다(SsabiPanel의 `key={tab}`) 통째로
- * 리마운트되고, 패널을 닫으면(Reader.tsx) SsabiPanel까지 언마운트된다 — 그래서 내부
- * useState만으론 기억할 수 없다. Reader → SsabiPanel → 여기로 내려오는
- * `initialCharacterMode`/`onCharacterModeChange`는 탭 기억(`tabMemory`, Reader.tsx)과
- * 정확히 같은 구조다: 언마운트되지 않는 상위 컴포넌트가 대신 들고 있다가 재마운트 시
- * 초기값으로 돌려준다. 세션이 바뀌면(SsabiPanel의 epoch 판정) 자동으로 기본값("주요인물")
- * 으로 리셋된다 — 탭 기억과 동일하게 새 세션에는 옛 화면 설정을 들고 가지 않는다.
- *
- * ## 2026-11-17 승인 시안 (`docs/superpowers/specs/mockups-2026-11-17/readd-relationship-simple.html`)
- *
- * 제목 질문 → 그래프 → 선 모양 범례 한 줄 → "{중심 인물}과 이어진 사람" 카드 순서다. 중심 인물(ego)이
- * 늘 한 명 있다 — 처음은 지금 보이는 인물 중 연결이 가장 많은 인물(동점이면 먼저 등장한 인물,
- * `centralNodeIndex`)이고, 인물을 누르면 그 인물이 중심이 된다. 그래서 "선택 해제"가 없다.
- * 범례의 "지난번 이후 새로"는 그 데이터(지난 방문 이후 새 관계)가 계약에 없어 넣지 않는다(6장).
- * 회색 부연 문구는 두지 않는다(DESIGN.md 2026-11-18 대표 지시).
- *
- * 중심 인물을 고르는 것은 받은 그래프 안에서의 표시 선택이다 — 기준점·쪽수 계산이 아니다
- * (절대 규칙 2·7번). 그래프 데이터는 서버가 기준점 이하로 걸러 준 그대로다 (FR-SPL-002 🚦).
+ * 받은 그래프를 거르지 않고 그대로 그린다 — 기준점 이하의 인물은 전부 그려지고 그 밖의 인물은 응답에 없다
+ * (FR-SPL-002 🚦, 절대 규칙 7번). 중심 인물(ego)이 늘 한 명 있다 — 처음은 연결이 가장 많은 인물(동점이면 먼저
+ * 등장한 인물, `centralNodeIndex`)이고, 인물을 누르면 그 인물이 중심이 된다. 중심 인물을 고르는 것은 받은
+ * 그래프 안에서의 표시 선택이지 기준점·쪽수 계산이 아니다 (절대 규칙 2·7번).
+ * 범례의 "지난번 이후 새로"는 그 데이터(지난 방문 이후 새 관계)가 계약에 없어 넣지 않는다(CLAUDE.md 6장).
  *
  * 조회 실패는 부분 표시로 넘어가지 않는다 (FR-SPL-005 🚦).
  */
 export default function RelationshipTab({
   graph,
   failed,
-  totalPages,
-  initialCharacterMode = null,
-  onCharacterModeChange,
 }: {
   graph: GraphResponse | null;
   failed: boolean;
-  /** 목차 기준 전체 페이지 수(상한 대상 아님, R3). 트랙 오른쪽 끝 표시에만 쓴다. */
-  totalPages?: number;
-  /** 세션 동안 기억해 둔 마지막 토글 값(위 "토글 위치 기억" 참고). 없으면 기본값
-   *  "주요인물"에서 시작한다. */
-  initialCharacterMode?: 'major' | 'all' | null;
-  /** 토글이 바뀔 때마다 호출 — 상위(SsabiPanel)가 이 값을 들고 있다가 재마운트 시
-   *  initialCharacterMode로 돌려준다. */
-  onCharacterModeChange?: (mode: 'major' | 'all') => void;
 }) {
-  const [picked, setPicked] = useState<number | null>(null);
   const [selected, setSelectedState] = useState<string | null>(null);
   // 선택한 선(graphEdgeKey). 인물을 고르면 풀린다 — 인물 선택과 선 선택은 함께 남지 않는다.
   const [selectedEdgeKey, setSelectedEdgeKey] = useState<string | null>(null);
-  function setSelected(id: string | null) {
+  function setSelected(id: string) {
     setSelectedEdgeKey(null);
     setSelectedState(id);
   }
-  const [query, setQuery] = useState('');
-  const [resultsOpen, setResultsOpen] = useState(false);
-  const [characterMode, setCharacterModeState] = useState<'major' | 'all'>(
-    initialCharacterMode ?? 'major'
-  );
-  function setCharacterMode(mode: 'major' | 'all') {
-    setCharacterModeState(mode);
-    onCharacterModeChange?.(mode);
-  }
 
-  const milestones = useMemo(() => (graph ? graphMilestones(graph) : []), [graph]);
-  const latest = milestones[milestones.length - 1] ?? 0;
-  // totalPages가 아직 안 왔거나(초기 로딩) latest보다 작게 들어오면(있을 수 없는 값) 그냥
-  // latest로 맞춰 미조작 막대 폭이 0이 되게 한다 — 트랙이 찌그러지는 것만 막는다.
-  const bookTotal = Math.max(totalPages ?? latest, latest);
-  const unread = bookTotal - latest;
-
-  // 고른 눈금이 사라졌으면(페이지를 옮겨 데이터가 바뀌었으면) 최신으로 되돌린다
-  const at = picked !== null && milestones.includes(picked) ? picked : latest;
-  const shown = useMemo(() => (graph ? graphUpTo(graph, at) : null), [graph, at]);
-
-  // 그래프·카드 리스트·개수 표시가 전부 이 값 하나를 공유한다 — 위 클래스 주석 참고.
-  const displayed = useMemo(
-    () => (shown ? (characterMode === 'major' ? filterMajorCharacters(shown) : shown) : null),
-    [shown, characterMode]
-  );
-
-  // 되감아서(또는 주요인물로 걸러져) 고른 인물이 안 보이면 고른 값을 무시한다(지우지는 않는다 —
-  // 다시 앞으로 감으면 그대로 복원된다). 그때는 기본 중심 인물로 돌아간다 (2026-11-17 시안).
-  const pickedVisible = selected && displayed?.nodes.some((n) => n.id === selected) ? selected : null;
+  // 고른 인물이 새 응답에 없으면(쪽을 옮겨 데이터가 바뀌면) 기본 중심 인물로 돌아간다.
+  const pickedVisible = selected && graph?.nodes.some((n) => n.id === selected) ? selected : null;
   const defaultEgo = useMemo(() => {
-    if (!displayed) return null;
-    const index = centralNodeIndex(displayed.nodes, displayed.edges);
-    return index >= 0 ? displayed.nodes[index].id : null;
-  }, [displayed]);
+    if (!graph) return null;
+    const index = centralNodeIndex(graph.nodes, graph.edges);
+    return index >= 0 ? graph.nodes[index].id : null;
+  }, [graph]);
   const activeSelected = pickedVisible ?? defaultEgo;
 
   if (failed)
@@ -173,56 +51,26 @@ export default function RelationshipTab({
         관계도를 불러오지 못했습니다
       </p>
     );
-  if (!graph || !shown || !displayed)
-    return <Loading fullScreen={false} message="인물 관계를 정리하는 중" />;
-
-  // 검색 대상은 되감기로 지금 화면에 보이는 인물(shown.nodes)로만 한정한다 — 아직
-  // 등장하지 않은 시점으로 되감아 놓고 그 이후 인물을 검색해 포커싱하면, 검색이 곧
-  // 기준점을 우회하는 별도 조회 경로가 된다(절대 규칙 7번과 같은 종류의 문제).
-  // "주요인물" 필터로 걸러진 인물은 여기 포함된다 — 검색은 걸러도 완전히 숨기지 않는다.
-  const normalizedQuery = query.trim().toLowerCase();
-  const searchResults = normalizedQuery
-    ? shown.nodes.filter(
-        (node) =>
-          node.name.toLowerCase().includes(normalizedQuery) ||
-          node.aliases.some((alias) => alias.toLowerCase().includes(normalizedQuery))
-      )
-    : [];
-
-  // 검색으로 고른 인물의 카드로 하단 목록을 스크롤한다 — 검색 결과는 그래프처럼 카메라가
-  // 옮겨가는 걸로 안 보이니(사용자 제보), 카드 목록이 길면 선택된 카드가 화면 밖에 남아
-  // "설명이 그대로다"로 보였다. 그래프에서 직접 인물을 눌렀을 때는 이미 그 화면을 보고
-  // 누른 것이라 스크롤이 필요 없다(오히려 화면이 갑자기 움직여 방해된다, 사용자 재제보) —
-  // 그래서 focusOn(검색 전용 경로)에서만 스크롤 대상을 표시해 둔다.
-  function focusOn(id: string) {
-    // 걸러진 인물을 검색으로 골랐으면 "전체"로 돌려 실제로 보이게 한다 — 완전히 숨기지
-    // 않는다는 약속(위 클래스 주석)을 여기서 지킨다.
-    if (characterMode === 'major' && !displayed?.nodes.some((node) => node.id === id)) {
-      setCharacterMode('all');
-    }
-    setSelected(id);
-    setQuery('');
-    setResultsOpen(false);
-  }
+  if (!graph) return <Loading fullScreen={false} message="인물 관계를 정리하는 중" />;
 
   return (
-    <div className="space-y-4">
-      <h3 className="m-0 font-dashSans text-[21px] font-extrabold leading-snug tracking-[-0.02em] text-brief-ink">
+    <div className="space-y-3">
+      <h3 className="m-0 mt-0.5 font-dashSans text-base font-bold leading-snug text-brief-ink">
         지금 누가 누구와 엮여 있을까요
       </h3>
       <div>
         <RelationshipGraph
-          graph={displayed}
+          graph={graph}
           selectedId={activeSelected}
           // 인물을 누르면 그 인물이 중심이 된다. 빈 곳을 누르면(null) 선 선택만 풀고 중심은 그대로 둔다.
           onSelect={(id) => (id ? setSelected(id) : setSelectedEdgeKey(null))}
           selectedEdgeKey={selectedEdgeKey}
           onSelectEdge={setSelectedEdgeKey}
         />
-        {/* 선 모양 범례 한 줄 (2026-11-17 시안). 라벨이므로 부연 문구 금지 규칙의 예외다. */}
+        {/* 선 모양 범례 한 줄 (시안). 라벨이므로 부연 문구 금지 규칙의 예외다. */}
         <ul
           aria-label="선 모양 범례"
-          className="m-0 mt-2.5 flex list-none gap-4 px-0.5 font-dashSans text-[12px] text-brief-muted"
+          className="m-0 mt-2.5 flex list-none gap-4 px-0.5 font-dashSans text-[11.5px] text-brief-muted"
         >
           <li className="flex items-center gap-1.5">
             <svg aria-hidden="true" width="22" height="6" viewBox="0 0 22 6">
@@ -247,185 +95,7 @@ export default function RelationshipTab({
           </li>
         </ul>
       </div>
-      <RelationDetails
-        graph={displayed}
-        selectedId={activeSelected}
-        selectedEdgeKey={selectedEdgeKey}
-      />
-
-      {milestones.length > 1 ? (
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center justify-between text-[11px]">
-            <label htmlFor="graph-scrub" className="text-brief-muted">
-              시점 되감기
-            </label>
-            <span className="font-bold text-brief-ink">
-              {at === latest ? '현재까지' : `${at}페이지 시점`}
-            </span>
-          </div>
-          <div className="flex items-center">
-            <div style={{ flexGrow: latest || 1, flexBasis: 0 }}>
-              <input
-                id="graph-scrub"
-                type="range"
-                min={0}
-                max={milestones.length - 1}
-                step={1}
-                value={Math.max(0, milestones.indexOf(at))}
-                onChange={(event) => setPicked(milestones[Number(event.target.value)])}
-                className={`block h-3.5 w-full cursor-pointer mobile:h-11 appearance-none bg-transparent
-                  [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:bg-brief-accent
-                  [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:border-none [&::-moz-range-track]:bg-brief-accent
-                  ${
-                    unread > 0
-                      ? '[&::-webkit-slider-runnable-track]:rounded-l-full [&::-moz-range-track]:rounded-l-full'
-                      : '[&::-webkit-slider-runnable-track]:rounded-full [&::-moz-range-track]:rounded-full'
-                  }
-                  [&::-webkit-slider-thumb]:-mt-1 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5
-                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full
-                  [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white
-                  [&::-webkit-slider-thumb]:bg-brief-accent [&::-webkit-slider-thumb]:shadow
-                  [&::-webkit-slider-thumb]:cursor-pointer
-                  [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-3.5
-                  [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full
-                  [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white
-                  [&::-moz-range-thumb]:bg-brief-accent [&::-moz-range-thumb]:shadow
-                  [&::-moz-range-thumb]:cursor-pointer`}
-              />
-            </div>
-            {unread > 0 ? (
-              <div
-                aria-hidden="true"
-                data-testid="graph-scrub-unread"
-                className="h-1.5 shrink-0 rounded-r-full bg-brief-rule"
-                style={{ flexGrow: unread, flexBasis: 0 }}
-              />
-            ) : null}
-          </div>
-          <div className="flex justify-between text-[10px] text-brief-muted">
-            <span>1p</span>
-            <span>{bookTotal}p</span>
-          </div>
-        </div>
-      ) : null}
-
-      <section aria-label="인물" className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <h3 className="text-xs font-bold text-brief-muted">{displayed.nodes.length}명</h3>
-
-            {/* 주요인물/전체 토글 — 그래프·카드 리스트가 공유하는 displayed를 바꾼다
-                (클래스 주석 "주요인물 / 전체 토글" 참고). */}
-            <div
-              role="group"
-              aria-label="인물 범위"
-              className="inline-flex items-center gap-0.5 rounded-pill border border-brief-rule bg-brief-page p-0.5"
-            >
-              <button
-                type="button"
-                aria-pressed={characterMode === 'major'}
-                onClick={() => setCharacterMode('major')}
-                className={`min-h-11 min-w-11 lg:min-h-0 lg:min-w-0 rounded-pill px-2 py-0.5 text-[10px] font-bold transition-colors ${
-                  characterMode === 'major' ? 'bg-brief-accent text-white' : 'text-brief-muted'
-                }`}
-              >
-                주요인물
-              </button>
-              <button
-                type="button"
-                aria-pressed={characterMode === 'all'}
-                onClick={() => setCharacterMode('all')}
-                className={`min-h-11 min-w-11 lg:min-h-0 lg:min-w-0 rounded-pill px-2 py-0.5 text-[10px] font-bold transition-colors ${
-                  characterMode === 'all' ? 'bg-brief-accent text-white' : 'text-brief-muted'
-                }`}
-              >
-                전체
-              </button>
-            </div>
-          </div>
-
-          {/* 시안(첫 번째 스크린샷)의 알약형 검색창 — 클릭 후 포커싱은 그래프가 이미
-              selectedId 로 하고 있어(RelationshipGraph.tsx), 여기서는 검색 결과를 골라
-              그 setSelected 를 그대로 호출하기만 한다. */}
-          <div className="relative">
-            <div className="flex items-center gap-1.5 rounded-pill border border-brief-rule bg-brief-page px-3 py-1.5">
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                width="12"
-                height="12"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                className="shrink-0 text-brief-muted"
-              >
-                <circle cx="10.5" cy="10.5" r="6.5" />
-                <line x1="15.3" y1="15.3" x2="20" y2="20" />
-              </svg>
-              <label htmlFor="character-search" className="sr-only">
-                인물 검색
-              </label>
-              <input
-                id="character-search"
-                type="text"
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  setResultsOpen(true);
-                }}
-                onFocus={() => setResultsOpen(true)}
-                onBlur={() => setResultsOpen(false)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' && searchResults.length > 0) {
-                    event.preventDefault();
-                    focusOn(searchResults[0].id);
-                  }
-                  if (event.key === 'Escape') setQuery('');
-                }}
-                placeholder="검색"
-                className="w-20 bg-transparent text-[11px] text-brief-ink outline-none placeholder:text-brief-muted mobile:min-h-11 mobile:text-[16px]"
-              />
-            </div>
-
-            {resultsOpen && normalizedQuery ? (
-              <ul data-no-track
-                role="listbox"
-                aria-label="인물 검색 결과"
-                className="absolute right-0 top-full z-10 mt-1 max-h-48 w-44 overflow-y-auto rounded-xl border border-brief-rule bg-white py-1 shadow-brief-soft-sm"
-              >
-                {searchResults.length > 0 ? (
-                  searchResults.map((node) => (
-                    <li key={node.id} role="option" aria-selected={node.id === activeSelected}>
-                      {/* mousedown 시점에 preventDefault 하지 않으면 input 의 onBlur 가
-                          먼저 일어나 목록이 닫혀버려 클릭이 아무 데도 안 먹는다. */}
-                      <button
-                        type="button"
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => focusOn(node.id)}
-                        className="block w-full px-3 py-1.5 text-left text-xs text-brief-ink hover:bg-brief-accent-soft"
-                      >
-                        {node.name}
-                        {node.aliases.length > 0 ? (
-                          <span className="ml-1.5 text-[10px] text-brief-muted">
-                            {node.aliases.join(' · ')}
-                          </span>
-                        ) : null}
-                      </button>
-                    </li>
-                  ))
-                ) : (
-                  <li className="px-3 py-1.5 text-xs text-brief-muted">일치하는 인물 없음</li>
-                )}
-              </ul>
-            ) : null}
-          </div>
-        </div>
-        {displayed.nodes.length === 0 ? (
-          <p className="text-[11px] text-brief-muted">아직 등장한 인물이 없습니다.</p>
-        ) : null}
-
-      </section>
+      <RelationDetails graph={graph} selectedId={activeSelected} selectedEdgeKey={selectedEdgeKey} />
     </div>
   );
 }

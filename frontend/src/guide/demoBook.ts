@@ -1,4 +1,11 @@
-import type { BriefingResponse, ChapterSummary, GraphEdge, GraphResponse, RelationshipSemantics } from '../types';
+import type {
+  BriefingResponse,
+  ChapterSummary,
+  GraphEdge,
+  GraphResponse,
+  RelationshipSemantics,
+  TimelineResponse,
+} from '../types';
 import type { ShowcaseBook } from '../data/homeShowcase';
 
 /**
@@ -169,6 +176,26 @@ export const DEMO_GRAPH: GraphResponse = {
   ],
   edges: DEMO_EDGES,
   history: DEMO_EDGES,
+};
+
+/**
+ * 4쪽까지 읽은 독자에게 보이는 타임라인 — 미리 만들어 둔 고정값 (결정 31: 다 읽은 장만 요약·사건).
+ * 1장(1~4쪽)은 다 읽었고 2장은 읽는 중이다. 가이드 단계는 이 탭을 거치지 않지만, 눌러 봐도 비지 않게 둔다.
+ */
+export const DEMO_TIMELINE: TimelineResponse = {
+  chapters: [
+    {
+      ...DEMO_CHAPTERS[0],
+      completed: true,
+      summary: '서진이 친구 태호의 별장에 와요. 다음 날 아침, 서재 진열장의 회중시계가 없어져요.',
+    },
+    { ...DEMO_CHAPTERS[1], completed: false, summary: null },
+  ],
+  events: [
+    { id: 'demo-ev-2', event: '불이 잠깐 꺼짐', description: '밤 아홉 시쯤 번개가 치고 집 안의 불이 잠깐 꺼졌다가 들어와요.', occurrence_page: 2 },
+    { id: 'demo-ev-3', event: '회중시계가 사라짐', description: '아침에 미라가 진열장이 비어 있는 것을 알아채요.', occurrence_page: 3 },
+  ],
+  applied_cutoff: 4,
 };
 
 /** 가이드에서 독자가 눌러 보는 인물 */
