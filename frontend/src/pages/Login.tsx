@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type FormEvent } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { isAxiosError } from 'axios';
 import { CaseLabel } from '../mobile/components/CaseMotifs';
@@ -22,7 +22,7 @@ const DISPLAY_NAME_MAX_LENGTH = 20;
 
 // 미스터리 브랜딩(2026-11-18 대표 지시) — data-night 토큰. 조사: docs/context/research-2026-11-18-new-screens.md 1장
 const FIELD =
-  'block min-h-12 w-full rounded-[10px] border border-[#35292c] bg-[#0d0a0b] px-3.5 text-[16px] text-[#ece6e0] outline-none transition-colors placeholder:text-[#8a7f81] focus:border-[#c4475f] focus-visible:ring-2 focus-visible:ring-[#c4475f]/35 disabled:opacity-60';
+  'block min-h-12 w-full rounded-[10px] border border-[#35292c] bg-[#0d0a0b] px-3.5 text-[16px] text-[#ece6e0] outline-none transition-colors placeholder:text-[#8a7f81] focus:border-[#c4475f] aria-[invalid=true]:border-[#c4475f] focus-visible:ring-2 focus-visible:ring-[#c4475f]/35 disabled:opacity-60';
 const LABEL = 'mb-1.5 block text-[13px] font-bold tracking-[0.02em] text-[#ece6e0]';
 const OUTLINE_BUTTON =
   'inline-flex min-h-12 w-full items-center justify-center rounded-full border border-[#35292c] bg-transparent px-4 text-[15px] font-bold text-[#ece6e0] transition-colors active:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b]';
@@ -44,16 +44,39 @@ function errorMessage(error: unknown, mode: Mode): string {
   return mode === 'signup' ? '가입하지 못했어요. 다시 해 주세요' : '로그인하지 못했어요. 다시 해 주세요';
 }
 
-function validate(mode: Mode, email: string, password: string, displayName: string): string | null {
-  if (!EMAIL_PATTERN.test(email.trim())) return '이메일 형식을 확인해 주세요';
+type Field = 'email' | 'password' | 'name';
+type FieldErrors = Partial<Record<Field, string>>;
+/** 화면 위에서 아래 순서 — 처음 틀린 칸으로 초점을 옮길 때 쓴다 */
+const FIELD_ORDER: readonly Field[] = ['email', 'password', 'name'];
+
+/** E2E #3 — 빈칸·잘못된 값을 칸마다 알린다. 버튼은 막지 않는다 */
+function validate(mode: Mode, email: string, password: string, displayName: string): FieldErrors {
+  const errors: FieldErrors = {};
+  const trimmedEmail = email.trim();
+  if (trimmedEmail === '') errors.email = '이메일을 입력해 주세요';
+  else if (!EMAIL_PATTERN.test(trimmedEmail)) errors.email = '올바른 이메일 형식이 아니에요';
   if (mode === 'signup') {
-    if (password.length < PASSWORD_MIN_LENGTH) return `비밀번호는 ${PASSWORD_MIN_LENGTH}자 이상이어야 해요`;
+    if (password.length < PASSWORD_MIN_LENGTH) errors.password = `비밀번호는 ${PASSWORD_MIN_LENGTH}자 이상이에요`;
     const nameLength = [...displayName.trim()].length;
-    if (nameLength < 1 || nameLength > DISPLAY_NAME_MAX_LENGTH) {
-      return `닉네임은 1~${DISPLAY_NAME_MAX_LENGTH}자로 정해 주세요`;
-    }
+    if (nameLength < 1) errors.name = '닉네임을 입력해 주세요';
+    else if (nameLength > DISPLAY_NAME_MAX_LENGTH) errors.name = `닉네임은 ${DISPLAY_NAME_MAX_LENGTH}자까지예요`;
+  } else if (password === '') {
+    errors.password = '비밀번호를 입력해 주세요';
   }
-  return null;
+  return errors;
+}
+
+// 서버 오류 상자와 같은 모양 — 칸 아래 알림도 이 모양을 쓴다
+const ERROR_BOX =
+  'm-0 flex items-start gap-2 break-keep rounded-[10px] border border-[#c4475f]/50 bg-[#2d161d] px-3 py-2.5 text-[14px] font-bold text-[#f0b3be]';
+
+function ErrorBox({ id, children, className = '' }: { id?: string; children: string; className?: string }) {
+  return (
+    <p id={id} role="alert" className={`${ERROR_BOX} ${className}`}>
+      <span aria-hidden="true" className="font-dashMono text-[#e58a9b]">!</span>
+      {children}
+    </p>
+  );
 }
 
 /**
@@ -75,6 +98,13 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const fieldRefs = {
+    email: useRef<HTMLInputElement>(null),
+    password: useRef<HTMLInputElement>(null),
+    name: useRef<HTMLInputElement>(null),
+  };
+  const errorIds = { email: useId(), password: useId(), name: useId() };
   const [methods, setMethods] = useState<LoginMethod[]>(['email']);
   const [alreadySignedIn] = useState(() => Boolean(getAuthToken()));
 
@@ -91,11 +121,28 @@ export default function Login() {
   if (alreadySignedIn) return <Navigate to={next} replace />;
 
   const oauth = methods.filter((m): m is AuthProvider => m === 'google' || m === 'kakao');
-  const filled = email.trim() !== '' && password !== '' && (mode === 'login' || displayName.trim() !== '');
 
   function switchMode(target: Mode) {
     setMode(target);
     setError(null);
+    setFieldErrors({});
+  }
+
+  /** 고친 칸의 알림만 지운다 */
+  function clearFieldError(field: Field) {
+    setFieldErrors((current) => {
+      if (!current[field]) return current;
+      const rest = { ...current };
+      delete rest[field];
+      return rest;
+    });
+  }
+
+  /** 칸 알림을 aria-invalid·aria-describedby 로 잇는다 */
+  function fieldA11y(field: Field) {
+    return fieldErrors[field]
+      ? { 'aria-invalid': true as const, 'aria-describedby': errorIds[field] }
+      : {};
   }
 
   async function finishLogin() {
@@ -108,8 +155,11 @@ export default function Login() {
     event.preventDefault();
     if (busy) return;
     const invalid = validate(mode, email, password, displayName);
-    if (invalid) {
-      setError(invalid);
+    const firstInvalid = FIELD_ORDER.find((field) => invalid[field]);
+    setFieldErrors(invalid);
+    if (firstInvalid) {
+      setError(null);
+      fieldRefs[firstInvalid].current?.focus();
       return;
     }
     setBusy(true);
@@ -184,12 +234,18 @@ export default function Login() {
               autoComplete="email"
               autoCapitalize="none"
               spellCheck={false}
+              ref={fieldRefs.email}
               value={email}
               disabled={busy}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                clearFieldError('email');
+              }}
               placeholder="name@example.com"
               className={FIELD}
+              {...fieldA11y('email')}
             />
+            {fieldErrors.email ? <ErrorBox id={errorIds.email} className="mt-2">{fieldErrors.email}</ErrorBox> : null}
           </div>
 
           <div>
@@ -201,10 +257,15 @@ export default function Login() {
                 id={ids.password}
                 type={showPassword ? 'text' : 'password'}
                 autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                ref={fieldRefs.password}
                 value={password}
                 disabled={busy}
-                onChange={(event) => setPassword(event.target.value)}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  clearFieldError('password');
+                }}
                 className={`${FIELD} pr-16`}
+                {...fieldA11y('password')}
               />
               <button
                 type="button"
@@ -216,6 +277,9 @@ export default function Login() {
                 {showPassword ? '숨기기' : '보기'}
               </button>
             </div>
+            {fieldErrors.password ? (
+              <ErrorBox id={errorIds.password} className="mt-2">{fieldErrors.password}</ErrorBox>
+            ) : null}
           </div>
 
           {mode === 'signup' ? (
@@ -228,27 +292,25 @@ export default function Login() {
                 type="text"
                 autoComplete="nickname"
                 maxLength={DISPLAY_NAME_MAX_LENGTH}
+                ref={fieldRefs.name}
                 value={displayName}
                 disabled={busy}
-                onChange={(event) => setDisplayName(event.target.value)}
+                onChange={(event) => {
+                  setDisplayName(event.target.value);
+                  clearFieldError('name');
+                }}
                 className={FIELD}
+                {...fieldA11y('name')}
               />
+              {fieldErrors.name ? <ErrorBox id={errorIds.name} className="mt-2">{fieldErrors.name}</ErrorBox> : null}
             </div>
           ) : null}
 
-          {error ? (
-            <p
-              role="alert"
-              className="m-0 flex items-start gap-2 break-keep rounded-[10px] border border-[#c4475f]/50 bg-[#2d161d] px-3 py-2.5 text-[14px] font-bold text-[#f0b3be]"
-            >
-              <span aria-hidden="true" className="font-dashMono text-[#e58a9b]">!</span>
-              {error}
-            </p>
-          ) : null}
+          {error ? <ErrorBox>{error}</ErrorBox> : null}
 
           <button
             type="submit"
-            disabled={busy || !filled}
+            disabled={busy}
             className="mt-1 min-h-12 w-full rounded-full bg-[#8f1d35] text-[16px] font-bold text-white transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1e1618] disabled:bg-[#4a2630] disabled:text-[#c9b7ba]"
           >
             {busy ? (mode === 'signup' ? '가입하는 중' : '로그인하는 중') : mode === 'signup' ? '가입하기' : '로그인'}

@@ -97,3 +97,28 @@ test('첫 접속: 로그인하지 않은 독자에게는 로그인·회원가입
   await expect(page.getByText('회원가입').first()).toBeVisible();
   await context.close();
 });
+
+test('E2E #89: 저장된 토큰의 계정이 없으면(401) 앱을 열 때 로그인 화면으로 간다', async ({ page }) => {
+  await installMockApi(page, { authRejected: true });
+  await page.goto('/');
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByTestId('login-screen')).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('ssabi.auth_token'))).toBeNull();
+});
+
+test('E2E #89: /auth/me 가 네트워크 오류면 로그아웃시키지 않는다', async ({ page }) => {
+  await installMockApi(page);
+  await page.route('**/auth/me', (route) => route.abort('internetdisconnected'));
+  await page.goto('/');
+  await expect(page.getByText('탁류', { exact: true }).first()).toBeVisible();
+  await expect(page).not.toHaveURL(/\/login/);
+  expect(await page.evaluate(() => localStorage.getItem('ssabi.auth_token'))).not.toBeNull();
+});
+
+test('E2E #81: MY에서 로그아웃하면 next 없이 /login 으로 간다', async ({ page }) => {
+  await installMockApi(page, { authMember: true });
+  await page.goto('/my');
+  await page.getByRole('button', { name: '로그아웃' }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByTestId('login-screen')).toBeVisible();
+});

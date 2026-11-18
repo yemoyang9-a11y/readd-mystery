@@ -100,6 +100,35 @@ test('mock 모드에서 로그인하면 가려던 주소로 돌아간다', async
   expect(await screen.findByRole('heading', { level: 1, name: '내 서재' })).toBeInTheDocument();
 });
 
+describe('E2E #81 — MY에서 직접 로그아웃하면 새로 시작한다', () => {
+  test('MY에서 로그아웃을 누르면 next 없이 /login 으로 가고, 다시 로그인하면 홈으로 간다', async () => {
+    setAuthToken('saved-session');
+    const router = renderAt('/my');
+    await userEvent.click(await screen.findByRole('button', { name: '로그아웃' }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
+    expect(router.state.location.search).toBe('');
+    expect(getAuthToken()).toBeNull();
+
+    await userEvent.type(screen.getByLabelText('이메일'), 'reader@example.com');
+    await userEvent.type(screen.getByLabelText('비밀번호'), 'secret-pass');
+    await userEvent.click(screen.getByRole('button', { name: '로그인' }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+  });
+
+  test('읽는 중에 세션이 지워지면(401 등) 가려던 주소를 next 로 들고 간다', async () => {
+    setAuthToken('saved-session');
+    const router = renderAt('/search?q=%EA%B9%80');
+    expect(router.state.location.pathname).toBe('/search');
+
+    act(() => clearAuthToken());
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
+    expect(router.state.location.search).toBe(`?next=${encodeURIComponent('/search?q=%EA%B9%80')}`);
+  });
+});
+
 describe('돌아갈 주소 검사', () => {
   test.each([
     [null, '/'],

@@ -68,7 +68,8 @@ describe('로그인·회원가입 화면 — 2026-11-18 대표 지시', () => {
     await userEvent.click(screen.getByRole('tab', { name: '회원가입' }));
     expect(screen.getByRole('tab', { name: '회원가입' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByLabelText('닉네임')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '가입하기' })).toBeDisabled();
+    // E2E #3 — 빈칸이어도 버튼은 눌린다. 누르면 칸마다 무엇이 빠졌는지 알린다
+    expect(screen.getByRole('button', { name: '가입하기' })).toBeEnabled();
   });
 
   test('가입하면 입력값으로 signup을 부르고 첫 안내(/guide)로 간다', async () => {
@@ -91,8 +92,83 @@ describe('로그인·회원가입 화면 — 2026-11-18 대표 지시', () => {
     await fill('닉네임', '추리왕');
     await userEvent.click(screen.getByRole('button', { name: '가입하기' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('비밀번호는 8자 이상이어야 해요');
+    expect(await screen.findByRole('alert')).toHaveTextContent('비밀번호는 8자 이상이에요');
+    expect(screen.getByLabelText('비밀번호')).toHaveAttribute('aria-invalid', 'true');
     expect(signup).not.toHaveBeenCalled();
+  });
+
+  describe('E2E #3 — 빈칸·잘못된 값으로 누르면 칸 아래에 알린다', () => {
+    test('가입 칸을 모두 비우고 누르면 세 칸 모두 알리고 첫 칸(이메일)으로 초점을 옮긴다', async () => {
+      renderLogin('/login?mode=signup');
+      const submit = screen.getByRole('button', { name: '가입하기' });
+      expect(submit).toBeEnabled();
+      await userEvent.click(submit);
+
+      const email = screen.getByLabelText('이메일');
+      const password = screen.getByLabelText('비밀번호');
+      const name = screen.getByLabelText('닉네임');
+      expect(email).toHaveAccessibleDescription('이메일을 입력해 주세요');
+      expect(password).toHaveAccessibleDescription('비밀번호는 8자 이상이에요');
+      expect(name).toHaveAccessibleDescription('닉네임을 입력해 주세요');
+      for (const field of [email, password, name]) expect(field).toHaveAttribute('aria-invalid', 'true');
+      expect(email).toHaveFocus();
+      expect(signup).not.toHaveBeenCalled();
+    });
+
+    test('이메일 형식이 틀리면 그 칸에 알리고, 맞는 칸은 알리지 않는다', async () => {
+      renderLogin('/login?mode=signup');
+      await fill('이메일', 'reader-at-example');
+      await fill('비밀번호', 'secret-pass');
+      await fill('닉네임', '추리왕');
+      await userEvent.click(screen.getByRole('button', { name: '가입하기' }));
+
+      expect(screen.getByLabelText('이메일')).toHaveAccessibleDescription('올바른 이메일 형식이 아니에요');
+      expect(screen.getByLabelText('이메일')).toHaveFocus();
+      expect(screen.getByLabelText('비밀번호')).not.toHaveAttribute('aria-invalid', 'true');
+      expect(screen.getByLabelText('닉네임')).not.toHaveAttribute('aria-invalid', 'true');
+      expect(signup).not.toHaveBeenCalled();
+    });
+
+    test('앞 칸이 맞으면 처음 틀린 칸(닉네임)으로 초점을 옮긴다', async () => {
+      renderLogin('/login?mode=signup');
+      await fill('이메일', 'reader@example.com');
+      await fill('비밀번호', 'secret-pass');
+      await userEvent.click(screen.getByRole('button', { name: '가입하기' }));
+
+      expect(screen.getByLabelText('닉네임')).toHaveAccessibleDescription('닉네임을 입력해 주세요');
+      expect(screen.getByLabelText('닉네임')).toHaveFocus();
+      expect(screen.getAllByRole('alert')).toHaveLength(1);
+    });
+
+    test('알림이 뜬 칸을 고치면 그 칸의 알림이 사라진다', async () => {
+      renderLogin('/login?mode=signup');
+      await userEvent.click(screen.getByRole('button', { name: '가입하기' }));
+      await fill('이메일', 'reader@example.com');
+
+      expect(screen.getByLabelText('이메일')).not.toHaveAttribute('aria-invalid', 'true');
+      expect(screen.queryByText('이메일을 입력해 주세요')).toBeNull();
+      expect(screen.getByText('닉네임을 입력해 주세요')).toBeInTheDocument();
+    });
+
+    test('로그인 칸을 비우고 누르면 이메일 칸에 알리고 로그인을 보내지 않는다', async () => {
+      renderLogin();
+      const submit = screen.getByRole('button', { name: '로그인' });
+      expect(submit).toBeEnabled();
+      await userEvent.click(submit);
+
+      expect(screen.getByLabelText('이메일')).toHaveAccessibleDescription('이메일을 입력해 주세요');
+      expect(screen.getByLabelText('비밀번호')).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.getByLabelText('이메일')).toHaveFocus();
+      expect(login).not.toHaveBeenCalled();
+    });
+
+    test('탭을 바꾸면 앞 탭의 알림은 지운다', async () => {
+      renderLogin('/login?mode=signup');
+      await userEvent.click(screen.getByRole('button', { name: '가입하기' }));
+      await userEvent.click(screen.getByRole('tab', { name: '로그인' }));
+
+      expect(screen.queryAllByRole('alert')).toHaveLength(0);
+    });
   });
 
   test('로그인하면 가려던 주소로 돌아간다', async () => {

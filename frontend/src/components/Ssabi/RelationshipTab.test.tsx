@@ -414,6 +414,81 @@ describe('RelationshipTab', () => {
 
       expect(screen.queryByTestId('relationship-graph-fullscreen-overlay')).not.toBeInTheDocument();
     });
+
+    it('PC에서는 반투명 배경 위 가운데 그래프 상자로 연다 (가로세로비 유지)', () => {
+      render(<RelationshipTab graph={graph} failed={false} />);
+
+      fireEvent.click(screen.getByRole('button', { name: '전체화면' }));
+
+      const overlay = screen.getByTestId('relationship-graph-fullscreen-overlay');
+      expect(overlay).not.toHaveAttribute('data-mobile');
+      expect(overlay.className).toContain('bg-black/40');
+      const dialog = screen.getByRole('dialog', { name: '인물 관계도 전체화면' });
+      expect(dialog.style.width).not.toBe('');
+      expect(dialog.style.height).not.toBe('');
+    });
+  });
+
+  /**
+   * E2E #51 — 휴대폰에서 전체화면을 누르면 가운데 카드로 뜨고 뒤의 싸비 패널이 비쳐 보였다.
+   * 휴대폰(싸비 시트의 data-mobile 안)에서는 화면 전체를 불투명하게 채우고, 싸비 시트보다 위에
+   * 있으며, 닫는 버튼이 화면 안에 있어야 한다.
+   */
+  describe('E2E #51 — 휴대폰 전체화면', () => {
+    function openOnMobile() {
+      render(
+        <div data-mobile="true" data-testid="mobile-ssabi">
+          <RelationshipTab graph={graph} failed={false} />
+        </div>
+      );
+      fireEvent.click(screen.getByRole('button', { name: '전체화면' }));
+      return {
+        overlay: screen.getByTestId('relationship-graph-fullscreen-overlay'),
+        dialog: screen.getByRole('dialog', { name: '인물 관계도 전체화면' }),
+      };
+    }
+
+    it('화면 전체(100dvh × 100vw)를 불투명한 바탕으로 덮는다 — 뒤 패널이 비치지 않는다', () => {
+      const { overlay } = openOnMobile();
+      expect(overlay).toHaveAttribute('data-mobile', 'true');
+      expect(overlay.className).toMatch(/\bfixed\b/);
+      expect(overlay.className).toMatch(/\binset-0\b/);
+      expect(overlay.className).toContain('h-[100dvh]');
+      expect(overlay.className).toContain('w-screen');
+      expect(overlay.className).not.toMatch(/bg-black\/|bg-\w+\/\d+/);
+      expect(overlay.className).toMatch(/\bbg-(white|brief-paper)\b/);
+    });
+
+    it('싸비 시트(z-10)·확인 창(z-60/70)보다 위에 있고 body 바로 아래에 붙는다', () => {
+      const { overlay } = openOnMobile();
+      expect(overlay.parentElement).toBe(document.body);
+      expect(overlay.className).toContain('z-[80]');
+    });
+
+    it('노치·홈 막대 자리(safe-area)만큼 비워 둔다', () => {
+      const { overlay } = openOnMobile();
+      expect(overlay.style.paddingTop).toBe('var(--safe-top)');
+      expect(overlay.style.paddingBottom).toBe('var(--safe-bottom)');
+      expect(overlay.style.paddingLeft).toBe('var(--safe-left)');
+      expect(overlay.style.paddingRight).toBe('var(--safe-right)');
+    });
+
+    it('그래프 상자가 고정 크기 카드가 아니라 남은 화면을 모두 채운다', () => {
+      const { dialog } = openOnMobile();
+      expect(dialog.style.width).toBe('');
+      expect(dialog.style.height).toBe('');
+      expect(dialog.className).toContain('h-full');
+      expect(dialog.className).toContain('w-full');
+      expect(dialog.className).not.toContain('rounded-[20px]');
+    });
+
+    it('전체화면 종료 버튼이 그 화면 안에 있고 누르면 싸비로 돌아온다', () => {
+      const { dialog } = openOnMobile();
+      const exit = within(dialog).getByRole('button', { name: '전체화면 종료' });
+      fireEvent.click(exit);
+      expect(screen.queryByTestId('relationship-graph-fullscreen-overlay')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '전체화면' })).toBeInTheDocument();
+    });
   });
 });
 

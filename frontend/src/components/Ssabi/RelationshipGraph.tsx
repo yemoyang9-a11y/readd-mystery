@@ -236,6 +236,14 @@ export default function RelationshipGraph({
   // 동시에 만족하는 최대 크기"(contain)를 안정적으로 계산해주지 않아(요소가 아니라
   // 이미지/비디오에만 있는 동작) 직접 계산한다.
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // E2E #51 — 휴대폰(싸비 시트의 data-mobile 안)에서는 가운데 카드 대신 화면 전체를 채운다.
+  // 여는 순간 그래프가 어디에 그려져 있는지로 정한다(포털로 옮기면 data-mobile 조상이 사라진다).
+  const [fullscreenOnMobile, setFullscreenOnMobile] = useState(false);
+  const mobileFullscreen = isFullscreen && fullscreenOnMobile;
+  function toggleFullscreen() {
+    if (!isFullscreen) setFullscreenOnMobile(Boolean(wrapRef.current?.closest('[data-mobile]')));
+    setIsFullscreen((v) => !v);
+  }
   useModalLayer({
     active: isFullscreen,
     dialogRef: wrapRef,
@@ -247,7 +255,8 @@ export default function RelationshipGraph({
   );
 
   useEffect(() => {
-    if (!isFullscreen) return;
+    // 휴대폰 전체화면은 CSS로 화면을 채운다 — 그래프는 svg 안에서 가로세로비를 지켜 맞춘다
+    if (!isFullscreen || fullscreenOnMobile) return;
     function computeSize() {
       const marginPx = 32;
       const maxW = (window.visualViewport?.width ?? window.innerWidth) - marginPx * 2;
@@ -268,7 +277,7 @@ export default function RelationshipGraph({
       window.removeEventListener('resize', computeSize);
       window.visualViewport?.removeEventListener('resize', computeSize);
     };
-  }, [isFullscreen, base]);
+  }, [isFullscreen, fullscreenOnMobile, base]);
 
   const validSelectedId = selectedId && degree.has(selectedId) ? selectedId : null;
 
@@ -334,8 +343,11 @@ export default function RelationshipGraph({
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
     const computeNext = (vb: ViewBox): ViewBox => {
-      const ux = vb.x + ((clientX - rect.left) / rect.width) * vb.width;
-      const uy = vb.y + ((clientY - rect.top) / rect.height) * vb.height;
+      // svg는 viewBox를 가로세로비를 지켜 가운데에 맞춘다(meet) — 휴대폰 전체화면처럼 캔버스
+      // 비율이 그래프와 달라도 손가락 아래 지점을 기준으로 확대되게 같은 방식으로 환산한다.
+      const scale = Math.max(vb.width / rect.width, vb.height / rect.height);
+      const ux = vb.x + vb.width / 2 + (clientX - (rect.left + rect.width / 2)) * scale;
+      const uy = vb.y + vb.height / 2 + (clientY - (rect.top + rect.height / 2)) * scale;
       const rawWidth = vb.width / factor;
       const width = Math.max(
         base.width * MIN_ZOOM_RATIO,
@@ -404,8 +416,10 @@ export default function RelationshipGraph({
       if (drag.pointers.size === 1 && drag.last) {
         const rect = canvasRef.current?.getBoundingClientRect();
         if (!rect) return;
-        const dx = ((event.clientX - drag.last.x) / rect.width) * viewBox.width;
-        const dy = ((event.clientY - drag.last.y) / rect.height) * viewBox.height;
+        // 위 zoomAt과 같은 meet 환산 — 캔버스 비율이 그래프와 달라도 손가락과 같은 거리만큼 움직인다
+        const scale = Math.max(viewBox.width / rect.width, viewBox.height / rect.height);
+        const dx = (event.clientX - drag.last.x) * scale;
+        const dy = (event.clientY - drag.last.y) * scale;
         drag.moved += Math.abs(event.clientX - drag.last.x) + Math.abs(event.clientY - drag.last.y);
         if (drag.moved > 4) {
           setViewBox((vb) => clampViewBox({ ...vb, x: vb.x - dx, y: vb.y - dy }, base));
@@ -637,13 +651,19 @@ export default function RelationshipGraph({
       //
       // 전체화면 중엔 이 규칙 대신 fullscreenSize(위에서 화면에 맞춰 계산한 px)를 쓴다 —
       // base의 가로세로비는 그대로 유지된 채 크기만 화면에 맞춰 커진다.
+      //
+      // 휴대폰 전체화면(E2E #51)은 고정 크기 카드가 아니라 오버레이의 남은 자리를 모두 채운다.
       className={
-        isFullscreen
+        mobileFullscreen
+          ? 'relative flex h-full w-full min-h-0 flex-col touch-none bg-white outline-none'
+          : isFullscreen
           ? 'relative flex flex-col touch-none rounded-[20px] border border-brief-rule bg-white'
           : 'relative flex w-full min-h-[220px] max-h-[420px] flex-col touch-none rounded-[20px] border border-brief-rule bg-white'
       }
       style={
-        isFullscreen && fullscreenSize
+        mobileFullscreen
+          ? undefined
+          : isFullscreen && fullscreenSize
           ? { width: fullscreenSize.width, height: fullscreenSize.height }
           : { aspectRatio: `${base.width} / ${base.height}` }
       }
@@ -925,7 +945,7 @@ export default function RelationshipGraph({
             aria-label={isFullscreen ? '전체화면 종료' : '전체화면'}
             aria-pressed={isFullscreen}
             className="flex h-11 w-11 lg:h-7 lg:w-7 items-center justify-center rounded-full border border-brief-rule bg-white/95 text-brief-muted"
-            onClick={() => setIsFullscreen((v) => !v)}
+            onClick={toggleFullscreen}
           >
             {isFullscreen ? (
               <svg
@@ -978,6 +998,30 @@ export default function RelationshipGraph({
   // 전체화면처럼 안 보이고 뒤에 깔렸다(2026-08-26, 사용자 제보 — elementFromPoint로
   // 확인: 탭 바 자리를 눌러도 오버레이가 아니라 탭 버튼이 잡힘). body로 포털하면 그
   // 조상 스태킹 컨텍스트를 벗어나 z-index 비교가 페이지 최상위에서 의도대로 동작한다.
+  //
+  // 휴대폰(E2E #51): 가운데 카드 + 반투명 배경이면 뒤의 싸비 패널이 비쳐 전체화면 같지 않았다.
+  // 화면 전체(100dvh × 100vw)를 불투명하게 덮고, 싸비 시트(z-10)·확인 창(z-60·70)보다 위에
+  // 두며, 노치·홈 막대 자리만큼 비워 아래 조작 줄(전체화면 종료 포함)이 손에 닿게 한다.
+  // data-mobile 을 다시 달아 포털 밖에서도 휴대폰용 변형(mobile:)이 그대로 걸리게 한다.
+  if (mobileFullscreen) {
+    return createPortal(
+      <div
+        data-testid="relationship-graph-fullscreen-overlay"
+        data-mobile="true"
+        className="viewport-overlay fixed inset-0 z-[80] flex h-[100dvh] w-screen flex-col overflow-hidden bg-white"
+        style={{
+          paddingTop: 'var(--safe-top)',
+          paddingBottom: 'var(--safe-bottom)',
+          paddingLeft: 'var(--safe-left)',
+          paddingRight: 'var(--safe-right)',
+        }}
+      >
+        {graphBox}
+      </div>,
+      document.body
+    );
+  }
+
   return createPortal(
     <div
       data-testid="relationship-graph-fullscreen-overlay"
