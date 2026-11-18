@@ -47,7 +47,8 @@ export interface ListPostsQuery {
 
 export interface CommunityRepository {
   listPosts(bookId: string, query: ListPostsQuery): Promise<PostRow[]>;
-  getPost(bookId: string, postId: string): Promise<PostRow | null>;
+  /** viewerId — liked_by_me 계산용(완독 게이트를 통과한 독자). 없으면 false */
+  getPost(bookId: string, postId: string, viewerId?: string): Promise<PostRow | null>;
   listComments(bookId: string, postId: string): Promise<CommentRow[]>;
   createPost(bookId: string, readerId: string, kind: PostKind, body: string): Promise<PostRow>;
   createComment(

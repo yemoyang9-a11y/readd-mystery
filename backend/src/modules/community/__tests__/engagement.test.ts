@@ -92,10 +92,10 @@ class FakeStore implements CommunityRepository, CommunityEngagementRepository {
     }
     return rows.slice(0, q.limit).map((p) => this.view(p, q.viewerId));
   }
-  async getPost(bookId: string, postId: string) {
+  async getPost(bookId: string, postId: string, viewerId?: string) {
     this.touched.push('getPost');
     const p = this.posts.find((x) => x.post_id === postId && x.book_id === bookId && !x.hidden);
-    return p ? this.view(p) : null;
+    return p ? this.view(p, viewerId) : null;
   }
   async listComments(): Promise<CommentRow[]> {
     this.touched.push('listComments');
@@ -240,6 +240,15 @@ describe('커뮤니티 공감·인기순·허브', () => {
     expect(await unliked.json()).toEqual({ like_count: 1, liked_by_me: false });
     const asB = (await (await call('GET', `${base}/posts`, FINISHER_2)).json()) as any;
     expect(asB.posts[0]).toMatchObject({ like_count: 1, liked_by_me: true });
+  });
+
+  test('글 상세도 목록과 같은 공감 상태 — 누른 독자는 true, 안 누른 독자는 false (2026-11-18 E2E #72)', async () => {
+    const post = store.seed(BOOK, SECRET);
+    await call('POST', `${base}/posts/${post.post_id}/like`, FINISHER);
+    const mine = (await (await call('GET', `${base}/posts/${post.post_id}`, FINISHER)).json()) as any;
+    expect(mine.post).toMatchObject({ like_count: 1, liked_by_me: true });
+    const other = (await (await call('GET', `${base}/posts/${post.post_id}`, FINISHER_2)).json()) as any;
+    expect(other.post).toMatchObject({ like_count: 1, liked_by_me: false });
   });
 
   test('공감: 숨김·삭제·없는 글은 404, 다른 도서의 글도 404', async () => {

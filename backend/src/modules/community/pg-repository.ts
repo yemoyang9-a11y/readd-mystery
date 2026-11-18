@@ -162,11 +162,16 @@ export function createPgCommunityRepository(
       return rows[0].n;
     },
 
-    async getPost(bookId, postId) {
-      const { rows } = await db.query(
-        `${POST_SELECT} WHERE p.book_id = $1 AND p.post_id = $2 AND ${VISIBLE}`,
-        [bookId, postId]
-      );
+    async getPost(bookId, postId, viewerId) {
+      const { rows } = viewerId
+        ? await db.query(
+            `${postSelect('$3')} WHERE p.book_id = $1 AND p.post_id = $2 AND ${VISIBLE}`,
+            [bookId, postId, viewerId]
+          )
+        : await db.query(`${POST_SELECT} WHERE p.book_id = $1 AND p.post_id = $2 AND ${VISIBLE}`, [
+            bookId,
+            postId,
+          ]);
       return rows.length === 0 ? null : toPost(rows[0]);
     },
 

@@ -217,7 +217,9 @@ export function createCommunityRouter({
       const { bookId, postId } = req.params;
       const readerId = await authorize(req, res);
       if (!readerId) return;
-      const row = UUID_PATTERN.test(postId) ? await community.getPost(bookId, postId) : null;
+      const row = UUID_PATTERN.test(postId)
+        ? await community.getPost(bookId, postId, readerId)
+        : null;
       if (!row) {
         notFound(res, 'Post not found');
         return;
