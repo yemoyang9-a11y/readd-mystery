@@ -19,12 +19,12 @@ it('renders graph after loading and after a position invalidates the previous gr
   expect(screen.getByRole('region', { name: '인물' })).toBeInTheDocument();
 });
 
-it('범례·조작 안내 같은 회색 부연 문구가 없고 선택 해제 버튼은 남는다 (2026-11-18 대표 지시)', () => {
+it('범례·조작 안내 같은 회색 부연 문구가 없다 (2026-11-18 대표 지시) — 중심 인물이 늘 있어 선택 해제 버튼도 없다 (2026-11-17 시안)', () => {
   render(<RelationshipTab graph={graph} failed={false} />);
   expect(screen.queryByText(/화살표는 감정·행동의 방향/)).toBeNull();
   expect(screen.queryByText(/두 손가락으로 확대/)).toBeNull();
   expect(screen.queryByText(/별칭을 생략합니다/)).toBeNull();
-  expect(screen.getByRole('button', { name: '선택 해제' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '선택 해제' })).toBeNull();
 });
 
 /**
@@ -41,11 +41,8 @@ describe('RelationshipTab', () => {
     expect(screen.getAllByText('부녀', { exact: false }).length).toBeGreaterThan(0);
   });
 
-  it('인물을 선택하면 설명 칸에 이어진 사람이 나온다 — 선택하기 전에는 설명 칸이 없다', () => {
+  it('설명 칸에 중심 인물과 이어진 사람이 나온다 — 처음 중심은 연결이 가장 많은(동점이면 먼저 등장한) 인물이다', () => {
     render(<RelationshipTab graph={graph} failed={false} />);
-    expect(screen.queryByRole('region', { name: '관계 설명' })).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: '정주사' }));
 
     const details = screen.getByRole('region', { name: '관계 설명' });
     expect(within(details).getByText('정주사 (정 주사)와 이어진 사람')).toBeInTheDocument();
@@ -53,15 +50,15 @@ describe('RelationshipTab', () => {
     expect(within(details).getByText('부녀')).toBeInTheDocument();
   });
 
-  it('같은 인물을 다시 선택하면 선택이 풀린다', () => {
+  it('같은 인물을 다시 선택해도 그 인물이 중심으로 남는다 (2026-11-17 시안)', () => {
     render(<RelationshipTab graph={graph} failed={false} />);
 
-    const node = screen.getByRole('button', { name: '정주사' });
+    const node = screen.getByRole('button', { name: '초봉' });
     fireEvent.click(node);
     expect(node).toHaveAttribute('aria-pressed', 'true');
 
     fireEvent.click(node);
-    expect(node).toHaveAttribute('aria-pressed', 'false');
+    expect(node).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('다른 인물을 연달아 눌러도 누른 인물이 선택된다', () => {
@@ -432,8 +429,22 @@ describe('인물관계도 선 선택', () => {
   });
 
   it('선택한 선은 #ff5c7d 색과 3.6px 굵기이고 관계 이름표가 나온다', () => {
-    const { container } = render(<RelationshipTab graph={graph} failed={false} />);
-    const edge = container.querySelector('[data-edge-id]') as SVGElement;
+    // 중심 인물(정주사)과 닿지 않은 선(초봉–고태수, 김씨–고태수 중 하나)을 골라야 기본 선 굵기와 비교된다
+    const four: GraphResponse = {
+      nodes: [
+        ...graph.nodes,
+        { id: 'c3', name: '고태수', first_appearance_page: 4, aliases: [] },
+        { id: 'c4', name: '김씨', first_appearance_page: 5, aliases: [] },
+      ],
+      edges: [
+        { id: 'e1', source: 'c1', target: 'c2', label: '부녀', established_page: 5 },
+        { id: 'e2', source: 'c1', target: 'c4', label: '이웃', established_page: 5 },
+        { id: 'e3', source: 'c3', target: 'c4', label: '거래', established_page: 6 },
+      ],
+    };
+    const { container } = render(<RelationshipTab graph={four} failed={false} />);
+    const edge = container.querySelector('[data-edge-id="e3"]') as SVGElement;
+    expect(edge).toHaveAttribute('data-ego-edge', 'false');
     // 굵기는 화면 배율 k를 곱한 값이라 기본 선(1.2px)과의 비로 확인한다
     const baseWidth = Number(edge.getAttribute('stroke-width'));
     fireEvent.click(edge);

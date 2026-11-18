@@ -131,6 +131,15 @@ export interface EdgePath {
   path: string;
   label: Point;
   length: number;
+  /** 2차 곡선의 점 — 이름표가 겹칠 때 선 위 다른 자리로 옮기는 데 쓴다 (edgePointAt). */
+  start: Point;
+  control: Point;
+  end: Point;
+}
+
+/** 곡선 위 t(0~1) 지점. 이름표 자리를 선을 따라 옮길 때 쓴다. */
+export function edgePointAt(entry: Pick<EdgePath, 'start' | 'control' | 'end'>, t: number): Point {
+  return quadraticPoint(entry.start, entry.control, entry.end, t);
 }
 
 /**
@@ -203,6 +212,9 @@ export function makeEdgePaths(
         path: `M ${start.x} ${start.y} Q ${control.x} ${control.y} ${end.x} ${end.y}`,
         label,
         length,
+        start,
+        control,
+        end,
       });
     });
   }
