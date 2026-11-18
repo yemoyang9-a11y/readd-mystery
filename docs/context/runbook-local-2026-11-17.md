@@ -140,3 +140,38 @@ node ../evaluation/relationships/check-structural-metrics.cjs data/generated/str
 MIGRATE_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/readd_migrate_test \
   npx jest tests/unit/scripts/migrate.test.ts
 ```
+
+## 8. 타임라인 장 핵심 한 줄 만들기 (2026-11-18 추가, 결정 31·시안 2차 A안)
+
+타임라인의 장마다 보이는 "핵심 한 줄"을 장마다 따로 만든다. 지금은 장 요약의 첫 문장을 대신 보여 준다. 만든 문장이 없거나 거절되면 화면은 지금처럼 요약 첫 문장을 보여 준다.
+
+AI는 장마다 1번 부른다(「가상범인」 5장이면 5번). AI에게는 **그 장 원문만**(장 첫 쪽 ~ 끝 쪽) 준다. 다음 장 글자는 한 자도 들어가지 않는다. 나온 문장은 코드가 검사해서 하나라도 걸리면 쓰지 않고 검수 후보로 남긴다. 검사 항목은 다섯 가지다.
+
+- 한 문장인가
+- 60자 이하인가(목표는 50자 안팎)
+- "단서·수상한·결정적" 같은 평가하는 말이 없는가
+- 그 장에 안 나온 인물 이름이 없는가
+- AI가 근거로 댄 원문이 그 장에 실제로 있는가
+
+**순서 (모두 `backend/` 안에서. 7절 baseline을 먼저 마쳐야 한다):**
+
+1. **마이그레이션 026 적용.** 장 요약 표에 빈 칸 두 개(`key_point`, `key_point_review_status`)를 더하기만 한다. 기존 데이터는 바뀌지 않는다.
+   ```bash
+   node scripts/migrate.js --status     # "남음 1개", "남음: 026_chapter_key_point.sql" 확인
+   node scripts/migrate.js              # "적용 1개, 건너뜀 22개"
+   ```
+2. **책 ID와 원문 파일 확인.** 생성 결과 폴더 `data/generated/<책 ID>/full/all-resolved.json`이 있어야 한다(인물 이름 검사에 쓴다). 업로드한 책이면 Supabase SQL 편집기에서 `SELECT book_id, source_path FROM ingest_jobs;`로 ID와 원문 경로를 본다. 아래 `<책 ID>`·`<원문>`은 예를 들어 `gasangbeomin`·`data/raw/gasangbeomin.txt`다.
+3. **생성 (AI 비용 발생).** DB에는 아직 쓰지 않는다.
+   ```bash
+   npx ts-node --transpile-only src/batch/pipeline/run-generate-key-points.ts --book <책 ID> --file <원문>
+   ```
+   장마다 `[글자 수] 문장` 또는 "검수 후보(쓰지 않음)"가 찍힌다. 결과는 `data/generated/<책 ID>/full/key-points.json`이다. 걸린 이유는 같은 파일의 `review_candidates`에 있다. 다시 돌리면 저장해 둔 답을 써서 AI를 부르지 않는다. 문장이 마음에 안 들어 다시 만들려면 `chapter-N.key-point.json`을 지우고 돌린다.
+4. **DB에 쓰기.** 통과한 문장만 쓴다.
+   ```bash
+   npx ts-node --transpile-only src/batch/pipeline/run-generate-key-points.ts --book <책 ID> --file <원문> --apply
+   ```
+   ⚠️ **쓰는 순간 그 책은 공개에서 내려간다**(검수 상태). 검수하지 않은 문장이 독자에게 보이지 않게 하려는 것이다(R12). 5번까지 이어서 한다. 원문이나 장 나눔이 만들 때와 다르면 아무것도 쓰지 않고 멈춘다.
+5. **검수 → 다시 공개.** 둘 중 하나로 한다.
+   - 관리자 화면 `/admin/books/<책 ID>/review` → "장 핵심 한 줄" 칸에서 장마다 승인 또는 거절한다. 거절하면 그 장은 요약 첫 문장으로 돌아간다. 마지막으로 "최종 승인"을 누른다(업로드로 등록한 책).
+   - 명령으로 할 때(명령으로 등록한 책): `run-export-review.ts --book <책 ID>`로 시트를 받는다. `chapter_key_point` 행을 채운 뒤 `run-apply-review.ts --book <책 ID>`, 이어서 `run-publish.ts --book <책 ID>`를 실행한다.
+6. **확인.** 앱에서 그 책을 몇 장 읽고 싸비 → 타임라인을 연다. 다 읽은 장에만 새 문장이 보이고, 읽는 중인 장에는 "다 읽으면 정리돼요"만 보이면 된다.

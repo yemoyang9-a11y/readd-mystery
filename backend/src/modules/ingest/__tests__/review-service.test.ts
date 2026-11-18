@@ -198,3 +198,47 @@ describe('review service', () => {
     expect(calls.some((c) => c.sql.includes('INSERT INTO review_records'))).toBe(false);
   });
 });
+
+describe('review service — 장 핵심 한 줄 (결정 31)', () => {
+  test('FR-ADM-005: 핵심 한 줄 거절은 문장을 비우고 rejected 로 둔다 — 장 요약은 그대로', async () => {
+    const jobs = await reviewReadyJobs();
+    const { db, calls } = fakeDb((sql) =>
+      sql.includes('key_point IS NOT NULL') ? [{ target_id: '1' }, { target_id: '2' }] : []
+    );
+    const service = createReviewService({ db, jobs });
+
+    const result = await service.applyDecisions('bk-abc', {
+      decisions: [
+        { target_type: 'chapter_key_point', target_id: '*', verdict: 'approve' },
+        { target_type: 'chapter_key_point', target_id: '2', verdict: 'reject' },
+      ],
+    });
+
+    expect(result).toEqual({ approved: 1, rejected: 1 });
+    const clear = calls.find((c) => /UPDATE chapter_summaries/.test(c.sql));
+    expect(clear?.sql).toMatch(/key_point = NULL/);
+    expect(clear?.sql).toMatch(/key_point_review_status = 'rejected'/);
+    expect(clear?.params).toEqual(['bk-abc', 2]);
+    expect(calls.some((c) => /DELETE FROM chapter_summaries/.test(c.sql))).toBe(false);
+    const insert = calls.find((c) => c.sql.includes('INSERT INTO review_records'));
+    expect(insert?.params?.slice(2, 4)).toEqual(['chapter_key_point', '1']);
+  });
+
+  test('FR-ADM-005: 검수 화면은 장 요약과 함께 핵심 한 줄을 보여 준다', async () => {
+    const jobs = await reviewReadyJobs();
+    const { db, calls } = fakeDb((sql) =>
+      sql.includes('FROM books WHERE book_id') ? [{ book_id: 'bk-abc' }] : []
+    );
+    const service = createReviewService({
+      db,
+      jobs,
+      loadIntegrity: () => null,
+      loadHeld: () => [],
+      loadHeldCandidates: () => [],
+    });
+    await service.getReview('bk-abc');
+    expect(
+      calls.some((c) => /SELECT chapter_no, summary, key_point FROM chapter_summaries/.test(c.sql))
+    ).toBe(true);
+  });
+});

@@ -150,7 +150,8 @@ export interface ReviewView {
     notes: { id: string; note: string; source_page: number }[];
   }[];
   relationships: ReviewRelationship[];
-  chapter_summaries: { chapter_no: number; summary: string }[];
+  /** key_point — 장 핵심 한 줄(결정 31). 배치가 만든 장만 있고, 마이그레이션 026 전 서버는 보내지 않는다 */
+  chapter_summaries: { chapter_no: number; summary: string; key_point?: string | null }[];
   terms: { id: string; term: string; definition: string; first_appearance_page: number }[];
   events: { id: string; event: string; description: string; occurrence_page: number }[];
   background_and_intro: { kind: string; content: string }[];

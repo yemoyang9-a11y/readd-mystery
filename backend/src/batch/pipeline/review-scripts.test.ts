@@ -250,3 +250,59 @@ describe('FR-ADM-005 🚦: 다른 책 산출물·시트는 거부한다', () => 
     await expect(applyReviewSheet(current.pool, hwabun)).resolves.toMatchObject({ rows: 1 });
   });
 });
+
+describe('FR-ADM-005 🚦: 검수 시트에 장 핵심 한 줄을 함께 낸다 (결정 31)', () => {
+  const withSummary = (bookId: string): ResolvedBookData => ({
+    ...resolvedData(bookId, 'term-x', '용어'),
+    chapter_summaries: [
+      { chapter_no: 1, title: '1장', summary: '1장 요약' },
+      { chapter_no: 2, title: '2장', summary: '2장 요약' },
+    ],
+  });
+
+  test('FR-ADM-005: key-points.json 이 있으면 통과한 문장만 chapter_key_point 행으로 낸다', async () => {
+    const args = tempBookArgs(root, 'hwabun');
+    fs.writeFileSync(
+      path.join(args.fullDir, 'all-resolved.json'),
+      JSON.stringify(withSummary('hwabun'))
+    );
+    fs.writeFileSync(
+      path.join(args.fullDir, 'key-points.json'),
+      JSON.stringify({
+        book_id: 'hwabun',
+        version: 'v',
+        key_points: [
+          { chapter_no: 1, grounding: {}, key_point: '1장 핵심 한 줄.' },
+          { chapter_no: 2, grounding: {}, key_point: null },
+        ],
+        review_candidates: [],
+      })
+    );
+    const { outPath } = await exportReviewSheet(recordingClient().client, args);
+    const rows = parseCsv(fs.readFileSync(outPath, 'utf-8')).filter(
+      (r) => r[1] === 'chapter_key_point'
+    );
+    expect(rows.map((r) => [r[2], r[4]])).toEqual([['1', '[1장] 1장 핵심 한 줄.']]);
+  });
+
+  test('FR-ADM-005: 다른 책의 key-points.json 은 합치지 않는다 — 없으면 핵심 한 줄 행 0건', async () => {
+    const args = tempBookArgs(root, 'hwabun');
+    fs.writeFileSync(
+      path.join(args.fullDir, 'all-resolved.json'),
+      JSON.stringify(withSummary('hwabun'))
+    );
+    const none = await exportReviewSheet(recordingClient().client, args);
+    expect(fs.readFileSync(none.outPath, 'utf-8')).not.toContain('chapter_key_point');
+
+    fs.writeFileSync(
+      path.join(args.fullDir, 'key-points.json'),
+      JSON.stringify({
+        book_id: 'takryu',
+        version: 'v',
+        key_points: [{ chapter_no: 1, grounding: {}, key_point: '다른 책 문장.' }],
+        review_candidates: [],
+      })
+    );
+    await expect(exportReviewSheet(recordingClient().client, args)).rejects.toThrow(/book_id/);
+  });
+});

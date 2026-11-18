@@ -426,6 +426,8 @@ export function mockTimelineResponse(page?: number): TimelineResponse {
         end_page,
         completed: end_page <= k,
         summary: end_page <= k ? (mockChapterSummaries[chapter_no] ?? null) : null,
+        // 결정 31 — mock 에는 장 핵심 한 줄이 없다 (화면은 요약 첫 문장으로 대신한다)
+        key_point: null,
       })),
     events: mockTimelineEvents.filter(
       (e) =>

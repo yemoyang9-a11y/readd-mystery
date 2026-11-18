@@ -329,3 +329,83 @@ describe('checkReviewComplete / publishBook — FR-ADM-006, R12 검수 미완료
     expect(item?.missing_criteria).toEqual(['recap_continuity_ok']);
   });
 });
+
+describe('장 핵심 한 줄 검수 — FR-ADM-005 🚦, R12 (결정 31)', () => {
+  const WITH_KEY_POINT: ResolvedBookData = {
+    ...DATA,
+    chapter_summaries: [
+      { chapter_no: 1, title: '인간기념물', summary: '장 1 요약', key_point: '장 1 핵심 한 줄.' },
+      { chapter_no: 2, title: '생활제일과', summary: '장 2 요약', key_point: null },
+    ],
+  };
+
+  test('핵심 한 줄이 있는 장만 chapter_key_point 행으로 내보낸다 (없는 장은 0건)', () => {
+    const rows = buildReviewSheetRows(WITH_KEY_POINT).filter(
+      (r) => r.target_type === 'chapter_key_point'
+    );
+    expect(rows).toEqual([
+      {
+        target_type: 'chapter_key_point',
+        target_id: '1',
+        page_ref: null,
+        content_preview: '[1장] 장 1 핵심 한 줄.',
+      },
+    ]);
+    // 핵심 한 줄이 없는 예전 산출물은 행이 늘지 않는다
+    expect(
+      buildReviewSheetRows(DATA).filter((r) => r.target_type === 'chapter_key_point')
+    ).toHaveLength(0);
+  });
+
+  test('R12: 핵심 한 줄이 있는 장은 검수 기록이 없으면 공개 전환을 거절한다', async () => {
+    const { client, calls } = mockClient((sql) => {
+      if (sql.includes('key_point IS NOT NULL'))
+        return { rows: [{ target_id: '1', hallucination_ok: null }] };
+      return { rows: [] };
+    });
+    const report = await publishBook(client, 'takryu');
+    expect(report.complete).toBe(false);
+    expect(report.missing).toEqual([
+      expect.objectContaining({ target_type: 'chapter_key_point', target_id: '1' }),
+    ]);
+    expect(calls.find((c) => c.sql.includes('UPDATE books'))).toBeUndefined();
+  });
+
+  test('R12: 핵심 한 줄 검수 항목이 전부 TRUE면 공개 전환된다 (positive)', async () => {
+    const { client, calls } = mockClient((sql) => {
+      if (sql.includes('key_point IS NOT NULL'))
+        return {
+          rows: [
+            {
+              target_id: '1',
+              hallucination_ok: true,
+              page_boundary_ok: true,
+              info_separation_ok: true,
+            },
+          ],
+        };
+      return { rows: [] };
+    });
+    const report = await publishBook(client, 'takryu');
+    expect(report.complete).toBe(true);
+    expect(calls.find((c) => c.sql.includes('UPDATE books'))).toBeDefined();
+  });
+
+  test('수정 반영은 key_point 열만 고친다', async () => {
+    const { client, calls } = mockClient();
+    await applyReviewJudgments(client, 'takryu', [
+      {
+        target_type: 'chapter_key_point',
+        target_id: '1',
+        criteria: { hallucination_ok: true, page_boundary_ok: true, info_separation_ok: true },
+        corrected_content: '고친 핵심 한 줄.',
+        correction_note: null,
+        reviewer: '대표',
+      },
+    ]);
+    const update = calls.find((c) => c.sql.includes('UPDATE chapter_summaries'));
+    expect(update?.sql).toMatch(/SET key_point = \$1/);
+    expect(update?.sql).not.toMatch(/SET summary/);
+    expect(update?.params).toEqual(['고친 핵심 한 줄.', 'takryu', 1]);
+  });
+});

@@ -47,13 +47,17 @@ describe('FR-SPL-002 🚦: 타임라인 스포일러 상한', () => {
   it('FR-SPL-002: 읽는 중인 장의 사건은 타임라인에 0건 (결정 31)', async () => {
     // 2장 = 10~25쪽, 사건 12·24쪽. K=13은 2장 중간
     const t = await service.getTimeline(BOOK, 13);
-    expect(t.events.filter((e) => e.occurrence_page >= 10 && e.occurrence_page <= 25)).toHaveLength(0);
+    expect(t.events.filter((e) => e.occurrence_page >= 10 && e.occurrence_page <= 25)).toHaveLength(
+      0
+    );
     expect(t.events.map((e) => e.occurrence_page)).toEqual([4, 9]);
   });
 
   it('FR-SPL-002: 장 마지막 쪽 직전(K=24)이면 그 장 사건은 발생 쪽이 지났어도 0건', async () => {
     const t = await service.getTimeline(BOOK, 24);
-    expect(t.events.filter((e) => e.occurrence_page >= 10 && e.occurrence_page <= 25)).toHaveLength(0);
+    expect(t.events.filter((e) => e.occurrence_page >= 10 && e.occurrence_page <= 25)).toHaveLength(
+      0
+    );
   });
 
   it('FR-SPL-002: 그 장 마지막 쪽(K=25)까지 읽으면 그 장 사건이 보인다', async () => {
@@ -126,6 +130,32 @@ describe('FR-SPL-002 🚦: 타임라인 스포일러 상한', () => {
     ]);
   });
 
+  // 2026-11-18 대표 승인 시안 2차 A안 — 장마다 핵심 한 줄(key_point). 결정 31: summary 와 같은 조건(다 읽은 장만)
+  it('FR-SPL-003: 읽는 중인 장(K가 장 안)의 핵심 한 줄은 0건', async () => {
+    // 2장 = 10~25쪽. K=13은 2장 중간, K=24는 마지막 쪽 직전
+    for (const cutoff of [13, 24]) {
+      const t = await service.getTimeline(BOOK, cutoff);
+      expect(t.chapters.find((c) => c.chapter_no === 2)!.key_point).toBeNull();
+      expect(t.chapters.filter((c) => c.end_page > cutoff && c.key_point !== null)).toHaveLength(0);
+    }
+  });
+
+  it('FR-SPL-003: 그 장 마지막 쪽(K >= end_page)까지 읽으면 그 장 핵심 한 줄이 보인다', async () => {
+    const t = await service.getTimeline(BOOK, 25);
+    expect(t.chapters.map((c) => [c.chapter_no, c.key_point])).toEqual([
+      [1, '1장 핵심 한 줄'],
+      [2, '2장 핵심 한 줄'],
+    ]);
+    // 다 읽은 장이라도 핵심 한 줄이 없으면 null (지어내지 않는다 — 화면은 요약 첫 문장으로)
+    const later = await service.getTimeline(BOOK, 40);
+    expect(later.chapters.find((c) => c.chapter_no === 3)!.key_point).toBeNull();
+  });
+
+  it('FR-SPL-003: 다른 책의 핵심 한 줄은 섞이지 않는다', async () => {
+    const t = await service.getTimeline(BOOK, 40);
+    expect(t.chapters.map((c) => c.key_point)).not.toContain('다른 책 핵심 한 줄');
+  });
+
   it('FR-SPL-002: 다른 책의 장·사건은 섞이지 않는다', async () => {
     const t = await service.getTimeline('other-book', 40);
     expect(t.chapters).toHaveLength(0);
@@ -161,8 +191,12 @@ describe('FR-SPL-002 🚦: 타임라인 pg 쿼리 계약', () => {
     const alias = eventSql.match(/JOIN\s+chapters\s+(\w+)/i)![1];
     const where = eventSql.slice(eventSql.search(/\bWHERE\b/i));
     expect(where).toMatch(new RegExp(`${alias}\\.end_page\\s*<=\\s*\\$2`, 'i'));
-    expect(eventSql).toMatch(new RegExp(`${alias}\\.start_page\\s*<=\\s*\\w+\\.occurrence_page`, 'i'));
-    expect(eventSql).toMatch(new RegExp(`${alias}\\.end_page\\s*>=\\s*\\w+\\.occurrence_page`, 'i'));
+    expect(eventSql).toMatch(
+      new RegExp(`${alias}\\.start_page\\s*<=\\s*\\w+\\.occurrence_page`, 'i')
+    );
+    expect(eventSql).toMatch(
+      new RegExp(`${alias}\\.end_page\\s*>=\\s*\\w+\\.occurrence_page`, 'i')
+    );
     expect(eventSql).toMatch(new RegExp(`${alias}\\.book_id\\s*=\\s*\\w+\\.book_id`, 'i'));
   });
 
@@ -180,7 +214,9 @@ describe('FR-SPL-002 🚦: 타임라인 pg 쿼리 계약', () => {
     await repository.findTimeline('synthetic-book', 13);
     expect(query).toHaveBeenCalledTimes(2);
     const chapterSql: string = query.mock.calls[0][0];
-    const join = chapterSql.match(/LEFT\s+JOIN\s+chapter_summaries\s+(\w+)\s+ON\s+([\s\S]*?)\bWHERE\b/i);
+    const join = chapterSql.match(
+      /LEFT\s+JOIN\s+chapter_summaries\s+(\w+)\s+ON\s+([\s\S]*?)\bWHERE\b/i
+    );
     expect(join).not.toBeNull();
     const [, alias, on] = join!;
     // 요약 행은 기준점 조건을 만족하는 장에만 붙는다 — 결과에서 숨기는 것이 아니라 읽지 않는다
@@ -189,6 +225,25 @@ describe('FR-SPL-002 🚦: 타임라인 pg 쿼리 계약', () => {
     expect(on).toMatch(new RegExp(`${alias}\\.chapter_no\\s*=\\s*\\w+\\.chapter_no`, 'i'));
     expect(chapterSql).toMatch(new RegExp(`${alias}\\.summary\\s+AS\\s+summary`, 'i'));
     expect(query.mock.calls[0][1]).toEqual(['synthetic-book', 13]);
+  });
+
+  it('FR-SPL-003: 핵심 한 줄은 요약과 같은 JOIN(다 읽은 장, end_page <= $2)에서만 고른다 — 읽는 중인 장의 행은 읽지 않는다 (결정 31, 절대 규칙 7)', async () => {
+    const { query, repository } = capture();
+    await repository.findTimeline('synthetic-book', 13);
+    expect(query).toHaveBeenCalledTimes(2);
+    const chapterSql: string = query.mock.calls[0][0];
+    const join = chapterSql.match(
+      /LEFT\s+JOIN\s+chapter_summaries\s+(\w+)\s+ON\s+([\s\S]*?)\bWHERE\b/i
+    );
+    expect(join).not.toBeNull();
+    const [, alias, on] = join!;
+    expect(on).toMatch(/\bend_page\s*<=\s*\$2/i);
+    expect(chapterSql).toMatch(new RegExp(`${alias}\\.key_point\\s+AS\\s+key_point`, 'i'));
+    // 핵심 한 줄을 다른 경로(하위 쿼리·다른 JOIN)로 읽지 않는다 — 그 JOIN 별칭에서 한 번만
+    expect(chapterSql.match(/\bkey_point\b/gi)).toHaveLength(2);
+    expect(chapterSql.match(/chapter_summaries/gi)).toHaveLength(1);
+    // 사건 쿼리는 핵심 한 줄을 읽지 않는다
+    expect(query.mock.calls[1][0]).not.toMatch(/key_point/i);
   });
 
   it('FR-SPL-002: 사건은 reader_description만 description으로 고르고 원본 컬럼은 고르지 않는다', async () => {

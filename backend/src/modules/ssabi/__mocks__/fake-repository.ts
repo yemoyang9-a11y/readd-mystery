@@ -27,10 +27,17 @@ export interface TimelineFixtureEvent extends TimelineEvent {
 
 export interface SsabiFixture {
   /** completed·summary 는 조회 시 cutoff 로 정해지므로 장 픽스처에는 두지 않는다 */
-  timelineChapters?: (Omit<TimelineChapter, 'completed' | 'summary'> & { book_id: string })[];
+  timelineChapters?: (Omit<TimelineChapter, 'completed' | 'summary' | 'key_point'> & {
+    book_id: string;
+  })[];
   timelineEvents?: TimelineFixtureEvent[];
   /** chapter_summaries 대역 — 장 요약 표는 장 표와 따로 있다 */
-  timelineChapterSummaries?: { book_id: string; chapter_no: number; summary: string }[];
+  timelineChapterSummaries?: {
+    book_id: string;
+    chapter_no: number;
+    summary: string;
+    key_point?: string | null;
+  }[];
   characters: Character[];
   relationships: Relationship[];
   aliases: Alias[];
@@ -52,20 +59,24 @@ export class FakeSsabiRepository implements SsabiRepository {
     const chapters = bookChapters
       .filter((c) => c.start_page <= cutoff)
       .sort((a, b) => a.chapter_no - b.chapter_no)
-      .map(({ chapter_no, title, start_page, end_page }) => ({
-        chapter_no,
-        title,
-        start_page,
-        end_page,
-        completed: end_page <= cutoff,
-        // FR-SPL-002 🚦 결정 31: 다 읽은 장일 때만 요약 표를 찾는다 (pg 의 JOIN 조건과 같다)
-        summary:
+      .map(({ chapter_no, title, start_page, end_page }) => {
+        // FR-SPL-002 🚦 FR-SPL-003 🚦 결정 31: 다 읽은 장일 때만 요약 표를 찾는다 (pg 의 JOIN 조건과 같다)
+        const row =
           end_page <= cutoff
-            ? ((this.fixture.timelineChapterSummaries ?? []).find(
+            ? (this.fixture.timelineChapterSummaries ?? []).find(
                 (s) => s.book_id === bookId && s.chapter_no === chapter_no
-              )?.summary ?? null)
-            : null,
-      }));
+              )
+            : undefined;
+        return {
+          chapter_no,
+          title,
+          start_page,
+          end_page,
+          completed: end_page <= cutoff,
+          summary: row?.summary ?? null,
+          key_point: row?.key_point ?? null,
+        };
+      });
     const events = (this.fixture.timelineEvents ?? [])
       .filter(
         (e) =>
@@ -384,9 +395,14 @@ export function createTestFixture(): SsabiFixture {
 
   // 3장 요약은 일부러 없다 — 다 읽은 장이라도 요약이 없으면 null 이어야 한다
   const timelineChapterSummaries = [
-    { book_id: 'takryu', chapter_no: 1, summary: '1장 요약' },
-    { book_id: 'takryu', chapter_no: 2, summary: '2장 요약' },
-    { book_id: 'other-book', chapter_no: 1, summary: '다른 책 요약' },
+    { book_id: 'takryu', chapter_no: 1, summary: '1장 요약', key_point: '1장 핵심 한 줄' },
+    { book_id: 'takryu', chapter_no: 2, summary: '2장 요약', key_point: '2장 핵심 한 줄' },
+    {
+      book_id: 'other-book',
+      chapter_no: 1,
+      summary: '다른 책 요약',
+      key_point: '다른 책 핵심 한 줄',
+    },
   ];
 
   return {

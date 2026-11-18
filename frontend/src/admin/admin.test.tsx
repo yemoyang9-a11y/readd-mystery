@@ -301,3 +301,47 @@ describe('review page', () => {
     expect(within(list).getByText(/hallucination_ok/)).toBeInTheDocument();
   });
 });
+
+describe('review page — 장 핵심 한 줄 (결정 31)', () => {
+  beforeEach(() => localStorage.setItem(ADMIN_TOKEN_KEY, TOKEN));
+
+  const WITH_KEY_POINT = {
+    ...REVIEW,
+    chapter_summaries: [
+      { chapter_no: 1, summary: '첫 장 요약', key_point: '첫 장 핵심 한 줄.' },
+      { chapter_no: 2, summary: '둘째 장 요약', key_point: null },
+    ],
+  };
+
+  it('FR-ADM-005: 핵심 한 줄이 있는 장만 보이고, 거절·전체 승인은 chapter_key_point 결정을 보낸다', async () => {
+    const user = userEvent.setup();
+    handler = (_url, init) =>
+      init.method === 'POST' ? json(200, { approved: 1, rejected: 0 }) : json(200, WITH_KEY_POINT);
+    renderAdmin('/admin/books/bk-1/review');
+    const section = await screen.findByRole('region', { name: '장 핵심 한 줄' });
+    expect(within(section).getByText(/첫 장 핵심 한 줄\./)).toBeInTheDocument();
+    expect(within(section).queryByText(/둘째 장/)).not.toBeInTheDocument();
+
+    await user.click(within(section).getByRole('button', { name: '거절' }));
+    await waitFor(() => expect(calls.some((c) => c.init.method === 'POST')).toBe(true));
+    expect(JSON.parse(String(calls.find((c) => c.init.method === 'POST')!.init.body))).toEqual({
+      decisions: [{ target_type: 'chapter_key_point', target_id: '1', verdict: 'reject' }],
+    });
+
+    await user.click(screen.getByRole('button', { name: '모든 항목 승인' }));
+    await waitFor(() => expect(calls.filter((c) => c.init.method === 'POST')).toHaveLength(2));
+    const all = JSON.parse(String(calls.filter((c) => c.init.method === 'POST')[1].init.body));
+    expect(all.decisions).toContainEqual({
+      target_type: 'chapter_key_point',
+      target_id: '*',
+      verdict: 'approve',
+    });
+  });
+
+  it('핵심 한 줄이 하나도 없으면 그 칸을 그리지 않는다', async () => {
+    handler = () => json(200, REVIEW);
+    renderAdmin('/admin/books/bk-1/review');
+    await screen.findByRole('region', { name: '관계' });
+    expect(screen.queryByRole('region', { name: '장 핵심 한 줄' })).not.toBeInTheDocument();
+  });
+});

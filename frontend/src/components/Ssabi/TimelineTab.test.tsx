@@ -6,9 +6,9 @@ import type { TimelineResponse } from '../../types';
 // 서버가 기준점 K=30으로 걸러 준 응답의 대역 — 1·2장은 다 읽음, 3장은 읽는 중
 const timeline: TimelineResponse = {
   chapters: [
-    { chapter_no: 1, title: '무대에 올려진 살인 사건', start_page: 1, end_page: 10, completed: true, summary: '좌장이 살해되고 아내가 붙잡혀요. 경찰은 아내를 의심해요.' },
-    { chapter_no: 2, title: '무대 위의 자백', start_page: 11, end_page: 20, completed: true, summary: '배우가 대본에 없던 말을 해요.' },
-    { chapter_no: 3, title: '7년 만의 재회', start_page: 21, end_page: 40, completed: false, summary: null },
+    { chapter_no: 1, title: '무대에 올려진 살인 사건', start_page: 1, end_page: 10, completed: true, summary: '좌장이 살해되고 아내가 붙잡혀요. 경찰은 아내를 의심해요.', key_point: null },
+    { chapter_no: 2, title: '무대 위의 자백', start_page: 11, end_page: 20, completed: true, summary: '배우가 대본에 없던 말을 해요.', key_point: null },
+    { chapter_no: 3, title: '7년 만의 재회', start_page: 21, end_page: 40, completed: false, summary: null, key_point: null },
   ],
   events: [
     { id: 'e3', event: '좌장 살해', description: '좌장이 자기 집에서 숨진 채 발견돼요.', occurrence_page: 3 },
@@ -40,6 +40,51 @@ describe('타임라인 탭 — 2026-11-18 대표 승인 시안 2차 A안 (장 �
     render(<TimelineTab timeline={timeline} failed={false} />);
     expect(screen.getByText('좌장이 살해되고 아내가 붙잡혀요.')).toBeInTheDocument();
     expect(screen.queryByText(/경찰은 아내를 의심해요/)).not.toBeInTheDocument();
+  });
+
+  // 2026-11-18 대표 승인 시안 2차 A안 — 장마다 따로 만든 핵심 한 줄(key_point, 50자 안팎)
+  it('서버가 핵심 한 줄(key_point)을 주면 요약 첫 문장 대신 그것을 보인다 — 요약은 보이지 않는다', () => {
+    const withKeyPoint: TimelineResponse = {
+      ...timeline,
+      chapters: timeline.chapters.map((c) =>
+        c.chapter_no === 1 ? { ...c, key_point: '좌장이 숨진 채 발견되고 아내가 붙잡혀요.' } : c
+      ),
+    };
+    render(<TimelineTab timeline={withKeyPoint} failed={false} />);
+    const first = within(screen.getAllByRole('listitem')[0]);
+    expect(first.getByText('좌장이 숨진 채 발견되고 아내가 붙잡혀요.')).toBeInTheDocument();
+    expect(first.queryByText('좌장이 살해되고 아내가 붙잡혀요.')).not.toBeInTheDocument();
+    // 핵심 한 줄이 없는 장은 지금처럼 요약 첫 문장
+    const second = within(screen.getAllByRole('listitem')[1]);
+    expect(second.getByText('배우가 대본에 없던 말을 해요.')).toBeInTheDocument();
+  });
+
+  it('핵심 한 줄은 같은 자리·같은 모양 — 장 버튼 안 한 줄로만 그린다', () => {
+    const withKeyPoint: TimelineResponse = {
+      ...timeline,
+      chapters: timeline.chapters.map((c) =>
+        c.chapter_no === 1 ? { ...c, key_point: '좌장이 숨진 채 발견되고 아내가 붙잡혀요.' } : c
+      ),
+    };
+    const { unmount } = render(<TimelineTab timeline={withKeyPoint} failed={false} />);
+    const kpLine = within(chapterButton(1)).getByText('좌장이 숨진 채 발견되고 아내가 붙잡혀요.');
+    const kpClass = kpLine.className;
+    unmount();
+    render(<TimelineTab timeline={timeline} failed={false} />);
+    const summaryLine = within(chapterButton(1)).getByText('좌장이 살해되고 아내가 붙잡혀요.');
+    expect(kpClass).toBe(summaryLine.className);
+  });
+
+  it('FR-SPL-002 🚦: 읽는 중인 장은 key_point 가 실려 와도 그리지 않는다 — 서버 completed만 따른다', () => {
+    const odd: TimelineResponse = {
+      ...timeline,
+      chapters: timeline.chapters.map((c) =>
+        c.chapter_no === 3 ? { ...c, key_point: '읽는 중인 장의 핵심 한 줄이에요.' } : c
+      ),
+    };
+    render(<TimelineTab timeline={odd} failed={false} />);
+    expect(screen.queryByText('읽는 중인 장의 핵심 한 줄이에요.')).not.toBeInTheDocument();
+    expect(screen.getByText('다 읽으면 정리돼요')).toBeInTheDocument();
   });
 
   it('장을 누르면 그 장의 사건 카드(이름·p.N)가 펼쳐지고, 다시 누르면 접힌다', async () => {
@@ -143,6 +188,7 @@ describe('타임라인 탭 — 2026-11-18 대표 승인 시안 2차 A안 (장 �
         end_page: i + 1,
         completed: true,
         summary: null,
+        key_point: null,
       })),
       events: [],
       applied_cutoff: 12,

@@ -14,6 +14,7 @@ import * as path from 'path';
 import { pool } from '../../config/database';
 import { ResolvedBookData } from './check-integrity';
 import { QueryClient } from './register';
+import { KeyPointFile } from './chapter-key-point';
 import { BookArgs, bookArgsFromCli, reviewSheetPath } from './run-args';
 import {
   buildReviewSheetRows,
@@ -35,6 +36,22 @@ export async function exportReviewSheet(
     throw new Error(
       `all-resolved.json의 book_id("${data.book_id}")가 --book("${args.bookId}")과 다름 — ${filePath}`
     );
+  }
+
+  // FR-ADM-005 🚦 결정 31 — 장 핵심 한 줄(run-generate-key-points 산출물)을 함께 검수 시트에 낸다
+  const keyPointsFile = path.join(args.fullDir, 'key-points.json');
+  if (fs.existsSync(keyPointsFile)) {
+    const keyPoints = JSON.parse(fs.readFileSync(keyPointsFile, 'utf-8')) as KeyPointFile;
+    if (keyPoints.book_id !== args.bookId) {
+      throw new Error(
+        `key-points.json의 book_id("${keyPoints.book_id}")가 --book("${args.bookId}")과 다름 — ${keyPointsFile}`
+      );
+    }
+    const byNo = new Map(keyPoints.key_points.map((k) => [k.chapter_no, k.key_point]));
+    data.chapter_summaries = data.chapter_summaries.map((cs) => ({
+      ...cs,
+      key_point: byNo.get(cs.chapter_no) ?? null,
+    }));
   }
 
   const existing = (await db.query(

@@ -79,6 +79,17 @@ describe('NFR-AI-001: provider and model configuration', () => {
     warn.mockRestore();
   });
 
+  test('NFR-OBS-004: 장 핵심 한 줄 작업 이름은 장 요약과 같은 모델을 쓰고 경고 없이 통과한다', () => {
+    const config = load({ LLM_PROVIDER: 'openai', OPENAI_MODEL: 'test-openai-model' });
+    const warn = jest.spyOn(console, 'warn').mockImplementation();
+    expect(config.getModelForTask('generate_chapter_key_point')).toBe(
+      config.MODEL_CONFIG.generate_summary
+    );
+    expect(warn).not.toHaveBeenCalled();
+    expect(Object.keys(config.MODEL_CONFIG)).not.toContain('generate_chapter_key_point');
+    warn.mockRestore();
+  });
+
   test('unknown task warns and uses the same selected provider model', () => {
     const config = load({ LLM_PROVIDER: 'openai', OPENAI_MODEL: 'test-openai-model' });
     const warn = jest.spyOn(console, 'warn').mockImplementation();

@@ -188,8 +188,9 @@ export const DEMO_TIMELINE: TimelineResponse = {
       ...DEMO_CHAPTERS[0],
       completed: true,
       summary: '서진이 친구 태호의 별장에 와요. 다음 날 아침, 서재 진열장의 회중시계가 없어져요.',
+      key_point: null,
     },
-    { ...DEMO_CHAPTERS[1], completed: false, summary: null },
+    { ...DEMO_CHAPTERS[1], completed: false, summary: null, key_point: null },
   ],
   events: [
     { id: 'demo-ev-2', event: '불이 잠깐 꺼짐', description: '밤 아홉 시쯤 번개가 치고 집 안의 불이 잠깐 꺼졌다가 들어와요.', occurrence_page: 2 },

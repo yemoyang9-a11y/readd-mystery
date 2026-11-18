@@ -246,8 +246,8 @@ describe('싸비 사이드창', () => {
     const timeline = {
       applied_cutoff: 12,
       chapters: [
-        { chapter_no: 1, title: '첫 장', start_page: 1, end_page: 9, completed: true, summary: '편지가 와요.' },
-        { chapter_no: 2, title: '둘째 장', start_page: 10, end_page: 20, completed: false, summary: null },
+        { chapter_no: 1, title: '첫 장', start_page: 1, end_page: 9, completed: true, summary: '편지가 와요.', key_point: null },
+        { chapter_no: 2, title: '둘째 장', start_page: 10, end_page: 20, completed: false, summary: null, key_point: null },
       ],
       events: [{ id: 'e1', event: '편지가 도착해요', description: '아침에 편지가 와요.', occurrence_page: 4 }],
     };

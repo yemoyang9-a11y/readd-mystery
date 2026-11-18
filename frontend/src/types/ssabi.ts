@@ -92,6 +92,11 @@ export interface TimelineChapter {
   completed: boolean;
   /** 장 간략 요약. 서버가 다 읽은 장에만 싣는다 — 읽는 중인 장·요약 없는 장은 null (FR-SPL-002 🚦, 결정 31) */
   summary: string | null;
+  /**
+   * 장 핵심 한 줄(50자 안팎). summary 와 같은 조건으로 서버가 다 읽은 장에만 싣는다 — 없으면 null 이고
+   * 화면은 summary 첫 문장으로 대신한다 (FR-SPL-003 🚦, 결정 31)
+   */
+  key_point: string | null;
 }
 
 export interface TimelineEvent {

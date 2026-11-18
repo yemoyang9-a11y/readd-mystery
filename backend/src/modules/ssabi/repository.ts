@@ -32,6 +32,13 @@ export interface TimelineChapter {
    * 다 읽은 장이라도 요약이 없으면 null (지어내지 않는다).
    */
   summary: string | null;
+  /**
+   * 장 핵심 한 줄 (chapter_summaries.key_point, 마이그레이션 026). summary 와 같은 JOIN 으로만 붙는다 —
+   * 다 읽은 장(end_page <= cutoff)이 아니면 행을 읽지 않고 null 이다 (FR-SPL-003 🚦, 결정 31, 절대 규칙 7번).
+   * 검수 규칙도 summary 와 같다: 행 단위로 거르지 않고, 책 공개(R12)가 검수 기록(chapter_key_point)을 요구한다.
+   * 없으면 null — 화면은 요약 첫 문장으로 대신한다.
+   */
+  key_point: string | null;
 }
 
 export interface TimelineEvent {

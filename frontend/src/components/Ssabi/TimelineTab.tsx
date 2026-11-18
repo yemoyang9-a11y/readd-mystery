@@ -9,8 +9,8 @@ function chapterCount(count: number): string {
 }
 
 /**
- * 핵심 한 줄 — 서버가 준 장 요약의 첫 문장. 요약 전체(4~5문장)는 길어서 접는다(2026-11-18 대표 지시).
- * 서버가 이미 기준점으로 거른 문장을 자르기만 한다. 장마다 따로 만든 핵심 문장이 생기면 그것으로 바꾼다.
+ * 핵심 한 줄의 대체값 — 서버가 준 장 요약의 첫 문장. 요약 전체(4~5문장)는 길어서 접는다(2026-11-18 대표 지시).
+ * 서버가 이미 기준점으로 거른 문장을 자르기만 한다. 장마다 따로 만든 핵심 문장(key_point)이 있으면 그것을 쓴다.
  */
 export function firstSentence(summary: string | null): string | null {
   if (!summary) return null;
@@ -112,7 +112,8 @@ export default function TimelineTab({
           );
           const chapterKey = `ch-${chapter.chapter_no}`;
           const chapterOpen = openIds.has(chapterKey);
-          const keyLine = firstSentence(chapter.summary);
+          // 결정 31 — 서버가 다 읽은 장에만 실어 준 핵심 한 줄. 없으면 요약 첫 문장 (FR-SPL-003 🚦)
+          const keyLine = chapter.key_point ?? firstSentence(chapter.summary);
           return (
             <li key={chapter.chapter_no} className="relative mb-4">
               <span

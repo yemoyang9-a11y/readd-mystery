@@ -61,7 +61,15 @@ export interface GroundedRelationship {
 }
 
 export interface ReviewCandidate {
-  kind: 'character' | 'alias' | 'note' | 'relationship' | 'identity' | 'event' | 'summary';
+  kind:
+    | 'character'
+    | 'alias'
+    | 'note'
+    | 'relationship'
+    | 'identity'
+    | 'event'
+    | 'summary'
+    | 'key_point';
   reason: string;
   candidate: unknown;
 }

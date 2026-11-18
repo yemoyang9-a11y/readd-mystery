@@ -208,10 +208,12 @@ export function createPgSsabiRepository(db: QueryClient): SsabiRepository {
       // FR-SPL-002 🚦
       // FR-SPL-002 🚦 결정 31: 장 요약은 다 읽은 장(c.end_page <= cutoff)에만 JOIN 조건으로 붙인다.
       // 읽는 중인 장의 요약 행은 결과에서 가리는 것이 아니라 읽지 않는다 (절대 규칙 7번).
+      // FR-SPL-003 🚦 핵심 한 줄(key_point)도 같은 JOIN 행에서만 고른다 — 따로 읽는 경로가 없다.
       const chapters = await db.query(
         `SELECT c.chapter_no, title, start_page, end_page,
                 (end_page <= $2) AS completed,
-                cs.summary AS summary
+                cs.summary AS summary,
+                cs.key_point AS key_point
            FROM chapters c
            LEFT JOIN chapter_summaries cs
              ON cs.book_id = c.book_id

@@ -16,7 +16,13 @@ export interface ResolvedBookData {
   provenance?: {
     relationship_coverage?: { complete: boolean; source_page_count: number; chapter_nos: number[] };
   };
-  chapter_summaries: { chapter_no: number; title: string; summary: string }[];
+  /** key_point — 장 핵심 한 줄(결정 31). run-generate-key-points 산출물을 합쳐 검수 시트에 낼 때만 있다 */
+  chapter_summaries: {
+    chapter_no: number;
+    title: string;
+    summary: string;
+    key_point?: string | null;
+  }[];
   characters: AccumulatedCharacter[];
   relationships: AccumulatedRelationship[];
   terms: AccumulatedTerm[];

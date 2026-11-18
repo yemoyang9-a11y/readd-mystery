@@ -20,6 +20,7 @@ import { ResolvedBookData } from './check-integrity';
 
 export type ReviewTargetType =
   | 'chapter_summary'
+  | 'chapter_key_point'
   | 'character'
   | 'alias'
   | 'character_note'
@@ -56,6 +57,8 @@ export const APPLICABLE_CRITERIA: Record<ReviewTargetType, ReviewCriterion[]> = 
     'recap_continuity_ok',
     'info_separation_ok',
   ],
+  // 결정 31 — 타임라인 장 핵심 한 줄. 그 장 원문만 보고 만든 한 문장이라 리캡 연결성은 해당 없다
+  chapter_key_point: ['hallucination_ok', 'page_boundary_ok', 'info_separation_ok'],
   character: ['hallucination_ok', 'alias_merge_ok', 'page_boundary_ok', 'info_separation_ok'],
   alias: ['hallucination_ok', 'page_boundary_ok'],
   character_note: ['hallucination_ok', 'page_boundary_ok', 'info_separation_ok'],
@@ -102,6 +105,10 @@ export function relationshipSnapshot(relation: AccumulatedRelationship): Record<
   };
 }
 
+/** 검수 대상 핵심 한 줄 — 문장이 있는 장만 (결정 31). 관리자 화면 검수와 같은 목록을 쓴다 */
+export const KEY_POINT_LIST_SQL =
+  'SELECT chapter_no::text AS target_id FROM chapter_summaries WHERE book_id = $1 AND key_point IS NOT NULL';
+
 export const SNAPSHOT_SQL = `jsonb_build_object('character_a_id', character_a_id, 'character_b_id', character_b_id,
   'label', label, 'established_page', established_page, 'semantics', semantics)`;
 
@@ -147,6 +154,17 @@ export function buildReviewSheetRows(
 
   for (const cs of data.chapter_summaries) {
     push('chapter_summary', String(cs.chapter_no), null, `[${cs.chapter_no}장] ${cs.summary}`);
+  }
+  // FR-ADM-005 🚦 결정 31 — 핵심 한 줄이 있는 장만 (없는 장은 화면이 요약 첫 문장을 쓴다)
+  for (const cs of data.chapter_summaries) {
+    if (cs.key_point) {
+      push(
+        'chapter_key_point',
+        String(cs.chapter_no),
+        null,
+        `[${cs.chapter_no}장] ${cs.key_point}`
+      );
+    }
   }
 
   for (const c of data.characters) {
@@ -404,6 +422,12 @@ export async function applyCorrection(
         [correctedContent, bookId, Number(target_id)]
       );
       return;
+    case 'chapter_key_point':
+      await client.query(
+        'UPDATE chapter_summaries SET key_point = $1 WHERE book_id = $2 AND chapter_no = $3',
+        [correctedContent, bookId, Number(target_id)]
+      );
+      return;
     case 'character':
       await client.query('UPDATE characters SET name = $1 WHERE book_id = $2 AND id = $3', [
         correctedContent,
@@ -597,6 +621,8 @@ export async function checkReviewComplete(
       'SELECT chapter_no::text AS target_id FROM chapter_summaries WHERE book_id = $1'
     ))
   );
+  // R12 결정 31 — 핵심 한 줄이 있는 장은 그 문장도 검수를 마쳐야 공개된다
+  missing.push(...(await findIncomplete(client, bookId, 'chapter_key_point', KEY_POINT_LIST_SQL)));
   missing.push(
     ...(await findIncomplete(
       client,

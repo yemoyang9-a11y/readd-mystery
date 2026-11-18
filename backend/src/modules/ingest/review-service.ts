@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {
   APPLICABLE_CRITERIA,
+  KEY_POINT_LIST_SQL,
   FilledReviewRow,
   ReviewCompletionReport,
   ReviewTargetType,
@@ -65,6 +66,7 @@ const TARGET_TYPES = Object.keys(APPLICABLE_CRITERIA) as ReviewTargetType[];
 
 const LIST_SQL: Record<ReviewTargetType, string> = {
   chapter_summary: 'SELECT chapter_no::text AS target_id FROM chapter_summaries WHERE book_id = $1',
+  chapter_key_point: KEY_POINT_LIST_SQL,
   character: 'SELECT id AS target_id FROM characters WHERE book_id = $1',
   alias: "SELECT character_id || '::' || alias AS target_id FROM aliases WHERE book_id = $1",
   character_note: 'SELECT id AS target_id FROM character_notes WHERE book_id = $1',
@@ -77,6 +79,7 @@ const LIST_SQL: Record<ReviewTargetType, string> = {
 };
 
 const REJECTABLE: ReviewTargetType[] = [
+  'chapter_key_point',
   'character',
   'alias',
   'character_note',
@@ -154,6 +157,12 @@ async function deleteTarget(
       id,
     ]);
     await client.query('DELETE FROM characters WHERE book_id = $1 AND id = $2', [bookId, id]);
+  } else if (type === 'chapter_key_point') {
+    // 결정 31 — 핵심 한 줄만 비운다. 장 요약 행은 남는다(화면은 요약 첫 문장으로 대신한다)
+    await client.query(
+      "UPDATE chapter_summaries SET key_point = NULL, key_point_review_status = 'rejected' WHERE book_id = $1 AND chapter_no = $2",
+      [bookId, Number(id)]
+    );
   } else if (type === 'alias') {
     const split = id.indexOf('::');
     await client.query(
@@ -234,7 +243,7 @@ export function createReviewService(deps: {
               WHERE r.book_id = $1 ORDER BY r.established_page, r.id`
           ),
           q(
-            'SELECT chapter_no, summary FROM chapter_summaries WHERE book_id = $1 ORDER BY chapter_no'
+            'SELECT chapter_no, summary, key_point FROM chapter_summaries WHERE book_id = $1 ORDER BY chapter_no'
           ),
           q(
             'SELECT id, term, definition, first_appearance_page FROM terms WHERE book_id = $1 ORDER BY first_appearance_page'

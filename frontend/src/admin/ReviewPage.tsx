@@ -5,6 +5,7 @@ import { useAdmin } from './AdminLayout';
 
 const TYPE_LABEL: Record<string, string> = {
   chapter_summary: '장 요약',
+  chapter_key_point: '장 핵심 한 줄',
   character: '인물',
   alias: '별칭',
   character_note: '인물 노트',
@@ -183,6 +184,8 @@ export default function ReviewPage() {
 
   const reviewable = view.job.status === 'review_ready';
   const aliasCount = view.characters.reduce((n, c) => n + c.aliases.length, 0);
+  // 결정 31 — 배치가 만든 핵심 한 줄이 있는 장만 검수한다 (거절하면 장 요약 첫 문장으로 돌아간다)
+  const keyPoints = view.chapter_summaries.filter((s) => s.key_point);
 
   return (
     <div className="space-y-6">
@@ -365,6 +368,31 @@ export default function ReviewPage() {
           ))}
         </ul>
       </Section>
+
+      {keyPoints.length > 0 && (
+        <Section
+          title="장 핵심 한 줄"
+          type="chapter_key_point"
+          pending={pendingCount('chapter_key_point')}
+          busy={busy || !reviewable}
+          onApproveAll={() => approveAll('chapter_key_point')}
+        >
+          <ul className="space-y-3 text-[13px]">
+            {keyPoints.map((s) => (
+              <li key={s.chapter_no} className="flex items-start justify-between gap-4">
+                <p>
+                  <span className="font-bold">{s.chapter_no}장</span> {s.key_point}{' '}
+                  <PendingDot pending={isPending('chapter_key_point', String(s.chapter_no))} />
+                </p>
+                <ItemActions
+                  busy={busy || !reviewable}
+                  onDecide={(v) => one('chapter_key_point', String(s.chapter_no), v)}
+                />
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
 
       <Section
         title="용어"
