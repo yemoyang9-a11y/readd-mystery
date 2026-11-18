@@ -99,6 +99,33 @@ describe('FR-SPL-002 🚦: 타임라인 스포일러 상한', () => {
     ]);
   });
 
+  // 2026-11-18 대표 승인 시안(타임라인 안 사건) — 장마다 간략 요약. 결정 31: 다 읽은 장만
+  it('FR-SPL-002: 읽는 중인 장(K가 장 안)의 요약은 0건 — 장 제목만 남는다', async () => {
+    // 2장 = 10~25쪽. K=13은 2장 중간
+    const t = await service.getTimeline(BOOK, 13);
+    const reading = t.chapters.find((c) => c.chapter_no === 2)!;
+    expect(reading.summary).toBeNull();
+    expect(t.chapters.filter((c) => c.end_page > 13 && c.summary !== null)).toHaveLength(0);
+    // 마지막 쪽 직전(K=24)에도 그 장 요약은 0건
+    const almost = await service.getTimeline(BOOK, 24);
+    expect(almost.chapters.filter((c) => c.end_page > 24 && c.summary !== null)).toHaveLength(0);
+  });
+
+  it('FR-SPL-002: 그 장 마지막 쪽(K >= end_page)까지 읽으면 그 장 요약이 보인다', async () => {
+    const t = await service.getTimeline(BOOK, 25);
+    expect(t.chapters.map((c) => [c.chapter_no, c.summary])).toEqual([
+      [1, '1장 요약'],
+      [2, '2장 요약'],
+    ]);
+    // 다 읽은 장 중 요약이 없는 장은 null (지어내지 않는다)
+    const later = await service.getTimeline(BOOK, 40);
+    expect(later.chapters.map((c) => [c.chapter_no, c.summary])).toEqual([
+      [1, '1장 요약'],
+      [2, '2장 요약'],
+      [3, null],
+    ]);
+  });
+
   it('FR-SPL-002: 다른 책의 장·사건은 섞이지 않는다', async () => {
     const t = await service.getTimeline('other-book', 40);
     expect(t.chapters).toHaveLength(0);
@@ -146,6 +173,22 @@ describe('FR-SPL-002 🚦: 타임라인 pg 쿼리 계약', () => {
     expect(chapterSql).toMatch(/\(\s*end_page\s*<=\s*\$2\s*\)\s+AS\s+completed/i);
     // 장 목록 자체의 상한은 그대로다
     expect(chapterSql.slice(chapterSql.search(/\bWHERE\b/i))).toMatch(/start_page\s*<=\s*\$2/i);
+  });
+
+  it('FR-SPL-002: 장 요약은 다 읽은 장(end_page <= 기준점 $2)일 때만 JOIN 조건으로 붙인다 — 읽는 중인 장의 요약 행은 읽지 않는다 (결정 31, 절대 규칙 7)', async () => {
+    const { query, repository } = capture();
+    await repository.findTimeline('synthetic-book', 13);
+    expect(query).toHaveBeenCalledTimes(2);
+    const chapterSql: string = query.mock.calls[0][0];
+    const join = chapterSql.match(/LEFT\s+JOIN\s+chapter_summaries\s+(\w+)\s+ON\s+([\s\S]*?)\bWHERE\b/i);
+    expect(join).not.toBeNull();
+    const [, alias, on] = join!;
+    // 요약 행은 기준점 조건을 만족하는 장에만 붙는다 — 결과에서 숨기는 것이 아니라 읽지 않는다
+    expect(on).toMatch(/\bend_page\s*<=\s*\$2/i);
+    expect(on).toMatch(new RegExp(`${alias}\\.book_id\\s*=\\s*\\w+\\.book_id`, 'i'));
+    expect(on).toMatch(new RegExp(`${alias}\\.chapter_no\\s*=\\s*\\w+\\.chapter_no`, 'i'));
+    expect(chapterSql).toMatch(new RegExp(`${alias}\\.summary\\s+AS\\s+summary`, 'i'));
+    expect(query.mock.calls[0][1]).toEqual(['synthetic-book', 13]);
   });
 
   it('FR-SPL-002: 사건은 reader_description만 description으로 고르고 원본 컬럼은 고르지 않는다', async () => {

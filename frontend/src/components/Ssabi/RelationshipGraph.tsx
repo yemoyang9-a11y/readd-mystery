@@ -1,6 +1,4 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { useModalLayer } from '../../hooks/useModalLayer';
 import type { GraphEdge, GraphResponse } from '../../types';
 import { edgePointAt, graphEdgeLabel, graphPillLabel, groupPillLabels, makeEdgePaths } from './graphEdges';
 import {
@@ -80,6 +78,9 @@ const GRAPH_NAME_ROOM = 56;
  * 인물은 둥근 네모 칩 + 이름 첫 글자, 이름은 칩 아래 작게. 중심 인물(selectedId)은 크게, 버건디
  * 테두리·바깥 고리. 중심 인물과 닿은 선은 강조색·화살표·관계 이름표, 나머지는 옅은 선. 실선 = 사실,
  * 점선 = 의심·주장 또는 끝난 관계. 색은 앱의 밝은 테마 토큰(brief-*)을 쓴다(시안의 검정 바탕은 옮기지 않음).
+ *
+ * 2026-11-18 대표 지시 — 시안에 없는 조작 줄(배율 % 표시, 확대·축소·전체 보기·전체화면 버튼)과 전체화면을
+ * 없앴다. 끌어서 옮기기·두 손가락 확대·휠 확대는 화면에 아무것도 더하지 않는 조작이라 남긴다.
  */
 
 // 2026-08-25 — "글씨가 작다"(1차) → 14/12로 올렸는데 "꽤 더 키워야" 재요청, 그 다음
@@ -144,9 +145,7 @@ export default function RelationshipGraph({
   onSelectEdge?: (key: string | null) => void;
 }) {
   const markerId = `relationship-arrow-${useId().replace(/:/g, '')}`;
-  const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<SVGSVGElement>(null);
-  const fullscreenButtonRef = useRef<HTMLButtonElement>(null);
   const dragRef = useRef<{
     pointers: Map<number, Point>;
     last: Point | null;
@@ -191,7 +190,7 @@ export default function RelationshipGraph({
    * 뷰박스를 즉시 바꾸는 대신 부드럽게 이동·확대한다(2026-08-25, 사용자 요청 — "인물
    * 관계도 줌/포커스 이동이 거칠다"). 드래그·휠·핀치줌처럼 사용자 입력을 1:1로 따라가는
    * 경우는 그 자체로 이미 부드러워 애니메이션이 필요 없다 — 여기는 "클릭 한 번으로
-   * 카메라가 순간이동하는" 경우(인물 선택 포커스, 전체 보기, +/− 버튼)에만 쓴다.
+   * 카메라가 순간이동하는" 경우(중심 인물이 화면 밖일 때 옮기기)에만 쓴다.
    */
   function animateViewBoxTo(target: ViewBox, duration = 380) {
     if (viewBoxAnimRef.current != null) cancelAnimationFrame(viewBoxAnimRef.current);
@@ -230,54 +229,6 @@ export default function RelationshipGraph({
   useEffect(() => {
     setViewBox({ x: base.x, y: base.y, width: base.width, height: base.height });
   }, [base]);
-
-  // 전체화면 — 그래프 원본 가로세로비(base)는 그대로 두고 화면에 맞는 크기만 계산한다.
-  // CSS의 aspect-ratio + max-width/max-height 조합은 둘 다 auto인 상태에서 "두 축을
-  // 동시에 만족하는 최대 크기"(contain)를 안정적으로 계산해주지 않아(요소가 아니라
-  // 이미지/비디오에만 있는 동작) 직접 계산한다.
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  // E2E #51 — 휴대폰(싸비 시트의 data-mobile 안)에서는 가운데 카드 대신 화면 전체를 채운다.
-  // 여는 순간 그래프가 어디에 그려져 있는지로 정한다(포털로 옮기면 data-mobile 조상이 사라진다).
-  const [fullscreenOnMobile, setFullscreenOnMobile] = useState(false);
-  const mobileFullscreen = isFullscreen && fullscreenOnMobile;
-  function toggleFullscreen() {
-    if (!isFullscreen) setFullscreenOnMobile(Boolean(wrapRef.current?.closest('[data-mobile]')));
-    setIsFullscreen((v) => !v);
-  }
-  useModalLayer({
-    active: isFullscreen,
-    dialogRef: wrapRef,
-    returnFocusRef: fullscreenButtonRef,
-    onClose: () => setIsFullscreen(false),
-  });
-  const [fullscreenSize, setFullscreenSize] = useState<{ width: number; height: number } | null>(
-    null
-  );
-
-  useEffect(() => {
-    // 휴대폰 전체화면은 CSS로 화면을 채운다 — 그래프는 svg 안에서 가로세로비를 지켜 맞춘다
-    if (!isFullscreen || fullscreenOnMobile) return;
-    function computeSize() {
-      const marginPx = 32;
-      const maxW = (window.visualViewport?.width ?? window.innerWidth) - marginPx * 2;
-      const maxH = (window.visualViewport?.height ?? window.innerHeight) - marginPx * 2;
-      const ratio = base.width / base.height;
-      let width = maxW;
-      let height = width / ratio;
-      if (height > maxH) {
-        height = maxH;
-        width = height * ratio;
-      }
-      setFullscreenSize({ width, height });
-    }
-    computeSize();
-    window.addEventListener('resize', computeSize);
-    window.visualViewport?.addEventListener('resize', computeSize);
-    return () => {
-      window.removeEventListener('resize', computeSize);
-      window.visualViewport?.removeEventListener('resize', computeSize);
-    };
-  }, [isFullscreen, fullscreenOnMobile, base]);
 
   const validSelectedId = selectedId && degree.has(selectedId) ? selectedId : null;
 
@@ -334,12 +285,8 @@ export default function RelationshipGraph({
     return Math.max(base.width / widthPx, base.height / heightPx);
   };
 
-  /**
-   * animated=true(+/− 버튼, 2026-08-25 — 클릭 한 번에 순간이동하던 걸 부드럽게)면
-   * animateViewBoxTo로, 아니면(휠·핀치줌 — 사용자 입력을 1:1로 따라가는 연속 동작이라
-   * 이미 부드럽다) 즉시 setViewBox로 반영한다.
-   */
-  function zoomAt(clientX: number, clientY: number, factor: number, animated = false) {
+  /** 휠·핀치 확대 — 사용자 입력을 1:1로 따라가는 연속 동작이라 즉시 setViewBox로 반영한다. */
+  function zoomAt(clientX: number, clientY: number, factor: number) {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
     const computeNext = (vb: ViewBox): ViewBox => {
@@ -359,11 +306,7 @@ export default function RelationshipGraph({
         base
       );
     };
-    if (animated) {
-      animateViewBoxTo(computeNext(viewBoxRef.current));
-    } else {
-      setViewBox(computeNext);
-    }
+    setViewBox(computeNext);
   }
 
   // 네이티브 리스너로 직접 붙인다 — React 17+ 는 onWheel 합성 이벤트를 passive로
@@ -379,10 +322,9 @@ export default function RelationshipGraph({
     el.addEventListener('wheel', handleWheel, { passive: false });
     return () => el.removeEventListener('wheel', handleWheel);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [base, isFullscreen]);
+  }, [base]);
 
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
-    if ((event.target as HTMLElement).closest('[data-graph-zoom-control]')) return;
     const drag = dragRef.current;
     drag.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     drag.moved = 0;
@@ -461,10 +403,6 @@ export default function RelationshipGraph({
     onSelectEdge?.(validSelectedEdgeKey === key ? null : key);
   }
 
-  function fitView() {
-    animateViewBoxTo({ x: base.x, y: base.y, width: base.width, height: base.height });
-  }
-
   // 컨테이너 크기가 바뀌면(창 크기·반응형 레이아웃·싸비 패널 드래그 리사이즈) k(줌 배율)도
   // 다시 계산해야 폰트·선 굵기가 화면상 크기를 유지한다 — viewBox 값 자체는 안 바꾸고
   // 재렌더만 강제한다.
@@ -487,7 +425,7 @@ export default function RelationshipGraph({
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, [isFullscreen]);
+  }, []);
 
   const k = unit();
   // 노드 원·글자는 출발선이 서로 반대다 — 원은 원래 아무 보정도 없어(유닛값 그대로)
@@ -640,42 +578,13 @@ export default function RelationshipGraph({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [validSelectedId, validSelectedEdgeKey, edgePaths, k, k0, labelScale, nameLabelBoxes, positions, graph.nodes]);
 
-  const graphBox = (
+  return (
     <div
-      ref={wrapRef}
-      // 높이를 고정값(h-[280px])으로 두면 패널을 가로로 늘려도(usePanelResize) 세로는
-      // 그대로라 그래프 영역이 점점 옆으로 길쭉해졌다(2026-08-25, "늘리면 가로로만
-      // 늘어난다" 피드백). 그래프 내용(base)의 가로세로비로 aspect-ratio를 잡아 폭이
-      // 늘면 높이도 같이 늘게 한다 — min/max로 극단적인 비율(인물이 한 줄로 쭉 이어진
-      // 그래프 등)에서도 너무 짜부라지거나 과하게 늘어나지 않게 막는다.
-      //
-      // 전체화면 중엔 이 규칙 대신 fullscreenSize(위에서 화면에 맞춰 계산한 px)를 쓴다 —
-      // base의 가로세로비는 그대로 유지된 채 크기만 화면에 맞춰 커진다.
-      //
-      // 휴대폰 전체화면(E2E #51)은 고정 크기 카드가 아니라 오버레이의 남은 자리를 모두 채운다.
-      className={
-        mobileFullscreen
-          ? 'relative flex h-full w-full min-h-0 flex-col touch-none bg-white outline-none'
-          : isFullscreen
-          ? 'relative flex flex-col touch-none rounded-[20px] border border-brief-rule bg-white'
-          : 'relative flex w-full min-h-[220px] max-h-[420px] flex-col touch-none rounded-[20px] border border-brief-rule bg-white'
-      }
-      style={
-        mobileFullscreen
-          ? undefined
-          : isFullscreen && fullscreenSize
-          ? { width: fullscreenSize.width, height: fullscreenSize.height }
-          : { aspectRatio: `${base.width} / ${base.height}` }
-      }
+      // 그래프 내용(base)의 가로세로비로 높이를 잡아 패널 폭이 늘면 높이도 같이 는다(2026-08-25).
+      // min/max로 극단적인 비율에서도 너무 짜부라지거나 과하게 늘어나지 않게 막는다.
+      className="relative flex w-full min-h-[220px] max-h-[420px] flex-col touch-none rounded-[14px] border border-brief-rule bg-white"
+      style={{ aspectRatio: `${base.width} / ${base.height}` }}
       onPointerDown={handlePointerDown}
-      // 전체화면 오버레이의 배경(바깥)을 눌러야 닫힌다 — 그래프 안(빈 캔버스 포함)을
-      // 눌렀을 때는 안 닫혀야 하므로, svg 쪽 클릭(빈 캔버스 클릭 시 선택 해제)이 이
-      // 컨테이너를 넘어 배경까지 버블링하지 않게 여기서 막는다.
-      onClick={isFullscreen ? (event) => event.stopPropagation() : undefined}
-      role={isFullscreen ? 'dialog' : undefined}
-      tabIndex={isFullscreen ? -1 : undefined}
-      aria-modal={isFullscreen ? true : undefined}
-      aria-label={isFullscreen ? '인물 관계도 전체화면' : undefined}
     >
       <svg
         ref={canvasRef}
@@ -895,141 +804,6 @@ export default function RelationshipGraph({
           })}
         </g>
       </svg>
-
-      {/* NFR-USE-006: 조작 버튼은 SVG 밖의 전용 행에 둔다. 두 인물만 펼쳐져도
-          인물·이름과 겹치지 않으며, 확대·이동 좌표는 canvasRef의 실제 영역을 쓴다. */}
-      <div
-        className="flex shrink-0 items-center justify-between gap-2 border-t border-brief-rule px-2 py-2"
-        role="toolbar"
-        aria-label="관계도 조작"
-        data-graph-zoom-control
-      >
-        <span className="rounded-pill border border-brief-rule bg-white/90 px-2 py-0.5 text-[10px] text-brief-muted">
-          {Math.round((base.width / viewBox.width) * 100)}%
-        </span>
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            aria-label="확대"
-            className="flex h-11 w-11 lg:h-7 lg:w-7 items-center justify-center rounded-full border border-brief-rule bg-white/95 text-brief-muted"
-            onClick={() => {
-              const rect = canvasRef.current?.getBoundingClientRect();
-              if (rect) zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 1.35, true);
-            }}
-          >
-            +
-          </button>
-          <button
-            type="button"
-            aria-label="축소"
-            className="flex h-11 w-11 lg:h-7 lg:w-7 items-center justify-center rounded-full border border-brief-rule bg-white/95 text-brief-muted"
-            onClick={() => {
-              const rect = canvasRef.current?.getBoundingClientRect();
-              if (rect)
-                zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 1 / 1.35, true);
-            }}
-          >
-            −
-          </button>
-          <button
-            type="button"
-            aria-label="전체 보기"
-            className="flex h-11 w-11 lg:h-7 lg:w-7 items-center justify-center rounded-full border border-brief-rule bg-white/95 text-[11px] text-brief-muted"
-            onClick={fitView}
-          >
-            ⤢
-          </button>
-          <button
-            type="button"
-            ref={fullscreenButtonRef}
-            aria-label={isFullscreen ? '전체화면 종료' : '전체화면'}
-            aria-pressed={isFullscreen}
-            className="flex h-11 w-11 lg:h-7 lg:w-7 items-center justify-center rounded-full border border-brief-rule bg-white/95 text-brief-muted"
-            onClick={toggleFullscreen}
-          >
-            {isFullscreen ? (
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                width="14"
-                height="14"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M8 3v3a2 2 0 0 1-2 2H3" />
-                <path d="M21 8h-3a2 2 0 0 1-2-2V3" />
-                <path d="M3 16h3a2 2 0 0 1 2 2v3" />
-                <path d="M16 21v-3a2 2 0 0 1 2-2h3" />
-              </svg>
-            ) : (
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                width="14"
-                height="14"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M8 3H5a2 2 0 0 0-2 2v3" />
-                <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
-                <path d="M3 16v3a2 2 0 0 0 2 2h3" />
-                <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
-              </svg>
-            )}
-          </button>
-        </div>
-      </div>
     </div>
-  );
-
-  if (!isFullscreen) return graphBox;
-
-  // document.body로 포털한다 — QuotePopover.tsx와 같은 이유(그 파일 주석 참고)다.
-  // 이 오버레이는 SsabiPanel의 tabpanel(`relative z-0`) 안에서 그려지는데, 그 형제인
-  // 탭 바(`relative z-10`)가 자기 스태킹 컨텍스트 전체보다 위에 온다. `fixed`로 화면에
-  // 붙여도 스태킹 비교는 DOM상 조상 컨텍스트 안에서만 일어나므로, z-50을 줘도 탭 바·
-  // 패널 리사이즈 손잡이·싸비 여닫기 버튼 등 tabpanel 밖에 있는 UI에 가려 전체화면이
-  // 전체화면처럼 안 보이고 뒤에 깔렸다(2026-08-26, 사용자 제보 — elementFromPoint로
-  // 확인: 탭 바 자리를 눌러도 오버레이가 아니라 탭 버튼이 잡힘). body로 포털하면 그
-  // 조상 스태킹 컨텍스트를 벗어나 z-index 비교가 페이지 최상위에서 의도대로 동작한다.
-  //
-  // 휴대폰(E2E #51): 가운데 카드 + 반투명 배경이면 뒤의 싸비 패널이 비쳐 전체화면 같지 않았다.
-  // 화면 전체(100dvh × 100vw)를 불투명하게 덮고, 싸비 시트(z-10)·확인 창(z-60·70)보다 위에
-  // 두며, 노치·홈 막대 자리만큼 비워 아래 조작 줄(전체화면 종료 포함)이 손에 닿게 한다.
-  // data-mobile 을 다시 달아 포털 밖에서도 휴대폰용 변형(mobile:)이 그대로 걸리게 한다.
-  if (mobileFullscreen) {
-    return createPortal(
-      <div
-        data-testid="relationship-graph-fullscreen-overlay"
-        data-mobile="true"
-        className="viewport-overlay fixed inset-0 z-[80] flex h-[100dvh] w-screen flex-col overflow-hidden bg-white"
-        style={{
-          paddingTop: 'var(--safe-top)',
-          paddingBottom: 'var(--safe-bottom)',
-          paddingLeft: 'var(--safe-left)',
-          paddingRight: 'var(--safe-right)',
-        }}
-      >
-        {graphBox}
-      </div>,
-      document.body
-    );
-  }
-
-  return createPortal(
-    <div
-      data-testid="relationship-graph-fullscreen-overlay"
-      onClick={() => setIsFullscreen(false)}
-      className="viewport-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6"
-    >
-      {graphBox}
-    </div>,
-    document.body
   );
 }

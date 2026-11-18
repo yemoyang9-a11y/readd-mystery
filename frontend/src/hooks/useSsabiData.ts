@@ -4,7 +4,7 @@ import {
   fetchTimeline as defaultFetchTimeline,
 } from '../services/ssabiService';
 import { nextSeq } from '../utils/seq';
-import type { GraphResponse, NotesView, SsabiTab, TimelineResponse } from '../types';
+import type { GraphResponse, SsabiTab, TimelineResponse } from '../types';
 
 /**
  * 싸비 탭 데이터 — 열려 있는 탭만 조회하고, 페이지가 바뀌면 다시 조회한다 (FR-SVB-003).
@@ -18,7 +18,6 @@ export function useSsabiData({
   bookId,
   tab,
   currentPage,
-  notesView = 'mine',
   refreshKey = 0,
   fetchGraph = defaultFetchGraph,
   fetchTimeline = defaultFetchTimeline,
@@ -27,8 +26,6 @@ export function useSsabiData({
   bookId: string;
   tab: SsabiTab;
   currentPage: number | null;
-  /** 추리 노트 탭에서 '사건 정리'가 선택됐을 때만 사건 정리를 조회한다 */
-  notesView?: NotesView;
   /**
    * 기준점이 페이지 이동 밖에서 바뀌었을 때(넘겨 본 쪽 확인 답, 2026-11-17) 올린다.
    * 값이 바뀌면 옛 데이터를 버리고 열린 탭을 다시 조회한다 — 새 K 는 서버가 정한다.
@@ -81,9 +78,10 @@ export function useSsabiData({
     // 열려 있는 탭을 다시 조회해야 한다 (FR-SVB-003).
   }, [panelOpen, bookId, tab, currentPage, refreshKey, fetchGraph]);
 
-  // FR-SPL-002 🚦: 사건 정리도 같은 규칙 — 서버가 K 이하만 주고, 실패하면 옛 데이터를 남기지 않는다
+  // FR-SPL-002 🚦: 타임라인(장 요약·사건)도 같은 규칙 — 서버가 K 이하·다 읽은 장만 주고,
+  // 실패하면 옛 데이터를 남기지 않는다. 타임라인 탭이 열려 있을 때만 조회한다 (결정 31)
   useEffect(() => {
-    if (!panelOpen || tab !== 'notes' || notesView !== 'events' || currentPage === null) return;
+    if (!panelOpen || tab !== 'timeline' || currentPage === null) return;
 
     let cancelled = false;
     const token = generation.current;
@@ -102,7 +100,7 @@ export function useSsabiData({
     return () => {
       cancelled = true;
     };
-  }, [panelOpen, bookId, tab, notesView, currentPage, refreshKey, fetchTimeline]);
+  }, [panelOpen, bookId, tab, currentPage, refreshKey, fetchTimeline]);
 
   return { graph, failed, timeline, timelineFailed };
 }

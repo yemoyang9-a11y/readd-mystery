@@ -11,7 +11,6 @@ const graph: GraphResponse = {
 const baseProps = {
   sessionEpoch: 7,
   onTabChange: () => {},
-  onCharacterModeChange: () => {},
   graph,
   graphFailed: false,
   notes: [],
@@ -92,13 +91,11 @@ describe('싸비 사이드창', () => {
     );
   });
 
-  it('G8: 탭은 3개다 — 시안의 타임라인 탭은 만들지 않는다 (00-shared §2.5 "[이후 확장]")', () => {
+  it('결정 31 · 2026-11-18 승인 시안 A안: 탭은 추리 노트 · 타임라인 · 인물관계도 · AI 챗봇 네 개, 이 순서다', () => {
     render(<SsabiPanel {...baseProps} />);
 
     const tabs = screen.getAllByRole('tab');
-    expect(tabs).toHaveLength(3);
-    expect(tabs.map((t) => t.textContent)).toEqual(['추리 노트', '인물관계도', 'AI 챗봇']);
-    expect(screen.queryByRole('tab', { name: '타임라인' })).not.toBeInTheDocument();
+    expect(tabs.map((t) => t.textContent)).toEqual(['추리 노트', '타임라인', '인물관계도', 'AI 챗봇']);
   });
 
   it('FR-SPL-005 🚦: 관계도 조회가 실패하면 부분 표시로 넘어가지 않는다', () => {
@@ -106,19 +103,6 @@ describe('싸비 사이드창', () => {
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.queryByText(/정주사/)).not.toBeInTheDocument();
-  });
-
-  it('totalPages를 인물 관계도 탭(되감기 트랙)에 그대로 전달한다', () => {
-    const multiMilestoneGraph: GraphResponse = {
-      nodes: [
-        { id: 'jeong', name: '정주사', first_appearance_page: 1, aliases: [] },
-        { id: 'chobong', name: '초봉', first_appearance_page: 3, aliases: [] },
-      ],
-      edges: [],
-    };
-    render(<SsabiPanel {...baseProps} graph={multiMilestoneGraph} totalPages={20} />);
-
-    expect(screen.getByText('20p')).toBeInTheDocument();
   });
 
   it('2026-11-11 사용자 결정: 기준점이 있어도 헤더에 "까지 읽음" 글자가 0건이다', () => {
@@ -135,11 +119,15 @@ describe('싸비 사이드창', () => {
     expect(screen.getByText('아모의 가이드북').closest('.pr-20')).not.toBeNull();
   });
 
-  it('활성 탭은 brief-accent 테두리를 쓰고, 아래 카드와 같은 배경으로 포스트잇처럼 겹친다', () => {
+  it('승인 시안: 탭은 칸을 똑같이 나눈 밑줄 탭 — 고른 탭만 강조색 글자·밑줄', () => {
     render(<SsabiPanel {...baseProps} />);
+    const tabs = screen.getAllByRole('tab');
+    for (const tab of tabs) expect(tab.className).toContain('flex-1');
     const activeTab = screen.getByRole('tab', { name: '인물관계도' });
     expect(activeTab.className).toContain('border-brief-accent');
-    expect(activeTab.className).toContain('bg-brief-paper');
+    expect(activeTab.className).toContain('text-brief-accent');
+    const other = screen.getByRole('tab', { name: '타임라인' });
+    expect(other.className).toContain('border-transparent');
     expect(screen.getByRole('tabpanel').className).toContain('bg-brief-paper');
   });
 
@@ -178,71 +166,6 @@ describe('싸비 사이드창', () => {
     expect(screen.getByRole('tab', { name: 'AI 챗봇' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  describe('인물 관계도 — 주요인물/전체 토글 기억 (2026-08-25)', () => {
-    it('최초 열기의 기본값은 "주요인물"이다', () => {
-      render(<SsabiPanel {...baseProps} />);
-      const people = screen.getByRole('region', { name: '인물' });
-      expect(within(people).getByRole('button', { name: '주요인물' })).toHaveAttribute(
-        'aria-pressed',
-        'true'
-      );
-    });
-
-    it('토글이 바뀌면 알린다 — 컨테이너(Reader)가 이 값을 들고 있는다', async () => {
-      const onCharacterModeChange = vi.fn();
-      render(<SsabiPanel {...baseProps} onCharacterModeChange={onCharacterModeChange} />);
-      const people = screen.getByRole('region', { name: '인물' });
-
-      await userEvent.click(within(people).getByRole('button', { name: '전체' }));
-
-      expect(onCharacterModeChange).toHaveBeenCalledWith('all');
-    });
-
-    it('다른 탭에 갔다 돌아와도(리마운트) 골랐던 토글이 유지된다', async () => {
-      render(<SsabiPanel {...baseProps} />);
-      const people = () => screen.getByRole('region', { name: '인물' });
-
-      await userEvent.click(within(people()).getByRole('button', { name: '전체' }));
-      expect(within(people()).getByRole('button', { name: '전체' })).toHaveAttribute(
-        'aria-pressed',
-        'true'
-      );
-
-      await userEvent.click(screen.getByRole('tab', { name: '추리 노트' }));
-      await userEvent.click(screen.getByRole('tab', { name: '인물관계도' }));
-
-      expect(within(people()).getByRole('button', { name: '전체' })).toHaveAttribute(
-        'aria-pressed',
-        'true'
-      );
-    });
-
-    it('2026-08-25: initialCharacterMode가 같은 세션(epoch 일치)이면 그 값에서 시작한다 — 패널 재마운트(닫았다 열기) 대역', () => {
-      render(<SsabiPanel {...baseProps} initialCharacterMode="all" initialCharacterModeEpoch={7} />);
-      const people = screen.getByRole('region', { name: '인물' });
-      expect(within(people).getByRole('button', { name: '전체' })).toHaveAttribute(
-        'aria-pressed',
-        'true'
-      );
-    });
-
-    it('2026-08-25: initialCharacterMode가 있어도 epoch이 다르면(세션이 바뀜) 기본값("주요인물")으로 시작한다', () => {
-      render(
-        <SsabiPanel
-          {...baseProps}
-          sessionEpoch={7}
-          initialCharacterMode="all"
-          initialCharacterModeEpoch={6}
-        />
-      );
-      const people = screen.getByRole('region', { name: '인물' });
-      expect(within(people).getByRole('button', { name: '주요인물' })).toHaveAttribute(
-        'aria-pressed',
-        'true'
-      );
-    });
-  });
-
   describe('추리 노트 탭 (2026-11-15 추리 전환)', () => {
     const note = {
       note_id: 'n1',
@@ -269,11 +192,11 @@ describe('싸비 사이드창', () => {
       expect(onJumpToNote).toHaveBeenCalledWith(7);
     });
 
-    it('"+ 단서·가설 적기"는 가운데 메모 창을 열고 쪽수 기본값은 지금 펼친 쪽이다', async () => {
+    it('"단서·가설 적기"는 가운데 메모 창을 열고 쪽수 기본값은 지금 펼친 쪽이다', async () => {
       const onAddNote = vi.fn().mockResolvedValue(true);
       render(<SsabiPanel {...baseProps} initialTab="notes" initialTabEpoch={7} currentPage={12} onAddNote={onAddNote} />);
 
-      await userEvent.click(screen.getByRole('button', { name: '+ 단서·가설 적기' }));
+      await userEvent.click(screen.getByRole('button', { name: '단서·가설 적기' }));
       const dialog = screen.getByRole('dialog', { name: '단서·가설 적기' });
       expect(within(dialog).getByLabelText('쪽수')).toHaveValue(12);
 
@@ -288,7 +211,7 @@ describe('싸비 사이드창', () => {
     it('내용이 비어 있으면 저장할 수 없다', async () => {
       render(<SsabiPanel {...baseProps} initialTab="notes" initialTabEpoch={7} />);
 
-      await userEvent.click(screen.getByRole('button', { name: '+ 단서·가설 적기' }));
+      await userEvent.click(screen.getByRole('button', { name: '단서·가설 적기' }));
 
       expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
     });
@@ -296,7 +219,7 @@ describe('싸비 사이드창', () => {
     it('저장에 실패하면 창이 남고 오류를 알린다', async () => {
       render(<SsabiPanel {...baseProps} initialTab="notes" initialTabEpoch={7} onAddNote={async () => false} />);
 
-      await userEvent.click(screen.getByRole('button', { name: '+ 단서·가설 적기' }));
+      await userEvent.click(screen.getByRole('button', { name: '단서·가설 적기' }));
       await userEvent.type(screen.getByLabelText('내용'), '메모');
       await userEvent.click(screen.getByRole('button', { name: '저장' }));
 
@@ -308,6 +231,8 @@ describe('싸비 사이드창', () => {
       const onRemoveNote = vi.fn().mockResolvedValue(true);
       render(<SsabiPanel {...baseProps} initialTab="notes" initialTabEpoch={7} notes={[note]} onRemoveNote={onRemoveNote} />);
 
+      // 시안의 카드에는 버튼이 없다 — 카드 내용을 눌러 메모 창에서 지운다
+      await userEvent.click(screen.getByRole('button', { name: '노트 수정' }));
       await userEvent.click(screen.getByRole('button', { name: '노트 삭제' }));
       expect(onRemoveNote).not.toHaveBeenCalled();
       await userEvent.click(screen.getByRole('button', { name: '노트 삭제 확인' }));
@@ -316,55 +241,49 @@ describe('싸비 사이드창', () => {
     });
   });
 
-  describe('추리 노트 안 사건 정리', () => {
+  describe('타임라인 탭 — 사건은 타임라인 안에 (2026-11-18 승인 시안 A안)', () => {
     const timeline = {
       applied_cutoff: 12,
-      chapters: [{ chapter_no: 1, title: '첫 장', start_page: 1, end_page: 9, completed: true }],
-      events: [{ id: 'e1', event: '편지가 도착해요', description: null, occurrence_page: 4 }],
+      chapters: [
+        { chapter_no: 1, title: '첫 장', start_page: 1, end_page: 9, completed: true, summary: '편지가 와요.' },
+        { chapter_no: 2, title: '둘째 장', start_page: 10, end_page: 20, completed: false, summary: null },
+      ],
+      events: [{ id: 'e1', event: '편지가 도착해요', description: '아침에 편지가 와요.', occurrence_page: 4 }],
     };
 
-    it('탭은 추리 노트·인물관계도·AI 챗봇 세 개다', () => {
-      render(<SsabiPanel {...baseProps} />);
-      const names = screen.getAllByRole('tab').map((t) => t.textContent);
-      expect(names).toEqual(['추리 노트', '인물관계도', 'AI 챗봇']);
+    it('타임라인 탭에 장 요약과 그 장의 사건이 함께 나온다', async () => {
+      const user = userEvent.setup();
+      render(<SsabiPanel {...baseProps} timeline={timeline} />);
+      await user.click(screen.getByRole('tab', { name: '타임라인' }));
+      expect(screen.getByRole('heading', { name: '지금까지, 두 장이에요' })).toBeInTheDocument();
+      expect(screen.getByText('편지가 와요.')).toBeInTheDocument();
+      expect(screen.getByText('이 장의 사건')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /편지가 도착해요/ })).toHaveAttribute('aria-expanded', 'false');
+      expect(screen.getByText('지금 읽는 곳 · 2장')).toBeInTheDocument();
     });
 
-    it('추리 노트에 내 노트·사건 정리 전환이 있고 기본은 내 노트다', async () => {
+    it('추리 노트에는 내 노트/사건 정리 전환·종류 고르기 줄이 없고, 사건도 나오지 않는다', async () => {
       const user = userEvent.setup();
       render(<SsabiPanel {...baseProps} timeline={timeline} />);
       await user.click(screen.getByRole('tab', { name: '추리 노트' }));
-      expect(screen.getByRole('button', { name: '내 노트' })).toHaveAttribute('aria-pressed', 'true');
-      expect(screen.getByRole('button', { name: '사건 정리' })).toHaveAttribute('aria-pressed', 'false');
+      expect(screen.queryByRole('button', { name: '내 노트' })).toBeNull();
+      expect(screen.queryByRole('button', { name: '사건 정리' })).toBeNull();
+      expect(screen.queryByRole('group', { name: '종류별로 보기' })).toBeNull();
+      expect(screen.queryByText('편지가 도착해요')).toBeNull();
+      expect(screen.getByRole('button', { name: '단서·가설 적기' })).toBeInTheDocument();
     });
 
-    it('사건 정리를 고른 뒤 다른 탭에 갔다 와도 사건 정리가 유지된다', async () => {
-      const user = userEvent.setup();
-      render(<SsabiPanel {...baseProps} timeline={timeline} />);
-      await user.click(screen.getByRole('tab', { name: '추리 노트' }));
-      await user.click(screen.getByRole('button', { name: '사건 정리' }));
-      expect(screen.getByText('지금까지, 1개 장면이에요')).toBeInTheDocument();
-      await user.click(screen.getByRole('tab', { name: '인물관계도' }));
-      await user.click(screen.getByRole('tab', { name: '추리 노트' }));
-      expect(screen.getByRole('button', { name: '사건 정리' })).toHaveAttribute('aria-pressed', 'true');
-      expect(screen.getByText('지금까지, 1개 장면이에요')).toBeInTheDocument();
+    it('타임라인 탭이 바뀌었다고 알린다 — 컨테이너가 열린 탭만 조회한다', async () => {
+      const onTabChange = vi.fn();
+      render(<SsabiPanel {...baseProps} onTabChange={onTabChange} />);
+      await userEvent.click(screen.getByRole('tab', { name: '타임라인' }));
+      expect(onTabChange).toHaveBeenLastCalledWith('timeline');
     });
 
-    it('단서·가설 적기는 내 노트에서만 보인다', async () => {
-      const user = userEvent.setup();
-      render(<SsabiPanel {...baseProps} timeline={timeline} />);
-      await user.click(screen.getByRole('tab', { name: '추리 노트' }));
-      expect(screen.getByRole('button', { name: /단서·가설 적기/ })).toBeInTheDocument();
-      await user.click(screen.getByRole('button', { name: '사건 정리' }));
-      expect(screen.queryByRole('button', { name: /단서·가설 적기/ })).toBeNull();
-    });
-
-    it('고른 쪽은 바뀔 때 알려 준다(패널을 닫았다 열어도 기억하기 위해)', async () => {
-      const user = userEvent.setup();
-      const onNotesViewChange = vi.fn();
-      render(<SsabiPanel {...baseProps} timeline={timeline} onNotesViewChange={onNotesViewChange} />);
-      await user.click(screen.getByRole('tab', { name: '추리 노트' }));
-      await user.click(screen.getByRole('button', { name: '사건 정리' }));
-      expect(onNotesViewChange).toHaveBeenLastCalledWith('events');
+    it('FR-SPL-005 🚦: 타임라인 조회가 실패하면 장·사건을 하나도 그리지 않는다', async () => {
+      render(<SsabiPanel {...baseProps} timeline={null} timelineFailed initialTab="timeline" initialTabEpoch={7} />);
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+      expect(screen.queryByRole('list')).toBeNull();
     });
   });
 });

@@ -6,33 +6,34 @@ import type {
   ChatbotConversationTurn,
   GraphResponse,
   NoteDraft,
-  NotesView,
   ReadingNote,
   SsabiTab,
   TimelineResponse,
 } from '../../types';
 import { resolveSsabiTab } from '../../utils/ssabiTab';
-import { resolveCharacterMode } from '../../utils/characterMode';
 import AmoSherlock from '../common/AmoSherlock';
 import NotesTab from './NotesTab';
-import EventSummary from './EventSummary';
+import TimelineTab from './TimelineTab';
 import RelationshipTab from './RelationshipTab';
 import ChatbotTab from './ChatbotTab';
 import FrontierConfirmCard from './FrontierConfirmCard';
 
 const TAB_LABELS: Record<SsabiTab, string> = {
   notes: '추리 노트',
+  timeline: '타임라인',
   relationship: '인물관계도',
   chatbot: 'AI 챗봇',
 };
 
-const TAB_ORDER: SsabiTab[] = ['notes', 'relationship', 'chatbot'];
+// 결정 31 · 2026-11-18 대표 승인 시안 A안 — 이 순서 그대로
+const TAB_ORDER: SsabiTab[] = ['notes', 'timeline', 'relationship', 'chatbot'];
 
 /**
- * 싸비 사이드창 3탭 — S5 (FR-SVB-002·004·005)
+ * 싸비 사이드창 4탭 — S5 (FR-SVB-002·004·005), 2026-11-18 대표 승인 시안 A안
+ * (`event-placement.html` "타임라인 안에 사건을 함께"): 추리 노트 · 타임라인 · 인물관계도 · AI 챗봇.
+ * 탭은 칸을 똑같이 나눈 밑줄 탭이고, 사건 정리는 타임라인 안에 있다(추리 노트 안의 사건 정리는 없앴다).
  *
- * 이 컴포넌트가 갖는 상태는 "어느 탭이 열려 있는가"와 "인물 관계도의 주요인물/전체
- * 토글" 둘이다(2026-08-25, 후자 추가 — RelationshipTab.tsx "토글 위치 기억" 참고).
+ * 이 컴포넌트가 갖는 상태는 "어느 탭이 열려 있는가" 하나다.
  * 조회는 컨테이너가 하고, 페이지 변경 시 재조회(FR-SVB-003)도 그쪽 책임이다.
  * 세션 경계는 서버가 준 session_epoch 의 **변화**로만 판정한다 — 클라이언트가 30분 규칙을
  * 다시 계산하지 않는다 (절대 규칙 8번, 자가 검증 17번).
@@ -43,11 +44,6 @@ export default function SsabiPanel({
   initialTab = null,
   initialTabEpoch = null,
   onTabChange,
-  initialCharacterMode = null,
-  initialCharacterModeEpoch = null,
-  onCharacterModeChange,
-  initialNotesView = 'mine',
-  onNotesViewChange,
   graph,
   graphFailed,
   timeline = null,
@@ -93,25 +89,12 @@ export default function SsabiPanel({
   initialTab?: SsabiTab | null;
   initialTabEpoch?: number | null;
   onTabChange: (tab: SsabiTab) => void;
-  /**
-   * 인물 관계도 탭의 "주요인물/전체" 토글 기억 — initialTab/initialTabEpoch와 똑같은
-   * 이유·구조다(RelationshipTab.tsx "토글 위치 기억" 참고). 이 컴포넌트조차 탭이 바뀔
-   * 때마다(아래 `key={tab}`) RelationshipTab을 리마운트시키므로, 이 값 자체는
-   * SsabiPanel이 들고 있다가(`lastCharacterMode`) 매 렌더 다시 넘겨주고, 패널이
-   * 통째로 닫힐 때를 대비해 Reader에도 다시 올려보낸다.
-   */
-  initialCharacterMode?: 'major' | 'all' | null;
-  initialCharacterModeEpoch?: number | null;
-  onCharacterModeChange: (mode: 'major' | 'all') => void;
-  /** 추리 노트 안 `내 노트 | 사건 정리` — 마지막에 고른 쪽 기억(탭 기억과 같은 방식, 컨테이너가 들고 있다) */
-  initialNotesView?: NotesView;
-  onNotesViewChange?: (view: NotesView) => void;
   graph: GraphResponse | null;
   graphFailed: boolean;
-  /** 사건 정리 — 서버가 K 이하로 걸러 준 것 (FR-SPL-002 🚦) */
+  /** 타임라인(장 요약·사건) — 서버가 K 이하, 다 읽은 장만 걸러 준 것 (FR-SPL-002 🚦, 결정 31) */
   timeline?: TimelineResponse | null;
   timelineFailed?: boolean;
-  /** 목차 기준 전체 페이지 수 — 인물 관계도 탭의 되감기 트랙 오른쪽 끝 표시용(R1 요청). */
+  /** 목차 기준 전체 페이지 수 — 노트 쪽수 입력의 상한(R3, 목차는 상한 대상 아님). */
   totalPages?: number;
   notes: ReadingNote[];
   notesFailed: boolean;
@@ -168,48 +151,13 @@ export default function SsabiPanel({
     onTabChange(tab);
   }, [tab, onTabChange]);
 
-  // 위 lastTab/previousEpoch와 같은 구조(RelationshipTab.tsx "토글 위치 기억" 참고).
-  const [lastCharacterMode, setLastCharacterMode] = useState<'major' | 'all' | null>(
-    initialCharacterMode
-  );
-  const previousCharacterModeEpoch = useRef<number | null>(initialCharacterModeEpoch);
-
-  // 탭(resolveSsabiTab)과 마찬가지로 **렌더 중에** 파생한다. 아래 useEffect 로만 리셋하면
-  // 자식이 첫 렌더에 useState 로 값을 고정한 뒤라 리셋을 보지 못한다 (characterMode.ts 참고).
-  const characterMode = resolveCharacterMode({
-    previousEpoch: previousCharacterModeEpoch.current,
-    currentEpoch: sessionEpoch,
-    lastMode: lastCharacterMode,
-  });
-
-  useEffect(() => {
-    if (previousCharacterModeEpoch.current !== sessionEpoch) {
-      previousCharacterModeEpoch.current = sessionEpoch;
-      setLastCharacterMode(null); // 새 세션 — 기본값("주요인물")으로 초기화
-    }
-  }, [sessionEpoch]);
-
-  function handleCharacterModeChange(mode: 'major' | 'all') {
-    setLastCharacterMode(mode);
-    onCharacterModeChange(mode);
-  }
-
-  const [notesView, setNotesView] = useState<NotesView>(initialNotesView);
-  function handleNotesView(view: NotesView) {
-    setNotesView(view);
-    onNotesViewChange?.(view);
-  }
-
   // 본문에서 인용 요청이 올 때마다(token 변화) 챗봇 탭으로 전환한다
   useEffect(() => {
     if (pendingQuote) setLastTab('chatbot');
   }, [pendingQuote?.token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (pendingNoteQuote) {
-      setLastTab('notes');
-      handleNotesView('mine'); // 노트 적기는 내 노트에서만
-    }
+    if (pendingNoteQuote) setLastTab('notes');
   }, [pendingNoteQuote?.token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
@@ -238,16 +186,8 @@ export default function SsabiPanel({
         <FrontierConfirmCard prompt={frontierConfirm} onAnswer={onFrontierConfirm} />
       ) : null}
 
-      {/*
-       * 탭은 3개다. 시안의 '타임라인'은 만들지 않는다 (00-shared §2.5 "[이후 확장]").
-       *
-       * 포스트잇 탭 (2026-08-25, 사용자 요청) — 활성 탭이 아래 카드에서 위로 삐져나온
-       * 메모지처럼 보이도록, 카드와 같은 배경(brief-paper)을 쓰고 바닥 테두리 없이
-       * -mb-px로 카드 위 테두리 선에 정확히 겹친다. 비활성 탭은 살짝 아래로 내려
-       * (mt-2) 카드 뒤에 깔린 것처럼 보이게 한다. z-10으로 탭이 카드 위에 그려져야
-       * 겹친 자리의 카드 테두리 선을 탭 배경이 덮어 이음매가 사라진다.
-       */}
-      <div role="tablist" aria-label="싸비" className="relative z-10 flex gap-1.5 px-6">
+      {/* 4탭 — 시안 그대로 칸을 똑같이 나눈 밑줄 탭. 고른 탭은 강조색 글자·굵게·밑줄 2px */}
+      <div role="tablist" aria-label="싸비" className="flex border-b border-brief-rule px-2">
         {TAB_ORDER.map((it) => (
           <button
             key={it}
@@ -256,11 +196,11 @@ export default function SsabiPanel({
             data-track={`ssabi-tab-${TAB_LABELS[it]}`}
             aria-selected={tab === it}
             onClick={() => setLastTab(it)}
-            className={
+            className={`-mb-px min-h-11 flex-1 whitespace-nowrap border-b-2 pb-2.5 pt-3 text-center font-dashSans text-[12.5px] leading-none transition-colors ${
               tab === it
-                ? '-mb-px rounded-t-lg border border-b-0 border-brief-accent bg-brief-paper px-4 py-2.5 font-dashSans text-xs font-bold text-brief-accent mobile:min-h-11'
-                : 'mt-2 rounded-t-lg border border-b-0 border-transparent px-4 py-2 font-dashSans text-xs text-brief-muted transition-colors hover:text-brief-ink mobile:min-h-11'
-            }
+                ? 'border-brief-accent font-bold text-brief-accent'
+                : 'border-transparent font-medium text-brief-muted hover:text-brief-ink'
+            }`}
           >
             {TAB_LABELS[it]}
           </button>
@@ -270,63 +210,28 @@ export default function SsabiPanel({
       <div
         key={tab}
         role="tabpanel"
-        className="brief-scroll relative z-0 flex-1 animate-tab-in overflow-y-auto rounded-b-xl rounded-tr-xl border border-brief-rule bg-brief-paper px-6 pb-6 pt-5"
+        // 시안 본문 여백(14px 16px 16px). 챗봇 탭은 이번 시안과 무관해 지금 여백을 그대로 둔다
+        className={`brief-scroll relative z-0 flex-1 animate-tab-in overflow-y-auto bg-brief-paper ${
+          tab === 'chatbot' ? 'px-6 pb-6 pt-5' : 'px-4 pb-4 pt-3.5'
+        }`}
       >
         {tab === 'notes' ? (
-          <div className="flex min-h-full flex-col">
-            <div
-              role="group"
-              aria-label="추리 노트 보기"
-              className="mb-4 flex gap-5 border-b border-brief-rule font-dashSans"
-            >
-              {(
-                [
-                  ['mine', '내 노트'],
-                  ['events', '사건 정리'],
-                ] as const
-              ).map(([view, label]) => (
-                <button
-                  key={view}
-                  type="button"
-                  data-track={`추리 노트-${label}`}
-                  aria-pressed={notesView === view}
-                  onClick={() => handleNotesView(view)}
-                  className={
-                    notesView === view
-                      ? '-mb-px min-h-11 border-b-2 border-brief-accent text-sm font-extrabold text-brief-ink'
-                      : '-mb-px min-h-11 border-b-2 border-transparent text-sm font-bold text-brief-muted'
-                  }
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            {notesView === 'mine' ? (
-              <NotesTab
-                notes={notes}
-                failed={notesFailed}
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onAdd={onAddNote}
-                onEdit={onEditNote}
-                onRemove={onRemoveNote}
-                onJump={onJumpToNote}
-                quoteDraft={pendingNoteQuote}
-                onQuoteDraftHandled={onNoteQuoteHandled}
-              />
-            ) : (
-              <EventSummary timeline={timeline} failed={timelineFailed} />
-            )}
-          </div>
-        ) : null}
-        {tab === 'relationship' ? (
-          <RelationshipTab
-            graph={graph}
-            failed={graphFailed}
+          <NotesTab
+            notes={notes}
+            failed={notesFailed}
+            currentPage={currentPage}
             totalPages={totalPages}
-            initialCharacterMode={characterMode}
-            onCharacterModeChange={handleCharacterModeChange}
+            onAdd={onAddNote}
+            onEdit={onEditNote}
+            onRemove={onRemoveNote}
+            onJump={onJumpToNote}
+            quoteDraft={pendingNoteQuote}
+            onQuoteDraftHandled={onNoteQuoteHandled}
           />
+        ) : null}
+        {tab === 'timeline' ? <TimelineTab timeline={timeline} failed={timelineFailed} /> : null}
+        {tab === 'relationship' ? (
+          <RelationshipTab graph={graph} failed={graphFailed} />
         ) : null}
         {tab === 'chatbot' ? (
           <ChatbotTab

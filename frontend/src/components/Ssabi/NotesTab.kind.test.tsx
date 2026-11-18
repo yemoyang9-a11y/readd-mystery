@@ -46,7 +46,7 @@ function card(body: string): HTMLElement {
 
 test('새 노트의 종류 선택지는 일반·단서·궁금한 점·가설 네 개이고 기본은 일반이다', async () => {
   const props = setup({ notes: [] });
-  await userEvent.click(screen.getByRole('button', { name: '+ 단서·가설 적기' }));
+  await userEvent.click(screen.getByRole('button', { name: '단서·가설 적기' }));
   const dialog = screen.getByRole('dialog', { name: '단서·가설 적기' });
 
   const chips = within(dialog).getAllByRole('radio');
@@ -60,7 +60,7 @@ test('새 노트의 종류 선택지는 일반·단서·궁금한 점·가설 �
 
 test('종류 선택지를 누르면 그 종류로 저장된다 — 궁금한 점', async () => {
   const props = setup({ notes: [] });
-  await userEvent.click(screen.getByRole('button', { name: '+ 단서·가설 적기' }));
+  await userEvent.click(screen.getByRole('button', { name: '단서·가설 적기' }));
   await userEvent.type(screen.getByLabelText('내용'), '왜 늦게 왔을까');
   await userEvent.click(screen.getByRole('radio', { name: '궁금한 점' }));
   await userEvent.click(screen.getByRole('button', { name: '저장' }));
@@ -86,62 +86,79 @@ test('노트마다 종류 표지가 붙는다', () => {
   expect(within(card('그냥 적어 둔 메모')).getByTestId('note-kind-badge')).toHaveTextContent('메모');
 });
 
-test('종류 고르기 줄: 전체는 모두, 종류를 고르면 그 종류의 노트만 보인다', async () => {
+test('2026-11-18 승인 시안: 종류 고르기 줄(전체/단서/궁금한 점/가설)이 없고 모든 노트가 그대로 보인다 — 종류는 메모 창에서 고른다', () => {
   setup();
-  const filter = screen.getByRole('group', { name: '종류별로 보기' });
-  expect(within(filter).getAllByRole('button').map((b) => b.textContent)).toEqual([
-    '전체',
-    '단서',
-    '궁금한 점',
-    '가설',
+  expect(screen.queryByRole('group', { name: '종류별로 보기' })).toBeNull();
+  expect(screen.queryByRole('button', { name: '전체' })).toBeNull();
+  expect(screen.getAllByRole('listitem')).toHaveLength(4);
+});
+
+test('2026-11-18 승인 시안: 카드에는 종류 표지·쪽·내용만 — 수정·삭제·풀림 버튼은 카드 위에 따로 없다', () => {
+  setup();
+  const c = card('왜 문이 열려 있었나');
+  expect(within(c).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual([
+    '7쪽으로 이동',
+    '노트 수정',
   ]);
-  expect(within(filter).getByRole('button', { name: '전체' })).toHaveAttribute('aria-pressed', 'true');
-  expect(screen.getAllByRole('listitem')).toHaveLength(4);
-
-  await userEvent.click(within(filter).getByRole('button', { name: '궁금한 점' }));
-  expect(screen.getAllByRole('listitem')).toHaveLength(1);
-  expect(screen.getByText('왜 문이 열려 있었나')).toBeInTheDocument();
-  expect(screen.queryByText('장갑이 한 짝 없다')).not.toBeInTheDocument();
-  expect(screen.queryByText('그냥 적어 둔 메모')).not.toBeInTheDocument();
-
-  await userEvent.click(within(filter).getByRole('button', { name: '단서' }));
-  expect(screen.getAllByRole('listitem')).toHaveLength(1);
-  expect(screen.getByText('장갑이 한 짝 없다')).toBeInTheDocument();
-
-  await userEvent.click(within(filter).getByRole('button', { name: '전체' }));
-  expect(screen.getAllByRole('listitem')).toHaveLength(4);
+  expect(within(c).getByRole('button', { name: '7쪽으로 이동' })).toHaveTextContent('7쪽');
 });
 
-test('고른 종류의 노트가 없으면 안내 문구가 나온다', async () => {
-  setup({ notes: [NOTES[0]] });
-  await userEvent.click(
-    within(screen.getByRole('group', { name: '종류별로 보기' })).getByRole('button', { name: '가설' })
-  );
-  expect(screen.queryAllByRole('listitem')).toHaveLength(0);
-  expect(screen.getByText('이 종류로 적은 노트가 없어요.')).toBeInTheDocument();
+test('카드의 쪽을 누르면 그 쪽으로 이동을 요청한다', async () => {
+  const props = setup();
+  await userEvent.click(within(card('장갑이 한 짝 없다')).getByRole('button', { name: '7쪽으로 이동' }));
+  expect(props.onJump).toHaveBeenCalledWith(7);
 });
 
-test('풀림 버튼은 궁금한 점·가설 노트에만 있다', () => {
+test('풀림 버튼은 궁금한 점·가설 노트의 메모 창에만 있다', async () => {
   setup();
-  expect(within(card('왜 문이 열려 있었나')).getByRole('button', { name: '풀림' })).toBeInTheDocument();
-  expect(within(card('범인은 왼손잡이')).getByRole('button', { name: '풀림' })).toBeInTheDocument();
-  expect(within(card('장갑이 한 짝 없다')).queryByRole('button', { name: '풀림' })).not.toBeInTheDocument();
-  expect(within(card('그냥 적어 둔 메모')).queryByRole('button', { name: '풀림' })).not.toBeInTheDocument();
+  for (const [body, has] of [
+    ['왜 문이 열려 있었나', true],
+    ['범인은 왼손잡이', true],
+    ['장갑이 한 짝 없다', false],
+    ['그냥 적어 둔 메모', false],
+  ] as const) {
+    await userEvent.click(within(card(body)).getByRole('button', { name: '노트 수정' }));
+    const dialog = screen.getByRole('dialog');
+    if (has) expect(within(dialog).getByRole('button', { name: '풀림' })).toBeInTheDocument();
+    else expect(within(dialog).queryByRole('button', { name: '풀림' })).not.toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('button', { name: '취소' }));
+  }
 });
 
 test('풀림 버튼을 누르면 독자의 선택만 서버로 보낸다 — 켜기와 끄기', async () => {
   const props = setup({
     notes: [note('n2', 'question', '왜 문이 열려 있었나'), note('n3', 'hypothesis', '범인은 왼손잡이', true)],
   });
-  const open = within(card('왜 문이 열려 있었나')).getByRole('button', { name: '풀림' });
+  await userEvent.click(within(card('왜 문이 열려 있었나')).getByRole('button', { name: '노트 수정' }));
+  const open = within(screen.getByRole('dialog')).getByRole('button', { name: '풀림' });
   expect(open).toHaveAttribute('aria-pressed', 'false');
   await userEvent.click(open);
   expect(props.onEdit).toHaveBeenCalledWith('n2', { resolved: true });
+  expect(open).toHaveAttribute('aria-pressed', 'true');
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '취소' }));
 
-  const done = within(card('범인은 왼손잡이')).getByRole('button', { name: '풀림' });
+  await userEvent.click(within(card('범인은 왼손잡이')).getByRole('button', { name: '노트 수정' }));
+  const done = within(screen.getByRole('dialog')).getByRole('button', { name: '풀림' });
   expect(done).toHaveAttribute('aria-pressed', 'true');
   await userEvent.click(done);
   expect(props.onEdit).toHaveBeenCalledWith('n3', { resolved: false });
+});
+
+test('메모 창의 삭제는 한 번 더 확인한 뒤에만 실행하고 창을 닫는다', async () => {
+  const props = setup();
+  await userEvent.click(within(card('장갑이 한 짝 없다')).getByRole('button', { name: '노트 수정' }));
+  await userEvent.click(screen.getByRole('button', { name: '노트 삭제' }));
+  expect(props.onRemove).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByRole('button', { name: '노트 삭제 확인' }));
+  expect(props.onRemove).toHaveBeenCalledWith('n1');
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
+test('새 노트 메모 창에는 풀림·삭제가 없다', async () => {
+  setup({ notes: [] });
+  await userEvent.click(screen.getByRole('button', { name: '단서·가설 적기' }));
+  expect(screen.queryByRole('button', { name: '풀림' })).toBeNull();
+  expect(screen.queryByRole('button', { name: '노트 삭제' })).toBeNull();
 });
 
 test('풀림으로 표시한 노트는 흐리게, 체크와 함께 보인다', () => {
@@ -154,16 +171,15 @@ test('풀림으로 표시한 노트는 흐리게, 체크와 함께 보인다', (
   expect(within(card('왜 문이 열려 있었나')).queryByTestId('note-resolved-check')).not.toBeInTheDocument();
 });
 
-test('누르는 곳은 모두 44px 이상이다 — 종류 고르기·풀림·종류 선택지', async () => {
+test('누르는 곳은 모두 44px 이상이다 — 풀림·종류 선택지·삭제', async () => {
   setup();
+  await userEvent.click(within(card('범인은 왼손잡이')).getByRole('button', { name: '노트 수정' }));
   const targets = [
-    ...within(screen.getByRole('group', { name: '종류별로 보기' })).getAllByRole('button'),
-    ...screen.getAllByRole('button', { name: '풀림' }),
+    screen.getByRole('button', { name: '풀림' }),
+    screen.getByRole('button', { name: '노트 삭제' }),
+    ...screen.getAllByRole('radio'),
   ];
-  await userEvent.click(screen.getByRole('button', { name: '+ 단서·가설 적기' }));
-  targets.push(...screen.getAllByRole('radio'));
   for (const target of targets) expect(target.className).toMatch(/\bmin-h-11\b/);
   // 좁은 화면(390px)에서 옆으로 넘치지 않게 줄바꿈한다
-  expect(screen.getByRole('group', { name: '종류별로 보기' }).className).toMatch(/\bflex-wrap\b/);
   expect(screen.getByRole('radiogroup', { name: '종류' }).className).toMatch(/\bflex-wrap\b/);
 });

@@ -26,6 +26,12 @@ export interface TimelineChapter {
    * 사건이 정리돼요" 안내의 근거 (2026-11-17 대표 결정). 장 경계는 목차라 상한 대상이 아니다 (R3).
    */
   completed: boolean;
+  /**
+   * 장 간략 요약 (chapter_summaries). 다 읽은 장(end_page <= cutoff)일 때만 조회 쿼리가 붙인다 —
+   * 읽는 중인 장은 요약 행을 읽지도 않고 null 이다 (FR-SPL-002 🚦, 결정 31, 절대 규칙 7번).
+   * 다 읽은 장이라도 요약이 없으면 null (지어내지 않는다).
+   */
+  summary: string | null;
 }
 
 export interface TimelineEvent {

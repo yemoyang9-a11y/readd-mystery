@@ -30,6 +30,7 @@ import {
   DEMO_PAGES,
   DEMO_SHOWCASE,
   DEMO_START_PAGE,
+  DEMO_TIMELINE,
   DEMO_TITLE,
   DEMO_TOTAL_PAGES,
   DEMO_NEIGHBORS,
@@ -280,9 +281,10 @@ export default function GuidePage() {
           <SsabiPanel
             sessionEpoch={1}
             onTabChange={noop}
-            onCharacterModeChange={noop}
             graph={DEMO_GRAPH}
             graphFailed={false}
+            timeline={DEMO_TIMELINE}
+            timelineFailed={false}
             totalPages={DEMO_TOTAL_PAGES}
             notes={notes}
             notesFailed={false}

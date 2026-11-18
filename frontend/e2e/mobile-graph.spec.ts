@@ -13,7 +13,7 @@ async function openGraph(page: Page): Promise<ApiLog> {
   await expect.poll(() => log.progress.length).toBe(1);
   await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
   await expect(page.getByRole('tab', { name: '인물관계도' })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByText('100%')).toBeVisible();
+  await expect(page.locator('svg[data-graph-canvas]')).toBeVisible();
   return log;
 }
 
@@ -26,8 +26,13 @@ async function pointers(page: Page, steps: { id: number; type: string; x: number
   }, steps);
 }
 
+// 2026-11-18 승인 시안 — 배율 % 표시·확대 버튼이 없으므로 확대는 그래프 viewBox 폭이 줄었는지로 본다
+const viewBoxWidth = (page: Page) =>
+  page.locator('svg[data-graph-canvas]').evaluate((el) => Number(el.getAttribute('viewBox')!.split(' ')[2]));
+
 test('G14: 두 손가락으로 벌리면 그래프가 확대된다', async ({ page }) => {
   await openGraph(page);
+  const before = await viewBoxWidth(page);
   const box = (await page.locator('div.touch-none').first().boundingBox())!;
   const cx = box.x + box.width / 2;
   const cy = box.y + box.height / 3;
@@ -39,7 +44,7 @@ test('G14: 두 손가락으로 벌리면 그래프가 확대된다', async ({ pa
     { id: 1, type: 'pointerup', x: cx - 40, y: cy },
     { id: 2, type: 'pointerup', x: cx + 40, y: cy },
   ]);
-  await expect(page.getByText('100%')).toHaveCount(0);
+  await expect.poll(() => viewBoxWidth(page)).toBeLessThan(before);
 });
 
 test('G14: 한 손가락으로 그래프를 끌어도 페이지 진도 요청이 생기지 않는다', async ({ page }) => {
@@ -55,32 +60,4 @@ test('G14: 한 손가락으로 그래프를 끌어도 페이지 진도 요청이
   await page.waitForTimeout(500);
   expect(log.progress).toEqual([15]);
   await expect(page.getByRole('textbox', { name: '페이지로 이동' })).toHaveValue('15');
-});
-
-test('G14: 전체화면은 화면 전체를 덮고 손잡이보다 위에 있으며, 닫으면 싸비로 돌아온다', async ({ page }) => {
-  await openGraph(page);
-  await page.getByRole('button', { name: '전체화면' }).click();
-  const overlay = page.getByTestId('relationship-graph-fullscreen-overlay');
-  await expect(overlay).toBeVisible();
-  const { width, height } = page.viewportSize()!;
-  const box = (await overlay.boundingBox())!;
-  expect(Math.abs(box.width - width)).toBeLessThanOrEqual(1);
-  expect(Math.abs(box.height - height)).toBeLessThanOrEqual(1);
-  // E2E #51 — 가운데 카드가 아니라 그래프 상자가 화면을 채우고, 바탕이 불투명해 뒤 패널이 비치지 않는다
-  const dialog = (await page.getByRole('dialog', { name: '인물 관계도 전체화면' }).boundingBox())!;
-  expect(Math.abs(dialog.width - width)).toBeLessThanOrEqual(1);
-  expect(dialog.height).toBeGreaterThanOrEqual(height * 0.9);
-  const overlayBg = await overlay.evaluate((el) => getComputedStyle(el).backgroundColor);
-  expect(overlayBg).toBe('rgb(255, 255, 255)');
-  const exit = (await page.getByRole('button', { name: '전체화면 종료' }).boundingBox())!;
-  expect(exit.y + exit.height).toBeLessThanOrEqual(height);
-  const handleCovered = await page.evaluate(() => {
-    const x = window.innerWidth - 10;
-    const y = window.innerHeight * 0.58;
-    return !!document.elementFromPoint(x, y)?.closest('[data-testid="relationship-graph-fullscreen-overlay"]');
-  });
-  expect(handleCovered).toBe(true);
-  await page.getByRole('button', { name: '전체화면 종료' }).click();
-  await expect(overlay).toHaveCount(0);
-  await expect(page.getByTestId('mobile-ssabi')).toBeVisible();
 });

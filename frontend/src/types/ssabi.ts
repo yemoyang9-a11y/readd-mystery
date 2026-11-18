@@ -76,8 +76,11 @@ export interface CharacterResponse {
   notes: string;
 }
 
-/** 싸비 사이드창 3탭. 최초 열기 기본값은 관계도 (FR-SVB-002) */
-export type SsabiTab = 'notes' | 'relationship' | 'chatbot';
+/**
+ * 싸비 4탭 — 추리 노트 · 타임라인 · 인물관계도 · AI 챗봇 (결정 31, 2026-11-18 대표 승인 시안 A안).
+ * 최초 열기 기본값은 관계도 (FR-SVB-002)
+ */
+export type SsabiTab = 'notes' | 'timeline' | 'relationship' | 'chatbot';
 
 /** GET /books/:bookId/ssabi/timeline — 장 시작 쪽·사건 발생 쪽 <= K 로 이미 걸러져 온다 (FR-SPL-002 🚦) */
 export interface TimelineChapter {
@@ -87,6 +90,8 @@ export interface TimelineChapter {
   end_page: number;
   /** 다 읽은 장인가 — 서버가 기준점으로 정한 값. 프론트는 쪽수로 다시 판정하지 않는다 (FR-BRF-005 🚦) */
   completed: boolean;
+  /** 장 간략 요약. 서버가 다 읽은 장에만 싣는다 — 읽는 중인 장·요약 없는 장은 null (FR-SPL-002 🚦, 결정 31) */
+  summary: string | null;
 }
 
 export interface TimelineEvent {
@@ -102,6 +107,3 @@ export interface TimelineResponse {
   events: TimelineEvent[];
   applied_cutoff: number;
 }
-
-/** 추리 노트 탭 안의 전환 */
-export type NotesView = 'mine' | 'events';
