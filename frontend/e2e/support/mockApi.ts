@@ -138,6 +138,11 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
   const failPages = new Set(opts.failPages ?? []);
   let briefingFailures = 0;
   const log: ApiLog = { progress: [], pageFetches: [], entries: 0, recapStreams: 0, events: [] };
+  // 2026-11-18 첫 접속 로그인 관문 — 시험 독자는 이미 로그인하고 가이드를 마친 상태로 시작한다
+  await page.addInitScript(() => {
+    localStorage.setItem('ssabi.auth_token', 'e2e-session-token');
+    localStorage.setItem('readd.onboarded', '1');
+  });
   const briefingRecap = opts.briefingRecap ?? 'saved';
   let cutoff = startPage;
   const extraPages: Record<string, number | undefined> = { [DONE_BOOK.book_id]: 20 };

@@ -87,3 +87,13 @@ test('관리자: 별도 화면 코드를 불러와도 인증 화면을 거친다
   await expect(page.getByLabel('관리자 토큰')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+test('첫 접속: 로그인하지 않은 독자에게는 로그인·회원가입 화면이 먼저 뜬다', async ({ browser }) => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.goto('/');
+  await expect(page).toHaveURL(/\/login/);
+  await expect(page.getByRole('button', { name: '로그인' }).first()).toBeVisible();
+  await expect(page.getByText('회원가입').first()).toBeVisible();
+  await context.close();
+});
