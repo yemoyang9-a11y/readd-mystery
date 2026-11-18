@@ -20,13 +20,12 @@ describe('AccountCard', () => {
     withdraw.mockReset().mockResolvedValue(undefined);
   });
 
-  test('로그인 전에는 안내와 구글·카카오 버튼 두 개를 보여 준다', () => {
+  test('로그인 전에는 상태 한 줄과 구글·카카오 버튼 두 개를 보여 주고 부연 문구는 없다', () => {
     auth('guest');
     render(<AccountCard />);
     expect(screen.getByText('로그인하지 않은 상태예요')).toBeInTheDocument();
-    expect(
-      screen.getByText('지금 읽은 기록은 이 기기에만 남아요. 로그인하면 다른 기기에서도 이어 읽을 수 있어요.')
-    ).toBeInTheDocument();
+    // 2026-11-18 대표 지시 — 회색 부연 설명을 두지 않는다
+    expect(screen.queryByText(/이 기기에만 남아요/)).toBeNull();
     expect(screen.getByRole('button', { name: '구글로 로그인' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '카카오로 로그인' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '로그아웃' })).toBeNull();

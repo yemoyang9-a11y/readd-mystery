@@ -200,7 +200,10 @@ describe('처음 펼친 독자(진도 기록 없음, applied_cutoff 0)', () => {
     expect(steps[0]).toHaveTextContent('읽은 쪽까지만 알려 줘요');
     expect(steps[1]).toHaveTextContent('단서와 가설을 노트에 적어요');
     expect(steps[2]).toHaveTextContent('아모에게 물어봐요');
-    expect(steps[2]).toHaveTextContent('아모는 추리가 맞는지 판정하지 않아요');
+    // 2026-11-18 대표 지시 — 단계별 회색 부연 설명은 없다
+    expect(screen.queryByText(/판정하지 않아요/)).toBeNull();
+    expect(screen.queryByText(/쪽수가 함께 남아서/)).toBeNull();
+    expect(screen.queryByText(/뒤의 일은 꺼내지 않아요/)).toBeNull();
 
     expect(onRequestFallback).not.toHaveBeenCalled();
   });

@@ -192,9 +192,6 @@ export default function RelationshipTab({
         selectedEdgeKey={selectedEdgeKey}
         onSelectEdge={setSelectedEdgeKey}
       />
-      <p className="text-[11px] leading-relaxed text-brief-muted">
-        화살표는 감정·행동의 방향이고, 점선은 주장·소문이거나 끝난 관계입니다.
-      </p>
       <RelationDetails
         graph={displayed}
         selectedId={activeSelected}
@@ -205,18 +202,13 @@ export default function RelationshipTab({
           이전 관계 이력이 없는 응답은 되감아도 당시 관계를 모두 복원할 수 없습니다.
         </p>
       ) : null}
-      {at < latest &&
-      graph?.nodes.some((node) => node.aliases.length > 0 && !node.alias_details) ? (
-        <p className="text-[11px] leading-relaxed text-brief-muted">
-          되감기에서는 공개 시점을 확인할 수 없는 별칭을 생략합니다.
-        </p>
-      ) : null}
 
-      {/* 시안(reader-map-graph.html)의 .hintbar 그대로 — 조작 안내 + 명시적 선택 해제.
+      {/* 시안(reader-map-graph.html)의 .hintbar 에서 명시적 선택 해제만 남긴다.
           예전엔 같은 카드를 다시 눌러야만 접혔는데, 그래프 위 다른 곳을 눌러도 되지만
-          그 동작이 눈에 안 보인다 — 이 버튼으로 "선택을 지우는 방법이 있다"를 드러낸다. */}
-      <div className="flex flex-wrap items-center justify-between text-[11px] text-brief-muted">
-        <span>두 손가락으로 확대 · 끌어서 이동</span>
+          그 동작이 눈에 안 보인다 — 이 버튼으로 "선택을 지우는 방법이 있다"를 드러낸다.
+          조작 안내 문구("두 손가락으로 확대 · 끌어서 이동")는 뺐다(2026-11-18 대표 지시 —
+          기능 설명용 회색 부연 문구를 두지 않는다). */}
+      <div className="flex justify-end text-[11px]">
         <button
           type="button"
           onClick={() => setSelected(null)}

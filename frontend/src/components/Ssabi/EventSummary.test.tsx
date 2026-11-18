@@ -52,7 +52,7 @@ describe('사건 정리', () => {
     expect(within(lastChapter).getByText('지금 읽는 곳')).toBeInTheDocument();
   });
 
-  it('사건이 아직 없는 지금 읽는 장에는 다 읽으면 정리된다는 한 줄만 보인다 (결정 31)', () => {
+  it('사건이 아직 없는 지금 읽는 장에는 제목만 있고 부연 안내 문구가 없다 (결정 31, 2026-11-18 대표 지시)', () => {
     const reading: TimelineResponse = {
       applied_cutoff: 13,
       chapters: timeline.chapters,
@@ -60,39 +60,9 @@ describe('사건 정리', () => {
     };
     render(<EventSummary timeline={reading} failed={false} />);
     const lastChapter = screen.getByText('둘째 장').closest('li') as HTMLElement;
-    expect(within(lastChapter).getByText('이 장을 다 읽으면 사건이 정리돼요')).toBeInTheDocument();
-    expect(within(lastChapter).queryAllByRole('button')).toHaveLength(0);
-    const firstChapter = screen.getByText('첫 장').closest('li') as HTMLElement;
-    expect(within(firstChapter).queryByText('이 장을 다 읽으면 사건이 정리돼요')).toBeNull();
-  });
-
-  // 2026-11-17 대표 결정 — 다 읽은 장인지는 서버가 준 completed 로만 안다
-  it('마지막 장을 다 읽었는데 그 장에 사건이 0건이면 다 읽으면 정리된다는 안내가 없다', () => {
-    const finished: TimelineResponse = {
-      applied_cutoff: 25,
-      chapters: timeline.chapters.map((chapter) => ({ ...chapter, completed: true })),
-      events: timeline.events.filter((event) => event.id !== 'e3'),
-    };
-    render(<EventSummary timeline={finished} failed={false} />);
+    expect(within(lastChapter).getByText('지금 읽는 곳')).toBeInTheDocument();
     expect(screen.queryByText('이 장을 다 읽으면 사건이 정리돼요')).toBeNull();
-    const lastChapter = screen.getByText('둘째 장').closest('li') as HTMLElement;
     expect(within(lastChapter).queryAllByRole('button')).toHaveLength(0);
-  });
-
-  it('다 읽은 장인지는 쪽수가 아니라 서버의 completed 로만 정한다', () => {
-    // 기준점·쪽수만 보면 다 읽은 것처럼 보여도 서버가 completed=false 를 주면 안내가 뜬다
-    const serverSaysReading: TimelineResponse = {
-      applied_cutoff: 25,
-      chapters: timeline.chapters,
-      events: timeline.events.filter((event) => event.id !== 'e3'),
-    };
-    render(<EventSummary timeline={serverSaysReading} failed={false} />);
-    expect(screen.getByText('이 장을 다 읽으면 사건이 정리돼요')).toBeInTheDocument();
-  });
-
-  it('지금 읽는 장에 사건이 있으면 안내 한 줄은 없다', () => {
-    render(<EventSummary timeline={timeline} failed={false} />);
-    expect(screen.queryByText('이 장을 다 읽으면 사건이 정리돼요')).toBeNull();
   });
 
   it('쪽수 문구가 없다', async () => {

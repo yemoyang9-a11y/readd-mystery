@@ -15,12 +15,12 @@ export const FIRST_VISIT_GREETING_LINES = ['처음 펼치시네요.', '천천히
 
 /**
  * 싸비 사용법 3단계 — 고정 안내다. 작품 내용으로 만들지 않는다(2026-11-17 대표 결정).
- * 세 번째 줄은 아모가 판정하지 않는다는 원칙(NFR-AI-005, CLAUDE.md 1장 ②)을 독자에게 미리 알린다.
+ * 단계마다 붙어 있던 회색 부연 설명은 뺐다(2026-11-18 대표 지시 — 기능 설명·안심용 문구를 두지 않는다).
  */
-export const SSABI_GUIDE_STEPS: { title: string; detail: string }[] = [
-  { title: '읽은 쪽까지만 알려 줘요', detail: '인물관계도도 아모도, 가장 멀리 읽은 쪽 뒤의 일은 꺼내지 않아요.' },
-  { title: '단서와 가설을 노트에 적어요', detail: '쪽수가 함께 남아서, 다시 펼쳤을 때 이 화면에서 모아 볼 수 있어요.' },
-  { title: '아모에게 물어봐요', detail: '아모는 추리가 맞는지 판정하지 않아요. 읽은 범위에서 같이 짚어 볼 뿐이에요.' },
+export const SSABI_GUIDE_STEPS: { title: string }[] = [
+  { title: '읽은 쪽까지만 알려 줘요' },
+  { title: '단서와 가설을 노트에 적어요' },
+  { title: '아모에게 물어봐요' },
 ];
 
 const RULE = <div data-testid="brief-rule" className="my-7 h-[2px] w-full rounded-[1px] bg-brief-rule" />;
@@ -214,12 +214,7 @@ export default function MobileBriefingView({
                     >
                       {i + 1}
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <b className="block break-keep text-[15px] font-bold text-brief-ink">{step.title}</b>
-                      <span className="mt-1 block break-keep text-[13px] leading-relaxed text-brief-muted">
-                        {step.detail}
-                      </span>
-                    </span>
+                    <b className="min-w-0 flex-1 break-keep text-[15px] font-bold text-brief-ink">{step.title}</b>
                   </li>
                 ))}
               </ol>

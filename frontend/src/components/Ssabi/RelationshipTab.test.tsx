@@ -19,6 +19,14 @@ it('renders graph after loading and after a position invalidates the previous gr
   expect(screen.getByRole('region', { name: '인물' })).toBeInTheDocument();
 });
 
+it('범례·조작 안내 같은 회색 부연 문구가 없고 선택 해제 버튼은 남는다 (2026-11-18 대표 지시)', () => {
+  render(<RelationshipTab graph={graph} failed={false} />);
+  expect(screen.queryByText(/화살표는 감정·행동의 방향/)).toBeNull();
+  expect(screen.queryByText(/두 손가락으로 확대/)).toBeNull();
+  expect(screen.queryByText(/별칭을 생략합니다/)).toBeNull();
+  expect(screen.getByRole('button', { name: '선택 해제' })).toBeInTheDocument();
+});
+
 /**
  * 인물 관계도 탭 — FR-SVB-002, FR-SPL-005 🚦, NFR-USE-006
  *
