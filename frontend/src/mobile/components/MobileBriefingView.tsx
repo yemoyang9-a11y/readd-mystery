@@ -2,10 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { BriefingResponse, ChapterSummary, ReadingNote } from '../../types';
 import { resolveBriefingView } from '../../utils/briefingView';
 import { parseRecapParagraphs } from '../../utils/recapText';
-import { formatPercent } from '../../utils/format';
 import { formatSinceLastRead } from '../../utils/sinceLastRead';
 import { splitHighlighted } from '../../components/Ssabi/highlightNames';
-import ProgressBar from '../../components/Reader/ProgressBar';
 import TypographicCover from '../../components/common/TypographicCover';
 import BriefingNotes from '../../components/Ssabi/BriefingNotes';
 import { GREETING_LINES } from '../../pages/BriefingView';
@@ -26,11 +24,12 @@ export const SSABI_GUIDE_STEPS: { title: string }[] = [
 const RULE = <div data-testid="brief-rule" className="my-7 h-[2px] w-full rounded-[1px] bg-brief-rule" />;
 
 /**
- * 모바일 브리핑 — 새 세션 진입 시 1회 경유 (PRODUCT.md: 저장 리캡·목차 위치·진도 바·마저 읽기)
+ * 모바일 브리핑 — 새 세션 진입 시 1회 경유 (PRODUCT.md: 저장 리캡·목차 위치·마저 읽기)
+ *
+ * 2026-11-18 대표 지시 — "브리핑 화면에서 어디까지 읽었는지 보고하는거 저거 빼고 현재 아모 빼".
+ * 11-17에 되살린 진도 카드(장·전체 쪽수·진도 바 위 아모·퍼센트)를 다시 뺐다. 목차는 남는다.
  *
  * 2026-11-17 대표 결정(화면 채우기 우선순위 1)
- * - 11-16 시안(314956f)에서 빠졌던 진도 카드와 목차를 되살린다. 카드의 장·전체 쪽수·퍼센트는
- *   브리핑 응답 값을 그대로 쓴다 — 퍼센트는 formatPercent 로 반올림만 한다 (FR-BRF-005 🚦).
  * - "3일 만이에요" 고정 문구를 없앴다. 서버의 마지막 읽은 시각(lastReadAt)이 있을 때만
  *   경과 안내를 그린다.
  * - 진도 기록이 없는 첫 방문(applied_cutoff 0)은 "아직 읽은 내용이 없습니다" 한 줄 대신
@@ -222,19 +221,7 @@ export default function MobileBriefingView({
           </>
         ) : (
           <>
-            <section aria-label="진도" className="mt-6 rounded-brief-panel bg-brief-card p-5 shadow-brief-soft-sm">
-              <div className="mb-6 flex items-start justify-between gap-3 text-sm">
-                {/* 백엔드는 title 에 장 번호를 섞지 않는다 — chapter_no 로 접두어를 만든다 (BriefingView.tsx) */}
-                <b className="min-w-0 break-keep font-semibold text-brief-ink">
-                  제{briefing.current_chapter.chapter_no}장 {briefing.current_chapter.title}
-                </b>
-                <span className="shrink-0 font-semibold text-brief-muted">{briefing.progress.total_pages}쪽</span>
-              </div>
-              {/* FR-BRF-005 🚦: percent 는 서버 계산값 그대로 — 표시만 반올림한다 */}
-              <ProgressBar percent={briefing.progress.percent} tone="night" size="md" runner />
-              <div className="mt-6 text-sm font-semibold text-brief-muted">{formatPercent(briefing.progress.percent)}</div>
-            </section>
-
+            {/* 2026-11-18 대표 지시 — 어디까지 읽었는지 알리는 진도 카드(장·전체 쪽수·진도 바 위 아모·퍼센트)를 뺐다 */}
             {RULE}
 
             <h3 className="mb-3 font-dashSerif text-lg font-semibold tracking-[-.02em] text-brief-ink">

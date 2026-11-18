@@ -55,7 +55,7 @@ describe('useChatConversation — conversationId 문자열 정규화', () => {
       await result.current.ask('고태수는 뭐하는 사람이야', 5, 2);
     });
 
-    // askChatbot(bookId, query, page, seq, conversationId, quote)
+    // askChatbot(bookId, query, page, seq, conversationId, quote, fromPage)
     expect(askChatbotMock).toHaveBeenNthCalledWith(
       2,
       'takryu',
@@ -63,6 +63,8 @@ describe('useChatConversation — conversationId 문자열 정규화', () => {
       5,
       2,
       279,
+      undefined,
+      // fromPage — 질문에 동봉하는 직전 화면 쪽. 이 시험은 넘기지 않는다 (2026-11-18)
       undefined
     );
   });

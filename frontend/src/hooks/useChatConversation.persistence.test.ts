@@ -44,6 +44,8 @@ describe('useChatConversation active session persistence', () => {
       5,
       2,
       279,
+      undefined,
+      // fromPage — 질문에 동봉하는 직전 화면 쪽. 이 시험은 넘기지 않는다 (2026-11-18)
       undefined
     );
   });
@@ -72,6 +74,8 @@ describe('useChatConversation active session persistence', () => {
       5,
       2,
       undefined,
+      undefined,
+      // fromPage — 질문에 동봉하는 직전 화면 쪽. 이 시험은 넘기지 않는다 (2026-11-18)
       undefined
     );
   });

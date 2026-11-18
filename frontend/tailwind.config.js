@@ -149,6 +149,11 @@ export default {
           '50%': { transform: 'translateX(-50%) translateY(-1px) rotate(9deg)' },
           '75%': { transform: 'translateX(calc(-50% - 1px)) translateY(-6px) rotate(-6deg)' },
         },
+        // 아모 말풍선 안 입력 표시 점 세 개 (2026-11-18 대표 지시 — 답하는 동안 빈 말풍선 대신)
+        'typing-dot': {
+          '0%, 80%, 100%': { opacity: '0.3', transform: 'translateY(0)' },
+          '40%': { opacity: '1', transform: 'translateY(-2px)' },
+        },
       },
       animation: {
         'tab-in': 'tab-in 200ms ease-out',
@@ -156,6 +161,7 @@ export default {
         'pop-in': 'pop-in 160ms ease-out',
         // 720ms도 "더 느리게"(2026-08-26 재요청)로 1100ms로 더 늦췄다.
         'amo-run': 'amo-run 1100ms ease-in-out infinite',
+        'typing-dot': 'typing-dot 1.2s ease-in-out infinite',
       },
     },
   },

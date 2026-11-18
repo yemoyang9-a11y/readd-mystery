@@ -171,7 +171,14 @@ router.get('/diag/sse', (_req: Request, res: Response) => {
  */
 router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
   const { bookId } = req.params;
-  const { query, quote, page, seq, conversationId: requestedConversationId } = req.body;
+  const {
+    query,
+    quote,
+    page,
+    seq,
+    from_page: fromPage,
+    conversationId: requestedConversationId,
+  } = req.body;
   const deviceId = resolveReaderId(req);
 
   // 입력 검증
@@ -187,6 +194,18 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
       error: 'BAD_REQUEST',
       message: 'X-Device-Id header is required',
     });
+  }
+
+  // FR-PRG-003 🚦 — 동봉 진도의 from_page 는 진도 POST 와 같은 규칙으로 받는다(이동 사실일 뿐 기준점 숫자가
+  // 아니다, 절대 규칙 8번). claim 은 목차 확인 창 전용이라 챗봇 요청에서는 받지 않는다
+  if (
+    fromPage !== undefined &&
+    fromPage !== null &&
+    !(Number.isSafeInteger(fromPage) && fromPage >= 1)
+  ) {
+    return res
+      .status(400)
+      .json({ error: 'BAD_REQUEST', message: 'from_page는 1 이상의 정수여야 합니다' });
   }
 
   try {
@@ -228,8 +247,15 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
       // 진도 이벤트 동봉 처리 (R4 요청)
       // 페이지 넘기고 바로 물으면 반영돼야 함
       // ⚠️ 호출 순서: recordProgressEvent → getCutoffSnapshot (R2 답신)
+      // 대표 지시 2026-11-18 — 차례 넘김(from_page)도 함께 넘긴다. 진도 POST 가 늦거나 실패한 쪽도
+      // 질문할 때 기준점에 들어간다 (FR-PRG-003 🚦, 3.3절 "넘긴 직후 물어도 반영")
       if (typeof page === 'number' && typeof seq === 'number') {
-        await acceptProgress(req, deviceId, bookId, { page, seq });
+        await acceptProgress(
+          req,
+          deviceId,
+          bookId,
+          typeof fromPage === 'number' ? { page, seq, from_page: fromPage } : { page, seq }
+        );
       }
       await readingState.sessionService.touchActivity(deviceId, bookId);
 

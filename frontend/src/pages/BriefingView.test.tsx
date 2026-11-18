@@ -42,9 +42,18 @@ describe('브리핑 화면', () => {
     expect(screen.getByText(/미두장에서 재산을 잃었다/)).toBeInTheDocument();
   });
 
-  it('2026-08-26 사용자 제보: 진도 패널의 장 제목 앞에 "제N장"이 붙는다 — 백엔드는 title에 장 번호를 안 섞어 보낸다', () => {
-    render(<BriefingView {...baseProps} briefing={briefing()} />);
-    expect(screen.getByText('제3장 신판 흥부전')).toBeInTheDocument();
+  // 2026-11-18 대표 지시 — "브리핑 화면에서 어디까지 읽었는지 보고하는거 저거 빼고 현재 아모 빼".
+  // 진도 카드(장 제목·전체 쪽수·진도 바 위 아모·퍼센트)를 뺀다. 모바일 브리핑과 같다
+  it('2026-11-18: 진도 카드·진도 바·아모 표지·퍼센트가 없고, 이어서 읽기는 남는다', () => {
+    const { container } = render(<BriefingView {...baseProps} briefing={briefing()} />);
+    expect(screen.queryByRole('region', { name: '진도' })).toBeNull();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+    expect(screen.queryByText('70%')).toBeNull();
+    expect(screen.queryByText('30쪽')).toBeNull();
+    expect(screen.queryByText('제3장 신판 흥부전')).toBeNull();
+    expect(container.querySelector('[data-testid*="runner"]')).toBeNull();
+    expect(screen.getByRole('button', { name: '이어서 읽기' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '그동안 이런 이야기였어요' })).toBeInTheDocument();
   });
 
   it('자가 검증 20 / D13 ①: 첫 진입은 빈 상태 문구를 띄우고 폴백을 호출하지 않는다', () => {
@@ -243,22 +252,6 @@ describe('브리핑 화면', () => {
     expect(screen.getByText('불러오는 중')).toBeInTheDocument();
   });
 
-  it('FR-BRF-005 🚦: 진도는 서버가 준 percent 를 그대로 렌더한다', () => {
-    render(<BriefingView {...baseProps} briefing={briefing()} />);
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '70');
-  });
-
-  it('2026-08-25: 전체 페이지 수는 진도 바 위 우측에, 퍼센트는 진도 바 아래에 보여준다', () => {
-    render(<BriefingView {...baseProps} briefing={briefing()} />);
-    const bar = screen.getByRole('progressbar');
-
-    const totalPagesEl = screen.getByText('30쪽');
-    expect(totalPagesEl.compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-
-    const percentEl = screen.getByText('70%');
-    expect(bar.compareDocumentPosition(percentEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  });
-
   it('목차는 기본이 접힘이다 — 펼치기 전에는 화면에서 안 보인다(grid-rows-[0fr])', () => {
     render(<BriefingView {...baseProps} briefing={briefing()} />);
     expect(screen.getByTestId('toc-panel').className).toContain('grid-rows-[0fr]');
@@ -281,8 +274,7 @@ describe('브리핑 화면', () => {
 
   it('현재 장 행만 강조된다', () => {
     render(<BriefingView {...baseProps} briefing={briefing()} />);
-    // 진도 패널의 장 제목은 "제3장 신판 흥부전"(접두어 포함)이라 텍스트가 다르지만,
-    // 그래도 목차로 좁혀서 의도를 분명히 한다 — 강조는 이동 버튼이 들고 있다
+    // 목차로 좁혀서 의도를 분명히 한다 — 강조는 이동 버튼이 들고 있다
     // (2026-08-26 목차 이동 추가로 `<li>`에서 옮겨졌다).
     const toc = screen.getByRole('list', { name: '목차' });
     const current = within(toc).getByText('신판 흥부전').closest('button')!;

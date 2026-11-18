@@ -460,9 +460,11 @@ export function useReadingSession(bookId: string): ReadingSessionState {
   const handleAsk = useCallback(
     (query: string, quote?: string) => {
       if (currentPage === null) return;
-      void askChat(query, currentPage, nextSeq(), quote);
+      // FR-PRG-003 🚦 — 진도 이벤트와 같은 직전 화면 쪽을 싣는다. 진도 POST 가 늦거나 실패한 마지막 넘김도
+      // 질문할 때 서버에 닿는다(대표 지시 2026-11-18). 판정은 서버가 한다
+      void askChat(query, currentPage, nextSeq(), quote, fromPageOf(currentPage));
     },
-    [askChat, currentPage]
+    [askChat, currentPage, fromPageOf]
   );
 
   const retryPage = useCallback(() => {

@@ -153,6 +153,25 @@ export const SUGGESTED_QUESTIONS = [
 ] as const;
 
 
+/**
+ * 답을 만드는 동안 빈 아모 말풍선 안에 그리는 점 세 개 (2026-11-18 대표 지시). 장식이라 읽지 않는다 —
+ * 상태는 아래 role="status" 문구가 알린다. 움직임 줄이기 설정이면 멈춘다.
+ */
+function TypingDots() {
+  return (
+    <span data-testid="amo-typing" aria-hidden="true" className="flex h-[19.8px] items-center gap-1">
+      {[0, 160, 320].map((delay) => (
+        <span
+          key={delay}
+          data-typing-dot
+          className="size-1.5 rounded-full bg-progress animate-typing-dot motion-reduce:animate-none motion-reduce:opacity-60"
+          style={{ animationDelay: `${delay}ms` }}
+        />
+      ))}
+    </span>
+  );
+}
+
 export default function ChatbotTab({
   answer = '',
   streaming,
@@ -499,12 +518,16 @@ export default function ChatbotTab({
                   <div key={i} className="flex items-end gap-2">
                     <AmoSherlock className="h-11 w-auto shrink-0 translate-y-3" />
                     <div className="w-fit max-w-[76%] rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] font-amo text-xs leading-[1.65] text-brief-ink">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm, remarkBreaks]}
-                        components={markdownComponents}
-                      >
-                        {turn.text}
-                      </ReactMarkdown>
+                      {streaming && turn.text === '' && i === bubbles.length - 1 ? (
+                        <TypingDots />
+                      ) : (
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm, remarkBreaks]}
+                          components={markdownComponents}
+                        >
+                          {turn.text}
+                        </ReactMarkdown>
+                      )}
                     </div>
                   </div>
                 )
@@ -517,9 +540,9 @@ export default function ChatbotTab({
               </p>
             ) : null}
 
+            {/* 2026-11-18 대표 지시 — 아모는 말풍선 옆 하나만 둔다. "답하는 중"은 화면 읽기 프로그램용 상태로만 남긴다 */}
             {streaming ? (
-              <span aria-live="polite" className="flex items-center gap-1.5 text-[11px] text-brief-muted">
-                <AmoSherlock expression="think" className="h-7 w-auto shrink-0" />
+              <span role="status" aria-live="polite" className="sr-only">
                 답하는 중
               </span>
             ) : null}

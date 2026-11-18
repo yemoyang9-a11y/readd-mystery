@@ -39,6 +39,8 @@ export const LENGTH_BUDGET: Record<QuestionIntent, LengthBudget> = {
   culprit_or_ending: { sentences: 3, chars: 240 },
   prediction: { sentences: 2, chars: 160 },
   outside: { sentences: 3, chars: 240 },
+  // 대표 지시 2026-11-18 — 노트 여러 개를 옮겨 정리하므로 사실 질문보다 조금 길게
+  reader_notes: { sentences: 5, chars: 400 },
 };
 
 const LIST_REQUEST =

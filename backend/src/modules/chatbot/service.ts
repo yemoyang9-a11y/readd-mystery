@@ -1,7 +1,7 @@
 import { SYSTEM_RULES, COMPLETION_STANCE, buildQuoteSection } from './response-policy';
 import type { ChatbotQueryLog } from '../../shared/types';
 import { assembleContext, buildStableContextParts } from './context-assembly';
-import { buildNotesSection } from './harness/notes-section';
+import { buildNoNotesNotice, buildNotesSection, notesWithinCutoff } from './harness/notes-section';
 import { vectorSearch } from './vector-search';
 import { selectModel, logModelSelection, recordSelection, CHATBOT_TASK } from './difficulty-router';
 import { stream as llmStream } from '../llm-gateway/gateway';
@@ -10,8 +10,12 @@ import { recordTurns, getConversationContext } from './conversation-service';
 import { questionFocus } from './question-focus';
 import { resolveConversationContext } from './conversation-context';
 import { formatConversationInput } from './conversation-input';
-import { emptyNotesReader, type NotesReader } from './notes-reader';
-import { classifyQuestion, isSceneLocationRequest } from './harness/question-intent';
+import { emptyNotesReader, type NotesReader, type ReaderNote } from './notes-reader';
+import {
+  classifyQuestion,
+  isSceneLocationRequest,
+  mentionsReaderNotes,
+} from './harness/question-intent';
 import { guardAnswer, type GuardViolation } from './harness/output-guard';
 import { takeSentences } from './harness/sentence-buffer';
 import { INTENT_POLICY, fixedAnswerFor, retryNoticeFor } from './harness/behavior-ladder';
@@ -172,6 +176,49 @@ export async function* handleQuery(
     return;
   }
 
+  // 대표 지시 2026-11-18 — 노트 요청은 노트(K 이하)를 먼저 읽는다. 조회 실패는 "노트가 없다"로 바꾸지 않고
+  // 실패로 끝낸다(FR-SPL-005 🚦). K 이하 노트가 없으면 모델을 부르지 않고 범위를 그대로 말한다
+  let preloadedNotes: ReaderNote[] | undefined;
+  if (policy.readerNotes) {
+    // FR-SPL-002 🚦: 노트 조회도 같은 스냅샷의 K를 상한으로 건다
+    preloadedNotes = await notesReader.listNotes(deviceId, bookId, K);
+    if (notesWithinCutoff(preloadedNotes, K).length === 0) {
+      const emptyText = policy.readerNotes.emptyAnswer(K);
+      const tag = policy.readerNotes.tag;
+      if (conversationId != null) {
+        if (quote) await recordTurns(conversationId, query, emptyText, K, quote);
+        else await recordTurns(conversationId, query, emptyText, K);
+      }
+      await logQuery({
+        timestamp: new Date(),
+        device_id: deviceId,
+        book_id: bookId,
+        cutoff_page: K,
+        query,
+        quote,
+        input_records: {
+          chapter_summaries: [],
+          current_chapter_pages: [],
+          characters: [],
+          relationships: [],
+          character_notes: [],
+          terms: [],
+          events: [],
+          background: 'none',
+        },
+        search_selected_pages: [],
+        no_evidence: false,
+        is_complete: isComplete,
+        model: `canned:harness-${tag}`,
+        harness: { intent, violations: [], regenerated: false, fixed_answer: true },
+        output_ref: `chatbot-${tag}-${Date.now()}`,
+        tokens: { input: 0, output: emptyText.length },
+      });
+      yield emptyText;
+      return;
+    }
+  }
+
   try {
     const context = MOCK_MODE ? getMockContext(K) : await assembleContext(bookId, K);
 
@@ -243,15 +290,22 @@ export async function* handleQuery(
     if (subjectFacts.length) {
       fullPrompt += `\n\n## 현재 질문 대상의 인물 근거 (현재 읽기 범위의 서버 자료)\n\n${JSON.stringify({ subject_facts: subjectFacts })}`;
     }
-    let notes: Awaited<ReturnType<NotesReader['listNotes']>> = [];
-    try {
-      // FR-SPL-002 🚦: 노트 조회도 같은 스냅샷의 K를 상한으로 건다
-      notes = await notesReader.listNotes(deviceId, bookId, K);
-    } catch (error) {
-      console.error('[Chatbot] notes lookup failed', { bookId, error });
+    let notes: ReaderNote[] = preloadedNotes ?? [];
+    if (!preloadedNotes) {
+      try {
+        // FR-SPL-002 🚦: 노트 조회도 같은 스냅샷의 K를 상한으로 건다
+        notes = await notesReader.listNotes(deviceId, bookId, K);
+      } catch (error) {
+        console.error('[Chatbot] notes lookup failed', { bookId, error });
+      }
     }
     fullPrompt += buildNotesSection(notes, K, query);
+    // 대표 지시 2026-11-18 — 노트를 언급했는데 K 이하 노트가 없으면 "노트가 안 보인다"고 하지 않게 범위만 알린다
+    if (mentionsReaderNotes(query) && notesWithinCutoff(notes, K).length === 0) {
+      fullPrompt += buildNoNotesNotice(K);
+    }
     fullPrompt += policy.guidance;
+    if (policy.readerNotes) fullPrompt += policy.readerNotes.scope(K);
     fullPrompt += amoTurnGuidance(styleContext);
     fullPrompt += `\n\n# 사용자 질문\n\n${query}`;
     fullPrompt = fullPrompt.replace(/^\n+/, '');
