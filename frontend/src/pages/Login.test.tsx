@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AxiosError, type AxiosResponse } from 'axios';
-import { createMemoryRouter, RouterProvider, useLocation } from 'react-router-dom';
+import { createMemoryRouter, RouterProvider, useLocation } from 'react-router';
 import Login from './Login';
 import { fetchMe, fetchProviders, login, signup, startLogin } from '../services/authService';
 import { setAuthToken } from '../utils/storage';

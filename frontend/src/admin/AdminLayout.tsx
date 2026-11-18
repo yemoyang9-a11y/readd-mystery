@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState, type FormEvent } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet } from 'react-router';
 import { AdminApiError, adminRequest, loadAdminToken, saveAdminToken } from './adminApi';
 
 interface AdminContextValue {

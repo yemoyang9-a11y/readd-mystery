@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router';
 import { AdminApiError, type Decision, type MissingItem, type ReviewView } from './adminApi';
 import { useAdmin } from './AdminLayout';
 

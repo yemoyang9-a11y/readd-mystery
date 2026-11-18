@@ -1,5 +1,5 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
-import { createMemoryRouter, RouterProvider } from 'react-router-dom';
+import { createMemoryRouter, RouterProvider } from 'react-router';
 import RequireSession from './RequireSession';
 import { logout } from '../../services/authService';
 import { verifyStoredSession } from '../../services/sessionCheck';

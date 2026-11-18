@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import Shelf from './Shelf';
 import { mockCatalog } from '../../mocks/fixtures';
 import type { BookSummary, CatalogResponse } from '../types';

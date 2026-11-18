@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router';
 import * as progressService from '../services/progressService';
 import * as notesService from '../services/notesService';
 import * as chatbotService from '../services/chatbotService';

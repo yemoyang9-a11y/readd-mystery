@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink } from 'react-router';
 import { APP_ROUTES } from '../../utils/routes';
 
 export const TAB_BAR_HEIGHT = 56;

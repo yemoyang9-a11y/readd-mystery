@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createMemoryRouter, RouterProvider } from 'react-router-dom';
+import { createMemoryRouter, RouterProvider } from 'react-router';
 import AdminLayout from './AdminLayout';
 import AnalyticsPage from './AnalyticsPage';
 import BooksPage from './BooksPage';

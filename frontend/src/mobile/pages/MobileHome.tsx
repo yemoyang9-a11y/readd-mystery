@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router';
 import { HOME_SHOWCASE } from '../../data/homeShowcase';
 import { useCatalog } from '../../hooks/useCatalog';
 import { fetchBriefing } from '../../services/recapService';

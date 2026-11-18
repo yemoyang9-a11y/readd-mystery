@@ -1,5 +1,5 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import BookCover from '../components/common/BookCover';
 import { useCatalog } from '../hooks/useCatalog';
 import { APP_ROUTES, bookPath } from '../utils/routes';

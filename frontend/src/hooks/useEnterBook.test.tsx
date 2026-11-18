@@ -9,7 +9,7 @@ import {
   Routes,
   useLocation,
   useParams,
-} from 'react-router-dom';
+} from 'react-router';
 import { useEnterBook } from './useEnterBook';
 import { clearPendingJump, setPendingJump, takePendingJump } from '../utils/pendingJump';
 import type { EntryResponse } from '../types';

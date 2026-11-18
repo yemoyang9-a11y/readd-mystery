@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router';
 import Loading from '../../components/common/Loading';
 import { useReadingSession } from '../../hooks/useReadingSession';
 import SsabiPanel from '../../components/Ssabi/SsabiPanel';

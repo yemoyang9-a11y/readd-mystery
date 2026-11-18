@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { loginPathFor } from '../../utils/authRedirect';
 import { APP_ROUTES } from '../../utils/routes';
 import { useAuth } from '../../hooks/useAuth';

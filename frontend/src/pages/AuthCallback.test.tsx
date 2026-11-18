@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import AuthCallback from './AuthCallback';
 import { exchangeLoginCode, fetchMe } from '../services/authService';
 import { getAuthToken } from '../utils/storage';

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router';
 import { fetchBriefing, streamRecap } from '../services/recapService';
 import { fetchGraph } from '../services/ssabiService';
 import { useSSE } from './useSSE';

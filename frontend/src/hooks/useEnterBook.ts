@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router';
 import { enterBook } from '../services/progressService';
 import { clearPendingJump, setPendingJump, takePendingJump } from '../utils/pendingJump';
 import { bookPath, routePathFor } from '../utils/routes';

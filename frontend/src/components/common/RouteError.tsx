@@ -1,4 +1,4 @@
-import { Link, useRouteError } from 'react-router-dom';
+import { Link, useRouteError } from 'react-router';
 
 /**
  * 경로 단위 오류 화면.

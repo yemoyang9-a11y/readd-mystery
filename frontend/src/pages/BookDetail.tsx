@@ -1,5 +1,5 @@
 import { useEffect, useState, type KeyboardEvent } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router';
 import ssabiFace from '../assets/images/ssabi-face.png';
 import BookCover from '../components/common/BookCover';
 import ChapterList from '../components/BookDetail/ChapterList';

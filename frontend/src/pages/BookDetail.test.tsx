@@ -6,7 +6,7 @@ import {
   createMemoryRouter,
   RouterProvider,
   useLocation,
-} from 'react-router-dom';
+} from 'react-router';
 import BookDetail from './BookDetail';
 import ChapterList from '../components/BookDetail/ChapterList';
 import { clearPendingJump, setPendingJump, takePendingJump } from '../utils/pendingJump';

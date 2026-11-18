@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router';
 import { loginPathFor } from '../../utils/authRedirect';
 import { verifyStoredSession } from '../../services/sessionCheck';
 import { AUTH_TOKEN_CLEARED_EVENT, getAuthToken, type AuthClearReason } from '../../utils/storage';

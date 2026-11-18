@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { AdminApiError, uploadBook, type JobStatus, type JobSummary } from './adminApi';
 import { useAdmin } from './AdminLayout';
 

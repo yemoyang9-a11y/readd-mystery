@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { RouterProvider } from 'react-router-dom';
+import { RouterProvider } from 'react-router';
 import { createAppRouter } from './App';
 import { LOGIN_REQUIRED_ROUTES, loginPathFor, safeNextPath } from './utils/authRedirect';
 import { BOOK_ROUTES } from './utils/routes';
