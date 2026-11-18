@@ -44,10 +44,13 @@ import {
   STRUCTURAL_LABEL_VERSION,
   buildPairLabelPrompt,
   runStructuralChapter,
+  uncoveredCharacters,
 } from './relationship-labeling';
 import { VerifierAnswer, VerifierInput, buildVerifierPrompt } from './relationship-verification';
 
 const MAX_TOKENS = 16000;
+/** 관계 0건 인물 검수 문턱 — 다른 인물과 근거 창이 이만큼 이상이면 올린다(보고용, 관계를 버리거나 만들지 않음) */
+const UNCOVERED_MIN_WINDOWS = 10;
 const JSON_RETRIES = 2;
 
 function flag(argv: string[], name: string): string | undefined {
@@ -320,8 +323,18 @@ export async function runStructuralRelationships(argv: string[] = process.argv.s
       r.notes.includes('claimed_page_earlier_than_evidence')
     ).length,
   };
+  // FR-CHR-001 — 자주 함께 나오는데 관계 0건인 인물(예: 백검사)을 검수 목록에 올린다. 관계를 만들지 않는다
+  const uncovered = candidatesOnly
+    ? []
+    : uncoveredCharacters(allCandidates, state.relationships, UNCOVERED_MIN_WINDOWS);
+  if (uncovered.length > 0)
+    console.warn(
+      '[검수] 자주 함께 나오는데 관계 0건:',
+      uncovered.map((c) => `${c.name}(근거 창 ${c.windows}, 상대 ${c.partners.join('·')})`).join(', ')
+    );
   const report = {
     version: STRUCTURAL_LABEL_VERSION,
+    uncovered_characters: uncovered,
     book_id: bookId,
     mode: candidatesOnly ? 'candidates-only' : 'labeled',
     method:

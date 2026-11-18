@@ -33,7 +33,8 @@ import {
 } from './interaction-candidates';
 import { VerifierAnswer, VerifierInput, endpointForms } from './relationship-verification';
 
-export const STRUCTURAL_LABEL_VERSION = 1;
+// 2 — 2026-11-18 관계만(행동 제외)·동료·태도 안내로 프롬프트 계약 변경. 이전 캐시는 쓰지 않는다
+export const STRUCTURAL_LABEL_VERSION = 2;
 
 /** 한 쌍에 프롬프트로 보내는 근거 창 수 상한 — 이른 쪽부터. 잘린 창은 확립을 늦출 뿐 앞당기지 않는다 */
 export const MAX_WINDOWS_PER_PAIR = 8;
@@ -119,7 +120,7 @@ export function buildPairLabelPrompt(
 - 같은 관계를 보여 주는 창이 여럿이면 모두 support에 넣는다. 확립 쪽수는 서버가 검증된 support 중 가장 이른 쪽으로 정한다. 근거가 없는 앞 쪽을 확립 쪽으로 쓰지 않는다.
 - character_a/b에는 목록의 대표명을 쓴다. direction은 a_to_b(주체 A→대상 B), b_to_a, mutual(양쪽 모두 명시), undirected(방향 없는 관계: 남매·동료 등), unknown.
 - label은 짧고 구체적인 술어("태수를 두고 질투한다", "고용한다", "아버지다"). summary는 두 대표명을 모두 넣은 한 문장. 추상 명사("감정", "관계", "욕망")만 쓰지 않는다.
-- 관계만 적는다. 관계는 두 인물 사이에 이어지는 상태다: 가족(부부·부모·형제), 사회적 관계(친구·고용·동료·스승), 한 인물이 다른 인물에게 품은 감정·태도(사랑·미움·질투·의심·신뢰·두려움·경계). 한 번 일어난 행동(손을 잡는다·구하려 한다·찾아간다·때린다·만난다·말을 건넨다)은 사건이지 관계가 아니므로 적지 않는다. 행동에서 감정·태도가 원문에 직접 드러나면 그 감정·태도만 적는다.
+- 관계만 적는다. 관계는 두 인물 사이에 이어지는 상태다: 가족(부부·부모·형제), 사회적 관계(친구·고용·동료·스승), 한 인물이 다른 인물에게 품은 감정·태도(사랑·미움·질투·의심·신뢰·두려움·경계). 같은 일을 함께 맡은 사이(같은 사건을 함께 맡은 검사와 경부, 같은 극단의 배우)는 동료 관계다 — 함께 맡았음을 말하는 낱말을 trigger로 쓴다. 한 인물이 다른 인물을 범인으로 의심하거나 노려보며 맞서는 것이 원문에 드러나면 의심·적대라는 태도 관계다. 한 번 일어난 행동(손을 잡는다·구하려 한다·찾아간다·때린다·만난다·말을 건넨다)은 사건이지 관계가 아니므로 적지 않는다. 행동에서 감정·태도가 원문에 직접 드러나면 그 감정·태도만 적는다.
 - kind는 family/social/emotion 중 하나(emotion은 감정과 태도), relation_key는 영어 소문자 키(parenthood, marriage, employment, friendship, jealousy, affection, suspicion, trust 등).
 - assertion_status: fact(서술로 확인), belief/claim/rumor/uncertain(누가 믿거나 주장하거나 소문 — attribution에 그 사람 이름을 쓰고 summary에 "믿는다/주장한다/소문" 같은 한정을 넣는다), negated(부정된 내용). 부정·소문·희망·오해를 fact로 쓰지 않는다.
 - temporal_scope는 언제나 ongoing, state는 active/ended, change_type은 establishment/restatement/transition/disclosure.
@@ -138,6 +139,45 @@ ${windowLines.join('\n\n')}`;
 // ─── 결정적 검사 ─────────────────────────────────────────────────────────────
 
 const LATIN = /[A-Za-z]/u;
+
+/** 자주 함께 나오는데 관계가 하나도 없는 인물 — 검수 목록용 */
+export interface UncoveredCharacter {
+  character_id: string;
+  name: string;
+  /** 이 인물이 들어간 후보 쌍의 근거 창 수 합계 */
+  windows: number;
+  /** 함께 나온 상대 이름 */
+  partners: string[];
+}
+
+/**
+ * 관계 0건인데 다른 인물과 근거 창이 minWindows개 이상인 인물을 고른다. 추출이 놓쳤을 수 있다는
+ * 표시일 뿐 관계를 만들지 않는다(R12 — 사람이 근거 창을 보고 판단한다). FR-CHR-001
+ * (2026-11-18 대표 지시: 백검사가 21쪽에 나오고 임경부와 함께 수사하는데 관계도에 없었다)
+ */
+export function uncoveredCharacters(
+  candidates: Pick<InteractionCandidate, 'a_id' | 'b_id' | 'a_name' | 'b_name' | 'windows'>[],
+  relationships: { character_a_id: string; character_b_id: string }[],
+  minWindows: number
+): UncoveredCharacter[] {
+  const related = new Set(relationships.flatMap((r) => [r.character_a_id, r.character_b_id]));
+  const byId = new Map<string, UncoveredCharacter>();
+  for (const c of candidates) {
+    for (const [id, name, partner] of [
+      [c.a_id, c.a_name, c.b_name],
+      [c.b_id, c.b_name, c.a_name],
+    ] as const) {
+      if (related.has(id)) continue;
+      const entry = byId.get(id) ?? { character_id: id, name, windows: 0, partners: [] };
+      entry.windows += c.windows.length;
+      if (!entry.partners.includes(partner)) entry.partners.push(partner);
+      byId.set(id, entry);
+    }
+  }
+  return [...byId.values()]
+    .filter((c) => c.windows >= minWindows)
+    .sort((x, y) => y.windows - x.windows);
+}
 
 /**
  * 한 번 일어난 행동인가 — kind=action 또는 temporal_scope=event. 관계도에 넣지 않는다.

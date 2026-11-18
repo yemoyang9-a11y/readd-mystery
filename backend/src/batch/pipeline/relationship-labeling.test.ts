@@ -11,6 +11,7 @@ import {
   buildPairLabelPrompt,
   finalizeStructuredRelationships,
   runStructuralChapter,
+  uncoveredCharacters,
   verifyPairLabels,
 } from './relationship-labeling';
 
@@ -661,5 +662,53 @@ describe('FR-CHR-001: 한 번 일어난 행동은 관계로 라벨링하지 않�
     );
     expect(prompt).not.toMatch(/family\/social\/emotion\/action/);
     expect(prompt).not.toMatch(/ongoing\/event/);
+  });
+});
+
+// 2026-11-18 대표 지시 — 백검사(21쪽 등장, 임경부와 함께 수사)가 관계 0건으로 관계도에서 빠졌다.
+// 자주 함께 나오는데 관계가 하나도 없는 인물은 검수 목록에 올려 사람이 놓침을 알아채게 한다.
+describe('FR-CHR-001: 자주 함께 나오는데 관계 0건인 인물은 검수 목록에 오른다', () => {
+  const pages = [
+    page(1, '서윤은 도현을 질투했다. 민은 서윤과 함께 수사했다. 민은 도현과 함께 수사했다.'),
+    page(2, '민은 서윤을 보았다. 민은 도현을 보았다.'),
+  ];
+  const candidates = generateInteractionCandidates(pages, lexicon);
+
+  test('관계 0건 인물(민) → 목록에 1건, 함께 나온 근거 창 수와 상대가 실린다', () => {
+    const out = uncoveredCharacters(candidates, [{ character_a_id: 'seoyun', character_b_id: 'dohyun' }], 2);
+    expect(out.map((c) => c.character_id)).toEqual(['min']);
+    expect(out[0].windows).toBeGreaterThanOrEqual(2);
+    expect([...out[0].partners].sort()).toEqual(['도현', '서윤']);
+  });
+
+  test('positive 쌍 — 관계가 하나라도 있으면 목록 0건', () => {
+    const out = uncoveredCharacters(
+      candidates,
+      [
+        { character_a_id: 'seoyun', character_b_id: 'dohyun' },
+        { character_a_id: 'min', character_b_id: 'seoyun' },
+      ],
+      2
+    );
+    expect(out).toEqual([]);
+  });
+
+  test('함께 나온 근거가 문턱보다 적은 인물은 올리지 않는다', () => {
+    expect(uncoveredCharacters(candidates, [], 1000)).toEqual([]);
+  });
+});
+
+describe('라벨 프롬프트 — 같은 일을 함께 맡은 동료·태도 관계 안내', () => {
+  test('동료 관계(같은 사건을 함께 맡음)와 의심·적대 태도를 관계로 적으라고 안내한다', () => {
+    const pages = [page(1, '서윤은 도현과 함께 이 사건을 처음부터 담당했다.')];
+    const candidates = generateInteractionCandidates(pages, lexicon);
+    const prompt = buildPairLabelPrompt(
+      { chapter_no: 1, title: '첫 장', start_page: 1, end_page: 1 } as never,
+      candidates,
+      lexicon
+    );
+    expect(prompt).toMatch(/함께 맡/);
+    expect(prompt).toMatch(/동료/);
+    expect(prompt).toMatch(/의심/);
   });
 });
