@@ -66,6 +66,12 @@ export default function Header({ nav = true }: { nav?: boolean }) {
                     서재
                   </NavLink>
                 </li>
+                <li>
+                  {/* E2E #86 — PC 에서도 커뮤니티 허브로 간다 */}
+                  <NavLink to={APP_ROUTES.community} data-track="nav-커뮤니티" className={headerLinkClass}>
+                    커뮤니티
+                  </NavLink>
+                </li>
               </ul>
             </nav>
 

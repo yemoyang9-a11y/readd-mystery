@@ -63,9 +63,25 @@ export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
         { path: APP_ROUTES.shelf, element: <Shelf /> },
         { path: APP_ROUTES.my, element: <My /> },
         { path: APP_ROUTES.feedback, element: isMobile ? <MobileFeedback /> : <NotFound /> },
-        { path: APP_ROUTES.community, element: isMobile ? <MobileCommunityHub /> : <NotFound /> },
+        ...(isMobile ? [{ path: APP_ROUTES.community, element: <MobileCommunityHub /> }] : []),
       ],
     },
+    // E2E #86 — PC 에서도 커뮤니티 허브·책 이야기방을 연다. 위 줄 메뉴 + 미스터리 브랜딩(data-night) 틀.
+    // 완독 게이트는 서버가 정한다 — 화면은 완독을 계산하지 않는다 (FR-BRF-005 🚦)
+    ...(isMobile
+      ? []
+      : [
+          {
+            element: <AppShell isMobile={false} night />,
+            children: [
+              { path: APP_ROUTES.community, element: <MobileCommunityHub /> },
+              {
+                path: BOOK_ROUTES.community,
+                lazy: async () => ({ Component: (await import('./pages/BookCommunity')).default }),
+              },
+            ],
+          },
+        ]),
     isMobile
       ? { path: APP_ROUTES.book, element: <MobileBookRedirect /> }
       : {
@@ -80,10 +96,9 @@ export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
       path: BOOK_ROUTES.reader,
       lazy: () => fadedPage(isMobile ? import('./mobile/pages/MobileReader') : import('./pages/Reader')),
     },
-    {
-      path: BOOK_ROUTES.community,
-      lazy: () => fadedPage(isMobile ? import('./mobile/pages/MobileCommunity') : Promise.resolve({ default: NotFound })),
-    },
+    ...(isMobile
+      ? [{ path: BOOK_ROUTES.community, lazy: () => fadedPage(import('./mobile/pages/MobileCommunity')) }]
+      : []),
     { path: LOGIN_PATH, element: <Login /> },
     { path: '/auth/callback', element: <AuthCallback /> },
     // 2026-11-18 대표 지시 — 데모 책으로 직접 눌러 보는 첫 이용 가이드
