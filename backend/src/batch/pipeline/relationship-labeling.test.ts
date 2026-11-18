@@ -7,6 +7,7 @@
  */
 import { Page } from '../../shared/types';
 import { CandidateCharacter, generateInteractionCandidates } from './interaction-candidates';
+import { RELATION_TYPES, relationType } from './relationship-taxonomy';
 import {
   buildPairLabelPrompt,
   finalizeStructuredRelationships,
@@ -37,26 +38,31 @@ const lexicon = [
   ch('eren', 'Eren'),
 ];
 
-/** 가짜 LLM 응답 한 건 — 필드는 실제 프롬프트 계약과 같다 */
+/**
+ * 가짜 LLM 응답 한 건 — 실제 프롬프트 계약(관계 질문지)과 같다. 기본은 판정 질문에 모두 맞게 답한 응답이다.
+ * extra로 질문지 답(lasting·type·type_question·exclusions·subject 등)을 바꾼다.
+ */
 function label(
   a: string,
   b: string,
   support: { window_id: string; trigger: string }[],
   extra: Record<string, unknown> = {}
 ) {
-  const relation_key = (extra.relation_key as string) ?? 'jealousy';
+  const type = (extra.type as string) ?? 'jealousy';
+  const t = relationType(type);
   return {
     character_a: a,
     character_b: b,
-    direction: 'a_to_b',
-    label: '질투한다',
-    kind: 'emotion',
-    relation_key,
+    lasting: true,
+    category: t?.category ?? 'attitude',
+    type,
+    type_question: true,
+    exclusions: Object.fromEntries((t?.exclusions ?? []).map((x) => [x.id, false])),
+    subject: t?.directionality === 'directed' ? a : null,
     assertion_status: 'fact',
-    temporal_scope: 'ongoing',
     state: 'active',
     change_type: 'establishment',
-    summary: `${a}은(는) ${b}을(를) 질투한다.`,
+    summary: `${a}은(는) ${b}을(를) ${t?.label ?? '질투한다'}.`,
     rationale: '근거 창의 서술',
     support,
     ...extra,
@@ -383,8 +389,7 @@ describe('FR-CHR-001: 근거 문장의 사실성·방향 단서 (사실로 단�
   test('positive — "윤아를 믿고 있었다"의 믿다는 사람을 목적어로 둔 신뢰라 출처 단서로 보지 않는다', () => {
     const out = run('민은 윤아를 믿고 있었다.', (w) =>
       label('민', '윤아', [{ window_id: w, trigger: '믿고' }], {
-        relation_key: 'trust',
-        label: '신뢰한다',
+        type: 'trust',
         summary: '민은 윤아를 신뢰한다.',
       })
     );
@@ -399,7 +404,7 @@ describe('FR-CHR-001: 근거 문장의 사실성·방향 단서 (사실로 단�
       {
         relations: [
           label('형보', '초봉이', [{ window_id: candidates[0].windows[0].id, trigger: '탐냈다' }], {
-            relation_key: 'possessive_desire',
+            type: 'lust',
           }),
         ],
       },
@@ -425,7 +430,7 @@ describe('FR-CHR-001: 근거 문장의 사실성·방향 단서 (사실로 단�
 
   test('바로 다음 문장이 거짓·오해라고 밝히면 사실 라벨은 보류', () => {
     const out = run('서윤은 도현을 미워했다. 그것은 모두의 오해였다.', (w) =>
-      label('서윤', '도현', [{ window_id: w, trigger: '미워' }], { relation_key: 'hostility' })
+      label('서윤', '도현', [{ window_id: w, trigger: '미워' }], { type: 'hatred' })
     );
     expect(out.relationships).toHaveLength(0);
     expect(out.held[0].reasons).toEqual(['factuality_cue:refuted_next']);
@@ -443,7 +448,7 @@ describe('FR-CHR-001: 근거 문장의 사실성·방향 단서 (사실로 단�
     expect(right.relationships).toHaveLength(1);
     const sameMeaning = run('서윤은 도현을 질투했다.', (w) =>
       label('도현', '서윤', [{ window_id: w, trigger: '질투' }], {
-        direction: 'b_to_a',
+        subject: '서윤',
         summary: '서윤은 도현을 질투한다.',
       })
     );
@@ -452,7 +457,7 @@ describe('FR-CHR-001: 근거 문장의 사실성·방향 단서 (사실로 단�
 
   test('방향 — 관형절 속 주어("도현이 받은")가 아니라 주제어("서윤은")를 주체로 본다', () => {
     const out = run('서윤은 도현이 받은 찬사를 못마땅해했다.', (w) =>
-      label('서윤', '도현', [{ window_id: w, trigger: '못마땅' }], { relation_key: 'resentment' })
+      label('서윤', '도현', [{ window_id: w, trigger: '못마땅' }], { type: 'hatred' })
     );
     expect(out.relationships).toHaveLength(1);
   });
@@ -477,7 +482,7 @@ describe('FR-CHR-001: 근거 문장의 사실성·방향 단서 (사실로 단�
   test('근거 낱말이 있는 문장에 두 인물이 모두 나와야 한다 — 이웃 문장만으로 욕망을 옮기지 않는다', () => {
     // 이웃 창(두 문장)만 있는 쌍 — 근거 낱말 '원했'이 있는 문장에는 도현이 없다
     const out = run('서윤은 항구의 소유권을 원했다. 도현은 배를 탔다.', (w) =>
-      label('서윤', '도현', [{ window_id: w, trigger: '원했' }], { relation_key: 'desire' })
+      label('서윤', '도현', [{ window_id: w, trigger: '원했' }], { type: 'lust' })
     );
     expect(out.relationships).toHaveLength(0);
     expect(out.held[0].reasons).toEqual(['trigger_sentence_lacks_endpoint']);
@@ -488,10 +493,7 @@ describe('FR-CHR-001: 근거 문장의 사실성·방향 단서 (사실로 단�
     const candidates = generateInteractionCandidates(pages, lexicon);
     const dialogue = candidates[0].windows.find((w) => w.kind === 'dialogue')!;
     const item = label('서윤', '도현', [{ window_id: dialogue.id, trigger: '누나' }], {
-      direction: 'undirected',
-      kind: 'family',
-      relation_key: 'siblings',
-      label: '남매다',
+      type: 'sibling',
       summary: '서윤과 도현은 남매다.',
     });
     const run1 = verifyPairLabels({ relations: [item] }, candidates, pages, lexicon);
@@ -555,8 +557,7 @@ describe('FR-CHR-001: 장 단위 실행 — 가짜 LLM, 실제 호출 0회', () 
       relations: [
         label('서윤', '도현', [{ window_id: w('seoyun', 'dohyun'), trigger: '질투' }]),
         label('민', '윤아', [{ window_id: w('min', 'yuna'), trigger: '믿었' }], {
-          relation_key: 'trust',
-          label: '신뢰한다',
+          type: 'trust',
           summary: '민은 윤아를 신뢰한다.',
         }),
         label('서윤', '수', [{ window_id: w('seoyun', 'dohyun'), trigger: '질투' }]),
@@ -581,21 +582,17 @@ describe('FR-CHR-001: 장 단위 실행 — 가짜 LLM, 실제 호출 0회', () 
 
 // 2026-11-18 대표 지시 — 관계도는 관계만 담는다. 한 번 일어난 행동은 사건(타임라인)이다
 describe('FR-CHR-001: 한 번 일어난 행동은 관계로 라벨링하지 않는다', () => {
-  test('kind=action 또는 temporal_scope=event 라벨 → 채택 0건, one_off_action', () => {
+  test('질문지 "이어지는 관계인가"에 아니오(lasting=false), 옛 형식 kind=action·temporal_scope=event → 채택 0건, one_off_action', () => {
     const pages = [page(1, '서윤은 도현의 손을 잡았다.')];
     const { candidates, windowOn } = setup(pages);
     const support = [{ window_id: windowOn(1), trigger: '손을 잡았다' }];
     const out = verifyPairLabels(
       {
         relations: [
-          label('서윤', '도현', support, {
-            label: '손을 잡는다',
-            kind: 'action',
-            relation_key: 'physical_contact',
-            temporal_scope: 'event',
-          }),
-          label('서윤', '도현', support, { label: '손을 잡는다', kind: 'action' }),
-          label('서윤', '도현', support, { label: '손을 잡는다', temporal_scope: 'event' }),
+          label('서윤', '도현', support, { lasting: false, type: 'affection' }),
+          label('서윤', '도현', support, { kind: 'action', type: 'affection' }),
+          label('서윤', '도현', support, { temporal_scope: 'event', type: 'affection' }),
+          label('서윤', '도현', support, { type: 'physical_contact' }),
         ],
       },
       candidates,
@@ -607,7 +604,34 @@ describe('FR-CHR-001: 한 번 일어난 행동은 관계로 라벨링하지 않�
       ['one_off_action'],
       ['one_off_action'],
       ['one_off_action'],
+      ['type_not_in_taxonomy'],
     ]);
+  });
+
+  test('제외 질문 "한 번 일어난 행동만 말하는가"에 예 → one_off_action, 아니오면 채택(쌍)', () => {
+    const pages = [page(1, '서윤은 도현과 오랜 친구였다.')];
+    const { candidates, windowOn } = setup(pages);
+    const support = [{ window_id: windowOn(1), trigger: '친구' }];
+    const once = verifyPairLabels(
+      {
+        relations: [
+          label('서윤', '도현', support, { type: 'friendship', exclusions: { one_off: true } }),
+        ],
+      },
+      candidates,
+      pages,
+      lexicon
+    );
+    expect(once.relationships).toHaveLength(0);
+    expect(once.held.map((h) => h.reasons)).toEqual([['one_off_action']]);
+    const lasting = verifyPairLabels(
+      { relations: [label('서윤', '도현', support, { type: 'friendship' })] },
+      candidates,
+      pages,
+      lexicon
+    );
+    expect(lasting.held).toEqual([]);
+    expect(lasting.relationships).toHaveLength(1);
   });
 
   test('positive — 같은 쌍의 지속 관계(의심)는 채택된다', () => {
@@ -617,8 +641,7 @@ describe('FR-CHR-001: 한 번 일어난 행동은 관계로 라벨링하지 않�
       {
         relations: [
           label('서윤', '도현', [{ window_id: windowOn(1), trigger: '의심' }], {
-            label: '의심한다',
-            relation_key: 'suspicion',
+            type: 'suspicion',
             summary: '서윤은(는) 도현을(를) 의심한다.',
           }),
         ],
@@ -638,8 +661,7 @@ describe('FR-CHR-001: 한 번 일어난 행동은 관계로 라벨링하지 않�
       {
         relations: [
           label('서윤', '도현', [{ window_id: windowOn(1), trigger: '의심' }], {
-            label: '의심한다',
-            relation_key: 'suspicion',
+            type: 'suspicion',
             summary: '서윤은(는) 도현을(를) 의심한다.',
           }),
         ],
@@ -714,5 +736,253 @@ describe('라벨 프롬프트 — 같은 일을 함께 맡은 동료·태도 관
     expect(prompt).toMatch(/함께 맡/);
     expect(prompt).toMatch(/동료/);
     expect(prompt).toMatch(/의심/);
+  });
+});
+
+// 2026-11-18 대표 지시 — 관계를 구분하고 명시하는 논문(Massey 2015 질문지, Hamilton 2025, Conan 2024) 기반.
+// LLM은 판정 질문에 답하고 닫힌 표의 유형을 고른다. 큰 종류·방향·대칭·라벨은 코드가 표에서 정한다.
+describe('FR-CHR-001: 관계 질문지 — 닫힌 유형 표와 판정 질문', () => {
+  const verify = (text: string, items: (w: (x: string, y: string) => string) => unknown[]) => {
+    const pages = [page(3, text)];
+    const candidates = generateInteractionCandidates(pages, lexicon);
+    const w = (x: string, y: string) =>
+      candidates.find((c) => [c.a_id, c.b_id].sort().join() === [x, y].sort().join())!.windows[0]
+        .id;
+    return verifyPairLabels({ relations: items(w) }, candidates, pages, lexicon);
+  };
+
+  test('null·부분 응답은 검수 경계(held)로 간다 — 채택 0건', () => {
+    const out = verify('서윤은 도현을 질투했다.', () => [
+      null,
+      { character_a: '서윤' },
+      'relation',
+    ]);
+    expect(out.relationships).toHaveLength(0);
+    expect(out.held.map((h) => h.reasons)).toEqual([
+      ['unresolved_endpoint'],
+      ['unresolved_endpoint'],
+      ['unresolved_endpoint'],
+    ]);
+  });
+
+  test('표 밖의 유형 → 채택 0건(type_not_in_taxonomy), 표 안 유형은 채택(쌍)', () => {
+    const out = verify('서윤은 도현을 질투했다.', (w) => [
+      label('서윤', '도현', [{ window_id: w('seoyun', 'dohyun'), trigger: '질투' }], {
+        type: 'envy_like_feeling',
+      }),
+      label('서윤', '도현', [{ window_id: w('seoyun', 'dohyun'), trigger: '질투' }]),
+    ]);
+    expect(out.held.map((h) => h.reasons)).toEqual([['type_not_in_taxonomy']]);
+    expect(out.relationships.map((r) => r.relationship.semantics?.relation_key)).toEqual([
+      'jealousy',
+    ]);
+  });
+
+  test('큰 종류(kind)·라벨은 표에서 정한다 — LLM이 보낸 kind·label·relation_key·direction은 쓰지 않는다', () => {
+    const out = verify('민은 윤아와 함께 이 사건을 처음부터 맡았다.', (w) => [
+      label(
+        '민',
+        '윤아',
+        [{ window_id: w('min', 'yuna'), trigger: '함께 이 사건을 처음부터 맡았다' }],
+        {
+          type: 'colleague',
+          kind: 'emotion',
+          label: '사랑한다',
+          relation_key: 'romance',
+          direction: 'a_to_b',
+          summary: '민과 윤아는 같은 사건을 맡은 동료다.',
+        }
+      ),
+    ]);
+    expect(out.held).toEqual([]);
+    const r = out.relationships[0].relationship;
+    expect(r.label).toBe('동료다');
+    expect(r.semantics).toMatchObject({
+      kind: 'social',
+      relation_key: 'colleague',
+      direction: 'undirected',
+      temporal_scope: 'ongoing',
+    });
+  });
+
+  test('방향 있는 유형은 주체(subject)가 character_a, direction=a_to_b — 주체가 쌍 밖이거나 없으면 보류', () => {
+    const out = verify('서윤은 도현을 의심했다.', (w) => [
+      label('도현', '서윤', [{ window_id: w('seoyun', 'dohyun'), trigger: '의심' }], {
+        type: 'suspicion',
+        subject: '서윤',
+        summary: '서윤은 도현을 의심한다.',
+      }),
+      label('도현', '서윤', [{ window_id: w('seoyun', 'dohyun'), trigger: '의심' }], {
+        type: 'suspicion',
+        subject: '민',
+        summary: '서윤은 도현을 의심한다.',
+      }),
+      label('도현', '서윤', [{ window_id: w('seoyun', 'dohyun'), trigger: '의심' }], {
+        type: 'suspicion',
+        subject: null,
+        summary: '서윤은 도현을 의심한다.',
+      }),
+    ]);
+    expect(out.held.map((h) => h.reasons)).toEqual([
+      ['subject_not_in_pair'],
+      ['subject_not_in_pair'],
+    ]);
+    expect(out.relationships).toHaveLength(1);
+    const r = out.relationships[0];
+    expect([r.relationship.character_a, r.relationship.character_b]).toEqual(['서윤', '도현']);
+    expect(r.character_a_id).toBe('seoyun');
+    expect(r.relationship.semantics).toMatchObject({
+      direction: 'a_to_b',
+      kind: 'emotion',
+      relation_key: 'suspicion',
+    });
+  });
+
+  test('주체를 거꾸로 답하면(의심받는 사람을 주체로) 방향 검사가 보류한다', () => {
+    const out = verify('서윤은 도현을 의심했다.', (w) => [
+      label('서윤', '도현', [{ window_id: w('seoyun', 'dohyun'), trigger: '의심' }], {
+        type: 'suspicion',
+        subject: '도현',
+        summary: '도현은 서윤을 의심한다.',
+      }),
+    ]);
+    expect(out.relationships).toHaveLength(0);
+    expect(out.held.map((h) => h.reasons)).toEqual([['direction_conflict']]);
+  });
+
+  test('판정 질문에 "아니오"이거나 참/거짓이 아닌 답이면 그 유형으로 저장하지 않는다', () => {
+    const out = verify('서윤은 도현을 질투했다.', (w) => [
+      label('서윤', '도현', [{ window_id: w('seoyun', 'dohyun'), trigger: '질투' }], {
+        type_question: false,
+      }),
+      label('서윤', '도현', [{ window_id: w('seoyun', 'dohyun'), trigger: '질투' }], {
+        type_question: 'yes',
+      }),
+    ]);
+    expect(out.relationships).toHaveLength(0);
+    expect(out.held.map((h) => h.reasons)).toEqual([
+      ['type_question_not_affirmed'],
+      ['type_question_not_affirmed'],
+    ]);
+  });
+
+  test('동료 — 제외 질문 "한쪽이 지휘하는가"에 예면 보류(→superior), 답이 빠져도 보류, 모두 아니오면 채택', () => {
+    const text = '민은 윤아와 함께 이 사건을 처음부터 맡았다.';
+    const support = (w: (x: string, y: string) => string) => [
+      { window_id: w('min', 'yuna'), trigger: '함께 이 사건을 처음부터 맡았다' },
+    ];
+    const summary = '민과 윤아는 같은 사건을 맡은 동료다.';
+    const out = verify(text, (w) => [
+      label('민', '윤아', support(w), {
+        type: 'colleague',
+        summary,
+        exclusions: { commands: true, hires: false },
+      }),
+      label('민', '윤아', support(w), { type: 'colleague', summary, exclusions: { hires: false } }),
+      label('민', '윤아', support(w), { type: 'colleague', summary }),
+    ]);
+    expect(out.held.map((h) => h.reasons)).toEqual([
+      ['exclusion_applies:commands→superior'],
+      ['exclusion_unanswered:commands'],
+    ]);
+    expect(out.relationships).toHaveLength(1);
+  });
+
+  test('적대 — "서윤은 도현과 원수 사이였다"는 채택, 부정("원수 사이가 아니었다")은 0건', () => {
+    const hostile = (w: (x: string, y: string) => string) => [
+      label('서윤', '도현', [{ window_id: w('seoyun', 'dohyun'), trigger: '원수' }], {
+        type: 'hostility',
+        summary: '서윤은 도현을 적대한다.',
+      }),
+    ];
+    const yes = verify('서윤은 도현과 원수 사이였다.', hostile);
+    expect(yes.held).toEqual([]);
+    expect(yes.relationships[0].relationship.semantics).toMatchObject({
+      relation_key: 'hostility',
+      direction: 'a_to_b',
+      kind: 'emotion',
+    });
+    const no = verify('서윤은 도현과 원수 사이가 아니었다.', hostile);
+    expect(no.relationships).toHaveLength(0);
+  });
+
+  test('큰 종류 답이 유형과 어긋나면 저장값은 표를 따르고 검수 메모(category_answer_mismatch)를 남긴다', async () => {
+    const pages = [page(3, '서윤은 도현을 질투했다.')];
+    const candidates = generateInteractionCandidates(pages, lexicon);
+    const item = label(
+      '서윤',
+      '도현',
+      [{ window_id: candidates[0].windows[0].id, trigger: '질투' }],
+      {
+        category: 'family',
+      }
+    );
+    const run = verifyPairLabels({ relations: [item] }, candidates, pages, lexicon);
+    expect(run.relationships[0].relationship.semantics?.kind).toBe('emotion');
+    const out = await finalizeStructuredRelationships(run, run, pages, lexicon);
+    expect(out.accepted.map((r) => [r.check, r.reasons])).toEqual([
+      ['needs_review', ['category_answer_mismatch']],
+    ]);
+  });
+
+  test('관계 변화(transition)는 사람끼리도 일치도가 낮아(Massey κ 0.208) needs_review로 남긴다', async () => {
+    const pages = [page(3, '서윤은 도현을 질투했다.')];
+    const candidates = generateInteractionCandidates(pages, lexicon);
+    const item = label(
+      '서윤',
+      '도현',
+      [{ window_id: candidates[0].windows[0].id, trigger: '질투' }],
+      {
+        change_type: 'transition',
+      }
+    );
+    const run = verifyPairLabels({ relations: [item] }, candidates, pages, lexicon);
+    const out = await finalizeStructuredRelationships(run, run, pages, lexicon);
+    expect(out.accepted.map((r) => [r.check, r.reasons])).toEqual([
+      ['needs_review', ['change_needs_review']],
+    ]);
+  });
+
+  test('자기 일관성은 유형까지 같아야 한다 — 두 실행이 다른 유형이면 single_run', async () => {
+    const pages = [page(3, '서윤은 도현을 질투하고 미워했다.')];
+    const candidates = generateInteractionCandidates(pages, lexicon);
+    const w = candidates[0].windows[0].id;
+    const run1 = verifyPairLabels(
+      { relations: [label('서윤', '도현', [{ window_id: w, trigger: '질투' }])] },
+      candidates,
+      pages,
+      lexicon
+    );
+    const run2 = verifyPairLabels(
+      {
+        relations: [label('서윤', '도현', [{ window_id: w, trigger: '미워' }], { type: 'hatred' })],
+      },
+      candidates,
+      pages,
+      lexicon
+    );
+    const out = await finalizeStructuredRelationships(run1, run2, pages, lexicon);
+    expect(out.accepted.map((r) => [r.relationship.semantics?.relation_key, r.reasons])).toEqual([
+      ['jealousy', ['single_run']],
+    ]);
+  });
+
+  test('프롬프트는 표의 모든 유형·판정 질문·제외 질문을 담고, 이어지는 관계인지·큰 종류를 유형보다 먼저 묻는다', () => {
+    const pages = [page(1, '서윤은 도현을 의심했다.')];
+    const candidates = generateInteractionCandidates(pages, lexicon);
+    const prompt = buildPairLabelPrompt(
+      { chapter_no: 1, title: '첫 장', start_page: 1, end_page: 1 } as never,
+      candidates,
+      lexicon
+    );
+    for (const t of RELATION_TYPES) {
+      expect(prompt).toContain(`${t.key}`);
+      expect(prompt).toContain(t.question);
+      for (const x of t.exclusions) expect(prompt).toContain(x.question);
+    }
+    const json = prompt.slice(prompt.indexOf('{"relations"'));
+    expect(json.indexOf('"lasting"')).toBeLessThan(json.indexOf('"category"'));
+    expect(json.indexOf('"category"')).toBeLessThan(json.indexOf('"type"'));
+    expect(json.indexOf('"type"')).toBeLessThan(json.indexOf('"type_question"'));
   });
 });

@@ -23,6 +23,8 @@ export interface VerifierInput {
   context: string;
   fromAliases: string[];
   toAliases: string[];
+  /** 관계 유형 표의 정의(relationship-taxonomy.ts) — 있으면 검토자가 유형 기준으로 본다 */
+  definition?: string;
 }
 
 export interface VerifierAnswer {
@@ -121,7 +123,7 @@ export function buildVerifierPrompt(input: VerifierInput): string {
 - 주체: ${input.from}
 - 대상: ${input.to}
 - 관계 문구: ${input.label}
-${direction}
+${input.definition ? `- 관계 유형 정의: ${input.definition}\n` : ''}${direction}
 진술은 "주체가 대상에 대해 관계 문구의 일을 한다/그런 사이다"로 읽는다.
 
 인용:
