@@ -12,10 +12,12 @@ function setup(onJumpToPage = vi.fn()) {
       onAsk={vi.fn()}
       turns={[
         { role: 'user', text: '백검사와 관련된 인물을 알려줘' },
-        { role: 'assistant', text: '백검사는 임경부와 함께 수사해요(p.13). 공연 뒤에도 만나요 15쪽.' },
+        {
+          role: 'assistant',
+          text: '백검사는 임경부와 함께 수사해요(p.13). 공연 뒤에도 만나요 15쪽.',
+        },
       ]}
       mentionNames={['백검사', '임경부']}
-      totalPages={68}
       onJumpToPage={onJumpToPage}
     />
   );
@@ -69,7 +71,6 @@ describe('아모 답변 — 인물 강조·쪽 키캡', () => {
         onAsk={vi.fn()}
         turns={[{ role: 'assistant', text: '수사해요(p.13).' }]}
         mentionNames={[]}
-        totalPages={68}
       />
     );
     expect(screen.queryByRole('button', { name: 'p.13' })).not.toBeInTheDocument();

@@ -175,9 +175,13 @@ export function useReadingSession(bookId: string): ReadingSessionState {
   const [pageError, setPageError] = useState(false);
 
   // FR-PRG-003 🚦
-  const pendingJumpRef = useRef<{ taken: boolean; page: number | null }>({ taken: false, page: null });
+  const pendingJumpRef = useRef<{ taken: boolean; page: number | null }>({
+    taken: false,
+    page: null,
+  });
   useEffect(() => {
-    if (!pendingJumpRef.current.taken) pendingJumpRef.current = { taken: true, page: takePendingJump(bookId) };
+    if (!pendingJumpRef.current.taken)
+      pendingJumpRef.current = { taken: true, page: takePendingJump(bookId) };
   }, [bookId]);
   const [entryPage, setEntryPage] = useState<number | null>(null);
   const [jumpOrigin, setJumpOrigin] = useState<number | null>(null);
@@ -234,7 +238,10 @@ export function useReadingSession(bookId: string): ReadingSessionState {
   /** "앞부분은 이미 읽었어요"로 고른 쪽. 그 쪽의 진도 이벤트 하나가 claim 을 싣고 비운다 */
   const pendingClaimRef = useRef<number | null>(null);
   const syncPageProgress = useCallback(
-    (targetPage: number, opts: { fromPage: number | null; claim?: ProgressClaim }): Promise<void> => {
+    (
+      targetPage: number,
+      opts: { fromPage: number | null; claim?: ProgressClaim }
+    ): Promise<void> => {
       const requestId = ++progressRequestIdRef.current;
       const request = { page: targetPage, promise: Promise.resolve() };
       request.promise = sendProgress(bookId, targetPage, opts).then((response) => {
@@ -242,7 +249,9 @@ export function useReadingSession(bookId: string): ReadingSessionState {
         if (requestId > (knownAppliedCutoffRef.current?.requestId ?? 0)) {
           knownAppliedCutoffRef.current = { requestId, cutoff: response.applied_cutoff };
           setFrontierConfirm(
-            response.confirm ? { applied_cutoff: response.applied_cutoff, ...response.confirm } : null
+            response.confirm
+              ? { applied_cutoff: response.applied_cutoff, ...response.confirm }
+              : null
           );
         }
       });
@@ -252,7 +261,8 @@ export function useReadingSession(bookId: string): ReadingSessionState {
     [bookId]
   );
   const fromPageOf = useCallback(
-    (targetPage: number) => (displayedRef.current.page === targetPage ? displayedRef.current.from : null),
+    (targetPage: number) =>
+      displayedRef.current.page === targetPage ? displayedRef.current.from : null,
     []
   );
   const ensureHistoryPosition = useCallback(async () => {
@@ -354,7 +364,10 @@ export function useReadingSession(bookId: string): ReadingSessionState {
       if (choice === 'read_through') {
         if (target === currentPage) {
           // 이미 그 쪽에 있으면 쪽이 바뀌지 않아 아래 effect 가 돌지 않는다 — 답만 한 번 보낸다
-          void syncPageProgress(target, { fromPage: fromPageOf(target), claim: 'read_through' }).catch(() => {
+          void syncPageProgress(target, {
+            fromPage: fromPageOf(target),
+            claim: 'read_through',
+          }).catch(() => {
             // FR-SPL-005
           });
           return;
@@ -370,11 +383,14 @@ export function useReadingSession(bookId: string): ReadingSessionState {
   // FR-PRG-003
   const jumpToNote = useCallback(
     (target: number) => {
-      if (currentPage === null || target === currentPage) return;
+      // 쪽 범위 확인은 여기 한 곳 — 노트·아모 쪽 표시가 책에 없는 쪽을 가리키면 이동하지 않는다
+      // (주소로 받은 이동 쪽의 inRange 와 같은 확인. 기준점·완독 판단이 아니다, FR-BRF-005 🚦)
+      const inRange = target >= 1 && target <= totalPages;
+      if (currentPage === null || target === currentPage || !inRange) return;
       setJumpOrigin(currentPage);
       setCurrentPage(target);
     },
-    [currentPage]
+    [currentPage, totalPages]
   );
 
   const returnToOrigin = useCallback(() => {
@@ -411,13 +427,15 @@ export function useReadingSession(bookId: string): ReadingSessionState {
     } else if (displayed.page !== currentPage) {
       displayedRef.current = { bookId, page: currentPage, from: displayed.page };
     }
-    const claim: ProgressClaim | undefined = pendingClaimRef.current === currentPage ? 'read_through' : undefined;
+    const claim: ProgressClaim | undefined =
+      pendingClaimRef.current === currentPage ? 'read_through' : undefined;
     pendingClaimRef.current = null;
-    void syncPageProgress(currentPage, { fromPage: displayedRef.current.from, ...(claim ? { claim } : {}) }).catch(
-      () => {
-        // FR-SPL-005
-      }
-    );
+    void syncPageProgress(currentPage, {
+      fromPage: displayedRef.current.from,
+      ...(claim ? { claim } : {}),
+    }).catch(() => {
+      // FR-SPL-005
+    });
   }, [bookId, currentPage, loadPage, syncPageProgress]);
 
   const handleAsk = useCallback(
@@ -437,7 +455,9 @@ export function useReadingSession(bookId: string): ReadingSessionState {
   const currentChapter =
     currentPage === null
       ? null
-      : (chapters.find((chapter) => currentPage >= chapter.start_page && currentPage <= chapter.end_page) ?? null);
+      : (chapters.find(
+          (chapter) => currentPage >= chapter.start_page && currentPage <= chapter.end_page
+        ) ?? null);
 
   return {
     entryError,

@@ -249,7 +249,6 @@ export default function SsabiPanel({
             onDeleteConversation={onDeleteChatConversation}
             onQuoteDismissed={onQuoteDismissed}
             mentionNames={chatMentionNames}
-            totalPages={totalPages ?? 0}
             onJumpToPage={onJumpToNote}
           />
         ) : null}

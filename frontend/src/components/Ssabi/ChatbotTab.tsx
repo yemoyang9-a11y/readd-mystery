@@ -288,14 +288,11 @@ export default function ChatbotTab({
   onQuoteDismissed,
   requireTextToSend = false,
   mentionNames = [],
-  totalPages = 0,
   onJumpToPage,
 }: {
   requireTextToSend?: boolean;
   /** 강조할 인물 이름 — 서버가 기준점으로 거른 관계도 응답에서 뽑은 것만 (FR-SPL-002 🚦) */
   mentionNames?: string[];
-  /** 쪽 링크를 만들 범위(1 ~ 마지막 쪽). 기준점 판단이 아니다 (R3, 절대 규칙 7) */
-  totalPages?: number;
   /** 쪽 키캡에서 이동 — 이동 직전 쪽을 기억하는 jumpToNote 와 같다. 없으면 쪽은 글자로만 */
   onJumpToPage?: (page: number) => void;
   /** 구경로 전용(테스트 호환). turns를 쓰는 실제 화면에서는 전달하지 않는다 */
@@ -443,8 +440,8 @@ export default function ChatbotTab({
     [openMention, onJumpToPage]
   );
   const mentionPlugins = useMemo(
-    () => [[rehypeAmoMentions, { names: mentionNames, totalPages }]] as never,
-    [mentionNames, totalPages]
+    () => [[rehypeAmoMentions, { names: mentionNames }]] as never,
+    [mentionNames]
   );
 
   return (

@@ -50,7 +50,12 @@ describe('ChatbotTab — 답하는 중 (2026-11-18 대표 지시)', () => {
       />
     );
     expect(screen.queryByTestId('amo-typing')).toBeNull();
-    expect(screen.getByText('2쪽에 노트가 하나 있어요.')).toBeInTheDocument();
+    // 쪽 언급은 p.N 으로 보인다(2026-11-18 승인 시안) — 글자 내용은 같다
+    expect(
+      screen.getByText(
+        (_, el) => el?.tagName === 'P' && el.textContent === 'p.2에 노트가 하나 있어요.'
+      )
+    ).toBeInTheDocument();
     expect(amoAvatars(container)).toHaveLength(1);
   });
 

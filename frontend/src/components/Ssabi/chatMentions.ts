@@ -4,7 +4,8 @@ import type { GraphResponse } from '../../types';
  * 아모 답변의 인물 이름·쪽 표시 — 2026-11-18 대표 승인 시안(인물 강조색, 쪽은 괄호 없는 키캡 ①).
  *
  * - 이름 목록은 서버가 기준점으로 거른 관계도 응답(nodes)만 쓴다. 새 조회·판정 없음 (FR-SPL-002 🚦, 절대 규칙 7).
- * - 쪽은 1 ~ 마지막 쪽 범위의 숫자만 링크로 만든다. 기준점 초과 여부는 판단하지 않는다(본문은 제한하지 않는다, R3).
+ * - 쪽은 1 이상의 숫자를 링크로 만든다. 마지막 쪽 비교·기준점 초과 여부는 여기서 하지 않는다(FR-BRF-005 🚦 —
+ *   쪽 범위 확인은 이동하는 쪽(useReadingSession 의 jumpToNote) 한 곳에서. 본문은 제한하지 않는다, R3).
  * - 답변 글자는 바꾸지 않는다. 쪽 언급을 감싼 괄호만 화면에서 뺀다 (절대 규칙 11 — 출력 검사는 서버 몫).
  */
 
@@ -31,7 +32,7 @@ function escapeRegExp(text: string): string {
 // "(p.13)" "p. 13" "pp.13-15" "13쪽" — 괄호로 감쌌으면 괄호까지 한 덩어리로 잡는다
 const PAGE = String.raw`(\(\s*)?(?:pp?\.\s?(\d{1,4})(?:\s*[-–~]\s*(\d{1,4}))?|(\d{1,4})\s*쪽)(\s*\))?`;
 
-export function splitMentions(text: string, names: string[], totalPages: number): MentionPart[] {
+export function splitMentions(text: string, names: string[]): MentionPart[] {
   const nameAlt = names.map(escapeRegExp).join('|');
   const pattern = new RegExp(nameAlt ? `${PAGE}|(${nameAlt})` : PAGE, 'gu');
   const parts: MentionPart[] = [];
@@ -52,7 +53,7 @@ export function splitMentions(text: string, names: string[], totalPages: number)
       continue;
     }
     const page = Number(from ?? plain);
-    if (!Number.isSafeInteger(page) || page < 1 || page > totalPages) continue;
+    if (!Number.isSafeInteger(page) || page < 1) continue;
     // 괄호는 양쪽이 다 있을 때만 뺀다. 한쪽만 잡혔으면 글자로 돌려준다
     const paired = Boolean(open) && Boolean(close);
     const before = text.slice(last, at) + (open && !paired ? open : '');
@@ -82,7 +83,7 @@ type HastNode = HastText | HastElement | { type: string; children?: HastNode[] }
 
 const SKIP = new Set(['code', 'pre', 'a']);
 
-export function rehypeAmoMentions(options: { names: string[]; totalPages: number }) {
+export function rehypeAmoMentions(options: { names: string[] }) {
   return (tree: HastNode) => {
     const walk = (node: HastNode) => {
       if (!('children' in node) || !node.children) return;
@@ -94,11 +95,7 @@ export function rehypeAmoMentions(options: { names: string[]; totalPages: number
           next.push(child);
           continue;
         }
-        for (const part of splitMentions(
-          (child as HastText).value,
-          options.names,
-          options.totalPages
-        )) {
+        for (const part of splitMentions((child as HastText).value, options.names)) {
           if (part.kind === 'text') next.push({ type: 'text', value: part.text });
           else if (part.kind === 'name')
             next.push({

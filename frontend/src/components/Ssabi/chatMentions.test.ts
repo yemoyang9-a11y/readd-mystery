@@ -30,7 +30,7 @@ describe('splitMentions — 답변 글자를 이름·쪽 조각으로 나눈다(
   const names = mentionNames(graph);
 
   it('"(p.13)"은 괄호를 빼고 쪽 조각 하나로', () => {
-    expect(splitMentions('함께 수사해요(p.13).', names, 68)).toEqual([
+    expect(splitMentions('함께 수사해요(p.13).', names)).toEqual([
       { kind: 'text', text: '함께 수사해요 ' },
       { kind: 'page', page: 13, label: 'p.13' },
       { kind: 'text', text: '.' },
@@ -38,7 +38,7 @@ describe('splitMentions — 답변 글자를 이름·쪽 조각으로 나눈다(
   });
 
   it('"13쪽", "p. 13", "pp.13-15"도 쪽 조각으로 — 범위는 첫 쪽으로 이동', () => {
-    const parts = splitMentions('13쪽과 p. 20, (pp.13–15)', names, 68).filter((p) => p.kind === 'page');
+    const parts = splitMentions('13쪽과 p. 20, (pp.13–15)', names).filter((p) => p.kind === 'page');
     expect(parts).toEqual([
       { kind: 'page', page: 13, label: 'p.13' },
       { kind: 'page', page: 20, label: 'p.20' },
@@ -46,12 +46,13 @@ describe('splitMentions — 답변 글자를 이름·쪽 조각으로 나눈다(
     ]);
   });
 
-  it('책에 없는 쪽(0쪽, 마지막 쪽 뒤)은 링크로 만들지 않고 글자 그대로 둔다', () => {
-    expect(splitMentions('p.0 그리고 p.999', names, 68)).toEqual([{ kind: 'text', text: 'p.0 그리고 p.999' }]);
+  it('p.0 은 링크로 만들지 않는다 — 마지막 쪽 비교는 여기서 하지 않는다(FR-BRF-005 🚦, 범위 확인은 이동 함수 한 곳)', () => {
+    expect(splitMentions('p.0 그리고', names)).toEqual([{ kind: 'text', text: 'p.0 그리고' }]);
+    expect(splitMentions('p.999', names)).toEqual([{ kind: 'page', page: 999, label: 'p.999' }]);
   });
 
   it('인물 이름은 이름 조각으로 — 긴 별칭을 먼저 맞춘다', () => {
-    expect(splitMentions('백검사께서 유불란 씨를 불렀다', names, 68)).toEqual([
+    expect(splitMentions('백검사께서 유불란 씨를 불렀다', names)).toEqual([
       { kind: 'name', text: '백검사께서' },
       { kind: 'text', text: ' ' },
       { kind: 'name', text: '유불란 씨' },
@@ -60,12 +61,12 @@ describe('splitMentions — 답변 글자를 이름·쪽 조각으로 나눈다(
   });
 
   it('이름도 쪽도 없으면 글자 그대로 한 조각', () => {
-    expect(splitMentions('아무 일도 없었어요.', names, 68)).toEqual([{ kind: 'text', text: '아무 일도 없었어요.' }]);
+    expect(splitMentions('아무 일도 없었어요.', names)).toEqual([{ kind: 'text', text: '아무 일도 없었어요.' }]);
   });
 
   it('조각을 이어 붙이면 괄호만 빠진 원래 글자와 같다 — 답변 내용은 바꾸지 않는다', () => {
     const text = '백검사는 임경부와 함께 수사해요(p.13). 이몽란은 13쪽에서 떠나요.';
-    const joined = splitMentions(text, names, 68)
+    const joined = splitMentions(text, names)
       .map((p) => (p.kind === 'page' ? p.label : p.text))
       .join('');
     expect(joined).toBe('백검사는 임경부와 함께 수사해요 p.13. 이몽란은 p.13에서 떠나요.');
