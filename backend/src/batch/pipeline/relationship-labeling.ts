@@ -42,7 +42,8 @@ import {
 
 // 2 — 2026-11-18 관계만(행동 제외)·동료·태도 안내로 프롬프트 계약 변경. 이전 캐시는 쓰지 않는다
 // 3 — 2026-11-18 닫힌 관계 유형 표 + 질문지 응답(relationship-taxonomy.ts). 큰 종류·방향은 코드가 정한다
-export const STRUCTURAL_LABEL_VERSION = 3;
+// 4 — 2026-11-18 보강: 대사 속 관계는 claim/belief, 관형절 방향, 화자 귀속 규칙, 반박·부정 단서 범위, summary 한정어
+export const STRUCTURAL_LABEL_VERSION = 4;
 
 /** 한 쌍에 프롬프트로 보내는 근거 창 수 상한 — 이른 쪽부터. 잘린 창은 확립을 늦출 뿐 앞당기지 않는다 */
 export const MAX_WINDOWS_PER_PAIR = 8;
@@ -160,7 +161,10 @@ export function buildPairLabelPrompt(
 4. type_question: 고른 유형의 판정 질문에 대한 답(true/false). true가 아니면 그 유형이 아니다.
 5. exclusions: 고른 유형의 제외 질문마다 id를 키로 true/false. 하나라도 true면 그 유형이 아니다 — (예면 …)에 적힌 유형을 다시 검토한다.
 6. subject: 방향 있는 유형이면 주체의 대표명(표의 subject 역할), 대칭 유형이면 null.
-7. assertion_status: fact(서술로 확인) / belief·claim·rumor·uncertain(누가 믿거나 주장하거나 소문 — attribution에 근거 창에 나온 그 사람 이름을 쓰고 summary에 "믿는다/주장한다/소문" 같은 한정을 넣는다) / negated(부정된 내용). 인물의 추측·거짓말·소문·오해·희망을 fact로 쓰지 않는다. 추리물에서는 겉으로 알려진 관계와 감춰진 관계가 다를 수 있다 — 누가 그렇게 말하거나 믿는지 근거 창에서 확인되면 그 사람을 attribution에 쓴다.
+7. assertion_status: fact(서술자가 따옴표 밖에서 직접 말함) / belief·claim·rumor·uncertain(누가 믿거나 주장하거나 소문 — attribution에 그 사람의 이름을 근거 문장에 쓰인 표기 그대로 쓰고, summary에 attribution 이름과 한정어를 그대로 넣는다 — claim은 "주장한다", belief는 "믿는다" 또는 "생각한다", rumor는 "소문", uncertain은 "확실하지 않다". "말한다·의문을 품는다"만으로는 한정어가 아니다) / negated(부정된 내용). 인물의 추측·거짓말·소문·오해·희망을 fact로 쓰지 않는다.
+   - 따옴표(“…”) 안의 대사·속생각에서 드러나는 관계는 fact가 아니다. 말한 사람의 주장이면 claim, 그 사람이 속으로 생각·믿는 것이면 belief로 쓰고 attribution에 말한(생각한) 사람의 대표명을 쓴다. 자기 감정을 말하는 대사("나는 부인을 사랑하고 있습니다")도 그 화자의 claim이다 — 화자가 근거 창에 "이름의 진술", "…하고 이름은 말했다"처럼 드러나야 한다.
+   - 추리물에서는 겉으로 알려진 관계와 감춰진 관계가 다를 수 있다 — 누가 그렇게 말하거나 믿는지가 관계의 일부다. 다른 사람이 말한 관계(예: 검사가 "좌장이 너를 미워했다"고 말함)도 그 말한 사람의 claim으로 적는다.
+   - 따옴표 밖 서술이 직접 말하는 관계만 fact다. 관형절("몽란을 끝없이 사랑하는 유불란")은 꾸밈을 받는 사람(유불란)이 주체다.
 8. state(active/ended)와 change_type(establishment/restatement/transition/disclosure). 관계가 바뀌거나 끝났다고 원문이 직접 말할 때만 transition/ended를 쓴다.
 9. summary: 두 대표명을 모두 넣은 한 문장. rationale: 근거 창이 판정 질문의 답을 뒷받침하는 이유.
 10. support: 근거 창 id와, 그 창 안에서 관계를 가장 분명하게 말하는 최소한의 연속 낱말(trigger)을 원문 그대로. trigger가 있는 문장에 두 인물의 이름이나 표기가 함께 있어야 한다. 대화 창은 말한 사람과 듣는 사람이 두 인물이다. 같은 관계를 보여 주는 창이 여럿이면 모두 넣는다. 확립 쪽수는 서버가 검증된 support 중 가장 이른 쪽으로 정한다.
@@ -299,7 +303,7 @@ export function interpretAnswer(
 }
 
 // 사실성 단서 — Saurí & Pustejovsky 2012(극성·양태·출처 도입 술어)를 한국어 어미·영어 어휘로 옮긴 보수적 목록
-const KO_NEGATION = /(?:않|아니|없[었다는이을지]|못\s*(?:했|하|한|해|된)|커녕|리\s*(?:가\s*)?없)/u;
+const KO_NEGATION = /(?:않|아니|없[었다는을지]|못\s*(?:했|하|한|해|된)|커녕|리\s*(?:가\s*)?없)/u;
 const KO_PREVERBAL_NEGATION = /(?:^|\s)(?:안|못|아니)\s*$/u;
 const KO_REPORTATIVE = /(?:다고|다는|라고|라는|다니|라니|냐고|자고|단다|란다)/u;
 const KO_MODAL =
@@ -347,11 +351,22 @@ export function factualityCue(
     if (EN_NEGATION_BEFORE.test(before) || EN_NEGATION_IN.test(trigger))
       return 'factuality_cue:negation';
     if (EN_SOURCE.test(masked)) return 'factuality_cue:source';
-    if (nextSentence && EN_REFUTE.test(nextSentence)) return 'factuality_cue:refuted_next';
+    if (nextSentence && EN_REFUTE.test(refuteScope(nextSentence)))
+      return 'factuality_cue:refuted_next';
     return undefined;
   }
   const cut = after.search(KO_CLAUSE_END);
-  const scope = trigger + after.slice(0, Math.min(cut === -1 ? after.length : cut, 40));
+  // trigger 안에 인물 이름이 있으면 부정은 마지막 이름 뒤부터 본다 — "몽란은 벌써 처녀가 아니고 박영민의 애욕의
+  // 대상이 되었던 것이다"의 "아니"는 앞 절(처녀)을 부정하지 관계를 부정하지 않는다(2026-11-18 보강)
+  const lastInside = Math.max(
+    triggerStart,
+    ...mentionSpans
+      .filter((m) => m.start >= triggerStart && m.start < triggerEnd)
+      .map((m) => m.start)
+  );
+  const scope =
+    masked.slice(lastInside, triggerEnd) +
+    after.slice(0, Math.min(cut === -1 ? after.length : cut, 40));
   if (KO_NEGATION.test(scope) || KO_PREVERBAL_NEGATION.test(before.slice(-4)))
     return 'factuality_cue:negation';
   if (KO_REPORTATIVE.test(masked)) return 'factuality_cue:reported';
@@ -363,7 +378,50 @@ export function factualityCue(
     (_, a: string, b: string) => a + '·'.repeat(b.length)
   );
   if (KO_SOURCE.test(source)) return 'factuality_cue:source';
-  if (nextSentence && KO_REFUTE.test(nextSentence)) return 'factuality_cue:refuted_next';
+  if (nextSentence && KO_REFUTE.test(refuteScope(nextSentence)))
+    return 'factuality_cue:refuted_next';
+  return undefined;
+}
+
+/**
+ * 다음 문장이 앞 문장을 반박하는가는 그 문장 첫머리(따옴표·공백 뒤 20자)만 본다 — "그것은 모두의 오해였다"는
+ * 반박이지만, 멀리 떨어진 "…자백이 거짓이란 것을"은 앞 문장의 관계를 반박하지 않는다(2026-11-18 보강)
+ */
+function refuteScope(next: string): string {
+  return next.replace(/^[\s“"‘'「『]+/u, '').slice(0, 20);
+}
+
+/** 관형형 어미로 끝나는가 — 받침 ㄴ(-는/-은/-ㄴ) 또는 -던 */
+function endsWithAdnominal(text: string): boolean {
+  const last = text.trimEnd().slice(-1);
+  if (!last) return false;
+  if (last === '던') return true;
+  const code = last.charCodeAt(0) - 0xac00;
+  return code >= 0 && code < 11172 && code % 28 === 4;
+}
+
+/**
+ * 관형절 "O를 … V-는 H" — 피수식 인물 H가 V의 주체, O가 대상이다. 찾으면 [주체 id, 대상 id], 없으면 undefined.
+ * O·H는 trigger 안이나 trigger 바로 뒤(2자 안)에 있어야 하고, 사이에 쉼표·문장 부호가 없어야 한다.
+ */
+function relativeClauseRoles(
+  sentence: string,
+  sentenceStart: number,
+  t0: number,
+  t1: number,
+  ends: Mention[]
+): [string, string] | undefined {
+  for (const o of ends) {
+    if (o.start < t0 || o.end > t1 || !OBJECT_MARK.test(o.particle)) continue;
+    const head = ends.find((m) => m.start > o.end && m.character_id !== o.character_id);
+    if (!head || head.start > t1 + 2) continue;
+    const between = sentence.slice(
+      o.end + o.particle.length - sentenceStart,
+      head.start - sentenceStart
+    );
+    if (/[,.!?;:，。]/u.test(between) || !endsWithAdnominal(between)) continue;
+    return [head.character_id, o.character_id];
+  }
   return undefined;
 }
 
@@ -381,9 +439,15 @@ export function directionConflict(
   subjectId: string,
   objectId: string
 ): boolean {
-  const ends = mentions.filter((m) => m.character_id === subjectId || m.character_id === objectId);
   const t0 = sentenceStart + triggerStart;
   const t1 = sentenceStart + triggerEnd;
+  // 대사는 따옴표가 닫힐 때까지 한 문장으로 묶인다 — trigger 앞의 마지막 문장 끝 부호 뒤(같은 문장 단위)만 본다
+  const before = sentence.slice(0, triggerStart);
+  const lastStop = Math.max(...['.', '!', '?', '。'].map((c) => before.lastIndexOf(c)));
+  const clauseStart = sentenceStart + lastStop + 1;
+  const ends = mentions.filter(
+    (m) => (m.character_id === subjectId || m.character_id === objectId) && m.start >= clauseStart
+  );
   const after = sentence.slice(triggerEnd);
   const prior = ends.filter((m) => m.end <= t0);
   if (LATIN.test(sentence.slice(triggerStart, triggerEnd))) {
@@ -398,6 +462,12 @@ export function directionConflict(
   }
   const scope = after.slice(0, 20);
   if (KO_PASSIVE.test(scope)) return false;
+  // "B는 A의 애욕의 대상이 되었다" — 대상 구문은 주제어가 대상이다. 판단하지 않는다
+  if (/대상(?:이|으로|이\s*되)/u.test(sentence.slice(triggerStart, triggerEnd) + scope))
+    return false;
+  // 관형절 "B를 … 사랑하는 A" — 피수식 인물 A가 주체(2026-11-18 보강)
+  const roles = relativeClauseRoles(sentence, sentenceStart, t0, t1, ends);
+  if (roles) return roles[0] !== subjectId || roles[1] !== objectId;
   const topic = [...prior].reverse().find((m) => SUBJECT_TOPIC.test(m.particle));
   const nominative = [...prior].reverse().find((m) => SUBJECT_NOMINATIVE.test(m.particle));
   const subj = topic ?? nominative;
@@ -432,6 +502,68 @@ interface PageIndex {
   page: Page;
   sentences: TextSpan[];
   mentions: Mention[];
+  /** 따옴표 안(대사·인용) 구간 */
+  quotes: TextSpan[];
+}
+
+/** 따옴표 구간 — “…”, ‘…’, 「…」, 『…』 는 짝으로, 곧은 따옴표(")는 번갈아 연다·닫는다 */
+export function quoteSpans(content: string): TextSpan[] {
+  const pairs: Record<string, string> = { '“': '”', '「': '」' };
+  const out: TextSpan[] = [];
+  let open: { start: number; close: string } | undefined;
+  for (let i = 0; i < content.length; i++) {
+    const c = content[i];
+    if (open) {
+      if (c === open.close) {
+        out.push({ start: open.start, end: i + 1 });
+        open = undefined;
+      }
+    } else if (pairs[c]) open = { start: i, close: pairs[c] };
+    else if (c === '"') open = { start: i, close: '"' };
+  }
+  if (open) out.push({ start: open.start, end: content.length });
+  return out;
+}
+
+const FIRST_PERSON = /(?:^|[\s“"‘'「,…—])(?:나는|내가|나도|나의|저는|제가|저도|저의)/u;
+const SPEECH_AFTER_NAME = /^\s*(?:의\s*)?(?:진술|말|대답|고백|자백|변명|증언)/u;
+const SPEECH_BEFORE_NAME = /(?:하고|라고|이라고)\s*$/u;
+
+/**
+ * 화자 본인의 감정 대사 — "나용귀의 진술. “… 나는 부인을 사랑하고 있습니다.”" 2026-11-18 보강.
+ * 근거 문장에 주체(화자)의 이름이 없어도, 아래가 모두 맞을 때만 그 화자의 **주장**으로 받는다(사실로는 받지 않는다 —
+ * 말하기 술어가 안긴 사건은 화자의 주장이다: Saurí & Pustejovsky 2012. 추리물 인물은 거짓말을 한다: Conan 2024).
+ *  - 라벨이 claim/belief이고 attribution이 빠진 인물(=주체)
+ *  - trigger가 따옴표 안이고, 그 문장 단위(마지막 문장 부호 뒤)에 1인칭(나는·저는…)이 있다
+ *  - 같은 근거 창의 다른 문장에 그 인물 이름이 말하기 표지와 붙어 있다: "이름(의) 진술/말/대답/고백/자백/증언"
+ *    또는 "…하고 이름은/이/가" (Elson 2010의 '인용 + 말하기 동사 + 인물' 범주, Muzny 2017의 문단 끝 언급 규칙)
+ * 맞으면 근거는 그 창 전체(화자 이름이 근거 인용에 들어간다), 아니면 undefined.
+ */
+function speakerSelfStatement(
+  windowItem: EvidenceWindow,
+  index: PageIndex,
+  sentence: TextSpan,
+  t0: number,
+  speakerId: string
+): TextSpan | undefined {
+  if (windowItem.kind === 'dialogue') return undefined;
+  if (!index.quotes.some((q) => t0 > q.start && t0 < q.end)) return undefined;
+  const before = index.page.content.slice(sentence.start, t0);
+  const stop = Math.max(...['.', '!', '?', '。', '“'].map((c) => before.lastIndexOf(c)));
+  if (!FIRST_PERSON.test(before.slice(stop + 1) + index.page.content.slice(t0, t0 + 4)))
+    return undefined;
+  const content = index.page.content;
+  const marked = index.mentions.some(
+    (m) =>
+      m.character_id === speakerId &&
+      m.start >= windowItem.start &&
+      m.end <= windowItem.end &&
+      (m.end <= sentence.start || m.start >= sentence.end) &&
+      (SPEECH_AFTER_NAME.test(content.slice(m.end, m.end + 8)) ||
+        (/^(?:은|는|이|가)?$/u.test(m.particle) &&
+          SPEECH_BEFORE_NAME.test(content.slice(Math.max(windowItem.start, m.start - 6), m.start))))
+  );
+  return marked ? { start: windowItem.start, end: windowItem.end } : undefined;
 }
 
 function indexPages(pages: Page[], lexicon: CandidateCharacter[]): Map<number, PageIndex> {
@@ -441,6 +573,7 @@ function indexPages(pages: Page[], lexicon: CandidateCharacter[]): Map<number, P
       page,
       sentences: splitSentences(page.content),
       mentions: findMentions(page.content, lexicon, page.page_no),
+      quotes: quoteSpans(page.content),
     });
   return out;
 }
@@ -452,7 +585,8 @@ function checkSupport(
   index: PageIndex,
   aId: string,
   bId: string,
-  r: Record<string, unknown>
+  r: Record<string, unknown>,
+  attributionId?: string
 ): VerifiedSupport | string {
   const hits = occurrences(windowItem.text, trigger);
   if (!trigger.trim() || hits.length === 0) return 'trigger_not_in_window';
@@ -468,14 +602,27 @@ function checkSupport(
     const s = index.sentences[si];
     const sentence = index.page.content.slice(s.start, s.end);
     const inSentence = index.mentions.filter((m) => m.start >= s.start && m.end <= s.end);
+    let speakerEvidence: TextSpan | undefined;
     if (windowItem.kind === 'dialogue') {
       if (!windowItem.quote || t0 < windowItem.start || t1 > windowItem.end)
         return 'trigger_not_in_window';
     } else if (
       !inSentence.some((m) => m.character_id === aId) ||
       !inSentence.some((m) => m.character_id === bId)
-    )
-      return 'trigger_sentence_lacks_endpoint';
+    ) {
+      // 빠진 쪽이 방향 있는 관계의 주체이고 그 사람이 말한 대사일 때만(화자 귀속 규칙) — 주장으로만 받는다
+      const missingSubject =
+        directed &&
+        !inSentence.some((m) => m.character_id === subjectId) &&
+        inSentence.some((m) => m.character_id === objectId);
+      if (
+        missingSubject &&
+        (r.assertion_status === 'claim' || r.assertion_status === 'belief') &&
+        attributionId === subjectId
+      )
+        speakerEvidence = speakerSelfStatement(windowItem, index, s, t0, subjectId);
+      if (!speakerEvidence) return 'trigger_sentence_lacks_endpoint';
+    }
     // trigger는 관계를 말하는 낱말이어야 한다 — 인물 이름(+조사)만으로 된 trigger는 근거가 아니다
     const spans = inSentence.map((m) => ({
       start: m.start - s.start,
@@ -486,6 +633,14 @@ function checkSupport(
       for (let k = Math.max(sp.start, t0 - s.start); k < Math.min(sp.end, t1 - s.start); k++)
         rest[k - (t0 - s.start)] = ' ';
     if (!/[\p{L}]/u.test(rest.join(''))) return 'trigger_is_name';
+    // 따옴표 안(대사·인용)의 관계는 서술자가 단정한 사실이 아니라 말한 사람의 주장이다 — claim/belief + attribution으로
+    // 적어야 한다(2026-11-18 보강, Conan의 공개/비밀 관점·Saurí & Pustejovsky 2012). 대화 창은 따로 검수로 간다
+    if (
+      r.assertion_status === 'fact' &&
+      windowItem.kind !== 'dialogue' &&
+      index.quotes.some((q) => t0 > q.start && t0 < q.end)
+    )
+      return 'factuality_cue:quoted_speech';
     if (r.assertion_status === 'fact') {
       const next = index.sentences[si + 1];
       const cue = factualityCue(
@@ -521,7 +676,7 @@ function checkSupport(
       evidence:
         windowItem.kind === 'dialogue'
           ? { start: windowItem.start, end: windowItem.end }
-          : { start: s.start, end: s.end },
+          : (speakerEvidence ?? { start: s.start, end: s.end }),
     };
   }
   return first!;
@@ -578,7 +733,15 @@ export function verifyPairLabels(
       }
       const pageIndex = index.get(own.page_no);
       const result = pageIndex
-        ? checkSupport(own, String(s.trigger ?? ''), pageIndex, aId, bId, r)
+        ? checkSupport(
+            own,
+            String(s.trigger ?? ''),
+            pageIndex,
+            aId,
+            bId,
+            r,
+            resolveName(r.attribution, lexicon)
+          )
         : 'support_page_missing';
       if (typeof result === 'string') rejected.push({ window_id: id, reason: result });
       else verified.push(result);
