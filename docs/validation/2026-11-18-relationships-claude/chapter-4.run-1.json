@@ -1,0 +1,108 @@
+{
+  "key": "083016ee873d636265c229891a451db923ab431a77b5332c7b37148f446494b7",
+  "chapter_no": 4,
+  "run": 1,
+  "response": "{\"relations\":[{\"character_a\":\"나용귀\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"romance\",\"type\":\"affection\",\"type_question\":true,\"exclusions\":{},\"subject\":\"나용귀\",\"assertion_status\":\"claim\",\"attribution\":\"임경부\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"임경부는 나용귀가 이몽란을 한량없이 사랑하며 애인 이몽란을 위해 일신을 희생하려 했다고 주장한다.\",\"rationale\":\"임경부가 나용귀에게 '이몽란을 한량없이 사랑하는 당신의 정성'이라고 말한다. 주체가 대상을 사랑한다는 판정 질문에 대한 답이 '예'다. 다만 따옴표 안의 대사이므로 임경부의 주장으로 적는다. 몽란의 마음은 말하지 않으므로 affection으로 적는다.\",\"support\":[{\"window_id\":\"p51:133-643:sentence\",\"trigger\":\"이몽란을 한량없이 사랑하는 당신의 정성\"},{\"window_id\":\"p51:133-1108:adjacent\",\"trigger\":\"이몽란을 한량없이 사랑하는 당신의 정성\"}]},{\"character_a\":\"나용귀\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"romance\",\"type\":\"affection\",\"type_question\":true,\"exclusions\":{},\"subject\":\"나용귀\",\"assertion_status\":\"claim\",\"attribution\":\"나용귀\",\"state\":\"active\",\"change_type\":\"restatement\",\"summary\":\"나용귀는 몽란을 사랑하며 몽란이 자기 생명보다 더 중한 사람이라고 주장한다.\",\"rationale\":\"나용귀가 임경부에게 직접 말한다. 몽란을 '사랑하는 사람'이라 부르고 '몽란은 나의 생명보다도 더 중한 사람'이라고 한다. 자기 감정을 밝힌 대사이므로 나용귀의 주장(claim)으로 적는다.\",\"support\":[{\"window_id\":\"p54:393-708:sentence\",\"trigger\":\"몽란은 나의 생명보다도 더 중한 사람\"},{\"window_id\":\"p54:0-708:adjacent\",\"trigger\":\"몽란은 나의 생명보다도 더 중한 사람\"}]},{\"character_a\":\"박영민\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"family\",\"type\":\"marriage\",\"type_question\":true,\"exclusions\":{\"plan_only\":false},\"subject\":null,\"assertion_status\":\"claim\",\"attribution\":\"임경부\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"임경부는 좌장 박영민이 부인 이몽란과 함께 외출했다고 말하며, 이몽란이 박영민의 부인이라고 주장한다.\",\"rationale\":\"임경부의 대사 '좌장이 부인과 함께 외출한 사실'은 이몽란을 좌장 박영민의 부인으로 말한다. 혼인의 계획이 아니라 혼인한 상태를 말하는 표현이다. 따옴표 안의 대사이므로 임경부의 주장으로 적는다.\",\"support\":[{\"window_id\":\"p53:0-602:sentence\",\"trigger\":\"좌장이 부인과 함께 외출한\"}]},{\"character_a\":\"유불란\",\"character_b\":\"임경부\",\"lasting\":true,\"category\":\"adversarial\",\"type\":\"suspicion\",\"type_question\":true,\"exclusions\":{},\"subject\":\"임경부\",\"assertion_status\":\"claim\",\"attribution\":\"임경부\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"임경부는 아직 자세한 사정은 모르지만 몽란 살해의 가해자가 유불란이라고 주장한다.\",\"rationale\":\"임경부가 '가해자는 유불란'이라고 말한다. 유불란이라는 사람을 범인으로 보는 말이다. 따옴표 안의 대사이고 화자가 '하고 임경부는'으로 드러나므로 임경부의 주장으로 적는다.\",\"support\":[{\"window_id\":\"p54:851-925:sentence\",\"trigger\":\"가해자는 유불란\"}]}]}",
+  "parsed": {
+    "relations": [
+      {
+        "character_a": "나용귀",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "affection",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "나용귀",
+        "assertion_status": "claim",
+        "attribution": "임경부",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "임경부는 나용귀가 이몽란을 한량없이 사랑하며 애인 이몽란을 위해 일신을 희생하려 했다고 주장한다.",
+        "rationale": "임경부가 나용귀에게 '이몽란을 한량없이 사랑하는 당신의 정성'이라고 말한다. 주체가 대상을 사랑한다는 판정 질문에 대한 답이 '예'다. 다만 따옴표 안의 대사이므로 임경부의 주장으로 적는다. 몽란의 마음은 말하지 않으므로 affection으로 적는다.",
+        "support": [
+          {
+            "window_id": "p51:133-643:sentence",
+            "trigger": "이몽란을 한량없이 사랑하는 당신의 정성"
+          },
+          {
+            "window_id": "p51:133-1108:adjacent",
+            "trigger": "이몽란을 한량없이 사랑하는 당신의 정성"
+          }
+        ]
+      },
+      {
+        "character_a": "나용귀",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "affection",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "나용귀",
+        "assertion_status": "claim",
+        "attribution": "나용귀",
+        "state": "active",
+        "change_type": "restatement",
+        "summary": "나용귀는 몽란을 사랑하며 몽란이 자기 생명보다 더 중한 사람이라고 주장한다.",
+        "rationale": "나용귀가 임경부에게 직접 말한다. 몽란을 '사랑하는 사람'이라 부르고 '몽란은 나의 생명보다도 더 중한 사람'이라고 한다. 자기 감정을 밝힌 대사이므로 나용귀의 주장(claim)으로 적는다.",
+        "support": [
+          {
+            "window_id": "p54:393-708:sentence",
+            "trigger": "몽란은 나의 생명보다도 더 중한 사람"
+          },
+          {
+            "window_id": "p54:0-708:adjacent",
+            "trigger": "몽란은 나의 생명보다도 더 중한 사람"
+          }
+        ]
+      },
+      {
+        "character_a": "박영민",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "family",
+        "type": "marriage",
+        "type_question": true,
+        "exclusions": {
+          "plan_only": false
+        },
+        "subject": null,
+        "assertion_status": "claim",
+        "attribution": "임경부",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "임경부는 좌장 박영민이 부인 이몽란과 함께 외출했다고 말하며, 이몽란이 박영민의 부인이라고 주장한다.",
+        "rationale": "임경부의 대사 '좌장이 부인과 함께 외출한 사실'은 이몽란을 좌장 박영민의 부인으로 말한다. 혼인의 계획이 아니라 혼인한 상태를 말하는 표현이다. 따옴표 안의 대사이므로 임경부의 주장으로 적는다.",
+        "support": [
+          {
+            "window_id": "p53:0-602:sentence",
+            "trigger": "좌장이 부인과 함께 외출한"
+          }
+        ]
+      },
+      {
+        "character_a": "유불란",
+        "character_b": "임경부",
+        "lasting": true,
+        "category": "adversarial",
+        "type": "suspicion",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "임경부",
+        "assertion_status": "claim",
+        "attribution": "임경부",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "임경부는 아직 자세한 사정은 모르지만 몽란 살해의 가해자가 유불란이라고 주장한다.",
+        "rationale": "임경부가 '가해자는 유불란'이라고 말한다. 유불란이라는 사람을 범인으로 보는 말이다. 따옴표 안의 대사이고 화자가 '하고 임경부는'으로 드러나므로 임경부의 주장으로 적는다.",
+        "support": [
+          {
+            "window_id": "p54:851-925:sentence",
+            "trigger": "가해자는 유불란"
+          }
+        ]
+      }
+    ]
+  }
+}

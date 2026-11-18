@@ -1,0 +1,3799 @@
+[
+  {
+    "chapter_no": 1,
+    "pair": [
+      "김영애",
+      "나용귀"
+    ],
+    "first_page": 1,
+    "weight": 4,
+    "windows": [
+      {
+        "id": "p1:859-891:sentence",
+        "kind": "sentence",
+        "page_no": 1
+      },
+      {
+        "id": "p3:37-116:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p3:705-848:adjacent",
+        "kind": "adjacent",
+        "page_no": 3
+      },
+      {
+        "id": "p4:601-677:sentence",
+        "kind": "sentence",
+        "page_no": 4
+      },
+      {
+        "id": "p5:678-1015:adjacent",
+        "kind": "adjacent",
+        "page_no": 5
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "김영애",
+      "박영민"
+    ],
+    "first_page": 1,
+    "weight": 4,
+    "windows": [
+      {
+        "id": "p1:892-1044:adjacent",
+        "kind": "adjacent",
+        "page_no": 1
+      },
+      {
+        "id": "p3:37-116:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p3:214-513:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p3:744-848:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p5:678-1015:adjacent",
+        "kind": "adjacent",
+        "page_no": 5
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "김영애",
+      "유불란"
+    ],
+    "first_page": 1,
+    "weight": 4,
+    "windows": [
+      {
+        "id": "p1:892-919:sentence",
+        "kind": "sentence",
+        "page_no": 1
+      },
+      {
+        "id": "p3:37-116:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p4:601-677:sentence",
+        "kind": "sentence",
+        "page_no": 4
+      },
+      {
+        "id": "p5:678-716:sentence",
+        "kind": "sentence",
+        "page_no": 5
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "김영애",
+      "진대성"
+    ],
+    "first_page": 1,
+    "weight": 4,
+    "windows": [
+      {
+        "id": "p1:859-891:sentence",
+        "kind": "sentence",
+        "page_no": 1
+      },
+      {
+        "id": "p3:37-116:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p4:601-677:sentence",
+        "kind": "sentence",
+        "page_no": 4
+      },
+      {
+        "id": "p5:678-716:sentence",
+        "kind": "sentence",
+        "page_no": 5
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "나용귀",
+      "박영민"
+    ],
+    "first_page": 1,
+    "weight": 13,
+    "windows": [
+      {
+        "id": "p1:752-791:sentence",
+        "kind": "sentence",
+        "page_no": 1
+      },
+      {
+        "id": "p2:644-884:adjacent",
+        "kind": "adjacent",
+        "page_no": 2
+      },
+      {
+        "id": "p3:37-116:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p3:705-848:adjacent",
+        "kind": "adjacent",
+        "page_no": 3
+      },
+      {
+        "id": "p5:717-1015:sentence",
+        "kind": "sentence",
+        "page_no": 5
+      },
+      {
+        "id": "p6:0-57:adjacent",
+        "kind": "adjacent",
+        "page_no": 6
+      },
+      {
+        "id": "p6:43-216:adjacent",
+        "kind": "adjacent",
+        "page_no": 6
+      },
+      {
+        "id": "p6:58-571:adjacent",
+        "kind": "adjacent",
+        "page_no": 6
+      },
+      {
+        "id": "p10:452-574:adjacent",
+        "kind": "adjacent",
+        "page_no": 10
+      },
+      {
+        "id": "p13:85-187:sentence",
+        "kind": "sentence",
+        "page_no": 13
+      },
+      {
+        "id": "p14:105-221:adjacent",
+        "kind": "adjacent",
+        "page_no": 14
+      },
+      {
+        "id": "p16:134-401:sentence",
+        "kind": "sentence",
+        "page_no": 16
+      },
+      {
+        "id": "p17:0-596:sentence",
+        "kind": "sentence",
+        "page_no": 17
+      },
+      {
+        "id": "p17:776-995:adjacent",
+        "kind": "adjacent",
+        "page_no": 17
+      },
+      {
+        "id": "p18:29-496:sentence",
+        "kind": "sentence",
+        "page_no": 18
+      },
+      {
+        "id": "p19:216-359:sentence",
+        "kind": "sentence",
+        "page_no": 19
+      },
+      {
+        "id": "p20:0-219:sentence",
+        "kind": "sentence",
+        "page_no": 20
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "나용귀",
+      "유불란"
+    ],
+    "first_page": 1,
+    "weight": 13.5,
+    "windows": [
+      {
+        "id": "p1:689-791:adjacent",
+        "kind": "adjacent",
+        "page_no": 1
+      },
+      {
+        "id": "p1:859-919:adjacent",
+        "kind": "adjacent",
+        "page_no": 1
+      },
+      {
+        "id": "p2:144-270:adjacent",
+        "kind": "adjacent",
+        "page_no": 2
+      },
+      {
+        "id": "p2:644-722:sentence",
+        "kind": "sentence",
+        "page_no": 2
+      },
+      {
+        "id": "p3:37-116:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p4:601-677:sentence",
+        "kind": "sentence",
+        "page_no": 4
+      },
+      {
+        "id": "p5:678-1015:adjacent",
+        "kind": "adjacent",
+        "page_no": 5
+      },
+      {
+        "id": "p6:217-571:sentence",
+        "kind": "sentence",
+        "page_no": 6
+      },
+      {
+        "id": "p10:387-520:adjacent",
+        "kind": "adjacent",
+        "page_no": 10
+      },
+      {
+        "id": "p15:592-699:sentence",
+        "kind": "sentence",
+        "page_no": 15
+      },
+      {
+        "id": "p15:759-934:adjacent",
+        "kind": "adjacent",
+        "page_no": 15
+      },
+      {
+        "id": "p16:402-637:sentence",
+        "kind": "sentence",
+        "page_no": 16
+      },
+      {
+        "id": "p16:680-941:sentence",
+        "kind": "sentence",
+        "page_no": 16
+      },
+      {
+        "id": "p17:0-596:sentence",
+        "kind": "sentence",
+        "page_no": 17
+      },
+      {
+        "id": "p18:29-496:sentence",
+        "kind": "sentence",
+        "page_no": 18
+      },
+      {
+        "id": "p18:860-974:adjacent",
+        "kind": "adjacent",
+        "page_no": 18
+      },
+      {
+        "id": "p18:928-996:adjacent",
+        "kind": "adjacent",
+        "page_no": 18
+      },
+      {
+        "id": "p18:975-1058:adjacent",
+        "kind": "adjacent",
+        "page_no": 18
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "나용귀",
+      "이몽란"
+    ],
+    "first_page": 1,
+    "weight": 12,
+    "windows": [
+      {
+        "id": "p1:752-791:sentence",
+        "kind": "sentence",
+        "page_no": 1
+      },
+      {
+        "id": "p3:37-116:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p3:705-848:adjacent",
+        "kind": "adjacent",
+        "page_no": 3
+      },
+      {
+        "id": "p4:601-677:sentence",
+        "kind": "sentence",
+        "page_no": 4
+      },
+      {
+        "id": "p5:717-1015:sentence",
+        "kind": "sentence",
+        "page_no": 5
+      },
+      {
+        "id": "p6:0-57:adjacent",
+        "kind": "adjacent",
+        "page_no": 6
+      },
+      {
+        "id": "p6:43-216:adjacent",
+        "kind": "adjacent",
+        "page_no": 6
+      },
+      {
+        "id": "p6:58-571:adjacent",
+        "kind": "adjacent",
+        "page_no": 6
+      },
+      {
+        "id": "p6:217-602:adjacent",
+        "kind": "adjacent",
+        "page_no": 6
+      },
+      {
+        "id": "p13:708-859:adjacent",
+        "kind": "adjacent",
+        "page_no": 13
+      },
+      {
+        "id": "p16:134-401:sentence",
+        "kind": "sentence",
+        "page_no": 16
+      },
+      {
+        "id": "p17:0-596:sentence",
+        "kind": "sentence",
+        "page_no": 17
+      },
+      {
+        "id": "p18:29-496:sentence",
+        "kind": "sentence",
+        "page_no": 18
+      },
+      {
+        "id": "p18:497-825:sentence",
+        "kind": "sentence",
+        "page_no": 18
+      },
+      {
+        "id": "p19:216-359:sentence",
+        "kind": "sentence",
+        "page_no": 19
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "나용귀",
+      "진대성"
+    ],
+    "first_page": 1,
+    "weight": 4.5,
+    "windows": [
+      {
+        "id": "p1:826-858:sentence",
+        "kind": "sentence",
+        "page_no": 1
+      },
+      {
+        "id": "p1:859-891:sentence",
+        "kind": "sentence",
+        "page_no": 1
+      },
+      {
+        "id": "p3:37-116:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p4:601-677:sentence",
+        "kind": "sentence",
+        "page_no": 4
+      },
+      {
+        "id": "p5:678-1015:adjacent",
+        "kind": "adjacent",
+        "page_no": 5
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "박영민",
+      "유불란"
+    ],
+    "first_page": 1,
+    "weight": 17,
+    "windows": [
+      {
+        "id": "p1:220-382:sentence",
+        "kind": "sentence",
+        "page_no": 1
+      },
+      {
+        "id": "p1:689-751:sentence",
+        "kind": "sentence",
+        "page_no": 1
+      },
+      {
+        "id": "p1:920-1044:sentence",
+        "kind": "sentence",
+        "page_no": 1
+      },
+      {
+        "id": "p2:491-575:sentence",
+        "kind": "sentence",
+        "page_no": 2
+      },
+      {
+        "id": "p2:723-884:sentence",
+        "kind": "sentence",
+        "page_no": 2
+      },
+      {
+        "id": "p3:37-116:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p4:698-853:adjacent",
+        "kind": "adjacent",
+        "page_no": 4
+      },
+      {
+        "id": "p5:678-1015:adjacent",
+        "kind": "adjacent",
+        "page_no": 5
+      },
+      {
+        "id": "p6:58-571:adjacent",
+        "kind": "adjacent",
+        "page_no": 6
+      },
+      {
+        "id": "p6:736-1018:adjacent",
+        "kind": "adjacent",
+        "page_no": 6
+      },
+      {
+        "id": "p7:21-592:sentence",
+        "kind": "sentence",
+        "page_no": 7
+      },
+      {
+        "id": "p7:593-862:sentence",
+        "kind": "sentence",
+        "page_no": 7
+      },
+      {
+        "id": "p8:0-902:sentence",
+        "kind": "sentence",
+        "page_no": 8
+      },
+      {
+        "id": "p10:521-628:adjacent",
+        "kind": "adjacent",
+        "page_no": 10
+      },
+      {
+        "id": "p15:178-253:sentence",
+        "kind": "sentence",
+        "page_no": 15
+      },
+      {
+        "id": "p15:269-351:sentence",
+        "kind": "sentence",
+        "page_no": 15
+      },
+      {
+        "id": "p15:352-428:sentence",
+        "kind": "sentence",
+        "page_no": 15
+      },
+      {
+        "id": "p16:134-637:adjacent",
+        "kind": "adjacent",
+        "page_no": 16
+      },
+      {
+        "id": "p17:0-596:sentence",
+        "kind": "sentence",
+        "page_no": 17
+      },
+      {
+        "id": "p18:29-496:sentence",
+        "kind": "sentence",
+        "page_no": 18
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "박영민",
+      "이몽란"
+    ],
+    "first_page": 1,
+    "weight": 21,
+    "windows": [
+      {
+        "id": "p1:752-791:sentence",
+        "kind": "sentence",
+        "page_no": 1
+      },
+      {
+        "id": "p2:31-84:sentence",
+        "kind": "sentence",
+        "page_no": 2
+      },
+      {
+        "id": "p2:491-575:sentence",
+        "kind": "sentence",
+        "page_no": 2
+      },
+      {
+        "id": "p3:37-116:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p3:214-513:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p3:627-674:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p3:744-848:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p3:882-915:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p5:717-1015:sentence",
+        "kind": "sentence",
+        "page_no": 5
+      },
+      {
+        "id": "p6:0-42:sentence",
+        "kind": "sentence",
+        "page_no": 6
+      },
+      {
+        "id": "p6:58-216:sentence",
+        "kind": "sentence",
+        "page_no": 6
+      },
+      {
+        "id": "p6:774-1018:sentence",
+        "kind": "sentence",
+        "page_no": 6
+      },
+      {
+        "id": "p7:21-592:sentence",
+        "kind": "sentence",
+        "page_no": 7
+      },
+      {
+        "id": "p8:0-902:sentence",
+        "kind": "sentence",
+        "page_no": 8
+      },
+      {
+        "id": "p11:272-369:adjacent",
+        "kind": "adjacent",
+        "page_no": 11
+      },
+      {
+        "id": "p11:637-769:adjacent",
+        "kind": "adjacent",
+        "page_no": 11
+      },
+      {
+        "id": "p15:352-428:sentence",
+        "kind": "sentence",
+        "page_no": 15
+      },
+      {
+        "id": "p16:134-401:sentence",
+        "kind": "sentence",
+        "page_no": 16
+      },
+      {
+        "id": "p17:0-596:sentence",
+        "kind": "sentence",
+        "page_no": 17
+      },
+      {
+        "id": "p18:29-496:sentence",
+        "kind": "sentence",
+        "page_no": 18
+      },
+      {
+        "id": "p19:216-359:sentence",
+        "kind": "sentence",
+        "page_no": 19
+      },
+      {
+        "id": "p19:474-948:sentence",
+        "kind": "sentence",
+        "page_no": 19
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "유불란",
+      "이몽란"
+    ],
+    "first_page": 1,
+    "weight": 16.5,
+    "windows": [
+      {
+        "id": "p1:689-791:adjacent",
+        "kind": "adjacent",
+        "page_no": 1
+      },
+      {
+        "id": "p2:90-127:sentence",
+        "kind": "sentence",
+        "page_no": 2
+      },
+      {
+        "id": "p2:491-575:sentence",
+        "kind": "sentence",
+        "page_no": 2
+      },
+      {
+        "id": "p3:37-116:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p4:601-677:sentence",
+        "kind": "sentence",
+        "page_no": 4
+      },
+      {
+        "id": "p4:784-919:adjacent",
+        "kind": "adjacent",
+        "page_no": 4
+      },
+      {
+        "id": "p4:920-1114:adjacent",
+        "kind": "adjacent",
+        "page_no": 4
+      },
+      {
+        "id": "p5:0-94:adjacent",
+        "kind": "adjacent",
+        "page_no": 5
+      },
+      {
+        "id": "p5:678-1015:adjacent",
+        "kind": "adjacent",
+        "page_no": 5
+      },
+      {
+        "id": "p6:58-571:adjacent",
+        "kind": "adjacent",
+        "page_no": 6
+      },
+      {
+        "id": "p6:217-602:adjacent",
+        "kind": "adjacent",
+        "page_no": 6
+      },
+      {
+        "id": "p6:572-625:adjacent",
+        "kind": "adjacent",
+        "page_no": 6
+      },
+      {
+        "id": "p6:736-1018:adjacent",
+        "kind": "adjacent",
+        "page_no": 6
+      },
+      {
+        "id": "p6:736-1018:dialogue",
+        "kind": "dialogue",
+        "page_no": 6
+      },
+      {
+        "id": "p7:21-592:sentence",
+        "kind": "sentence",
+        "page_no": 7
+      },
+      {
+        "id": "p8:0-902:sentence",
+        "kind": "sentence",
+        "page_no": 8
+      },
+      {
+        "id": "p9:182-265:adjacent",
+        "kind": "adjacent",
+        "page_no": 9
+      },
+      {
+        "id": "p10:258-329:sentence",
+        "kind": "sentence",
+        "page_no": 10
+      },
+      {
+        "id": "p15:352-428:sentence",
+        "kind": "sentence",
+        "page_no": 15
+      },
+      {
+        "id": "p16:134-637:adjacent",
+        "kind": "adjacent",
+        "page_no": 16
+      },
+      {
+        "id": "p17:0-596:sentence",
+        "kind": "sentence",
+        "page_no": 17
+      },
+      {
+        "id": "p18:29-496:sentence",
+        "kind": "sentence",
+        "page_no": 18
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "유불란",
+      "진대성"
+    ],
+    "first_page": 1,
+    "weight": 3.5,
+    "windows": [
+      {
+        "id": "p1:859-919:adjacent",
+        "kind": "adjacent",
+        "page_no": 1
+      },
+      {
+        "id": "p3:37-116:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p4:601-677:sentence",
+        "kind": "sentence",
+        "page_no": 4
+      },
+      {
+        "id": "p5:678-716:sentence",
+        "kind": "sentence",
+        "page_no": 5
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "김영애",
+      "이몽란"
+    ],
+    "first_page": 3,
+    "weight": 4.5,
+    "windows": [
+      {
+        "id": "p3:37-116:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p3:214-513:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p3:744-848:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p4:601-677:sentence",
+        "kind": "sentence",
+        "page_no": 4
+      },
+      {
+        "id": "p5:678-1015:adjacent",
+        "kind": "adjacent",
+        "page_no": 5
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "박영민",
+      "진대성"
+    ],
+    "first_page": 3,
+    "weight": 1.5,
+    "windows": [
+      {
+        "id": "p3:37-116:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p5:678-1015:adjacent",
+        "kind": "adjacent",
+        "page_no": 5
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "이몽란",
+      "진대성"
+    ],
+    "first_page": 3,
+    "weight": 2.5,
+    "windows": [
+      {
+        "id": "p3:37-116:sentence",
+        "kind": "sentence",
+        "page_no": 3
+      },
+      {
+        "id": "p4:601-677:sentence",
+        "kind": "sentence",
+        "page_no": 4
+      },
+      {
+        "id": "p5:678-1015:adjacent",
+        "kind": "adjacent",
+        "page_no": 5
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "박영민",
+      "백검사"
+    ],
+    "first_page": 10,
+    "weight": 4,
+    "windows": [
+      {
+        "id": "p10:858-900:sentence",
+        "kind": "sentence",
+        "page_no": 10
+      },
+      {
+        "id": "p16:134-401:sentence",
+        "kind": "sentence",
+        "page_no": 16
+      },
+      {
+        "id": "p17:0-660:adjacent",
+        "kind": "adjacent",
+        "page_no": 17
+      },
+      {
+        "id": "p18:29-496:sentence",
+        "kind": "sentence",
+        "page_no": 18
+      },
+      {
+        "id": "p19:142-359:adjacent",
+        "kind": "adjacent",
+        "page_no": 19
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "박영민",
+      "임경부"
+    ],
+    "first_page": 10,
+    "weight": 2.5,
+    "windows": [
+      {
+        "id": "p10:858-900:sentence",
+        "kind": "sentence",
+        "page_no": 10
+      },
+      {
+        "id": "p17:0-660:adjacent",
+        "kind": "adjacent",
+        "page_no": 17
+      },
+      {
+        "id": "p18:0-496:adjacent",
+        "kind": "adjacent",
+        "page_no": 18
+      },
+      {
+        "id": "p19:142-359:adjacent",
+        "kind": "adjacent",
+        "page_no": 19
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "백검사",
+      "임경부"
+    ],
+    "first_page": 10,
+    "weight": 9.5,
+    "windows": [
+      {
+        "id": "p10:805-857:sentence",
+        "kind": "sentence",
+        "page_no": 10
+      },
+      {
+        "id": "p10:858-900:sentence",
+        "kind": "sentence",
+        "page_no": 10
+      },
+      {
+        "id": "p13:423-498:sentence",
+        "kind": "sentence",
+        "page_no": 13
+      },
+      {
+        "id": "p13:499-545:sentence",
+        "kind": "sentence",
+        "page_no": 13
+      },
+      {
+        "id": "p13:628-707:sentence",
+        "kind": "sentence",
+        "page_no": 13
+      },
+      {
+        "id": "p15:592-699:sentence",
+        "kind": "sentence",
+        "page_no": 15
+      },
+      {
+        "id": "p17:597-660:sentence",
+        "kind": "sentence",
+        "page_no": 17
+      },
+      {
+        "id": "p18:0-496:adjacent",
+        "kind": "adjacent",
+        "page_no": 18
+      },
+      {
+        "id": "p18:826-859:sentence",
+        "kind": "sentence",
+        "page_no": 18
+      },
+      {
+        "id": "p19:142-215:sentence",
+        "kind": "sentence",
+        "page_no": 19
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "나용귀",
+      "백검사"
+    ],
+    "first_page": 13,
+    "weight": 8,
+    "windows": [
+      {
+        "id": "p13:423-498:sentence",
+        "kind": "sentence",
+        "page_no": 13
+      },
+      {
+        "id": "p13:596-707:adjacent",
+        "kind": "adjacent",
+        "page_no": 13
+      },
+      {
+        "id": "p13:628-782:adjacent",
+        "kind": "adjacent",
+        "page_no": 13
+      },
+      {
+        "id": "p15:592-699:sentence",
+        "kind": "sentence",
+        "page_no": 15
+      },
+      {
+        "id": "p16:134-401:sentence",
+        "kind": "sentence",
+        "page_no": 16
+      },
+      {
+        "id": "p17:597-660:sentence",
+        "kind": "sentence",
+        "page_no": 17
+      },
+      {
+        "id": "p17:661-775:adjacent",
+        "kind": "adjacent",
+        "page_no": 17
+      },
+      {
+        "id": "p17:719-827:adjacent",
+        "kind": "adjacent",
+        "page_no": 17
+      },
+      {
+        "id": "p18:29-496:sentence",
+        "kind": "sentence",
+        "page_no": 18
+      },
+      {
+        "id": "p18:497-859:adjacent",
+        "kind": "adjacent",
+        "page_no": 18
+      },
+      {
+        "id": "p19:142-359:adjacent",
+        "kind": "adjacent",
+        "page_no": 19
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "나용귀",
+      "임경부"
+    ],
+    "first_page": 13,
+    "weight": 7.5,
+    "windows": [
+      {
+        "id": "p13:423-498:sentence",
+        "kind": "sentence",
+        "page_no": 13
+      },
+      {
+        "id": "p13:596-707:adjacent",
+        "kind": "adjacent",
+        "page_no": 13
+      },
+      {
+        "id": "p13:628-782:adjacent",
+        "kind": "adjacent",
+        "page_no": 13
+      },
+      {
+        "id": "p15:592-699:sentence",
+        "kind": "sentence",
+        "page_no": 15
+      },
+      {
+        "id": "p15:759-829:sentence",
+        "kind": "sentence",
+        "page_no": 15
+      },
+      {
+        "id": "p16:0-31:sentence",
+        "kind": "sentence",
+        "page_no": 16
+      },
+      {
+        "id": "p17:597-660:sentence",
+        "kind": "sentence",
+        "page_no": 17
+      },
+      {
+        "id": "p18:0-496:adjacent",
+        "kind": "adjacent",
+        "page_no": 18
+      },
+      {
+        "id": "p18:497-859:adjacent",
+        "kind": "adjacent",
+        "page_no": 18
+      },
+      {
+        "id": "p19:142-359:adjacent",
+        "kind": "adjacent",
+        "page_no": 19
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "백검사",
+      "유불란"
+    ],
+    "first_page": 15,
+    "weight": 3.5,
+    "windows": [
+      {
+        "id": "p15:592-699:sentence",
+        "kind": "sentence",
+        "page_no": 15
+      },
+      {
+        "id": "p16:134-637:adjacent",
+        "kind": "adjacent",
+        "page_no": 16
+      },
+      {
+        "id": "p17:0-660:adjacent",
+        "kind": "adjacent",
+        "page_no": 17
+      },
+      {
+        "id": "p18:29-496:sentence",
+        "kind": "sentence",
+        "page_no": 18
+      },
+      {
+        "id": "p18:826-927:adjacent",
+        "kind": "adjacent",
+        "page_no": 18
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "유불란",
+      "임경부"
+    ],
+    "first_page": 15,
+    "weight": 3,
+    "windows": [
+      {
+        "id": "p15:592-699:sentence",
+        "kind": "sentence",
+        "page_no": 15
+      },
+      {
+        "id": "p15:759-934:adjacent",
+        "kind": "adjacent",
+        "page_no": 15
+      },
+      {
+        "id": "p17:0-660:adjacent",
+        "kind": "adjacent",
+        "page_no": 17
+      },
+      {
+        "id": "p18:0-496:adjacent",
+        "kind": "adjacent",
+        "page_no": 18
+      },
+      {
+        "id": "p18:826-927:adjacent",
+        "kind": "adjacent",
+        "page_no": 18
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "백검사",
+      "이몽란"
+    ],
+    "first_page": 16,
+    "weight": 3.5,
+    "windows": [
+      {
+        "id": "p16:134-401:sentence",
+        "kind": "sentence",
+        "page_no": 16
+      },
+      {
+        "id": "p17:0-660:adjacent",
+        "kind": "adjacent",
+        "page_no": 17
+      },
+      {
+        "id": "p18:29-496:sentence",
+        "kind": "sentence",
+        "page_no": 18
+      },
+      {
+        "id": "p18:497-859:adjacent",
+        "kind": "adjacent",
+        "page_no": 18
+      },
+      {
+        "id": "p19:142-359:adjacent",
+        "kind": "adjacent",
+        "page_no": 19
+      }
+    ]
+  },
+  {
+    "chapter_no": 1,
+    "pair": [
+      "이몽란",
+      "임경부"
+    ],
+    "first_page": 17,
+    "weight": 2,
+    "windows": [
+      {
+        "id": "p17:0-660:adjacent",
+        "kind": "adjacent",
+        "page_no": 17
+      },
+      {
+        "id": "p18:0-496:adjacent",
+        "kind": "adjacent",
+        "page_no": 18
+      },
+      {
+        "id": "p18:497-859:adjacent",
+        "kind": "adjacent",
+        "page_no": 18
+      },
+      {
+        "id": "p19:142-359:adjacent",
+        "kind": "adjacent",
+        "page_no": 19
+      }
+    ]
+  },
+  {
+    "chapter_no": 2,
+    "pair": [
+      "유불란",
+      "이몽란"
+    ],
+    "first_page": 21,
+    "weight": 28,
+    "windows": [
+      {
+        "id": "p21:174-250:sentence",
+        "kind": "sentence",
+        "page_no": 21
+      },
+      {
+        "id": "p21:251-308:sentence",
+        "kind": "sentence",
+        "page_no": 21
+      },
+      {
+        "id": "p21:806-892:sentence",
+        "kind": "sentence",
+        "page_no": 21
+      },
+      {
+        "id": "p21:893-935:sentence",
+        "kind": "sentence",
+        "page_no": 21
+      },
+      {
+        "id": "p21:936-981:sentence",
+        "kind": "sentence",
+        "page_no": 21
+      },
+      {
+        "id": "p21:982-1015:sentence",
+        "kind": "sentence",
+        "page_no": 21
+      },
+      {
+        "id": "p22:148-201:sentence",
+        "kind": "sentence",
+        "page_no": 22
+      },
+      {
+        "id": "p22:308-347:sentence",
+        "kind": "sentence",
+        "page_no": 22
+      },
+      {
+        "id": "p22:461-520:sentence",
+        "kind": "sentence",
+        "page_no": 22
+      },
+      {
+        "id": "p22:614-706:sentence",
+        "kind": "sentence",
+        "page_no": 22
+      },
+      {
+        "id": "p23:369-451:sentence",
+        "kind": "sentence",
+        "page_no": 23
+      },
+      {
+        "id": "p23:452-650:sentence",
+        "kind": "sentence",
+        "page_no": 23
+      },
+      {
+        "id": "p23:651-826:sentence",
+        "kind": "sentence",
+        "page_no": 23
+      },
+      {
+        "id": "p24:119-181:adjacent",
+        "kind": "adjacent",
+        "page_no": 24
+      },
+      {
+        "id": "p24:278-326:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      },
+      {
+        "id": "p24:327-426:dialogue",
+        "kind": "dialogue",
+        "page_no": 24
+      },
+      {
+        "id": "p24:327-426:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      },
+      {
+        "id": "p24:427-649:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      },
+      {
+        "id": "p24:720-866:adjacent",
+        "kind": "adjacent",
+        "page_no": 24
+      },
+      {
+        "id": "p25:410-503:sentence",
+        "kind": "sentence",
+        "page_no": 25
+      },
+      {
+        "id": "p25:504-525:sentence",
+        "kind": "sentence",
+        "page_no": 25
+      },
+      {
+        "id": "p25:806-851:sentence",
+        "kind": "sentence",
+        "page_no": 25
+      },
+      {
+        "id": "p25:913-1025:sentence",
+        "kind": "sentence",
+        "page_no": 25
+      },
+      {
+        "id": "p26:149-198:sentence",
+        "kind": "sentence",
+        "page_no": 26
+      },
+      {
+        "id": "p26:199-328:sentence",
+        "kind": "sentence",
+        "page_no": 26
+      },
+      {
+        "id": "p26:433-628:adjacent",
+        "kind": "adjacent",
+        "page_no": 26
+      },
+      {
+        "id": "p26:472-672:adjacent",
+        "kind": "adjacent",
+        "page_no": 26
+      },
+      {
+        "id": "p27:425-485:sentence",
+        "kind": "sentence",
+        "page_no": 27
+      },
+      {
+        "id": "p27:727-821:sentence",
+        "kind": "sentence",
+        "page_no": 27
+      },
+      {
+        "id": "p28:532-858:sentence",
+        "kind": "sentence",
+        "page_no": 28
+      }
+    ]
+  },
+  {
+    "chapter_no": 2,
+    "pair": [
+      "나용귀",
+      "이몽란"
+    ],
+    "first_page": 22,
+    "weight": 6.5,
+    "windows": [
+      {
+        "id": "p22:899-1004:sentence",
+        "kind": "sentence",
+        "page_no": 22
+      },
+      {
+        "id": "p23:312-368:sentence",
+        "kind": "sentence",
+        "page_no": 23
+      },
+      {
+        "id": "p23:369-451:sentence",
+        "kind": "sentence",
+        "page_no": 23
+      },
+      {
+        "id": "p23:651-826:sentence",
+        "kind": "sentence",
+        "page_no": 23
+      },
+      {
+        "id": "p24:327-426:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      },
+      {
+        "id": "p24:427-649:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      },
+      {
+        "id": "p24:720-866:adjacent",
+        "kind": "adjacent",
+        "page_no": 24
+      }
+    ]
+  },
+  {
+    "chapter_no": 2,
+    "pair": [
+      "박영민",
+      "유불란"
+    ],
+    "first_page": 22,
+    "weight": 5,
+    "windows": [
+      {
+        "id": "p22:148-238:adjacent",
+        "kind": "adjacent",
+        "page_no": 22
+      },
+      {
+        "id": "p22:461-555:adjacent",
+        "kind": "adjacent",
+        "page_no": 22
+      },
+      {
+        "id": "p23:312-451:adjacent",
+        "kind": "adjacent",
+        "page_no": 23
+      },
+      {
+        "id": "p24:327-426:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      },
+      {
+        "id": "p24:427-649:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      },
+      {
+        "id": "p26:433-628:adjacent",
+        "kind": "adjacent",
+        "page_no": 26
+      },
+      {
+        "id": "p26:472-672:adjacent",
+        "kind": "adjacent",
+        "page_no": 26
+      },
+      {
+        "id": "p26:752-949:adjacent",
+        "kind": "adjacent",
+        "page_no": 26
+      }
+    ]
+  },
+  {
+    "chapter_no": 2,
+    "pair": [
+      "박영민",
+      "이몽란"
+    ],
+    "first_page": 22,
+    "weight": 7,
+    "windows": [
+      {
+        "id": "p22:35-94:sentence",
+        "kind": "sentence",
+        "page_no": 22
+      },
+      {
+        "id": "p22:202-238:sentence",
+        "kind": "sentence",
+        "page_no": 22
+      },
+      {
+        "id": "p22:461-555:adjacent",
+        "kind": "adjacent",
+        "page_no": 22
+      },
+      {
+        "id": "p22:521-565:adjacent",
+        "kind": "adjacent",
+        "page_no": 22
+      },
+      {
+        "id": "p23:312-368:sentence",
+        "kind": "sentence",
+        "page_no": 23
+      },
+      {
+        "id": "p24:327-426:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      },
+      {
+        "id": "p24:427-649:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      },
+      {
+        "id": "p26:472-628:sentence",
+        "kind": "sentence",
+        "page_no": 26
+      }
+    ]
+  },
+  {
+    "chapter_no": 2,
+    "pair": [
+      "나용귀",
+      "박영민"
+    ],
+    "first_page": 23,
+    "weight": 4,
+    "windows": [
+      {
+        "id": "p23:312-368:sentence",
+        "kind": "sentence",
+        "page_no": 23
+      },
+      {
+        "id": "p24:327-426:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      },
+      {
+        "id": "p24:427-649:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      },
+      {
+        "id": "p26:865-949:sentence",
+        "kind": "sentence",
+        "page_no": 26
+      }
+    ]
+  },
+  {
+    "chapter_no": 2,
+    "pair": [
+      "나용귀",
+      "유불란"
+    ],
+    "first_page": 23,
+    "weight": 7.5,
+    "windows": [
+      {
+        "id": "p23:369-451:sentence",
+        "kind": "sentence",
+        "page_no": 23
+      },
+      {
+        "id": "p23:651-826:sentence",
+        "kind": "sentence",
+        "page_no": 23
+      },
+      {
+        "id": "p23:827-934:sentence",
+        "kind": "sentence",
+        "page_no": 23
+      },
+      {
+        "id": "p24:327-426:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      },
+      {
+        "id": "p24:427-649:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      },
+      {
+        "id": "p24:720-775:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      },
+      {
+        "id": "p26:752-949:adjacent",
+        "kind": "adjacent",
+        "page_no": 26
+      },
+      {
+        "id": "p31:633-1008:sentence",
+        "kind": "sentence",
+        "page_no": 31
+      }
+    ]
+  },
+  {
+    "chapter_no": 2,
+    "pair": [
+      "김영애",
+      "나용귀"
+    ],
+    "first_page": 24,
+    "weight": 1,
+    "windows": [
+      {
+        "id": "p24:427-649:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      }
+    ]
+  },
+  {
+    "chapter_no": 2,
+    "pair": [
+      "김영애",
+      "박영민"
+    ],
+    "first_page": 24,
+    "weight": 1,
+    "windows": [
+      {
+        "id": "p24:427-649:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      }
+    ]
+  },
+  {
+    "chapter_no": 2,
+    "pair": [
+      "김영애",
+      "유불란"
+    ],
+    "first_page": 24,
+    "weight": 2,
+    "windows": [
+      {
+        "id": "p24:427-649:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      },
+      {
+        "id": "p27:229-345:sentence",
+        "kind": "sentence",
+        "page_no": 27
+      }
+    ]
+  },
+  {
+    "chapter_no": 2,
+    "pair": [
+      "김영애",
+      "이몽란"
+    ],
+    "first_page": 24,
+    "weight": 1,
+    "windows": [
+      {
+        "id": "p24:427-649:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      }
+    ]
+  },
+  {
+    "chapter_no": 2,
+    "pair": [
+      "김영애",
+      "진대성"
+    ],
+    "first_page": 24,
+    "weight": 2,
+    "windows": [
+      {
+        "id": "p24:427-649:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      },
+      {
+        "id": "p27:229-345:sentence",
+        "kind": "sentence",
+        "page_no": 27
+      }
+    ]
+  },
+  {
+    "chapter_no": 2,
+    "pair": [
+      "나용귀",
+      "진대성"
+    ],
+    "first_page": 24,
+    "weight": 1,
+    "windows": [
+      {
+        "id": "p24:427-649:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      }
+    ]
+  },
+  {
+    "chapter_no": 2,
+    "pair": [
+      "박영민",
+      "진대성"
+    ],
+    "first_page": 24,
+    "weight": 1,
+    "windows": [
+      {
+        "id": "p24:427-649:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      }
+    ]
+  },
+  {
+    "chapter_no": 2,
+    "pair": [
+      "유불란",
+      "진대성"
+    ],
+    "first_page": 24,
+    "weight": 2,
+    "windows": [
+      {
+        "id": "p24:427-649:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      },
+      {
+        "id": "p27:229-345:sentence",
+        "kind": "sentence",
+        "page_no": 27
+      }
+    ]
+  },
+  {
+    "chapter_no": 2,
+    "pair": [
+      "이몽란",
+      "진대성"
+    ],
+    "first_page": 24,
+    "weight": 1,
+    "windows": [
+      {
+        "id": "p24:427-649:sentence",
+        "kind": "sentence",
+        "page_no": 24
+      }
+    ]
+  },
+  {
+    "chapter_no": 3,
+    "pair": [
+      "나용귀",
+      "박영민"
+    ],
+    "first_page": 45,
+    "weight": 1.5,
+    "windows": [
+      {
+        "id": "p45:817-998:sentence",
+        "kind": "sentence",
+        "page_no": 45
+      },
+      {
+        "id": "p46:37-342:adjacent",
+        "kind": "adjacent",
+        "page_no": 46
+      }
+    ]
+  },
+  {
+    "chapter_no": 3,
+    "pair": [
+      "나용귀",
+      "임경부"
+    ],
+    "first_page": 45,
+    "weight": 2,
+    "windows": [
+      {
+        "id": "p45:817-998:sentence",
+        "kind": "sentence",
+        "page_no": 45
+      },
+      {
+        "id": "p46:204-342:sentence",
+        "kind": "sentence",
+        "page_no": 46
+      }
+    ]
+  },
+  {
+    "chapter_no": 3,
+    "pair": [
+      "박영민",
+      "임경부"
+    ],
+    "first_page": 45,
+    "weight": 4,
+    "windows": [
+      {
+        "id": "p45:817-998:sentence",
+        "kind": "sentence",
+        "page_no": 45
+      },
+      {
+        "id": "p46:37-203:sentence",
+        "kind": "sentence",
+        "page_no": 46
+      },
+      {
+        "id": "p48:109-167:adjacent",
+        "kind": "adjacent",
+        "page_no": 48
+      },
+      {
+        "id": "p48:151-194:adjacent",
+        "kind": "adjacent",
+        "page_no": 48
+      },
+      {
+        "id": "p48:659-848:sentence",
+        "kind": "sentence",
+        "page_no": 48
+      }
+    ]
+  },
+  {
+    "chapter_no": 3,
+    "pair": [
+      "나용귀",
+      "유불란"
+    ],
+    "first_page": 46,
+    "weight": 1,
+    "windows": [
+      {
+        "id": "p46:204-342:sentence",
+        "kind": "sentence",
+        "page_no": 46
+      }
+    ]
+  },
+  {
+    "chapter_no": 3,
+    "pair": [
+      "나용귀",
+      "이몽란"
+    ],
+    "first_page": 46,
+    "weight": 1,
+    "windows": [
+      {
+        "id": "p46:204-342:sentence",
+        "kind": "sentence",
+        "page_no": 46
+      }
+    ]
+  },
+  {
+    "chapter_no": 3,
+    "pair": [
+      "박영민",
+      "유불란"
+    ],
+    "first_page": 46,
+    "weight": 2,
+    "windows": [
+      {
+        "id": "p46:37-203:sentence",
+        "kind": "sentence",
+        "page_no": 46
+      },
+      {
+        "id": "p48:659-848:sentence",
+        "kind": "sentence",
+        "page_no": 48
+      }
+    ]
+  },
+  {
+    "chapter_no": 3,
+    "pair": [
+      "박영민",
+      "이몽란"
+    ],
+    "first_page": 46,
+    "weight": 3,
+    "windows": [
+      {
+        "id": "p46:37-203:sentence",
+        "kind": "sentence",
+        "page_no": 46
+      },
+      {
+        "id": "p48:151-167:sentence",
+        "kind": "sentence",
+        "page_no": 48
+      },
+      {
+        "id": "p48:659-848:sentence",
+        "kind": "sentence",
+        "page_no": 48
+      }
+    ]
+  },
+  {
+    "chapter_no": 3,
+    "pair": [
+      "백검사",
+      "임경부"
+    ],
+    "first_page": 46,
+    "weight": 5,
+    "windows": [
+      {
+        "id": "p46:792-842:sentence",
+        "kind": "sentence",
+        "page_no": 46
+      },
+      {
+        "id": "p46:843-925:sentence",
+        "kind": "sentence",
+        "page_no": 46
+      },
+      {
+        "id": "p48:109-150:sentence",
+        "kind": "sentence",
+        "page_no": 48
+      },
+      {
+        "id": "p48:471-556:sentence",
+        "kind": "sentence",
+        "page_no": 48
+      },
+      {
+        "id": "p48:594-658:sentence",
+        "kind": "sentence",
+        "page_no": 48
+      }
+    ]
+  },
+  {
+    "chapter_no": 3,
+    "pair": [
+      "유불란",
+      "이몽란"
+    ],
+    "first_page": 46,
+    "weight": 3,
+    "windows": [
+      {
+        "id": "p46:37-203:sentence",
+        "kind": "sentence",
+        "page_no": 46
+      },
+      {
+        "id": "p46:204-342:sentence",
+        "kind": "sentence",
+        "page_no": 46
+      },
+      {
+        "id": "p48:659-848:sentence",
+        "kind": "sentence",
+        "page_no": 48
+      }
+    ]
+  },
+  {
+    "chapter_no": 3,
+    "pair": [
+      "유불란",
+      "임경부"
+    ],
+    "first_page": 46,
+    "weight": 3,
+    "windows": [
+      {
+        "id": "p46:37-203:sentence",
+        "kind": "sentence",
+        "page_no": 46
+      },
+      {
+        "id": "p46:204-342:sentence",
+        "kind": "sentence",
+        "page_no": 46
+      },
+      {
+        "id": "p48:659-848:sentence",
+        "kind": "sentence",
+        "page_no": 48
+      }
+    ]
+  },
+  {
+    "chapter_no": 3,
+    "pair": [
+      "이몽란",
+      "임경부"
+    ],
+    "first_page": 46,
+    "weight": 5,
+    "windows": [
+      {
+        "id": "p46:37-203:sentence",
+        "kind": "sentence",
+        "page_no": 46
+      },
+      {
+        "id": "p46:204-342:sentence",
+        "kind": "sentence",
+        "page_no": 46
+      },
+      {
+        "id": "p48:109-167:adjacent",
+        "kind": "adjacent",
+        "page_no": 48
+      },
+      {
+        "id": "p48:151-194:adjacent",
+        "kind": "adjacent",
+        "page_no": 48
+      },
+      {
+        "id": "p48:195-294:sentence",
+        "kind": "sentence",
+        "page_no": 48
+      },
+      {
+        "id": "p48:659-848:sentence",
+        "kind": "sentence",
+        "page_no": 48
+      }
+    ]
+  },
+  {
+    "chapter_no": 3,
+    "pair": [
+      "박영민",
+      "백검사"
+    ],
+    "first_page": 48,
+    "weight": 1,
+    "windows": [
+      {
+        "id": "p48:109-167:adjacent",
+        "kind": "adjacent",
+        "page_no": 48
+      },
+      {
+        "id": "p48:594-848:adjacent",
+        "kind": "adjacent",
+        "page_no": 48
+      }
+    ]
+  },
+  {
+    "chapter_no": 3,
+    "pair": [
+      "백검사",
+      "유불란"
+    ],
+    "first_page": 48,
+    "weight": 0.5,
+    "windows": [
+      {
+        "id": "p48:594-848:adjacent",
+        "kind": "adjacent",
+        "page_no": 48
+      }
+    ]
+  },
+  {
+    "chapter_no": 3,
+    "pair": [
+      "백검사",
+      "이몽란"
+    ],
+    "first_page": 48,
+    "weight": 1,
+    "windows": [
+      {
+        "id": "p48:109-167:adjacent",
+        "kind": "adjacent",
+        "page_no": 48
+      },
+      {
+        "id": "p48:594-848:adjacent",
+        "kind": "adjacent",
+        "page_no": 48
+      }
+    ]
+  },
+  {
+    "chapter_no": 4,
+    "pair": [
+      "나용귀",
+      "박영민"
+    ],
+    "first_page": 49,
+    "weight": 9,
+    "windows": [
+      {
+        "id": "p49:345-448:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p49:449-477:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p49:497-906:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p50:266-797:sentence",
+        "kind": "sentence",
+        "page_no": 50
+      },
+      {
+        "id": "p50:847-986:sentence",
+        "kind": "sentence",
+        "page_no": 50
+      },
+      {
+        "id": "p51:0-132:sentence",
+        "kind": "sentence",
+        "page_no": 51
+      },
+      {
+        "id": "p51:133-1108:adjacent",
+        "kind": "adjacent",
+        "page_no": 51
+      },
+      {
+        "id": "p52:0-808:adjacent",
+        "kind": "adjacent",
+        "page_no": 52
+      },
+      {
+        "id": "p53:0-602:sentence",
+        "kind": "sentence",
+        "page_no": 53
+      },
+      {
+        "id": "p54:0-392:sentence",
+        "kind": "sentence",
+        "page_no": 54
+      }
+    ]
+  },
+  {
+    "chapter_no": 4,
+    "pair": [
+      "나용귀",
+      "백검사"
+    ],
+    "first_page": 49,
+    "weight": 2.5,
+    "windows": [
+      {
+        "id": "p49:345-448:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p49:497-906:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p55:0-204:adjacent",
+        "kind": "adjacent",
+        "page_no": 55
+      }
+    ]
+  },
+  {
+    "chapter_no": 4,
+    "pair": [
+      "나용귀",
+      "유불란"
+    ],
+    "first_page": 49,
+    "weight": 4.5,
+    "windows": [
+      {
+        "id": "p49:497-906:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p50:266-797:sentence",
+        "kind": "sentence",
+        "page_no": 50
+      },
+      {
+        "id": "p51:133-643:sentence",
+        "kind": "sentence",
+        "page_no": 51
+      },
+      {
+        "id": "p52:0-808:adjacent",
+        "kind": "adjacent",
+        "page_no": 52
+      },
+      {
+        "id": "p54:0-392:sentence",
+        "kind": "sentence",
+        "page_no": 54
+      }
+    ]
+  },
+  {
+    "chapter_no": 4,
+    "pair": [
+      "나용귀",
+      "이몽란"
+    ],
+    "first_page": 49,
+    "weight": 5.5,
+    "windows": [
+      {
+        "id": "p49:497-906:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p50:266-797:sentence",
+        "kind": "sentence",
+        "page_no": 50
+      },
+      {
+        "id": "p51:133-643:sentence",
+        "kind": "sentence",
+        "page_no": 51
+      },
+      {
+        "id": "p53:0-602:sentence",
+        "kind": "sentence",
+        "page_no": 53
+      },
+      {
+        "id": "p54:393-708:sentence",
+        "kind": "sentence",
+        "page_no": 54
+      },
+      {
+        "id": "p55:0-204:adjacent",
+        "kind": "adjacent",
+        "page_no": 55
+      }
+    ]
+  },
+  {
+    "chapter_no": 4,
+    "pair": [
+      "나용귀",
+      "임경부"
+    ],
+    "first_page": 49,
+    "weight": 13,
+    "windows": [
+      {
+        "id": "p49:345-448:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p49:497-906:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p50:0-104:adjacent",
+        "kind": "adjacent",
+        "page_no": 50
+      },
+      {
+        "id": "p50:105-199:sentence",
+        "kind": "sentence",
+        "page_no": 50
+      },
+      {
+        "id": "p50:266-797:sentence",
+        "kind": "sentence",
+        "page_no": 50
+      },
+      {
+        "id": "p50:847-986:sentence",
+        "kind": "sentence",
+        "page_no": 50
+      },
+      {
+        "id": "p51:0-132:sentence",
+        "kind": "sentence",
+        "page_no": 51
+      },
+      {
+        "id": "p51:133-643:sentence",
+        "kind": "sentence",
+        "page_no": 51
+      },
+      {
+        "id": "p52:0-808:adjacent",
+        "kind": "adjacent",
+        "page_no": 52
+      },
+      {
+        "id": "p53:0-602:sentence",
+        "kind": "sentence",
+        "page_no": 53
+      },
+      {
+        "id": "p53:804-937:sentence",
+        "kind": "sentence",
+        "page_no": 53
+      },
+      {
+        "id": "p53:938-979:sentence",
+        "kind": "sentence",
+        "page_no": 53
+      },
+      {
+        "id": "p54:393-708:sentence",
+        "kind": "sentence",
+        "page_no": 54
+      },
+      {
+        "id": "p55:269-328:sentence",
+        "kind": "sentence",
+        "page_no": 55
+      }
+    ]
+  },
+  {
+    "chapter_no": 4,
+    "pair": [
+      "박영민",
+      "백검사"
+    ],
+    "first_page": 49,
+    "weight": 2,
+    "windows": [
+      {
+        "id": "p49:345-448:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p49:497-906:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      }
+    ]
+  },
+  {
+    "chapter_no": 4,
+    "pair": [
+      "박영민",
+      "유불란"
+    ],
+    "first_page": 49,
+    "weight": 5,
+    "windows": [
+      {
+        "id": "p49:497-906:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p50:266-797:sentence",
+        "kind": "sentence",
+        "page_no": 50
+      },
+      {
+        "id": "p51:0-643:adjacent",
+        "kind": "adjacent",
+        "page_no": 51
+      },
+      {
+        "id": "p51:133-1108:adjacent",
+        "kind": "adjacent",
+        "page_no": 51
+      },
+      {
+        "id": "p52:49-808:sentence",
+        "kind": "sentence",
+        "page_no": 52
+      },
+      {
+        "id": "p54:0-392:sentence",
+        "kind": "sentence",
+        "page_no": 54
+      }
+    ]
+  },
+  {
+    "chapter_no": 4,
+    "pair": [
+      "박영민",
+      "이몽란"
+    ],
+    "first_page": 49,
+    "weight": 5,
+    "windows": [
+      {
+        "id": "p49:497-906:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p50:266-797:sentence",
+        "kind": "sentence",
+        "page_no": 50
+      },
+      {
+        "id": "p51:0-643:adjacent",
+        "kind": "adjacent",
+        "page_no": 51
+      },
+      {
+        "id": "p51:644-1108:sentence",
+        "kind": "sentence",
+        "page_no": 51
+      },
+      {
+        "id": "p53:0-602:sentence",
+        "kind": "sentence",
+        "page_no": 53
+      },
+      {
+        "id": "p54:0-708:adjacent",
+        "kind": "adjacent",
+        "page_no": 54
+      }
+    ]
+  },
+  {
+    "chapter_no": 4,
+    "pair": [
+      "박영민",
+      "임경부"
+    ],
+    "first_page": 49,
+    "weight": 8,
+    "windows": [
+      {
+        "id": "p49:345-448:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p49:497-906:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p50:266-797:sentence",
+        "kind": "sentence",
+        "page_no": 50
+      },
+      {
+        "id": "p50:847-986:sentence",
+        "kind": "sentence",
+        "page_no": 50
+      },
+      {
+        "id": "p51:0-132:sentence",
+        "kind": "sentence",
+        "page_no": 51
+      },
+      {
+        "id": "p51:133-1108:adjacent",
+        "kind": "adjacent",
+        "page_no": 51
+      },
+      {
+        "id": "p52:49-808:sentence",
+        "kind": "sentence",
+        "page_no": 52
+      },
+      {
+        "id": "p53:0-602:sentence",
+        "kind": "sentence",
+        "page_no": 53
+      },
+      {
+        "id": "p54:0-708:adjacent",
+        "kind": "adjacent",
+        "page_no": 54
+      }
+    ]
+  },
+  {
+    "chapter_no": 4,
+    "pair": [
+      "백검사",
+      "유불란"
+    ],
+    "first_page": 49,
+    "weight": 1.5,
+    "windows": [
+      {
+        "id": "p49:160-259:adjacent",
+        "kind": "adjacent",
+        "page_no": 49
+      },
+      {
+        "id": "p49:497-906:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      }
+    ]
+  },
+  {
+    "chapter_no": 4,
+    "pair": [
+      "백검사",
+      "이몽란"
+    ],
+    "first_page": 49,
+    "weight": 3,
+    "windows": [
+      {
+        "id": "p49:211-259:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p49:497-906:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p55:114-204:sentence",
+        "kind": "sentence",
+        "page_no": 55
+      }
+    ]
+  },
+  {
+    "chapter_no": 4,
+    "pair": [
+      "백검사",
+      "임경부"
+    ],
+    "first_page": 49,
+    "weight": 4.5,
+    "windows": [
+      {
+        "id": "p49:211-259:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p49:345-448:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p49:497-906:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p49:907-959:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p55:114-268:adjacent",
+        "kind": "adjacent",
+        "page_no": 55
+      }
+    ]
+  },
+  {
+    "chapter_no": 4,
+    "pair": [
+      "유불란",
+      "이몽란"
+    ],
+    "first_page": 49,
+    "weight": 6.5,
+    "windows": [
+      {
+        "id": "p49:54-119:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p49:160-210:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p49:497-906:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p50:266-797:sentence",
+        "kind": "sentence",
+        "page_no": 50
+      },
+      {
+        "id": "p51:133-643:sentence",
+        "kind": "sentence",
+        "page_no": 51
+      },
+      {
+        "id": "p54:0-708:adjacent",
+        "kind": "adjacent",
+        "page_no": 54
+      },
+      {
+        "id": "p54:926-952:sentence",
+        "kind": "sentence",
+        "page_no": 54
+      }
+    ]
+  },
+  {
+    "chapter_no": 4,
+    "pair": [
+      "유불란",
+      "임경부"
+    ],
+    "first_page": 49,
+    "weight": 6,
+    "windows": [
+      {
+        "id": "p49:160-259:adjacent",
+        "kind": "adjacent",
+        "page_no": 49
+      },
+      {
+        "id": "p49:497-906:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p50:266-797:sentence",
+        "kind": "sentence",
+        "page_no": 50
+      },
+      {
+        "id": "p51:133-643:sentence",
+        "kind": "sentence",
+        "page_no": 51
+      },
+      {
+        "id": "p52:49-808:sentence",
+        "kind": "sentence",
+        "page_no": 52
+      },
+      {
+        "id": "p54:0-708:adjacent",
+        "kind": "adjacent",
+        "page_no": 54
+      },
+      {
+        "id": "p54:851-925:sentence",
+        "kind": "sentence",
+        "page_no": 54
+      }
+    ]
+  },
+  {
+    "chapter_no": 4,
+    "pair": [
+      "이몽란",
+      "임경부"
+    ],
+    "first_page": 49,
+    "weight": 7,
+    "windows": [
+      {
+        "id": "p49:211-259:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p49:497-906:sentence",
+        "kind": "sentence",
+        "page_no": 49
+      },
+      {
+        "id": "p50:266-797:sentence",
+        "kind": "sentence",
+        "page_no": 50
+      },
+      {
+        "id": "p51:133-643:sentence",
+        "kind": "sentence",
+        "page_no": 51
+      },
+      {
+        "id": "p53:0-602:sentence",
+        "kind": "sentence",
+        "page_no": 53
+      },
+      {
+        "id": "p54:393-708:sentence",
+        "kind": "sentence",
+        "page_no": 54
+      },
+      {
+        "id": "p54:851-952:adjacent",
+        "kind": "adjacent",
+        "page_no": 54
+      },
+      {
+        "id": "p55:114-268:adjacent",
+        "kind": "adjacent",
+        "page_no": 55
+      }
+    ]
+  },
+  {
+    "chapter_no": 5,
+    "pair": [
+      "나용귀",
+      "백검사"
+    ],
+    "first_page": 56,
+    "weight": 17.5,
+    "windows": [
+      {
+        "id": "p56:21-117:sentence",
+        "kind": "sentence",
+        "page_no": 56
+      },
+      {
+        "id": "p56:576-723:sentence",
+        "kind": "sentence",
+        "page_no": 56
+      },
+      {
+        "id": "p60:562-639:sentence",
+        "kind": "sentence",
+        "page_no": 60
+      },
+      {
+        "id": "p60:640-684:sentence",
+        "kind": "sentence",
+        "page_no": 60
+      },
+      {
+        "id": "p60:685-817:adjacent",
+        "kind": "adjacent",
+        "page_no": 60
+      },
+      {
+        "id": "p60:818-908:sentence",
+        "kind": "sentence",
+        "page_no": 60
+      },
+      {
+        "id": "p60:943-1010:sentence",
+        "kind": "sentence",
+        "page_no": 60
+      },
+      {
+        "id": "p61:149-253:sentence",
+        "kind": "sentence",
+        "page_no": 61
+      },
+      {
+        "id": "p61:346-830:adjacent",
+        "kind": "adjacent",
+        "page_no": 61
+      },
+      {
+        "id": "p62:0-740:sentence",
+        "kind": "sentence",
+        "page_no": 62
+      },
+      {
+        "id": "p62:741-859:sentence",
+        "kind": "sentence",
+        "page_no": 62
+      },
+      {
+        "id": "p63:33-85:sentence",
+        "kind": "sentence",
+        "page_no": 63
+      },
+      {
+        "id": "p64:0-169:adjacent",
+        "kind": "adjacent",
+        "page_no": 64
+      },
+      {
+        "id": "p64:108-538:adjacent",
+        "kind": "adjacent",
+        "page_no": 64
+      },
+      {
+        "id": "p65:0-35:sentence",
+        "kind": "sentence",
+        "page_no": 65
+      },
+      {
+        "id": "p65:725-937:sentence",
+        "kind": "sentence",
+        "page_no": 65
+      },
+      {
+        "id": "p66:295-408:sentence",
+        "kind": "sentence",
+        "page_no": 66
+      },
+      {
+        "id": "p66:528-719:sentence",
+        "kind": "sentence",
+        "page_no": 66
+      },
+      {
+        "id": "p67:0-467:sentence",
+        "kind": "sentence",
+        "page_no": 67
+      },
+      {
+        "id": "p68:12-86:adjacent",
+        "kind": "adjacent",
+        "page_no": 68
+      }
+    ]
+  },
+  {
+    "chapter_no": 5,
+    "pair": [
+      "나용귀",
+      "유불란"
+    ],
+    "first_page": 56,
+    "weight": 14.5,
+    "windows": [
+      {
+        "id": "p56:21-117:sentence",
+        "kind": "sentence",
+        "page_no": 56
+      },
+      {
+        "id": "p56:576-1082:adjacent",
+        "kind": "adjacent",
+        "page_no": 56
+      },
+      {
+        "id": "p57:38-135:sentence",
+        "kind": "sentence",
+        "page_no": 57
+      },
+      {
+        "id": "p57:136-285:sentence",
+        "kind": "sentence",
+        "page_no": 57
+      },
+      {
+        "id": "p58:872-1084:sentence",
+        "kind": "sentence",
+        "page_no": 58
+      },
+      {
+        "id": "p59:0-844:sentence",
+        "kind": "sentence",
+        "page_no": 59
+      },
+      {
+        "id": "p61:346-681:sentence",
+        "kind": "sentence",
+        "page_no": 61
+      },
+      {
+        "id": "p62:0-740:sentence",
+        "kind": "sentence",
+        "page_no": 62
+      },
+      {
+        "id": "p62:741-1063:adjacent",
+        "kind": "adjacent",
+        "page_no": 62
+      },
+      {
+        "id": "p63:33-272:adjacent",
+        "kind": "adjacent",
+        "page_no": 63
+      },
+      {
+        "id": "p64:108-538:adjacent",
+        "kind": "adjacent",
+        "page_no": 64
+      },
+      {
+        "id": "p66:175-294:adjacent",
+        "kind": "adjacent",
+        "page_no": 66
+      },
+      {
+        "id": "p66:245-408:adjacent",
+        "kind": "adjacent",
+        "page_no": 66
+      },
+      {
+        "id": "p66:528-970:adjacent",
+        "kind": "adjacent",
+        "page_no": 66
+      },
+      {
+        "id": "p67:0-467:sentence",
+        "kind": "sentence",
+        "page_no": 67
+      },
+      {
+        "id": "p67:468-522:sentence",
+        "kind": "sentence",
+        "page_no": 67
+      },
+      {
+        "id": "p67:523-629:sentence",
+        "kind": "sentence",
+        "page_no": 67
+      },
+      {
+        "id": "p67:739-852:adjacent",
+        "kind": "adjacent",
+        "page_no": 67
+      },
+      {
+        "id": "p68:87-132:adjacent",
+        "kind": "adjacent",
+        "page_no": 68
+      }
+    ]
+  },
+  {
+    "chapter_no": 5,
+    "pair": [
+      "나용귀",
+      "이몽란"
+    ],
+    "first_page": 56,
+    "weight": 8.5,
+    "windows": [
+      {
+        "id": "p56:21-527:adjacent",
+        "kind": "adjacent",
+        "page_no": 56
+      },
+      {
+        "id": "p57:38-135:sentence",
+        "kind": "sentence",
+        "page_no": 57
+      },
+      {
+        "id": "p58:872-1084:sentence",
+        "kind": "sentence",
+        "page_no": 58
+      },
+      {
+        "id": "p59:0-844:sentence",
+        "kind": "sentence",
+        "page_no": 59
+      },
+      {
+        "id": "p60:0-494:sentence",
+        "kind": "sentence",
+        "page_no": 60
+      },
+      {
+        "id": "p61:346-681:sentence",
+        "kind": "sentence",
+        "page_no": 61
+      },
+      {
+        "id": "p62:0-740:sentence",
+        "kind": "sentence",
+        "page_no": 62
+      },
+      {
+        "id": "p63:33-272:adjacent",
+        "kind": "adjacent",
+        "page_no": 63
+      },
+      {
+        "id": "p66:528-970:adjacent",
+        "kind": "adjacent",
+        "page_no": 66
+      },
+      {
+        "id": "p67:0-467:sentence",
+        "kind": "sentence",
+        "page_no": 67
+      }
+    ]
+  },
+  {
+    "chapter_no": 5,
+    "pair": [
+      "나용귀",
+      "임경부"
+    ],
+    "first_page": 56,
+    "weight": 8.5,
+    "windows": [
+      {
+        "id": "p56:21-117:sentence",
+        "kind": "sentence",
+        "page_no": 56
+      },
+      {
+        "id": "p56:576-723:sentence",
+        "kind": "sentence",
+        "page_no": 56
+      },
+      {
+        "id": "p57:0-135:adjacent",
+        "kind": "adjacent",
+        "page_no": 57
+      },
+      {
+        "id": "p57:136-491:adjacent",
+        "kind": "adjacent",
+        "page_no": 57
+      },
+      {
+        "id": "p59:0-844:sentence",
+        "kind": "sentence",
+        "page_no": 59
+      },
+      {
+        "id": "p60:818-908:sentence",
+        "kind": "sentence",
+        "page_no": 60
+      },
+      {
+        "id": "p61:346-681:sentence",
+        "kind": "sentence",
+        "page_no": 61
+      },
+      {
+        "id": "p64:108-538:adjacent",
+        "kind": "adjacent",
+        "page_no": 64
+      },
+      {
+        "id": "p66:175-294:adjacent",
+        "kind": "adjacent",
+        "page_no": 66
+      },
+      {
+        "id": "p66:245-408:adjacent",
+        "kind": "adjacent",
+        "page_no": 66
+      },
+      {
+        "id": "p67:739-852:adjacent",
+        "kind": "adjacent",
+        "page_no": 67
+      },
+      {
+        "id": "p68:12-86:adjacent",
+        "kind": "adjacent",
+        "page_no": 68
+      }
+    ]
+  },
+  {
+    "chapter_no": 5,
+    "pair": [
+      "백검사",
+      "유불란"
+    ],
+    "first_page": 56,
+    "weight": 8.5,
+    "windows": [
+      {
+        "id": "p56:21-117:sentence",
+        "kind": "sentence",
+        "page_no": 56
+      },
+      {
+        "id": "p56:576-1082:adjacent",
+        "kind": "adjacent",
+        "page_no": 56
+      },
+      {
+        "id": "p61:346-830:adjacent",
+        "kind": "adjacent",
+        "page_no": 61
+      },
+      {
+        "id": "p62:0-740:sentence",
+        "kind": "sentence",
+        "page_no": 62
+      },
+      {
+        "id": "p62:741-1063:adjacent",
+        "kind": "adjacent",
+        "page_no": 62
+      },
+      {
+        "id": "p63:33-272:adjacent",
+        "kind": "adjacent",
+        "page_no": 63
+      },
+      {
+        "id": "p64:170-538:sentence",
+        "kind": "sentence",
+        "page_no": 64
+      },
+      {
+        "id": "p64:539-607:sentence",
+        "kind": "sentence",
+        "page_no": 64
+      },
+      {
+        "id": "p66:245-408:adjacent",
+        "kind": "adjacent",
+        "page_no": 66
+      },
+      {
+        "id": "p66:528-970:adjacent",
+        "kind": "adjacent",
+        "page_no": 66
+      },
+      {
+        "id": "p67:0-467:sentence",
+        "kind": "sentence",
+        "page_no": 67
+      },
+      {
+        "id": "p68:59-98:adjacent",
+        "kind": "adjacent",
+        "page_no": 68
+      }
+    ]
+  },
+  {
+    "chapter_no": 5,
+    "pair": [
+      "백검사",
+      "이몽란"
+    ],
+    "first_page": 56,
+    "weight": 4,
+    "windows": [
+      {
+        "id": "p56:21-527:adjacent",
+        "kind": "adjacent",
+        "page_no": 56
+      },
+      {
+        "id": "p61:346-830:adjacent",
+        "kind": "adjacent",
+        "page_no": 61
+      },
+      {
+        "id": "p62:0-740:sentence",
+        "kind": "sentence",
+        "page_no": 62
+      },
+      {
+        "id": "p63:33-272:adjacent",
+        "kind": "adjacent",
+        "page_no": 63
+      },
+      {
+        "id": "p66:528-970:adjacent",
+        "kind": "adjacent",
+        "page_no": 66
+      },
+      {
+        "id": "p67:0-467:sentence",
+        "kind": "sentence",
+        "page_no": 67
+      }
+    ]
+  },
+  {
+    "chapter_no": 5,
+    "pair": [
+      "백검사",
+      "임경부"
+    ],
+    "first_page": 56,
+    "weight": 8,
+    "windows": [
+      {
+        "id": "p56:21-117:sentence",
+        "kind": "sentence",
+        "page_no": 56
+      },
+      {
+        "id": "p56:576-723:sentence",
+        "kind": "sentence",
+        "page_no": 56
+      },
+      {
+        "id": "p60:818-908:sentence",
+        "kind": "sentence",
+        "page_no": 60
+      },
+      {
+        "id": "p61:346-830:adjacent",
+        "kind": "adjacent",
+        "page_no": 61
+      },
+      {
+        "id": "p64:170-538:sentence",
+        "kind": "sentence",
+        "page_no": 64
+      },
+      {
+        "id": "p64:539-607:sentence",
+        "kind": "sentence",
+        "page_no": 64
+      },
+      {
+        "id": "p64:608-807:sentence",
+        "kind": "sentence",
+        "page_no": 64
+      },
+      {
+        "id": "p66:245-408:adjacent",
+        "kind": "adjacent",
+        "page_no": 66
+      },
+      {
+        "id": "p68:59-86:sentence",
+        "kind": "sentence",
+        "page_no": 68
+      }
+    ]
+  },
+  {
+    "chapter_no": 5,
+    "pair": [
+      "유불란",
+      "이몽란"
+    ],
+    "first_page": 56,
+    "weight": 10,
+    "windows": [
+      {
+        "id": "p56:118-527:sentence",
+        "kind": "sentence",
+        "page_no": 56
+      },
+      {
+        "id": "p57:38-135:sentence",
+        "kind": "sentence",
+        "page_no": 57
+      },
+      {
+        "id": "p57:680-751:adjacent",
+        "kind": "adjacent",
+        "page_no": 57
+      },
+      {
+        "id": "p57:719-795:adjacent",
+        "kind": "adjacent",
+        "page_no": 57
+      },
+      {
+        "id": "p58:872-1084:sentence",
+        "kind": "sentence",
+        "page_no": 58
+      },
+      {
+        "id": "p59:0-844:sentence",
+        "kind": "sentence",
+        "page_no": 59
+      },
+      {
+        "id": "p61:346-681:sentence",
+        "kind": "sentence",
+        "page_no": 61
+      },
+      {
+        "id": "p62:0-740:sentence",
+        "kind": "sentence",
+        "page_no": 62
+      },
+      {
+        "id": "p63:86-272:sentence",
+        "kind": "sentence",
+        "page_no": 63
+      },
+      {
+        "id": "p66:720-970:sentence",
+        "kind": "sentence",
+        "page_no": 66
+      },
+      {
+        "id": "p67:0-467:sentence",
+        "kind": "sentence",
+        "page_no": 67
+      }
+    ]
+  },
+  {
+    "chapter_no": 5,
+    "pair": [
+      "유불란",
+      "임경부"
+    ],
+    "first_page": 56,
+    "weight": 10.5,
+    "windows": [
+      {
+        "id": "p56:21-117:sentence",
+        "kind": "sentence",
+        "page_no": 56
+      },
+      {
+        "id": "p56:576-1082:adjacent",
+        "kind": "adjacent",
+        "page_no": 56
+      },
+      {
+        "id": "p57:0-135:adjacent",
+        "kind": "adjacent",
+        "page_no": 57
+      },
+      {
+        "id": "p57:286-491:sentence",
+        "kind": "sentence",
+        "page_no": 57
+      },
+      {
+        "id": "p57:601-679:sentence",
+        "kind": "sentence",
+        "page_no": 57
+      },
+      {
+        "id": "p59:0-844:sentence",
+        "kind": "sentence",
+        "page_no": 59
+      },
+      {
+        "id": "p61:346-681:sentence",
+        "kind": "sentence",
+        "page_no": 61
+      },
+      {
+        "id": "p64:170-538:sentence",
+        "kind": "sentence",
+        "page_no": 64
+      },
+      {
+        "id": "p64:539-607:sentence",
+        "kind": "sentence",
+        "page_no": 64
+      },
+      {
+        "id": "p66:245-294:sentence",
+        "kind": "sentence",
+        "page_no": 66
+      },
+      {
+        "id": "p67:739-800:sentence",
+        "kind": "sentence",
+        "page_no": 67
+      },
+      {
+        "id": "p68:59-98:adjacent",
+        "kind": "adjacent",
+        "page_no": 68
+      }
+    ]
+  },
+  {
+    "chapter_no": 5,
+    "pair": [
+      "이몽란",
+      "임경부"
+    ],
+    "first_page": 56,
+    "weight": 3,
+    "windows": [
+      {
+        "id": "p56:21-527:adjacent",
+        "kind": "adjacent",
+        "page_no": 56
+      },
+      {
+        "id": "p57:0-135:adjacent",
+        "kind": "adjacent",
+        "page_no": 57
+      },
+      {
+        "id": "p59:0-844:sentence",
+        "kind": "sentence",
+        "page_no": 59
+      },
+      {
+        "id": "p61:346-681:sentence",
+        "kind": "sentence",
+        "page_no": 61
+      }
+    ]
+  },
+  {
+    "chapter_no": 5,
+    "pair": [
+      "나용귀",
+      "박영민"
+    ],
+    "first_page": 57,
+    "weight": 8.5,
+    "windows": [
+      {
+        "id": "p57:38-135:sentence",
+        "kind": "sentence",
+        "page_no": 57
+      },
+      {
+        "id": "p58:872-1084:sentence",
+        "kind": "sentence",
+        "page_no": 58
+      },
+      {
+        "id": "p59:0-844:sentence",
+        "kind": "sentence",
+        "page_no": 59
+      },
+      {
+        "id": "p60:0-494:sentence",
+        "kind": "sentence",
+        "page_no": 60
+      },
+      {
+        "id": "p61:346-681:sentence",
+        "kind": "sentence",
+        "page_no": 61
+      },
+      {
+        "id": "p62:0-740:sentence",
+        "kind": "sentence",
+        "page_no": 62
+      },
+      {
+        "id": "p64:108-538:adjacent",
+        "kind": "adjacent",
+        "page_no": 64
+      },
+      {
+        "id": "p65:100-582:sentence",
+        "kind": "sentence",
+        "page_no": 65
+      },
+      {
+        "id": "p65:725-937:sentence",
+        "kind": "sentence",
+        "page_no": 65
+      }
+    ]
+  },
+  {
+    "chapter_no": 5,
+    "pair": [
+      "박영민",
+      "유불란"
+    ],
+    "first_page": 57,
+    "weight": 6,
+    "windows": [
+      {
+        "id": "p57:38-135:sentence",
+        "kind": "sentence",
+        "page_no": 57
+      },
+      {
+        "id": "p58:872-1084:sentence",
+        "kind": "sentence",
+        "page_no": 58
+      },
+      {
+        "id": "p59:0-844:sentence",
+        "kind": "sentence",
+        "page_no": 59
+      },
+      {
+        "id": "p61:346-681:sentence",
+        "kind": "sentence",
+        "page_no": 61
+      },
+      {
+        "id": "p62:0-740:sentence",
+        "kind": "sentence",
+        "page_no": 62
+      },
+      {
+        "id": "p64:170-538:sentence",
+        "kind": "sentence",
+        "page_no": 64
+      }
+    ]
+  },
+  {
+    "chapter_no": 5,
+    "pair": [
+      "박영민",
+      "이몽란"
+    ],
+    "first_page": 57,
+    "weight": 7,
+    "windows": [
+      {
+        "id": "p57:38-135:sentence",
+        "kind": "sentence",
+        "page_no": 57
+      },
+      {
+        "id": "p58:872-1084:sentence",
+        "kind": "sentence",
+        "page_no": 58
+      },
+      {
+        "id": "p59:0-844:sentence",
+        "kind": "sentence",
+        "page_no": 59
+      },
+      {
+        "id": "p60:0-494:sentence",
+        "kind": "sentence",
+        "page_no": 60
+      },
+      {
+        "id": "p61:346-681:sentence",
+        "kind": "sentence",
+        "page_no": 61
+      },
+      {
+        "id": "p62:0-740:sentence",
+        "kind": "sentence",
+        "page_no": 62
+      },
+      {
+        "id": "p63:504-933:sentence",
+        "kind": "sentence",
+        "page_no": 63
+      }
+    ]
+  },
+  {
+    "chapter_no": 5,
+    "pair": [
+      "박영민",
+      "임경부"
+    ],
+    "first_page": 57,
+    "weight": 3.5,
+    "windows": [
+      {
+        "id": "p57:0-135:adjacent",
+        "kind": "adjacent",
+        "page_no": 57
+      },
+      {
+        "id": "p59:0-844:sentence",
+        "kind": "sentence",
+        "page_no": 59
+      },
+      {
+        "id": "p61:346-681:sentence",
+        "kind": "sentence",
+        "page_no": 61
+      },
+      {
+        "id": "p64:170-538:sentence",
+        "kind": "sentence",
+        "page_no": 64
+      }
+    ]
+  },
+  {
+    "chapter_no": 5,
+    "pair": [
+      "박영민",
+      "백검사"
+    ],
+    "first_page": 61,
+    "weight": 4,
+    "windows": [
+      {
+        "id": "p61:346-830:adjacent",
+        "kind": "adjacent",
+        "page_no": 61
+      },
+      {
+        "id": "p62:0-740:sentence",
+        "kind": "sentence",
+        "page_no": 62
+      },
+      {
+        "id": "p64:170-538:sentence",
+        "kind": "sentence",
+        "page_no": 64
+      },
+      {
+        "id": "p64:808-1035:adjacent",
+        "kind": "adjacent",
+        "page_no": 64
+      },
+      {
+        "id": "p65:725-937:sentence",
+        "kind": "sentence",
+        "page_no": 65
+      }
+    ]
+  },
+  {
+    "chapter_no": 5,
+    "pair": [
+      "나용귀",
+      "박병국"
+    ],
+    "first_page": 66,
+    "weight": 0.5,
+    "windows": [
+      {
+        "id": "p66:528-970:adjacent",
+        "kind": "adjacent",
+        "page_no": 66
+      }
+    ]
+  },
+  {
+    "chapter_no": 5,
+    "pair": [
+      "박병국",
+      "백검사"
+    ],
+    "first_page": 66,
+    "weight": 0.5,
+    "windows": [
+      {
+        "id": "p66:528-970:adjacent",
+        "kind": "adjacent",
+        "page_no": 66
+      }
+    ]
+  },
+  {
+    "chapter_no": 5,
+    "pair": [
+      "박병국",
+      "유불란"
+    ],
+    "first_page": 66,
+    "weight": 1,
+    "windows": [
+      {
+        "id": "p66:720-970:sentence",
+        "kind": "sentence",
+        "page_no": 66
+      }
+    ]
+  },
+  {
+    "chapter_no": 5,
+    "pair": [
+      "박병국",
+      "이몽란"
+    ],
+    "first_page": 66,
+    "weight": 1,
+    "windows": [
+      {
+        "id": "p66:720-970:sentence",
+        "kind": "sentence",
+        "page_no": 66
+      }
+    ]
+  }
+]

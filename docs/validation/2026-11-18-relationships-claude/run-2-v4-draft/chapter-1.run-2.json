@@ -1,0 +1,154 @@
+{
+  "key": "e056d47b6d58b17ac3d7edf86a395620f37bb2935dc924a570e21bb8d9dbc650",
+  "chapter_no": 1,
+  "run": 2,
+  "response": "{\"relations\":[{\"character_a\":\"박영민\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"family\",\"type\":\"marriage\",\"type_question\":true,\"exclusions\":{\"plan_only\":false},\"subject\":null,\"assertion_status\":\"fact\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"박영민과 이몽란은 부부다(이몽란은 좌장 박영민의 부인).\",\"rationale\":\"배역표와 서술이 이몽란을 '좌장 부인', '좌장의 부인', 박영민의 '아내'라고 따옴표 밖에서 직접 말한다.\",\"support\":[{\"window_id\":\"p1:752-791:sentence\",\"trigger\":\"좌장 부인 해왕좌 배우 이몽란\"},{\"window_id\":\"p2:31-84:sentence\",\"trigger\":\"좌장의 부인인 화형(花形) 배우 이몽란\"},{\"window_id\":\"p3:37-116:sentence\",\"trigger\":\"박영민(홍 배우가 분장), 그의 아내 몽란\"}]},{\"character_a\":\"박영민\",\"character_b\":\"유불란\",\"lasting\":true,\"category\":\"social\",\"type\":\"friendship\",\"type_question\":true,\"exclusions\":{\"one_off\":false},\"subject\":null,\"assertion_status\":\"fact\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"유불란은 박영민의 친구다.\",\"rationale\":\"따옴표 밖 소개문이 유불란을 '좌장의 친구'라고 직접 말하며, 좌장은 박영민을 가리킨다.\",\"support\":[{\"window_id\":\"p1:920-1044:sentence\",\"trigger\":\"좌장의 친구요 탐정 소설계의 명성인 유불란\"}]},{\"character_a\":\"유불란\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"romance\",\"type\":\"affection\",\"type_question\":true,\"exclusions\":{},\"subject\":\"유불란\",\"assertion_status\":\"uncertain\",\"attribution\":null,\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"유불란이 이몽란을 사랑하는 것처럼 보인다고 서술된다(확정되지 않음).\",\"rationale\":\"서술이 유불란이 몽란에게 던지는 시선에 '끝없이 타오르는 사랑의 불꽃이 서리어 있는 것과 같이 보였다'고 하여, 사랑을 말하되 '같이 보였다'는 겉모습으로 한정한다.\",\"support\":[{\"window_id\":\"p5:0-94:adjacent\",\"trigger\":\"몽란에게 때때로 던지는 그의 날카로운 시선 가운데는 말할 수 없는 애처로움과 끝없이 타오르는 사랑의 불꽃이 서리어 있는 것과 같이 보였다\"}]},{\"character_a\":\"나용귀\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"romance\",\"type\":\"affection\",\"type_question\":true,\"exclusions\":{},\"subject\":\"나용귀\",\"assertion_status\":\"claim\",\"attribution\":\"나용귀\",\"state\":\"active\",\"change_type\":\"disclosure\",\"summary\":\"나용귀는 자기 진술에서 이몽란(부인)을 사랑하고 있다고 주장한다.\",\"rationale\":\"'나용귀의 진술'로 밝혀진 대사에서 나용귀가 '나는 부인을 사랑하고 있습니다'라고 말한다. 여기서 부인은 좌장의 부인 이몽란이다. 대사이므로 나용귀의 주장이다.\",\"support\":[{\"window_id\":\"p6:43-216:adjacent\",\"trigger\":\"나는 부인을 사랑하고 있습니다\"}]},{\"character_a\":\"나용귀\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"romance\",\"type\":\"affection\",\"type_question\":true,\"exclusions\":{},\"subject\":\"이몽란\",\"assertion_status\":\"negated\",\"attribution\":\"이몽란\",\"state\":\"active\",\"change_type\":\"disclosure\",\"summary\":\"이몽란은 자기 진술에서 나용귀를 사랑해 본 적이 없다고 주장한다.\",\"rationale\":\"'이몽란의 진술'로 밝혀진 대사에서 이몽란이 '나용귀 씨도 사랑해 본 적이 없어요'라고 하여, 자신이 나용귀를 사랑한다는 것을 부정한다.\",\"support\":[{\"window_id\":\"p6:58-571:adjacent\",\"trigger\":\"나용귀 씨도 사랑해 본 적이 없어요\"}]},{\"character_a\":\"백검사\",\"character_b\":\"임경부\",\"lasting\":true,\"category\":\"professional\",\"type\":\"colleague\",\"type_question\":true,\"exclusions\":{\"commands\":false,\"hires\":false},\"subject\":null,\"assertion_status\":\"fact\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"백검사와 임경부는 박영민 살인사건을 처음부터 함께 담당한 동료다.\",\"rationale\":\"따옴표 밖 서술이 '임경부와 백검사는 이 살인사건을 처음부터 담당한'이라고 하여, 두 사람이 같은 사건 수사를 함께 맡는다고 직접 말한다.\",\"support\":[{\"window_id\":\"p13:423-498:sentence\",\"trigger\":\"임경부와 백검사는 이 살인사건을 처음부터 담당한\"}]}]}",
+  "parsed": {
+    "relations": [
+      {
+        "character_a": "박영민",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "family",
+        "type": "marriage",
+        "type_question": true,
+        "exclusions": {
+          "plan_only": false
+        },
+        "subject": null,
+        "assertion_status": "fact",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "박영민과 이몽란은 부부다(이몽란은 좌장 박영민의 부인).",
+        "rationale": "배역표와 서술이 이몽란을 '좌장 부인', '좌장의 부인', 박영민의 '아내'라고 따옴표 밖에서 직접 말한다.",
+        "support": [
+          {
+            "window_id": "p1:752-791:sentence",
+            "trigger": "좌장 부인 해왕좌 배우 이몽란"
+          },
+          {
+            "window_id": "p2:31-84:sentence",
+            "trigger": "좌장의 부인인 화형(花形) 배우 이몽란"
+          },
+          {
+            "window_id": "p3:37-116:sentence",
+            "trigger": "박영민(홍 배우가 분장), 그의 아내 몽란"
+          }
+        ]
+      },
+      {
+        "character_a": "박영민",
+        "character_b": "유불란",
+        "lasting": true,
+        "category": "social",
+        "type": "friendship",
+        "type_question": true,
+        "exclusions": {
+          "one_off": false
+        },
+        "subject": null,
+        "assertion_status": "fact",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "유불란은 박영민의 친구다.",
+        "rationale": "따옴표 밖 소개문이 유불란을 '좌장의 친구'라고 직접 말하며, 좌장은 박영민을 가리킨다.",
+        "support": [
+          {
+            "window_id": "p1:920-1044:sentence",
+            "trigger": "좌장의 친구요 탐정 소설계의 명성인 유불란"
+          }
+        ]
+      },
+      {
+        "character_a": "유불란",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "affection",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "유불란",
+        "assertion_status": "uncertain",
+        "attribution": null,
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "유불란이 이몽란을 사랑하는 것처럼 보인다고 서술된다(확정되지 않음).",
+        "rationale": "서술이 유불란이 몽란에게 던지는 시선에 '끝없이 타오르는 사랑의 불꽃이 서리어 있는 것과 같이 보였다'고 하여, 사랑을 말하되 '같이 보였다'는 겉모습으로 한정한다.",
+        "support": [
+          {
+            "window_id": "p5:0-94:adjacent",
+            "trigger": "몽란에게 때때로 던지는 그의 날카로운 시선 가운데는 말할 수 없는 애처로움과 끝없이 타오르는 사랑의 불꽃이 서리어 있는 것과 같이 보였다"
+          }
+        ]
+      },
+      {
+        "character_a": "나용귀",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "affection",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "나용귀",
+        "assertion_status": "claim",
+        "attribution": "나용귀",
+        "state": "active",
+        "change_type": "disclosure",
+        "summary": "나용귀는 자기 진술에서 이몽란(부인)을 사랑하고 있다고 주장한다.",
+        "rationale": "'나용귀의 진술'로 밝혀진 대사에서 나용귀가 '나는 부인을 사랑하고 있습니다'라고 말한다. 여기서 부인은 좌장의 부인 이몽란이다. 대사이므로 나용귀의 주장이다.",
+        "support": [
+          {
+            "window_id": "p6:43-216:adjacent",
+            "trigger": "나는 부인을 사랑하고 있습니다"
+          }
+        ]
+      },
+      {
+        "character_a": "나용귀",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "affection",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "이몽란",
+        "assertion_status": "negated",
+        "attribution": "이몽란",
+        "state": "active",
+        "change_type": "disclosure",
+        "summary": "이몽란은 자기 진술에서 나용귀를 사랑해 본 적이 없다고 주장한다.",
+        "rationale": "'이몽란의 진술'로 밝혀진 대사에서 이몽란이 '나용귀 씨도 사랑해 본 적이 없어요'라고 하여, 자신이 나용귀를 사랑한다는 것을 부정한다.",
+        "support": [
+          {
+            "window_id": "p6:58-571:adjacent",
+            "trigger": "나용귀 씨도 사랑해 본 적이 없어요"
+          }
+        ]
+      },
+      {
+        "character_a": "백검사",
+        "character_b": "임경부",
+        "lasting": true,
+        "category": "professional",
+        "type": "colleague",
+        "type_question": true,
+        "exclusions": {
+          "commands": false,
+          "hires": false
+        },
+        "subject": null,
+        "assertion_status": "fact",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "백검사와 임경부는 박영민 살인사건을 처음부터 함께 담당한 동료다.",
+        "rationale": "따옴표 밖 서술이 '임경부와 백검사는 이 살인사건을 처음부터 담당한'이라고 하여, 두 사람이 같은 사건 수사를 함께 맡는다고 직접 말한다.",
+        "support": [
+          {
+            "window_id": "p13:423-498:sentence",
+            "trigger": "임경부와 백검사는 이 살인사건을 처음부터 담당한"
+          }
+        ]
+      }
+    ]
+  }
+}

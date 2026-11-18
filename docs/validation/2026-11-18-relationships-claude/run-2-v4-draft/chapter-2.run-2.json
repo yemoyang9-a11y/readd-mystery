@@ -1,0 +1,128 @@
+{
+  "key": "6e21c2c9879ef287cc40a414ea0ccdfa272e09c87f09db6db9e0c6e2a130a860",
+  "chapter_no": 2,
+  "run": 2,
+  "response": "{\"relations\":[{\"character_a\":\"유불란\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"romance\",\"type\":\"romance\",\"type_question\":true,\"exclusions\":{\"one_side_only\":false,\"met_only\":false},\"subject\":null,\"assertion_status\":\"fact\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"유불란과 이몽란은 서로의 첫사랑으로 사랑한 사이다.\",\"rationale\":\"서술자가 따옴표 밖에서 '첫사랑'이라 하고, 몽란은 유불란을 생각하고 유불란은 몽란을 꿈꾸었다고 두 사람의 마음을 함께 말한다. 뒤이은 '이별'은 유학과 상경으로 떨어져 지내게 된 일이다. 관계가 끝났다고 직접 말하지는 않으므로 active로 둔다.\",\"support\":[{\"window_id\":\"p21:893-935:sentence\",\"trigger\":\"첫사랑, 잘 때면 반드시 몽란은 유불란을 생각하고 유불란은 몽란을 꿈꾸었다\"}]},{\"character_a\":\"유불란\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"romance\",\"type\":\"affection\",\"type_question\":true,\"exclusions\":{},\"subject\":\"유불란\",\"assertion_status\":\"fact\",\"state\":\"active\",\"change_type\":\"restatement\",\"summary\":\"유불란은 헤어진 뒤에도 이몽란에게 거의 매일 애서를 보낼 만큼 그녀를 연모한다.\",\"rationale\":\"서술자가 따옴표 밖에서 유불란의 애서(사랑의 편지)가 거의 매일 이몽란에게 배달되었다고 말한다. 이는 유불란이 몽란을 계속 연모한다는 뜻이다.\",\"support\":[{\"window_id\":\"p22:148-201:sentence\",\"trigger\":\"거의 매일과 같이 배달되는 유불란의 애서를 받아들고 이몽란은\"}]},{\"character_a\":\"박영민\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"professional\",\"type\":\"superior\",\"type_question\":true,\"exclusions\":{\"hires\":false},\"subject\":\"박영민\",\"assertion_status\":\"fact\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"박영민은 해왕좌의 단장이고 이몽란은 그 극단의 일원이다.\",\"rationale\":\"서술자가 박영민을 단장으로 둔 해왕좌에 몽란이 일원으로 들어갔다고 말한다. 같은 조직에서 박영민이 단장으로 몽란을 이끄는 위아래 관계다.\",\"support\":[{\"window_id\":\"p22:35-94:sentence\",\"trigger\":\"박영민을 단장으로 둔 해왕좌가 창립되자 몽란은 만사를 불고하고 이 극장의 일원이 되었다\"}]},{\"character_a\":\"박영민\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"romance\",\"type\":\"lust\",\"type_question\":true,\"exclusions\":{},\"subject\":\"박영민\",\"assertion_status\":\"fact\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"이몽란은 박영민의 애욕의 대상이 되었다.\",\"rationale\":\"서술자가 따옴표 밖에서 몽란이 박영민의 '애욕의 대상'이 되었다고 직접 말한다. 박영민이 몽란을 탐내 차지했다는 뜻이다.\",\"support\":[{\"window_id\":\"p22:202-238:sentence\",\"trigger\":\"몽란은 벌써 처녀가 아니고 박영민의 애욕의 대상이 되었던 것이다\"}]},{\"character_a\":\"나용귀\",\"character_b\":\"유불란\",\"lasting\":true,\"category\":\"adversarial\",\"type\":\"suspicion\",\"type_question\":true,\"exclusions\":{},\"subject\":\"유불란\",\"assertion_status\":\"claim\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"유불란은 나용귀를 좌장 살해의 범인이라고 주장한다.\",\"rationale\":\"유불란은 나용귀가 죽였다고 생각하지 않는 몽란에게 섭섭해하고 실망한다. 또 '그래도 나용귀를 범인이라고 생각하기가 싫어?'라고 묻는다. 이 대사들에서 유불란이 나용귀를 범인으로 본다는 주장이 드러난다.\",\"support\":[{\"window_id\":\"p23:369-451:sentence\",\"trigger\":\"그러면 몽란은 나용귀가 죽였다고 생각지 않는 모양이로군\"},{\"window_id\":\"p23:651-826:sentence\",\"trigger\":\"나용귀 범인설을 마음속 한편 구석에서 부인하는 듯한 몽란의 태도를 유불란은 적지 않은 실망을 가지고\"},{\"window_id\":\"p24:720-775:sentence\",\"trigger\":\"그래도 나용귀를 범인이라고 생각하기가 싫어\"}]}]}",
+  "parsed": {
+    "relations": [
+      {
+        "character_a": "유불란",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "romance",
+        "type_question": true,
+        "exclusions": {
+          "one_side_only": false,
+          "met_only": false
+        },
+        "subject": null,
+        "assertion_status": "fact",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "유불란과 이몽란은 서로의 첫사랑으로 사랑한 사이다.",
+        "rationale": "서술자가 따옴표 밖에서 '첫사랑'이라 하고, 몽란은 유불란을 생각하고 유불란은 몽란을 꿈꾸었다고 두 사람의 마음을 함께 말한다. 뒤이은 '이별'은 유학과 상경으로 떨어져 지내게 된 일이다. 관계가 끝났다고 직접 말하지는 않으므로 active로 둔다.",
+        "support": [
+          {
+            "window_id": "p21:893-935:sentence",
+            "trigger": "첫사랑, 잘 때면 반드시 몽란은 유불란을 생각하고 유불란은 몽란을 꿈꾸었다"
+          }
+        ]
+      },
+      {
+        "character_a": "유불란",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "affection",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "유불란",
+        "assertion_status": "fact",
+        "state": "active",
+        "change_type": "restatement",
+        "summary": "유불란은 헤어진 뒤에도 이몽란에게 거의 매일 애서를 보낼 만큼 그녀를 연모한다.",
+        "rationale": "서술자가 따옴표 밖에서 유불란의 애서(사랑의 편지)가 거의 매일 이몽란에게 배달되었다고 말한다. 이는 유불란이 몽란을 계속 연모한다는 뜻이다.",
+        "support": [
+          {
+            "window_id": "p22:148-201:sentence",
+            "trigger": "거의 매일과 같이 배달되는 유불란의 애서를 받아들고 이몽란은"
+          }
+        ]
+      },
+      {
+        "character_a": "박영민",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "professional",
+        "type": "superior",
+        "type_question": true,
+        "exclusions": {
+          "hires": false
+        },
+        "subject": "박영민",
+        "assertion_status": "fact",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "박영민은 해왕좌의 단장이고 이몽란은 그 극단의 일원이다.",
+        "rationale": "서술자가 박영민을 단장으로 둔 해왕좌에 몽란이 일원으로 들어갔다고 말한다. 같은 조직에서 박영민이 단장으로 몽란을 이끄는 위아래 관계다.",
+        "support": [
+          {
+            "window_id": "p22:35-94:sentence",
+            "trigger": "박영민을 단장으로 둔 해왕좌가 창립되자 몽란은 만사를 불고하고 이 극장의 일원이 되었다"
+          }
+        ]
+      },
+      {
+        "character_a": "박영민",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "lust",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "박영민",
+        "assertion_status": "fact",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "이몽란은 박영민의 애욕의 대상이 되었다.",
+        "rationale": "서술자가 따옴표 밖에서 몽란이 박영민의 '애욕의 대상'이 되었다고 직접 말한다. 박영민이 몽란을 탐내 차지했다는 뜻이다.",
+        "support": [
+          {
+            "window_id": "p22:202-238:sentence",
+            "trigger": "몽란은 벌써 처녀가 아니고 박영민의 애욕의 대상이 되었던 것이다"
+          }
+        ]
+      },
+      {
+        "character_a": "나용귀",
+        "character_b": "유불란",
+        "lasting": true,
+        "category": "adversarial",
+        "type": "suspicion",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "유불란",
+        "assertion_status": "claim",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "유불란은 나용귀를 좌장 살해의 범인이라고 주장한다.",
+        "rationale": "유불란은 나용귀가 죽였다고 생각하지 않는 몽란에게 섭섭해하고 실망한다. 또 '그래도 나용귀를 범인이라고 생각하기가 싫어?'라고 묻는다. 이 대사들에서 유불란이 나용귀를 범인으로 본다는 주장이 드러난다.",
+        "support": [
+          {
+            "window_id": "p23:369-451:sentence",
+            "trigger": "그러면 몽란은 나용귀가 죽였다고 생각지 않는 모양이로군"
+          },
+          {
+            "window_id": "p23:651-826:sentence",
+            "trigger": "나용귀 범인설을 마음속 한편 구석에서 부인하는 듯한 몽란의 태도를 유불란은 적지 않은 실망을 가지고"
+          },
+          {
+            "window_id": "p24:720-775:sentence",
+            "trigger": "그래도 나용귀를 범인이라고 생각하기가 싫어"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,1752 @@
+{
+  "version": 4,
+  "uncovered_characters": [
+    {
+      "character_id": "김영애",
+      "name": "김영애",
+      "windows": 30,
+      "partners": [
+        "나용귀",
+        "박영민",
+        "유불란",
+        "진대성",
+        "이몽란"
+      ]
+    },
+    {
+      "character_id": "진대성",
+      "name": "진대성",
+      "windows": 25,
+      "partners": [
+        "김영애",
+        "나용귀",
+        "유불란",
+        "박영민",
+        "이몽란"
+      ]
+    }
+  ],
+  "book_id": "gasangbeomin",
+  "mode": "labeled",
+  "method": "structural interaction candidates + evidence-window relation questionnaire over a closed type table (docs/context/research-2026-11-18-relationship-extraction.md, research-2026-11-18-relationship-classification.md)",
+  "provider": "claude-cli (subscription, no API key)",
+  "counts": {
+    "chapters": 5,
+    "chapters_with_candidates": 5,
+    "llm_label_runs": 10,
+    "model_calls": 26,
+    "model_label_calls": 10,
+    "model_verifier_calls": 16,
+    "model_json_retries": 0,
+    "model_seconds": 566,
+    "wall_seconds": 566,
+    "candidate_pairs": 87,
+    "windows": 568,
+    "accepted": 11,
+    "confirmed": 11,
+    "needs_review": 0,
+    "held": 15,
+    "llm_page_claims_rejected_as_early": 0
+  },
+  "held_reasons": {
+    "trigger_sentence_lacks_endpoint": 2,
+    "factuality_cue:negation": 1,
+    "verifier_rejected": 5,
+    "factuality_cue:reported": 1,
+    "Complete semantic v2 contract, specific predicate, qualified subject/object summary and exact dated evidence required": 6
+  },
+  "relationships": [
+    {
+      "character_a_id": "박영민",
+      "character_b_id": "이몽란",
+      "label": "부부다",
+      "established_page": 1,
+      "evidence": {
+        "source_page": 1,
+        "quote": "홍(洪)\n• 좌장 부인 해왕좌 배우 이몽란(李夢蘭, 24) ......",
+        "start_char": 752,
+        "end_char": 791
+      },
+      "rationale": "서술자가 따옴표 밖에서 이몽란을 '좌장 부인'이라고 소개한다. 또 박영민의 '아내 몽란'이라고 직접 말하므로 두 사람이 부부라는 판정 질문에 예로 답할 수 있다.",
+      "change_type": "establishment",
+      "semantics": {
+        "version": 2,
+        "direction": "undirected",
+        "kind": "family",
+        "relation_key": "marriage",
+        "summary": "박영민과 이몽란은 부부다(이몽란은 좌장 박영민의 부인이다).",
+        "assertion_status": "fact",
+        "temporal_scope": "ongoing",
+        "state": "active",
+        "evidence": {
+          "source_page": 1,
+          "quote": "홍(洪)\n• 좌장 부인 해왕좌 배우 이몽란(李夢蘭, 24) ......",
+          "start_char": 752,
+          "end_char": 791
+        },
+        "verification": {
+          "check": "confirmed",
+          "reasons": [],
+          "runs_agreed": 2
+        }
+      },
+      "id": "7f87b821-4c0f-58e6-a3fb-85ff4a96bbc3",
+      "character_a": "박영민",
+      "character_b": "이몽란"
+    },
+    {
+      "character_a_id": "박영민",
+      "character_b_id": "유불란",
+      "label": "친구다",
+      "established_page": 1,
+      "evidence": {
+        "source_page": 1,
+        "quote": "유불란\n• 그 외 박영민 댁의 식모 두 사람, 경관 너댓 명\n탐정극 『가상범인』은 좌장의 친구요 탐정 소설계의 명성인 유불란 씨가 저번 세상을 놀라게 한 본 해왕좌의 좌장 박영민 씨 살해사건을 취재하여 친히 원작한 것이다.",
+        "start_char": 920,
+        "end_char": 1044
+      },
+      "rationale": "서술자가 따옴표 밖에서 유불란을 '좌장의 친구'라고 직접 부른다. 한 번의 행동이 아니라 이어지는 친구 관계를 말한다.",
+      "change_type": "establishment",
+      "semantics": {
+        "version": 2,
+        "direction": "undirected",
+        "kind": "social",
+        "relation_key": "friendship",
+        "summary": "유불란은 좌장 박영민의 친구다.",
+        "assertion_status": "fact",
+        "temporal_scope": "ongoing",
+        "state": "active",
+        "evidence": {
+          "source_page": 1,
+          "quote": "유불란\n• 그 외 박영민 댁의 식모 두 사람, 경관 너댓 명\n탐정극 『가상범인』은 좌장의 친구요 탐정 소설계의 명성인 유불란 씨가 저번 세상을 놀라게 한 본 해왕좌의 좌장 박영민 씨 살해사건을 취재하여 친히 원작한 것이다.",
+          "start_char": 920,
+          "end_char": 1044
+        },
+        "verification": {
+          "check": "confirmed",
+          "reasons": [],
+          "runs_agreed": 2
+        }
+      },
+      "id": "cd57cbd0-e22d-5386-a0be-ecbe07514537",
+      "character_a": "박영민",
+      "character_b": "유불란"
+    },
+    {
+      "character_a_id": "백검사",
+      "character_b_id": "임경부",
+      "label": "동료다",
+      "established_page": 13,
+      "evidence": {
+        "source_page": 13,
+        "quote": "더구나 임경부와 백검사는 이 살인사건을 처음부터 담당한 만큼, 나용귀 입에서 굴러 나온 기적적인 음성은 그들에게 크나큰 쇼크를 주었다.",
+        "start_char": 423,
+        "end_char": 498
+      },
+      "rationale": "서술자가 두 사람이 이 살인사건을 처음부터 담당했다고 직접 말한다. 또 둘이 함께 현장을 임검했다고 말하므로 같은 사건 수사를 함께 맡은 사이다. 지휘나 고용을 말하는 서술은 없다.",
+      "change_type": "establishment",
+      "semantics": {
+        "version": 2,
+        "direction": "undirected",
+        "kind": "social",
+        "relation_key": "colleague",
+        "summary": "백검사와 임경부는 박영민 살인사건을 처음부터 함께 담당한 동료다.",
+        "assertion_status": "fact",
+        "temporal_scope": "ongoing",
+        "state": "active",
+        "evidence": {
+          "source_page": 13,
+          "quote": "더구나 임경부와 백검사는 이 살인사건을 처음부터 담당한 만큼, 나용귀 입에서 굴러 나온 기적적인 음성은 그들에게 크나큰 쇼크를 주었다.",
+          "start_char": 423,
+          "end_char": 498
+        },
+        "verification": {
+          "check": "confirmed",
+          "reasons": [],
+          "runs_agreed": 2
+        }
+      },
+      "id": "cf9daf43-92b9-575b-9469-b4b261057a0e",
+      "character_a": "백검사",
+      "character_b": "임경부"
+    },
+    {
+      "character_a_id": "유불란",
+      "character_b_id": "이몽란",
+      "label": "연인이다",
+      "established_page": 21,
+      "evidence": {
+        "source_page": 21,
+        "quote": "첫사랑, 잘 때면 반드시 몽란은 유불란을 생각하고 유불란은 몽란을 꿈꾸었다.",
+        "start_char": 893,
+        "end_char": 935
+      },
+      "rationale": "서술자가 따옴표 밖에서 '첫사랑'이라 하고, 몽란은 유불란을 생각하고 유불란은 몽란을 꿈꾸었다고 말한다. 양쪽의 마음이 모두 드러나므로 한쪽 마음만 말하는 경우가 아니다. 이별 뒤에도 유불란의 애서가 거의 매일 배달되었다고 하므로, 관계가 끝났다는 직접적인 말은 없다.",
+      "change_type": "establishment",
+      "semantics": {
+        "version": 2,
+        "direction": "undirected",
+        "kind": "social",
+        "relation_key": "romance",
+        "summary": "유불란과 이몽란은 서로를 생각하고 꿈꾸던 첫사랑 사이다.",
+        "assertion_status": "fact",
+        "temporal_scope": "ongoing",
+        "state": "active",
+        "evidence": {
+          "source_page": 21,
+          "quote": "첫사랑, 잘 때면 반드시 몽란은 유불란을 생각하고 유불란은 몽란을 꿈꾸었다.",
+          "start_char": 893,
+          "end_char": 935
+        },
+        "verification": {
+          "check": "confirmed",
+          "reasons": [],
+          "runs_agreed": 2
+        }
+      },
+      "id": "585e8736-50f7-57fc-be1f-624abaecf043",
+      "character_a": "유불란",
+      "character_b": "이몽란"
+    },
+    {
+      "character_a_id": "박영민",
+      "character_b_id": "이몽란",
+      "label": "윗사람이다",
+      "established_page": 22,
+      "evidence": {
+        "source_page": 22,
+        "quote": "그때 마침 서울에 박영민을 단장으로 둔 해왕좌가 창립되자 몽란은 만사를 불고하고 이 극장의 일원이 되었다.",
+        "start_char": 35,
+        "end_char": 94
+      },
+      "rationale": "서술자가 박영민을 단장으로 둔 해왕좌에 몽란이 일원으로 들어갔다고 직접 말한다. 같은 조직에서 단장과 단원의 위아래 관계이며, 개인이 돈을 주고 부린다는 말은 없다.",
+      "change_type": "establishment",
+      "semantics": {
+        "version": 2,
+        "direction": "a_to_b",
+        "kind": "social",
+        "relation_key": "superior",
+        "summary": "박영민은 단장으로 있는 해왕좌에서 단원인 이몽란의 윗사람이다.",
+        "assertion_status": "fact",
+        "temporal_scope": "ongoing",
+        "state": "active",
+        "evidence": {
+          "source_page": 22,
+          "quote": "그때 마침 서울에 박영민을 단장으로 둔 해왕좌가 창립되자 몽란은 만사를 불고하고 이 극장의 일원이 되었다.",
+          "start_char": 35,
+          "end_char": 94
+        },
+        "verification": {
+          "check": "confirmed",
+          "reasons": [],
+          "runs_agreed": 2
+        }
+      },
+      "id": "0786c3c3-4ffa-5ae9-9721-b12c2253e995",
+      "character_a": "박영민",
+      "character_b": "이몽란"
+    },
+    {
+      "character_a_id": "이몽란",
+      "character_b_id": "임경부",
+      "label": "미워한다",
+      "established_page": 46,
+      "evidence": {
+        "source_page": 46,
+        "quote": "“그러면 좌장을 죽인 자는 누구일까? 몽란이다. 몽란이가 역시 좌장을 죽인 진정한 범인이다. 속아서는 아니 된다. 몽란을 끝없이 사랑하는 유불란, 그리고 몽란을 구해내고자 창작한 탐정극 『가상범인』에 속아서는 아니 된다!”\n임경부는 그때 몽란과 유불란에 대한 미움이 마음을 찌르는 듯함을 깨달았다.",
+        "start_char": 37,
+        "end_char": 203
+      },
+      "rationale": "따옴표 밖 서술이 임경부가 몽란에 대한 미움이 마음을 찌르는 듯함을 깨달았다고 직접 말한다.",
+      "change_type": "establishment",
+      "semantics": {
+        "version": 2,
+        "direction": "b_to_a",
+        "kind": "emotion",
+        "relation_key": "hatred",
+        "summary": "임경부는 이몽란에게 미움을 품고 있다.",
+        "assertion_status": "fact",
+        "temporal_scope": "ongoing",
+        "state": "active",
+        "evidence": {
+          "source_page": 46,
+          "quote": "“그러면 좌장을 죽인 자는 누구일까? 몽란이다. 몽란이가 역시 좌장을 죽인 진정한 범인이다. 속아서는 아니 된다. 몽란을 끝없이 사랑하는 유불란, 그리고 몽란을 구해내고자 창작한 탐정극 『가상범인』에 속아서는 아니 된다!”\n임경부는 그때 몽란과 유불란에 대한 미움이 마음을 찌르는 듯함을 깨달았다.",
+          "start_char": 37,
+          "end_char": 203
+        },
+        "verification": {
+          "check": "confirmed",
+          "reasons": [],
+          "runs_agreed": 2
+        }
+      },
+      "id": "647fd9ce-85b0-5858-ba47-4137bce4fbc6",
+      "character_a": "이몽란",
+      "character_b": "임경부"
+    },
+    {
+      "character_a_id": "유불란",
+      "character_b_id": "임경부",
+      "label": "미워한다",
+      "established_page": 46,
+      "evidence": {
+        "source_page": 46,
+        "quote": "“그러면 좌장을 죽인 자는 누구일까? 몽란이다. 몽란이가 역시 좌장을 죽인 진정한 범인이다. 속아서는 아니 된다. 몽란을 끝없이 사랑하는 유불란, 그리고 몽란을 구해내고자 창작한 탐정극 『가상범인』에 속아서는 아니 된다!”\n임경부는 그때 몽란과 유불란에 대한 미움이 마음을 찌르는 듯함을 깨달았다.",
+        "start_char": 37,
+        "end_char": 203
+      },
+      "rationale": "따옴표 밖 서술이 임경부가 유불란에 대한 미움이 마음을 찌르는 듯함을 깨달았다고 직접 말한다.",
+      "change_type": "establishment",
+      "semantics": {
+        "version": 2,
+        "direction": "b_to_a",
+        "kind": "emotion",
+        "relation_key": "hatred",
+        "summary": "임경부는 유불란에게 미움을 품고 있다.",
+        "assertion_status": "fact",
+        "temporal_scope": "ongoing",
+        "state": "active",
+        "evidence": {
+          "source_page": 46,
+          "quote": "“그러면 좌장을 죽인 자는 누구일까? 몽란이다. 몽란이가 역시 좌장을 죽인 진정한 범인이다. 속아서는 아니 된다. 몽란을 끝없이 사랑하는 유불란, 그리고 몽란을 구해내고자 창작한 탐정극 『가상범인』에 속아서는 아니 된다!”\n임경부는 그때 몽란과 유불란에 대한 미움이 마음을 찌르는 듯함을 깨달았다.",
+          "start_char": 37,
+          "end_char": 203
+        },
+        "verification": {
+          "check": "confirmed",
+          "reasons": [],
+          "runs_agreed": 2
+        }
+      },
+      "id": "eaf43914-85a0-5b27-8363-a3712ba97069",
+      "character_a": "유불란",
+      "character_b": "임경부"
+    },
+    {
+      "character_a_id": "유불란",
+      "character_b_id": "이몽란",
+      "label": "사랑한다",
+      "established_page": 46,
+      "evidence": {
+        "source_page": 46,
+        "quote": "“그러면 좌장을 죽인 자는 누구일까? 몽란이다. 몽란이가 역시 좌장을 죽인 진정한 범인이다. 속아서는 아니 된다. 몽란을 끝없이 사랑하는 유불란, 그리고 몽란을 구해내고자 창작한 탐정극 『가상범인』에 속아서는 아니 된다!”\n임경부는 그때 몽란과 유불란에 대한 미움이 마음을 찌르는 듯함을 깨달았다.",
+        "start_char": 37,
+        "end_char": 203
+      },
+      "rationale": "'몽란을 끝없이 사랑하는 유불란'은 따옴표 안 임경부의 속생각이다. 관형절의 꾸밈을 받는 유불란이 사랑의 주체이며, 화자인 임경부의 믿음으로 적는다.",
+      "change_type": "establishment",
+      "semantics": {
+        "version": 2,
+        "direction": "a_to_b",
+        "kind": "social",
+        "relation_key": "affection",
+        "summary": "임경부는 유불란이 이몽란을 끝없이 사랑한다고 생각한다.",
+        "assertion_status": "belief",
+        "temporal_scope": "ongoing",
+        "state": "active",
+        "evidence": {
+          "source_page": 46,
+          "quote": "“그러면 좌장을 죽인 자는 누구일까? 몽란이다. 몽란이가 역시 좌장을 죽인 진정한 범인이다. 속아서는 아니 된다. 몽란을 끝없이 사랑하는 유불란, 그리고 몽란을 구해내고자 창작한 탐정극 『가상범인』에 속아서는 아니 된다!”\n임경부는 그때 몽란과 유불란에 대한 미움이 마음을 찌르는 듯함을 깨달았다.",
+          "start_char": 37,
+          "end_char": 203
+        },
+        "attribution": "임경부",
+        "verification": {
+          "check": "confirmed",
+          "reasons": [],
+          "runs_agreed": 2
+        }
+      },
+      "id": "ee083539-2cee-536d-88df-49777a69b98e",
+      "character_a": "유불란",
+      "character_b": "이몽란"
+    },
+    {
+      "character_a_id": "나용귀",
+      "character_b_id": "이몽란",
+      "label": "사랑한다",
+      "established_page": 51,
+      "evidence": {
+        "source_page": 51,
+        "quote": "“나 씨, 당신이 거짓 자백으로 경찰 당국의 눈을 속인 죄는 물론 면할 바 못 되나 이몽란을 한량없이 사랑하는 당신의 정성에는 귀신이라도 감복하지 않을 수가 없소. 자기의 죄를 다른 사람에게 밀기를 일삼는 이 야속한 세상에서——사랑의 힘이란 그와 같이 힘 있고 굳세다는 것을 비로소 나는 깨달은 것 같소.─ 그러나 법률은 죄인의 대신을 용서치 않으오. 당신은 『가상범인』에 출연하겠다는 것을 승인한 그때부터 벌써 애인 이몽란을 위하여 일신을 희생하겠다고 각오했던 것이오. 게다가 당신은 훌륭한 의성술(擬聲術)을 가지고 있었으니만큼 유불란이가 이몽란을 구하고자 만들어낸 『가상범인』이란 연극을 그대로 실행하여 자기가 범인이란 것을 객관화시키었던 것이오.”\n임경부는 거기서 말을 끊고 정신없는 사람과 같이 물끄러미 자기를 쳐다보고 있는 나용귀를 애처로운 듯이 내려다보며, 애인을 위하여 목숨을 바치려고 하는 연애지상주의자의 끓는 정열을 새삼스러이 부러워하면서 한번 빙그레 마음속으로 웃은 다음에 또다시 말을 이었다.",
+        "start_char": 133,
+        "end_char": 643
+      },
+      "rationale": "임경부가 대사에서 나용귀(당신)가 이몽란을 한량없이 사랑하고 애인 이몽란을 위해 희생을 각오했다고 말한다. 대사 안의 말이므로 임경부의 주장으로 적는다.",
+      "change_type": "establishment",
+      "semantics": {
+        "version": 2,
+        "direction": "a_to_b",
+        "kind": "social",
+        "relation_key": "affection",
+        "summary": "임경부는 나용귀가 이몽란을 한량없이 사랑한다고 주장한다.",
+        "assertion_status": "claim",
+        "temporal_scope": "ongoing",
+        "state": "active",
+        "evidence": {
+          "source_page": 51,
+          "quote": "“나 씨, 당신이 거짓 자백으로 경찰 당국의 눈을 속인 죄는 물론 면할 바 못 되나 이몽란을 한량없이 사랑하는 당신의 정성에는 귀신이라도 감복하지 않을 수가 없소. 자기의 죄를 다른 사람에게 밀기를 일삼는 이 야속한 세상에서——사랑의 힘이란 그와 같이 힘 있고 굳세다는 것을 비로소 나는 깨달은 것 같소.─ 그러나 법률은 죄인의 대신을 용서치 않으오. 당신은 『가상범인』에 출연하겠다는 것을 승인한 그때부터 벌써 애인 이몽란을 위하여 일신을 희생하겠다고 각오했던 것이오. 게다가 당신은 훌륭한 의성술(擬聲術)을 가지고 있었으니만큼 유불란이가 이몽란을 구하고자 만들어낸 『가상범인』이란 연극을 그대로 실행하여 자기가 범인이란 것을 객관화시키었던 것이오.”\n임경부는 거기서 말을 끊고 정신없는 사람과 같이 물끄러미 자기를 쳐다보고 있는 나용귀를 애처로운 듯이 내려다보며, 애인을 위하여 목숨을 바치려고 하는 연애지상주의자의 끓는 정열을 새삼스러이 부러워하면서 한번 빙그레 마음속으로 웃은 다음에 또다시 말을 이었다.",
+          "start_char": 133,
+          "end_char": 643
+        },
+        "attribution": "임경부",
+        "verification": {
+          "check": "confirmed",
+          "reasons": [],
+          "runs_agreed": 2
+        }
+      },
+      "id": "3d3ef5f3-f2ac-511f-bc04-ef8733f161fc",
+      "character_a": "나용귀",
+      "character_b": "이몽란"
+    },
+    {
+      "character_a_id": "나용귀",
+      "character_b_id": "유불란",
+      "label": "미워한다",
+      "established_page": 57,
+      "evidence": {
+        "source_page": 57,
+        "quote": "나용귀는 터져 나올 듯한 격분을 참는 듯이 가장 엄숙한 어조로\n“유불란 군, 자세한 사정은 이직 모르나 군은 너무도 잔혹한 짓을 했다. 자기의 애인만을 죽였다면 또한 모르거니와 군은 나의 애인까지도 죽여버리고 말었다!”\n하고 미움이 가득 찬 눈초리를 불란에게 던졌다.",
+        "start_char": 136,
+        "end_char": 285
+      },
+      "rationale": "따옴표 밖 서술이 나용귀가 '미움이 가득 찬 눈초리'를 불란에게 던졌다고 직접 말한다.",
+      "change_type": "establishment",
+      "semantics": {
+        "version": 2,
+        "direction": "a_to_b",
+        "kind": "emotion",
+        "relation_key": "hatred",
+        "summary": "나용귀는 유불란을 미워한다.",
+        "assertion_status": "fact",
+        "temporal_scope": "ongoing",
+        "state": "active",
+        "evidence": {
+          "source_page": 57,
+          "quote": "나용귀는 터져 나올 듯한 격분을 참는 듯이 가장 엄숙한 어조로\n“유불란 군, 자세한 사정은 이직 모르나 군은 너무도 잔혹한 짓을 했다. 자기의 애인만을 죽였다면 또한 모르거니와 군은 나의 애인까지도 죽여버리고 말었다!”\n하고 미움이 가득 찬 눈초리를 불란에게 던졌다.",
+          "start_char": 136,
+          "end_char": 285
+        },
+        "verification": {
+          "check": "confirmed",
+          "reasons": [],
+          "runs_agreed": 2
+        }
+      },
+      "id": "0eaf11e3-7e85-5c3e-b453-be60c63e0a33",
+      "character_a": "나용귀",
+      "character_b": "유불란"
+    }
+  ],
+  "details": [
+    {
+      "chapter_no": 1,
+      "character_a": "박영민",
+      "character_b": "이몽란",
+      "label": "부부다",
+      "relation_key": "marriage",
+      "kind": "family",
+      "direction": "undirected",
+      "assertion_status": "fact",
+      "summary": "박영민과 이몽란은 부부다(이몽란은 좌장 박영민의 부인이다).",
+      "evidence_quote": "홍(洪)\n• 좌장 부인 해왕좌 배우 이몽란(李夢蘭, 24) ......",
+      "established_page": 1,
+      "runs_agreed": 2,
+      "check": "confirmed",
+      "reasons": [],
+      "support": [
+        {
+          "window_id": "p1:752-791:sentence",
+          "kind": "sentence",
+          "page_no": 1,
+          "trigger": "좌장 부인 해왕좌 배우 이몽란",
+          "trigger_start": 759,
+          "trigger_end": 775,
+          "evidence": {
+            "start": 752,
+            "end": 791
+          }
+        },
+        {
+          "window_id": "p2:31-84:sentence",
+          "kind": "sentence",
+          "page_no": 2,
+          "trigger": "좌장의 부인인 화형(花形) 배우 이몽란",
+          "trigger_start": 50,
+          "trigger_end": 71,
+          "evidence": {
+            "start": 31,
+            "end": 84
+          }
+        },
+        {
+          "window_id": "p3:37-116:sentence",
+          "kind": "sentence",
+          "page_no": 3,
+          "trigger": "박영민(홍 배우가 분장), 그의 아내 몽란",
+          "trigger_start": 37,
+          "trigger_end": 60,
+          "evidence": {
+            "start": 37,
+            "end": 116
+          }
+        }
+      ],
+      "rejected_support": [],
+      "notes": []
+    },
+    {
+      "chapter_no": 1,
+      "character_a": "박영민",
+      "character_b": "유불란",
+      "label": "친구다",
+      "relation_key": "friendship",
+      "kind": "social",
+      "direction": "undirected",
+      "assertion_status": "fact",
+      "summary": "유불란은 좌장 박영민의 친구다.",
+      "evidence_quote": "유불란\n• 그 외 박영민 댁의 식모 두 사람, 경관 너댓 명\n탐정극 『가상범인』은 좌장의 친구요 탐정 소설계의 명성인 유불란 씨가 저번 세상을 놀라게 한 본 해왕좌의 좌장 박영민 씨 살해사건을 취재하여 친히 원작한 것이다.",
+      "established_page": 1,
+      "runs_agreed": 2,
+      "check": "confirmed",
+      "reasons": [],
+      "support": [
+        {
+          "window_id": "p1:920-1044:sentence",
+          "kind": "sentence",
+          "page_no": 1,
+          "trigger": "좌장의 친구요 탐정 소설계의 명성인 유불란",
+          "trigger_start": 966,
+          "trigger_end": 989,
+          "evidence": {
+            "start": 920,
+            "end": 1044
+          }
+        }
+      ],
+      "rejected_support": [
+        {
+          "window_id": "p1:892-1044:adjacent",
+          "reason": "support_window_not_for_pair"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "chapter_no": 1,
+      "character_a": "백검사",
+      "character_b": "임경부",
+      "label": "동료다",
+      "relation_key": "colleague",
+      "kind": "social",
+      "direction": "undirected",
+      "assertion_status": "fact",
+      "summary": "백검사와 임경부는 박영민 살인사건을 처음부터 함께 담당한 동료다.",
+      "evidence_quote": "더구나 임경부와 백검사는 이 살인사건을 처음부터 담당한 만큼, 나용귀 입에서 굴러 나온 기적적인 음성은 그들에게 크나큰 쇼크를 주었다.",
+      "established_page": 13,
+      "runs_agreed": 2,
+      "check": "confirmed",
+      "reasons": [],
+      "support": [
+        {
+          "window_id": "p10:858-900:sentence",
+          "kind": "sentence",
+          "page_no": 10,
+          "trigger": "임경부와 백검사 이 둘은 좌장 살해 당시에 현장을 임검(臨檢)한 사람들이다",
+          "trigger_start": 858,
+          "trigger_end": 899,
+          "evidence": {
+            "start": 858,
+            "end": 900
+          }
+        },
+        {
+          "window_id": "p13:423-498:sentence",
+          "kind": "sentence",
+          "page_no": 13,
+          "trigger": "임경부와 백검사는 이 살인사건을 처음부터 담당한",
+          "trigger_start": 427,
+          "trigger_end": 453,
+          "evidence": {
+            "start": 423,
+            "end": 498
+          }
+        }
+      ],
+      "rejected_support": [],
+      "notes": [
+        "established_page_from_later_run"
+      ]
+    },
+    {
+      "chapter_no": 2,
+      "character_a": "유불란",
+      "character_b": "이몽란",
+      "label": "연인이다",
+      "relation_key": "romance",
+      "kind": "social",
+      "direction": "undirected",
+      "assertion_status": "fact",
+      "summary": "유불란과 이몽란은 서로를 생각하고 꿈꾸던 첫사랑 사이다.",
+      "evidence_quote": "첫사랑, 잘 때면 반드시 몽란은 유불란을 생각하고 유불란은 몽란을 꿈꾸었다.",
+      "established_page": 21,
+      "runs_agreed": 2,
+      "check": "confirmed",
+      "reasons": [],
+      "support": [
+        {
+          "window_id": "p21:893-935:sentence",
+          "kind": "sentence",
+          "page_no": 21,
+          "trigger": "첫사랑, 잘 때면 반드시 몽란은 유불란을 생각하고 유불란은 몽란을 꿈꾸었다",
+          "trigger_start": 893,
+          "trigger_end": 934,
+          "evidence": {
+            "start": 893,
+            "end": 935
+          }
+        },
+        {
+          "window_id": "p22:148-201:sentence",
+          "kind": "sentence",
+          "page_no": 22,
+          "trigger": "유불란의 애서를 받아들고 이몽란은",
+          "trigger_start": 163,
+          "trigger_end": 181,
+          "evidence": {
+            "start": 148,
+            "end": 201
+          }
+        }
+      ],
+      "rejected_support": [],
+      "notes": []
+    },
+    {
+      "chapter_no": 2,
+      "character_a": "박영민",
+      "character_b": "이몽란",
+      "label": "윗사람이다",
+      "relation_key": "superior",
+      "kind": "social",
+      "direction": "a_to_b",
+      "assertion_status": "fact",
+      "summary": "박영민은 단장으로 있는 해왕좌에서 단원인 이몽란의 윗사람이다.",
+      "evidence_quote": "그때 마침 서울에 박영민을 단장으로 둔 해왕좌가 창립되자 몽란은 만사를 불고하고 이 극장의 일원이 되었다.",
+      "established_page": 22,
+      "runs_agreed": 2,
+      "check": "confirmed",
+      "reasons": [],
+      "support": [
+        {
+          "window_id": "p22:35-94:sentence",
+          "kind": "sentence",
+          "page_no": 22,
+          "trigger": "박영민을 단장으로 둔 해왕좌가 창립되자 몽란은 만사를 불고하고 이 극장의 일원이 되었다",
+          "trigger_start": 45,
+          "trigger_end": 93,
+          "evidence": {
+            "start": 35,
+            "end": 94
+          }
+        }
+      ],
+      "rejected_support": [],
+      "notes": []
+    },
+    {
+      "chapter_no": 3,
+      "character_a": "임경부",
+      "character_b": "이몽란",
+      "label": "미워한다",
+      "relation_key": "hatred",
+      "kind": "emotion",
+      "direction": "a_to_b",
+      "assertion_status": "fact",
+      "summary": "임경부는 이몽란에게 미움을 품고 있다.",
+      "evidence_quote": "“그러면 좌장을 죽인 자는 누구일까? 몽란이다. 몽란이가 역시 좌장을 죽인 진정한 범인이다. 속아서는 아니 된다. 몽란을 끝없이 사랑하는 유불란, 그리고 몽란을 구해내고자 창작한 탐정극 『가상범인』에 속아서는 아니 된다!”\n임경부는 그때 몽란과 유불란에 대한 미움이 마음을 찌르는 듯함을 깨달았다.",
+      "established_page": 46,
+      "runs_agreed": 2,
+      "check": "confirmed",
+      "reasons": [],
+      "support": [
+        {
+          "window_id": "p46:37-203:sentence",
+          "kind": "sentence",
+          "page_no": 46,
+          "trigger": "임경부는 그때 몽란과 유불란에 대한 미움",
+          "trigger_start": 162,
+          "trigger_end": 184,
+          "evidence": {
+            "start": 37,
+            "end": 203
+          }
+        }
+      ],
+      "rejected_support": [],
+      "notes": []
+    },
+    {
+      "chapter_no": 3,
+      "character_a": "임경부",
+      "character_b": "유불란",
+      "label": "미워한다",
+      "relation_key": "hatred",
+      "kind": "emotion",
+      "direction": "a_to_b",
+      "assertion_status": "fact",
+      "summary": "임경부는 유불란에게 미움을 품고 있다.",
+      "evidence_quote": "“그러면 좌장을 죽인 자는 누구일까? 몽란이다. 몽란이가 역시 좌장을 죽인 진정한 범인이다. 속아서는 아니 된다. 몽란을 끝없이 사랑하는 유불란, 그리고 몽란을 구해내고자 창작한 탐정극 『가상범인』에 속아서는 아니 된다!”\n임경부는 그때 몽란과 유불란에 대한 미움이 마음을 찌르는 듯함을 깨달았다.",
+      "established_page": 46,
+      "runs_agreed": 2,
+      "check": "confirmed",
+      "reasons": [],
+      "support": [
+        {
+          "window_id": "p46:37-203:sentence",
+          "kind": "sentence",
+          "page_no": 46,
+          "trigger": "임경부는 그때 몽란과 유불란에 대한 미움",
+          "trigger_start": 162,
+          "trigger_end": 184,
+          "evidence": {
+            "start": 37,
+            "end": 203
+          }
+        }
+      ],
+      "rejected_support": [],
+      "notes": []
+    },
+    {
+      "chapter_no": 3,
+      "character_a": "유불란",
+      "character_b": "이몽란",
+      "label": "사랑한다",
+      "relation_key": "affection",
+      "kind": "social",
+      "direction": "a_to_b",
+      "assertion_status": "belief",
+      "attribution": "임경부",
+      "summary": "임경부는 유불란이 이몽란을 끝없이 사랑한다고 생각한다.",
+      "evidence_quote": "“그러면 좌장을 죽인 자는 누구일까? 몽란이다. 몽란이가 역시 좌장을 죽인 진정한 범인이다. 속아서는 아니 된다. 몽란을 끝없이 사랑하는 유불란, 그리고 몽란을 구해내고자 창작한 탐정극 『가상범인』에 속아서는 아니 된다!”\n임경부는 그때 몽란과 유불란에 대한 미움이 마음을 찌르는 듯함을 깨달았다.",
+      "established_page": 46,
+      "runs_agreed": 2,
+      "check": "confirmed",
+      "reasons": [],
+      "support": [
+        {
+          "window_id": "p46:37-203:sentence",
+          "kind": "sentence",
+          "page_no": 46,
+          "trigger": "몽란을 끝없이 사랑하는 유불란",
+          "trigger_start": 101,
+          "trigger_end": 117,
+          "evidence": {
+            "start": 37,
+            "end": 203
+          }
+        }
+      ],
+      "rejected_support": [],
+      "notes": []
+    },
+    {
+      "chapter_no": 4,
+      "character_a": "나용귀",
+      "character_b": "이몽란",
+      "label": "사랑한다",
+      "relation_key": "affection",
+      "kind": "social",
+      "direction": "a_to_b",
+      "assertion_status": "claim",
+      "attribution": "임경부",
+      "summary": "임경부는 나용귀가 이몽란을 한량없이 사랑한다고 주장한다.",
+      "evidence_quote": "“나 씨, 당신이 거짓 자백으로 경찰 당국의 눈을 속인 죄는 물론 면할 바 못 되나 이몽란을 한량없이 사랑하는 당신의 정성에는 귀신이라도 감복하지 않을 수가 없소. 자기의 죄를 다른 사람에게 밀기를 일삼는 이 야속한 세상에서——사랑의 힘이란 그와 같이 힘 있고 굳세다는 것을 비로소 나는 깨달은 것 같소.─ 그러나 법률은 죄인의 대신을 용서치 않으오. 당신은 『가상범인』에 출연하겠다는 것을 승인한 그때부터 벌써 애인 이몽란을 위하여 일신을 희생하겠다고 각오했던 것이오. 게다가 당신은 훌륭한 의성술(擬聲術)을 가지고 있었으니만큼 유불란이가 이몽란을 구하고자 만들어낸 『가상범인』이란 연극을 그대로 실행하여 자기가 범인이란 것을 객관화시키었던 것이오.”\n임경부는 거기서 말을 끊고 정신없는 사람과 같이 물끄러미 자기를 쳐다보고 있는 나용귀를 애처로운 듯이 내려다보며, 애인을 위하여 목숨을 바치려고 하는 연애지상주의자의 끓는 정열을 새삼스러이 부러워하면서 한번 빙그레 마음속으로 웃은 다음에 또다시 말을 이었다.",
+      "established_page": 51,
+      "runs_agreed": 2,
+      "check": "confirmed",
+      "reasons": [],
+      "support": [
+        {
+          "window_id": "p51:133-643:sentence",
+          "kind": "sentence",
+          "page_no": 51,
+          "trigger": "이몽란을 한량없이 사랑하는 당신의 정성",
+          "trigger_start": 180,
+          "trigger_end": 201,
+          "evidence": {
+            "start": 133,
+            "end": 643
+          }
+        }
+      ],
+      "rejected_support": [],
+      "notes": []
+    },
+    {
+      "chapter_no": 5,
+      "character_a": "유불란",
+      "character_b": "이몽란",
+      "label": "사랑한다",
+      "relation_key": "affection",
+      "kind": "social",
+      "direction": "a_to_b",
+      "assertion_status": "claim",
+      "attribution": "유불란",
+      "summary": "유불란은 이몽란을 자기가 가장 사랑하는 사람이라고 말한다(유불란의 주장).",
+      "evidence_quote": "“그러나 나는 그 복면한 여자가, 가슴에다 ‘칠’호를 붙인 그 가장한 여자가 자기의 가장 사랑하는 몽란일 줄이야 어찌 알았겠습니까 ? 이와 같이 잔인하고 비참한 일이 또 어데 있으리요? 나는, 나는 이 손으로 몽란을 죽였습니다. 그는 그때 아무 말도 없이─누가 그에게 재갈을 물렸을 줄을 어찌 알았으리요—— 나의 허리와 다리를 쓸어 만져보며 제발 살려달라고 애원하는 그가 바로 몽란이었을 줄이야 꿈에도 생각하지 못하였습니다. 그러나 그것은 결코 나의 자유의사로 죽인 것이 아니고 무서운 권총의 협박을 받았기 때문입니다. 나는 무서운 꿈속을 헤매면서 행여나 그것이 단지 꿈에 지나지 않기를 얼마나 고대하고 기다리었겠습니까? 그러나 그것은 일장의 악몽이 아니고 현실이었습니다!”\n유불란은 아직도 꿈속의 사람과 같이 사방을 돌아다보았다.",
+      "established_page": 56,
+      "runs_agreed": 2,
+      "check": "confirmed",
+      "reasons": [],
+      "support": [
+        {
+          "window_id": "p56:118-527:sentence",
+          "kind": "sentence",
+          "page_no": 56,
+          "trigger": "자기의 가장 사랑하는 몽란",
+          "trigger_start": 161,
+          "trigger_end": 175,
+          "evidence": {
+            "start": 118,
+            "end": 527
+          }
+        }
+      ],
+      "rejected_support": [],
+      "notes": []
+    },
+    {
+      "chapter_no": 5,
+      "character_a": "나용귀",
+      "character_b": "유불란",
+      "label": "미워한다",
+      "relation_key": "hatred",
+      "kind": "emotion",
+      "direction": "a_to_b",
+      "assertion_status": "fact",
+      "summary": "나용귀는 유불란을 미워한다.",
+      "evidence_quote": "나용귀는 터져 나올 듯한 격분을 참는 듯이 가장 엄숙한 어조로\n“유불란 군, 자세한 사정은 이직 모르나 군은 너무도 잔혹한 짓을 했다. 자기의 애인만을 죽였다면 또한 모르거니와 군은 나의 애인까지도 죽여버리고 말었다!”\n하고 미움이 가득 찬 눈초리를 불란에게 던졌다.",
+      "established_page": 57,
+      "runs_agreed": 2,
+      "check": "confirmed",
+      "reasons": [],
+      "support": [
+        {
+          "window_id": "p57:136-285:sentence",
+          "kind": "sentence",
+          "page_no": 57,
+          "trigger": "미움이 가득 찬 눈초리를 불란에게 던졌다",
+          "trigger_start": 262,
+          "trigger_end": 284,
+          "evidence": {
+            "start": 136,
+            "end": 285
+          }
+        }
+      ],
+      "rejected_support": [],
+      "notes": []
+    }
+  ],
+  "held": [
+    {
+      "candidate": {
+        "character_a": "나용귀",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "affection",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "나용귀",
+        "assertion_status": "claim",
+        "attribution": "나용귀",
+        "state": "active",
+        "change_type": "disclosure",
+        "summary": "나용귀는 자신이 이몽란(부인)을 사랑하고 있다고 주장한다.",
+        "rationale": "'나용귀의 진술'로 밝혀진 대사에서 나용귀가 '나는 부인을 사랑하고 있습니다'라고 말한다. 이는 화자 자신의 감정 주장이므로 claim이다.",
+        "support": [
+          {
+            "window_id": "p6:43-216:adjacent",
+            "trigger": "나는 부인을 사랑하고 있습니다"
+          }
+        ]
+      },
+      "reasons": [
+        "trigger_sentence_lacks_endpoint"
+      ],
+      "chapter_no": 1
+    },
+    {
+      "candidate": {
+        "character_a": "나용귀",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "affection",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "이몽란",
+        "assertion_status": "negated",
+        "attribution": "이몽란",
+        "state": "active",
+        "change_type": "disclosure",
+        "summary": "이몽란은 나용귀를 사랑해 본 적이 없다고 주장한다.",
+        "rationale": "'이몽란의 진술'로 밝혀진 대사에서 이몽란이 나용귀를 사랑해 본 적이 없다고 부정한다. 이는 이몽란의 주장으로서 부정된 관계다.",
+        "support": [
+          {
+            "window_id": "p6:58-571:adjacent",
+            "trigger": "나용귀 씨도 사랑해 본 적이 없어요"
+          }
+        ]
+      },
+      "reasons": [
+        "trigger_sentence_lacks_endpoint"
+      ],
+      "chapter_no": 1
+    },
+    {
+      "candidate": {
+        "character_a": "박영민",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "lust",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "박영민",
+        "assertion_status": "fact",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "박영민은 이몽란을 애욕의 대상으로 삼아 차지했다.",
+        "rationale": "서술자가 따옴표 밖에서 몽란이 '박영민의 애욕의 대상'이 되었다고 직접 말한다. 사랑이라는 말은 없고 애욕이라고만 하므로 탐냄(lust)에 해당한다.",
+        "support": [
+          {
+            "window_id": "p22:202-238:sentence",
+            "trigger": "몽란은 벌써 처녀가 아니고 박영민의 애욕의 대상이 되었던 것이다"
+          }
+        ]
+      },
+      "reasons": [
+        "factuality_cue:negation"
+      ],
+      "chapter_no": 2
+    },
+    {
+      "candidate": {
+        "relationship": {
+          "character_a": "유불란",
+          "character_b": "나용귀",
+          "label": "의심한다",
+          "established_page": 24,
+          "rationale": "유불란이 대사에서 몽란에게 '그래도 나용귀를 범인이라고 생각하기가 싫어?'라고 다그친다. 이는 유불란 자신이 나용귀를 범인으로 본다는 주장이다. 대사 속에서 드러나므로 유불란의 claim으로 적는다.",
+          "evidence": {
+            "source_page": 24,
+            "quote": "“그래도 나용귀를 범인이라고 생각하기가 싫어?”\n유불란의 말소리는 점점 흥분을 띠어가기 시작하였다.",
+            "start_char": 720,
+            "end_char": 775
+          },
+          "assertion_status": "claim",
+          "semantics": {
+            "version": 2,
+            "direction": "a_to_b",
+            "kind": "emotion",
+            "relation_key": "suspicion",
+            "summary": "유불란은 나용귀를 좌장을 죽인 범인으로 본다고 주장한다.",
+            "assertion_status": "claim",
+            "temporal_scope": "ongoing",
+            "state": "active",
+            "evidence": {
+              "source_page": 24,
+              "quote": "“그래도 나용귀를 범인이라고 생각하기가 싫어?”\n유불란의 말소리는 점점 흥분을 띠어가기 시작하였다.",
+              "start_char": 720,
+              "end_char": 775
+            },
+            "attribution": "유불란"
+          },
+          "change_type": "establishment"
+        },
+        "character_a_id": "유불란",
+        "character_b_id": "나용귀",
+        "support": [
+          {
+            "window_id": "p24:720-775:sentence",
+            "kind": "sentence",
+            "page_no": 24,
+            "trigger": "나용귀를 범인이라고 생각하기가 싫어",
+            "trigger_start": 725,
+            "trigger_end": 744,
+            "evidence": {
+              "start": 720,
+              "end": 775
+            }
+          }
+        ],
+        "rejected_support": [],
+        "notes": [],
+        "check": "confirmed",
+        "reasons": [],
+        "runs_agreed": 2,
+        "verifier_why": "인용은 유불란이 상대에게 '나용귀를 범인이라고 생각하기가 싫으냐'고 묻는 의문문이라 유불란 자신이 나용귀를 의심한다는 사실 단정이 아니라 함의에 그치므로 관계를 사실로 뒷받침하지 못한다."
+      },
+      "reasons": [
+        "verifier_rejected"
+      ],
+      "chapter_no": 2
+    },
+    {
+      "candidate": {
+        "character_a": "이몽란",
+        "character_b": "임경부",
+        "lasting": true,
+        "category": "adversarial",
+        "type": "suspicion",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "임경부",
+        "assertion_status": "fact",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "임경부는 이몽란을 좌장을 죽인 범인으로 보아 왔다.",
+        "rationale": "따옴표 밖 서술이 임경부가 지금까지 좌장을 죽인 범인을 몽란이라고 생각해 왔다고 직접 말한다. 생각이 막혔다는 말은 있으나 의심이 끝났다고 직접 말하지는 않는다.",
+        "support": [
+          {
+            "window_id": "p48:659-848:sentence",
+            "trigger": "좌장을 죽인 범인을 몽란이라고 생각해오던 임경부"
+          }
+        ]
+      },
+      "reasons": [
+        "factuality_cue:reported"
+      ],
+      "chapter_no": 3
+    },
+    {
+      "candidate": {
+        "relationship": {
+          "character_a": "임경부",
+          "character_b": "유불란",
+          "label": "의심한다",
+          "established_page": 48,
+          "rationale": "임경부의 대사가 '그가 몽란을 죽였다?'라고 물음꼴로 유불란을 혐의자로 떠올린다. 단정이 아니므로 uncertain으로 적는다.",
+          "evidence": {
+            "source_page": 48,
+            "quote": "“음! 장충단 아파트에 사는 유불란! 유불란의 모자에 틀림이 없소.”\n그리고 이상하다는 듯이 임경부는 두어 번 머리를 흔들면서\n“유불란! 유불란! 몽란을 구해내고자 『가상범인』을 창작한 유불란! 그리고 그를 구해낸 유불란! 그가 죽였다. 그가 몽란을 죽였다?”\n지금까지 좌장을 죽인 범인을 몽란이라고 생각해오던 임경부는 생각이 쫙 막혔다.",
+            "start_char": 659,
+            "end_char": 848
+          },
+          "assertion_status": "uncertain",
+          "semantics": {
+            "version": 2,
+            "direction": "a_to_b",
+            "kind": "emotion",
+            "relation_key": "suspicion",
+            "summary": "임경부는 유불란이 몽란을 죽인 것인지 의문을 품는다.",
+            "assertion_status": "uncertain",
+            "temporal_scope": "ongoing",
+            "state": "active",
+            "evidence": {
+              "source_page": 48,
+              "quote": "“음! 장충단 아파트에 사는 유불란! 유불란의 모자에 틀림이 없소.”\n그리고 이상하다는 듯이 임경부는 두어 번 머리를 흔들면서\n“유불란! 유불란! 몽란을 구해내고자 『가상범인』을 창작한 유불란! 그리고 그를 구해낸 유불란! 그가 죽였다. 그가 몽란을 죽였다?”\n지금까지 좌장을 죽인 범인을 몽란이라고 생각해오던 임경부는 생각이 쫙 막혔다.",
+              "start_char": 659,
+              "end_char": 848
+            },
+            "attribution": "임경부"
+          },
+          "change_type": "establishment"
+        },
+        "character_a_id": "임경부",
+        "character_b_id": "유불란",
+        "support": [
+          {
+            "window_id": "p48:659-848:sentence",
+            "kind": "sentence",
+            "page_no": 48,
+            "trigger": "그가 몽란을 죽였다?",
+            "trigger_start": 792,
+            "trigger_end": 803,
+            "evidence": {
+              "start": 659,
+              "end": 848
+            }
+          }
+        ],
+        "rejected_support": [],
+        "notes": []
+      },
+      "reasons": [
+        "Complete semantic v2 contract, specific predicate, qualified subject/object summary and exact dated evidence required"
+      ],
+      "chapter_no": 3
+    },
+    {
+      "candidate": {
+        "relationship": {
+          "character_a": "나용귀",
+          "character_b": "이몽란",
+          "label": "사랑한다",
+          "established_page": 54,
+          "rationale": "나용귀가 대사에서 몽란을 사랑하는 사람이며 자기 생명보다 더 중한 사람이라고 말한다. 자기 감정을 말한 대사이므로 나용귀의 주장이다.",
+          "evidence": {
+            "source_page": 54,
+            "quote": "그러다가 돌연 고개를 들며\n“나는 나는 이대로 있는 것이 얼마나 행복인지 알 수 없습니다. 나는 다시 세상에 나가기를 원치 않습니다. 그리고 나는 몽란을 육체적으로 사랑하겠다고는 꿈에도 생각해 본 일이 없습니다. 이 컴컴한 옥중에서 다만 사랑하는 사람의 환영을 가슴에 품고 일생을 지나는 것이 나에게는 얼마나 행복이겠습니까! 경부께서는 몽란을 다시 이 컴컴하고도 쓸쓸한 감옥에다 넣으려고 나를 찾아온 것에 틀림이 없습니다. 몽란을 다시 옥중으로 보내지 마십시오! 몽란은 나의 생명보다도 더 중한 사람......”\n하고 나용귀는 테이블 위에 그만 쓰러지고야 말었다.",
+            "start_char": 393,
+            "end_char": 708
+          },
+          "assertion_status": "claim",
+          "semantics": {
+            "version": 2,
+            "direction": "a_to_b",
+            "kind": "social",
+            "relation_key": "affection",
+            "summary": "나용귀는 이몽란을 자기 생명보다 더 중한 사람으로 사랑한다고 스스로 말한다.",
+            "assertion_status": "claim",
+            "temporal_scope": "ongoing",
+            "state": "active",
+            "evidence": {
+              "source_page": 54,
+              "quote": "그러다가 돌연 고개를 들며\n“나는 나는 이대로 있는 것이 얼마나 행복인지 알 수 없습니다. 나는 다시 세상에 나가기를 원치 않습니다. 그리고 나는 몽란을 육체적으로 사랑하겠다고는 꿈에도 생각해 본 일이 없습니다. 이 컴컴한 옥중에서 다만 사랑하는 사람의 환영을 가슴에 품고 일생을 지나는 것이 나에게는 얼마나 행복이겠습니까! 경부께서는 몽란을 다시 이 컴컴하고도 쓸쓸한 감옥에다 넣으려고 나를 찾아온 것에 틀림이 없습니다. 몽란을 다시 옥중으로 보내지 마십시오! 몽란은 나의 생명보다도 더 중한 사람......”\n하고 나용귀는 테이블 위에 그만 쓰러지고야 말었다.",
+              "start_char": 393,
+              "end_char": 708
+            },
+            "attribution": "나용귀"
+          },
+          "change_type": "restatement"
+        },
+        "character_a_id": "나용귀",
+        "character_b_id": "이몽란",
+        "support": [
+          {
+            "window_id": "p54:393-708:sentence",
+            "kind": "sentence",
+            "page_no": 54,
+            "trigger": "몽란은 나의 생명보다도 더 중한 사람",
+            "trigger_start": 652,
+            "trigger_end": 672,
+            "evidence": {
+              "start": 393,
+              "end": 708
+            }
+          }
+        ],
+        "rejected_support": [],
+        "notes": []
+      },
+      "reasons": [
+        "Complete semantic v2 contract, specific predicate, qualified subject/object summary and exact dated evidence required"
+      ],
+      "chapter_no": 4
+    },
+    {
+      "candidate": {
+        "relationship": {
+          "character_a": "박영민",
+          "character_b": "이몽란",
+          "label": "부부다",
+          "established_page": 53,
+          "rationale": "임경부의 대사에서 '좌장이 부인과 함께'라고 하여 이몽란이 박영민의 부인임을 말한다. 혼인 계획이나 소문이 아니라 부인이라고 직접 말한다. 대사 안의 말이므로 임경부의 주장이다.",
+          "evidence": {
+            "source_page": 53,
+            "quote": "그리고 임경부는 사진을 나용귀 앞으로 밀어놓으면서\n“이 사진은 분명히 좌장이 생전에 찍었던 것인데 보는 바와 같이 좌장의 서재입니다. 자세히 들여다보십시오. 흰 담벽 위에 걸려 있는 이 시계가 지금 몇 시를 가리키고 있는가. 9시 34분입니다. 그리고 그 밑에 걸려 있는 화신백화점의 마크가 박혀 있는 일력(日曆)을 보면, 그것이 11월 23일이란 것을 알아볼 수가 있을 것이오. 그러면 어떻게 되우? 좌장이 이 사진을 촬영한 것이 11월 23일 9시 34분——알겠소? 당신이 총알로 시계를 멈추어놓았다고 생각하는 그 시각도 11월 23일 9시 34분입니다. 단지 어그러지는 것은 하나는 오후라는 것이 분명한데 하나는 ‘오후’인가, ‘오전’인가 분명치 않을 뿐이오. 이 우연한 일치를 당신은 어떻게 생각하시우? 만일 좌장이 시계 진행 중에 이 사진을 박았다고 가정하면 오후 9시 34분에는 벌써 시체가 되어버린 좌장이니만치 도저히 촬영할 수가 없었을 것이니, 그날 오전 9시 34분에 박았다고 생각하는 것이 당연할 것이오. 그러나 그날 오전 9시 34분에는 좌장이 부인과 함께 외출한 사실이 판명되어 있습니다.”\n임경부는 신경을 일일이 가다듬어 가면서 다시 설명을 계속하였다.",
+            "start_char": 0,
+            "end_char": 602
+          },
+          "assertion_status": "claim",
+          "semantics": {
+            "version": 2,
+            "direction": "undirected",
+            "kind": "family",
+            "relation_key": "marriage",
+            "summary": "임경부는 박영민(좌장)이 부인 이몽란과 함께 외출했다고 말하며 두 사람을 부부로 말한다.",
+            "assertion_status": "claim",
+            "temporal_scope": "ongoing",
+            "state": "active",
+            "evidence": {
+              "source_page": 53,
+              "quote": "그리고 임경부는 사진을 나용귀 앞으로 밀어놓으면서\n“이 사진은 분명히 좌장이 생전에 찍었던 것인데 보는 바와 같이 좌장의 서재입니다. 자세히 들여다보십시오. 흰 담벽 위에 걸려 있는 이 시계가 지금 몇 시를 가리키고 있는가. 9시 34분입니다. 그리고 그 밑에 걸려 있는 화신백화점의 마크가 박혀 있는 일력(日曆)을 보면, 그것이 11월 23일이란 것을 알아볼 수가 있을 것이오. 그러면 어떻게 되우? 좌장이 이 사진을 촬영한 것이 11월 23일 9시 34분——알겠소? 당신이 총알로 시계를 멈추어놓았다고 생각하는 그 시각도 11월 23일 9시 34분입니다. 단지 어그러지는 것은 하나는 오후라는 것이 분명한데 하나는 ‘오후’인가, ‘오전’인가 분명치 않을 뿐이오. 이 우연한 일치를 당신은 어떻게 생각하시우? 만일 좌장이 시계 진행 중에 이 사진을 박았다고 가정하면 오후 9시 34분에는 벌써 시체가 되어버린 좌장이니만치 도저히 촬영할 수가 없었을 것이니, 그날 오전 9시 34분에 박았다고 생각하는 것이 당연할 것이오. 그러나 그날 오전 9시 34분에는 좌장이 부인과 함께 외출한 사실이 판명되어 있습니다.”\n임경부는 신경을 일일이 가다듬어 가면서 다시 설명을 계속하였다.",
+              "start_char": 0,
+              "end_char": 602
+            },
+            "attribution": "임경부"
+          },
+          "change_type": "establishment"
+        },
+        "character_a_id": "박영민",
+        "character_b_id": "이몽란",
+        "support": [
+          {
+            "window_id": "p53:0-602:sentence",
+            "kind": "sentence",
+            "page_no": 53,
+            "trigger": "좌장이 부인과 함께 외출한",
+            "trigger_start": 536,
+            "trigger_end": 550,
+            "evidence": {
+              "start": 0,
+              "end": 602
+            }
+          }
+        ],
+        "rejected_support": [],
+        "notes": []
+      },
+      "reasons": [
+        "Complete semantic v2 contract, specific predicate, qualified subject/object summary and exact dated evidence required"
+      ],
+      "chapter_no": 4
+    },
+    {
+      "candidate": {
+        "relationship": {
+          "character_a": "임경부",
+          "character_b": "유불란",
+          "label": "의심한다",
+          "established_page": 54,
+          "rationale": "임경부가 '가해자는 유불란'이라고 말해 유불란을 혐의자로 본다. 말한 사람의 대사이므로 임경부의 주장이다.",
+          "evidence": {
+            "source_page": 54,
+            "quote": "“살해를 당했다......? ”\n“아직 자세한 사정은 알 수가 없으나 가해자는 유불란......”\n하고 임경부는 말끝을 그만 끊었다.",
+            "start_char": 851,
+            "end_char": 925
+          },
+          "assertion_status": "claim",
+          "semantics": {
+            "version": 2,
+            "direction": "a_to_b",
+            "kind": "emotion",
+            "relation_key": "suspicion",
+            "summary": "임경부는 아직 확실하지 않다면서도 유불란을 이몽란 살해의 가해자로 본다고 말한다.",
+            "assertion_status": "claim",
+            "temporal_scope": "ongoing",
+            "state": "active",
+            "evidence": {
+              "source_page": 54,
+              "quote": "“살해를 당했다......? ”\n“아직 자세한 사정은 알 수가 없으나 가해자는 유불란......”\n하고 임경부는 말끝을 그만 끊었다.",
+              "start_char": 851,
+              "end_char": 925
+            },
+            "attribution": "임경부"
+          },
+          "change_type": "establishment"
+        },
+        "character_a_id": "임경부",
+        "character_b_id": "유불란",
+        "support": [
+          {
+            "window_id": "p54:851-925:sentence",
+            "kind": "sentence",
+            "page_no": 54,
+            "trigger": "가해자는 유불란......",
+            "trigger_start": 890,
+            "trigger_end": 904,
+            "evidence": {
+              "start": 851,
+              "end": 925
+            }
+          }
+        ],
+        "rejected_support": [],
+        "notes": [],
+        "check": "confirmed",
+        "reasons": [],
+        "runs_agreed": 2,
+        "verifier_why": "임경부가 \"가해자는 유불란......\"에서 말끝을 끊어 문장이 미완결이므로, 유불란 본인을 가해자로 지목한 것인지 단정할 수 없고 '유불란을 의심했다'는 사람 목적어 의심도 명시되지 않는다."
+      },
+      "reasons": [
+        "verifier_rejected"
+      ],
+      "chapter_no": 4
+    },
+    {
+      "candidate": {
+        "relationship": {
+          "character_a": "이몽란",
+          "character_b": "유불란",
+          "label": "사랑한다",
+          "established_page": 59,
+          "rationale": "임경부가 대사에서 몽란이 유불란을 더 사랑했을지 모르나 '그의 마음은 당신에게서 떠나기 시작'했다고 말한다. 따라서 관계가 바뀌었다는 임경부의 claim이다.",
+          "evidence": {
+            "source_page": 59,
+            "quote": "“어째, 거짓 자백이란 말이오?”\n임경부는 아까 서대문 형무소에서 나용귀에게 한 것과 같은 설명을 세세히 한 다음에\n“이제 말한 바와 같이 결국 당신은 그때 박영민의 서재에 걸려 있던 시계가 고장으로 말미암아 멎어 있었던 사실을 몰랐던 것이오. 멎어 있는 시계에서 똑딱똑딱 하는 소리가 날리는 만무하니까.”\n유불란은 이론이 정연한 임경부의 설명에 대하여 무어라고 변명할 여유도 가지지 못하고 그저 묵묵히 듣고 있다가\n“그러면 결국 박영민을 죽인 것이 몽란이라 합시다. 그러나 나는 왜 몽란을 죽이지 않으면 안 된다는 말이오? 무슨 동기로——”\n“흥, 당신이 몽란을 죽인 동기를 내 입으로 말해보라는 말이지요.”\n하고 임경부는 잠깐 동안 유불란과 나용귀를 절반씩 쳐다본 후\n“몽란은 혹은 당신을 더 사랑했을지도 모르나 아니, 몽란 자신도——나 씨의 면전에서 실례입니다만, 나 씨를 사랑하지 않는다고 단언했었지만, 그러나 그 후 몽란의 마음은 점점 변해지기를 시작하였던 것이오. 그는 자기를 구하려고 『가상범인』을 창작한 당신의 노력과 역시 자기를 구하려고 거짓 자백을 하여서 대신 옥중으로 들어간 나 씨의 노력을 냉정한 머리로 비교하여보았을 것이오. 여성에게 있어서 외형미 같은 것은 사랑의 최대조건은 아닙니다. 그들이 사랑하고 동경하는 적은 무엇보다도 남자들의 친절이오. 몽란은 번민하기를 마지않았을 것이오. 몽란은 자기가 범인이란 것을 누구보다도 잘 알고 있는 동시에 결코 나 씨가 범인이 아니라는 것도 잘 알고 있었지요. 그래서 그의 마음은 당신에게서 떠나기 시작하여 드디어 나 씨께로 옮아가고야 말았습니다. 질투로 가득한 당신의 심정─”\n그때 유불란은 의자에서 벌떡 일어나며 미친 것과 같이 부르짖었다.",
+            "start_char": 0,
+            "end_char": 844
+          },
+          "assertion_status": "claim",
+          "semantics": {
+            "version": 2,
+            "direction": "a_to_b",
+            "kind": "social",
+            "relation_key": "affection",
+            "summary": "임경부는 이몽란의 마음이 유불란에게서 떠났다고 주장한다.",
+            "assertion_status": "claim",
+            "temporal_scope": "ongoing",
+            "state": "ended",
+            "evidence": {
+              "source_page": 59,
+              "quote": "“어째, 거짓 자백이란 말이오?”\n임경부는 아까 서대문 형무소에서 나용귀에게 한 것과 같은 설명을 세세히 한 다음에\n“이제 말한 바와 같이 결국 당신은 그때 박영민의 서재에 걸려 있던 시계가 고장으로 말미암아 멎어 있었던 사실을 몰랐던 것이오. 멎어 있는 시계에서 똑딱똑딱 하는 소리가 날리는 만무하니까.”\n유불란은 이론이 정연한 임경부의 설명에 대하여 무어라고 변명할 여유도 가지지 못하고 그저 묵묵히 듣고 있다가\n“그러면 결국 박영민을 죽인 것이 몽란이라 합시다. 그러나 나는 왜 몽란을 죽이지 않으면 안 된다는 말이오? 무슨 동기로——”\n“흥, 당신이 몽란을 죽인 동기를 내 입으로 말해보라는 말이지요.”\n하고 임경부는 잠깐 동안 유불란과 나용귀를 절반씩 쳐다본 후\n“몽란은 혹은 당신을 더 사랑했을지도 모르나 아니, 몽란 자신도——나 씨의 면전에서 실례입니다만, 나 씨를 사랑하지 않는다고 단언했었지만, 그러나 그 후 몽란의 마음은 점점 변해지기를 시작하였던 것이오. 그는 자기를 구하려고 『가상범인』을 창작한 당신의 노력과 역시 자기를 구하려고 거짓 자백을 하여서 대신 옥중으로 들어간 나 씨의 노력을 냉정한 머리로 비교하여보았을 것이오. 여성에게 있어서 외형미 같은 것은 사랑의 최대조건은 아닙니다. 그들이 사랑하고 동경하는 적은 무엇보다도 남자들의 친절이오. 몽란은 번민하기를 마지않았을 것이오. 몽란은 자기가 범인이란 것을 누구보다도 잘 알고 있는 동시에 결코 나 씨가 범인이 아니라는 것도 잘 알고 있었지요. 그래서 그의 마음은 당신에게서 떠나기 시작하여 드디어 나 씨께로 옮아가고야 말았습니다. 질투로 가득한 당신의 심정─”\n그때 유불란은 의자에서 벌떡 일어나며 미친 것과 같이 부르짖었다.",
+              "start_char": 0,
+              "end_char": 844
+            },
+            "attribution": "임경부",
+            "change_evidence": {
+              "source_page": 59,
+              "quote": "“어째, 거짓 자백이란 말이오?”\n임경부는 아까 서대문 형무소에서 나용귀에게 한 것과 같은 설명을 세세히 한 다음에\n“이제 말한 바와 같이 결국 당신은 그때 박영민의 서재에 걸려 있던 시계가 고장으로 말미암아 멎어 있었던 사실을 몰랐던 것이오. 멎어 있는 시계에서 똑딱똑딱 하는 소리가 날리는 만무하니까.”\n유불란은 이론이 정연한 임경부의 설명에 대하여 무어라고 변명할 여유도 가지지 못하고 그저 묵묵히 듣고 있다가\n“그러면 결국 박영민을 죽인 것이 몽란이라 합시다. 그러나 나는 왜 몽란을 죽이지 않으면 안 된다는 말이오? 무슨 동기로——”\n“흥, 당신이 몽란을 죽인 동기를 내 입으로 말해보라는 말이지요.”\n하고 임경부는 잠깐 동안 유불란과 나용귀를 절반씩 쳐다본 후\n“몽란은 혹은 당신을 더 사랑했을지도 모르나 아니, 몽란 자신도——나 씨의 면전에서 실례입니다만, 나 씨를 사랑하지 않는다고 단언했었지만, 그러나 그 후 몽란의 마음은 점점 변해지기를 시작하였던 것이오. 그는 자기를 구하려고 『가상범인』을 창작한 당신의 노력과 역시 자기를 구하려고 거짓 자백을 하여서 대신 옥중으로 들어간 나 씨의 노력을 냉정한 머리로 비교하여보았을 것이오. 여성에게 있어서 외형미 같은 것은 사랑의 최대조건은 아닙니다. 그들이 사랑하고 동경하는 적은 무엇보다도 남자들의 친절이오. 몽란은 번민하기를 마지않았을 것이오. 몽란은 자기가 범인이란 것을 누구보다도 잘 알고 있는 동시에 결코 나 씨가 범인이 아니라는 것도 잘 알고 있었지요. 그래서 그의 마음은 당신에게서 떠나기 시작하여 드디어 나 씨께로 옮아가고야 말았습니다. 질투로 가득한 당신의 심정─”\n그때 유불란은 의자에서 벌떡 일어나며 미친 것과 같이 부르짖었다.",
+              "start_char": 0,
+              "end_char": 844
+            }
+          },
+          "change_type": "transition",
+          "change_evidence": {
+            "source_page": 59,
+            "quote": "“어째, 거짓 자백이란 말이오?”\n임경부는 아까 서대문 형무소에서 나용귀에게 한 것과 같은 설명을 세세히 한 다음에\n“이제 말한 바와 같이 결국 당신은 그때 박영민의 서재에 걸려 있던 시계가 고장으로 말미암아 멎어 있었던 사실을 몰랐던 것이오. 멎어 있는 시계에서 똑딱똑딱 하는 소리가 날리는 만무하니까.”\n유불란은 이론이 정연한 임경부의 설명에 대하여 무어라고 변명할 여유도 가지지 못하고 그저 묵묵히 듣고 있다가\n“그러면 결국 박영민을 죽인 것이 몽란이라 합시다. 그러나 나는 왜 몽란을 죽이지 않으면 안 된다는 말이오? 무슨 동기로——”\n“흥, 당신이 몽란을 죽인 동기를 내 입으로 말해보라는 말이지요.”\n하고 임경부는 잠깐 동안 유불란과 나용귀를 절반씩 쳐다본 후\n“몽란은 혹은 당신을 더 사랑했을지도 모르나 아니, 몽란 자신도——나 씨의 면전에서 실례입니다만, 나 씨를 사랑하지 않는다고 단언했었지만, 그러나 그 후 몽란의 마음은 점점 변해지기를 시작하였던 것이오. 그는 자기를 구하려고 『가상범인』을 창작한 당신의 노력과 역시 자기를 구하려고 거짓 자백을 하여서 대신 옥중으로 들어간 나 씨의 노력을 냉정한 머리로 비교하여보았을 것이오. 여성에게 있어서 외형미 같은 것은 사랑의 최대조건은 아닙니다. 그들이 사랑하고 동경하는 적은 무엇보다도 남자들의 친절이오. 몽란은 번민하기를 마지않았을 것이오. 몽란은 자기가 범인이란 것을 누구보다도 잘 알고 있는 동시에 결코 나 씨가 범인이 아니라는 것도 잘 알고 있었지요. 그래서 그의 마음은 당신에게서 떠나기 시작하여 드디어 나 씨께로 옮아가고야 말았습니다. 질투로 가득한 당신의 심정─”\n그때 유불란은 의자에서 벌떡 일어나며 미친 것과 같이 부르짖었다.",
+            "start_char": 0,
+            "end_char": 844
+          }
+        },
+        "character_a_id": "이몽란",
+        "character_b_id": "유불란",
+        "support": [
+          {
+            "window_id": "p59:0-844:sentence",
+            "kind": "sentence",
+            "page_no": 59,
+            "trigger": "그의 마음은 당신에게서 떠나기 시작하여",
+            "trigger_start": 746,
+            "trigger_end": 767,
+            "evidence": {
+              "start": 0,
+              "end": 844
+            }
+          }
+        ],
+        "rejected_support": [],
+        "notes": [],
+        "check": "needs_review",
+        "reasons": [
+          "single_run",
+          "change_needs_review"
+        ],
+        "runs_agreed": 1,
+        "verifier_why": "인용에서 몽란이 유불란을 사랑했다는 말은 임경부의 추측('혹은 당신을 더 사랑했을지도 모르나')에 그치고, 곧이어 그녀의 마음이 유불란에게서 떠나 나 씨에게로 옮아갔다고 말하므로 이몽란이 유불란을 사랑한다는 진술을 사실로 뒷받침하지 않는다."
+      },
+      "reasons": [
+        "verifier_rejected"
+      ],
+      "chapter_no": 5
+    },
+    {
+      "candidate": {
+        "relationship": {
+          "character_a": "이몽란",
+          "character_b": "나용귀",
+          "label": "사랑한다",
+          "established_page": 59,
+          "rationale": "임경부의 대사가 몽란의 마음이 변해 '드디어 나 씨께로 옮아가고야 말았'다고 말한다. 이는 임경부의 claim이며, 유불란은 곧이어 이를 부인한다.",
+          "evidence": {
+            "source_page": 59,
+            "quote": "“어째, 거짓 자백이란 말이오?”\n임경부는 아까 서대문 형무소에서 나용귀에게 한 것과 같은 설명을 세세히 한 다음에\n“이제 말한 바와 같이 결국 당신은 그때 박영민의 서재에 걸려 있던 시계가 고장으로 말미암아 멎어 있었던 사실을 몰랐던 것이오. 멎어 있는 시계에서 똑딱똑딱 하는 소리가 날리는 만무하니까.”\n유불란은 이론이 정연한 임경부의 설명에 대하여 무어라고 변명할 여유도 가지지 못하고 그저 묵묵히 듣고 있다가\n“그러면 결국 박영민을 죽인 것이 몽란이라 합시다. 그러나 나는 왜 몽란을 죽이지 않으면 안 된다는 말이오? 무슨 동기로——”\n“흥, 당신이 몽란을 죽인 동기를 내 입으로 말해보라는 말이지요.”\n하고 임경부는 잠깐 동안 유불란과 나용귀를 절반씩 쳐다본 후\n“몽란은 혹은 당신을 더 사랑했을지도 모르나 아니, 몽란 자신도——나 씨의 면전에서 실례입니다만, 나 씨를 사랑하지 않는다고 단언했었지만, 그러나 그 후 몽란의 마음은 점점 변해지기를 시작하였던 것이오. 그는 자기를 구하려고 『가상범인』을 창작한 당신의 노력과 역시 자기를 구하려고 거짓 자백을 하여서 대신 옥중으로 들어간 나 씨의 노력을 냉정한 머리로 비교하여보았을 것이오. 여성에게 있어서 외형미 같은 것은 사랑의 최대조건은 아닙니다. 그들이 사랑하고 동경하는 적은 무엇보다도 남자들의 친절이오. 몽란은 번민하기를 마지않았을 것이오. 몽란은 자기가 범인이란 것을 누구보다도 잘 알고 있는 동시에 결코 나 씨가 범인이 아니라는 것도 잘 알고 있었지요. 그래서 그의 마음은 당신에게서 떠나기 시작하여 드디어 나 씨께로 옮아가고야 말았습니다. 질투로 가득한 당신의 심정─”\n그때 유불란은 의자에서 벌떡 일어나며 미친 것과 같이 부르짖었다.",
+            "start_char": 0,
+            "end_char": 844
+          },
+          "assertion_status": "claim",
+          "semantics": {
+            "version": 2,
+            "direction": "a_to_b",
+            "kind": "social",
+            "relation_key": "affection",
+            "summary": "임경부는 이몽란의 마음이 나용귀에게로 옮아갔다고 주장한다.",
+            "assertion_status": "claim",
+            "temporal_scope": "ongoing",
+            "state": "active",
+            "evidence": {
+              "source_page": 59,
+              "quote": "“어째, 거짓 자백이란 말이오?”\n임경부는 아까 서대문 형무소에서 나용귀에게 한 것과 같은 설명을 세세히 한 다음에\n“이제 말한 바와 같이 결국 당신은 그때 박영민의 서재에 걸려 있던 시계가 고장으로 말미암아 멎어 있었던 사실을 몰랐던 것이오. 멎어 있는 시계에서 똑딱똑딱 하는 소리가 날리는 만무하니까.”\n유불란은 이론이 정연한 임경부의 설명에 대하여 무어라고 변명할 여유도 가지지 못하고 그저 묵묵히 듣고 있다가\n“그러면 결국 박영민을 죽인 것이 몽란이라 합시다. 그러나 나는 왜 몽란을 죽이지 않으면 안 된다는 말이오? 무슨 동기로——”\n“흥, 당신이 몽란을 죽인 동기를 내 입으로 말해보라는 말이지요.”\n하고 임경부는 잠깐 동안 유불란과 나용귀를 절반씩 쳐다본 후\n“몽란은 혹은 당신을 더 사랑했을지도 모르나 아니, 몽란 자신도——나 씨의 면전에서 실례입니다만, 나 씨를 사랑하지 않는다고 단언했었지만, 그러나 그 후 몽란의 마음은 점점 변해지기를 시작하였던 것이오. 그는 자기를 구하려고 『가상범인』을 창작한 당신의 노력과 역시 자기를 구하려고 거짓 자백을 하여서 대신 옥중으로 들어간 나 씨의 노력을 냉정한 머리로 비교하여보았을 것이오. 여성에게 있어서 외형미 같은 것은 사랑의 최대조건은 아닙니다. 그들이 사랑하고 동경하는 적은 무엇보다도 남자들의 친절이오. 몽란은 번민하기를 마지않았을 것이오. 몽란은 자기가 범인이란 것을 누구보다도 잘 알고 있는 동시에 결코 나 씨가 범인이 아니라는 것도 잘 알고 있었지요. 그래서 그의 마음은 당신에게서 떠나기 시작하여 드디어 나 씨께로 옮아가고야 말았습니다. 질투로 가득한 당신의 심정─”\n그때 유불란은 의자에서 벌떡 일어나며 미친 것과 같이 부르짖었다.",
+              "start_char": 0,
+              "end_char": 844
+            },
+            "attribution": "임경부",
+            "change_evidence": {
+              "source_page": 59,
+              "quote": "“어째, 거짓 자백이란 말이오?”\n임경부는 아까 서대문 형무소에서 나용귀에게 한 것과 같은 설명을 세세히 한 다음에\n“이제 말한 바와 같이 결국 당신은 그때 박영민의 서재에 걸려 있던 시계가 고장으로 말미암아 멎어 있었던 사실을 몰랐던 것이오. 멎어 있는 시계에서 똑딱똑딱 하는 소리가 날리는 만무하니까.”\n유불란은 이론이 정연한 임경부의 설명에 대하여 무어라고 변명할 여유도 가지지 못하고 그저 묵묵히 듣고 있다가\n“그러면 결국 박영민을 죽인 것이 몽란이라 합시다. 그러나 나는 왜 몽란을 죽이지 않으면 안 된다는 말이오? 무슨 동기로——”\n“흥, 당신이 몽란을 죽인 동기를 내 입으로 말해보라는 말이지요.”\n하고 임경부는 잠깐 동안 유불란과 나용귀를 절반씩 쳐다본 후\n“몽란은 혹은 당신을 더 사랑했을지도 모르나 아니, 몽란 자신도——나 씨의 면전에서 실례입니다만, 나 씨를 사랑하지 않는다고 단언했었지만, 그러나 그 후 몽란의 마음은 점점 변해지기를 시작하였던 것이오. 그는 자기를 구하려고 『가상범인』을 창작한 당신의 노력과 역시 자기를 구하려고 거짓 자백을 하여서 대신 옥중으로 들어간 나 씨의 노력을 냉정한 머리로 비교하여보았을 것이오. 여성에게 있어서 외형미 같은 것은 사랑의 최대조건은 아닙니다. 그들이 사랑하고 동경하는 적은 무엇보다도 남자들의 친절이오. 몽란은 번민하기를 마지않았을 것이오. 몽란은 자기가 범인이란 것을 누구보다도 잘 알고 있는 동시에 결코 나 씨가 범인이 아니라는 것도 잘 알고 있었지요. 그래서 그의 마음은 당신에게서 떠나기 시작하여 드디어 나 씨께로 옮아가고야 말았습니다. 질투로 가득한 당신의 심정─”\n그때 유불란은 의자에서 벌떡 일어나며 미친 것과 같이 부르짖었다.",
+              "start_char": 0,
+              "end_char": 844
+            }
+          },
+          "change_type": "transition",
+          "change_evidence": {
+            "source_page": 59,
+            "quote": "“어째, 거짓 자백이란 말이오?”\n임경부는 아까 서대문 형무소에서 나용귀에게 한 것과 같은 설명을 세세히 한 다음에\n“이제 말한 바와 같이 결국 당신은 그때 박영민의 서재에 걸려 있던 시계가 고장으로 말미암아 멎어 있었던 사실을 몰랐던 것이오. 멎어 있는 시계에서 똑딱똑딱 하는 소리가 날리는 만무하니까.”\n유불란은 이론이 정연한 임경부의 설명에 대하여 무어라고 변명할 여유도 가지지 못하고 그저 묵묵히 듣고 있다가\n“그러면 결국 박영민을 죽인 것이 몽란이라 합시다. 그러나 나는 왜 몽란을 죽이지 않으면 안 된다는 말이오? 무슨 동기로——”\n“흥, 당신이 몽란을 죽인 동기를 내 입으로 말해보라는 말이지요.”\n하고 임경부는 잠깐 동안 유불란과 나용귀를 절반씩 쳐다본 후\n“몽란은 혹은 당신을 더 사랑했을지도 모르나 아니, 몽란 자신도——나 씨의 면전에서 실례입니다만, 나 씨를 사랑하지 않는다고 단언했었지만, 그러나 그 후 몽란의 마음은 점점 변해지기를 시작하였던 것이오. 그는 자기를 구하려고 『가상범인』을 창작한 당신의 노력과 역시 자기를 구하려고 거짓 자백을 하여서 대신 옥중으로 들어간 나 씨의 노력을 냉정한 머리로 비교하여보았을 것이오. 여성에게 있어서 외형미 같은 것은 사랑의 최대조건은 아닙니다. 그들이 사랑하고 동경하는 적은 무엇보다도 남자들의 친절이오. 몽란은 번민하기를 마지않았을 것이오. 몽란은 자기가 범인이란 것을 누구보다도 잘 알고 있는 동시에 결코 나 씨가 범인이 아니라는 것도 잘 알고 있었지요. 그래서 그의 마음은 당신에게서 떠나기 시작하여 드디어 나 씨께로 옮아가고야 말았습니다. 질투로 가득한 당신의 심정─”\n그때 유불란은 의자에서 벌떡 일어나며 미친 것과 같이 부르짖었다.",
+            "start_char": 0,
+            "end_char": 844
+          }
+        },
+        "character_a_id": "이몽란",
+        "character_b_id": "나용귀",
+        "support": [
+          {
+            "window_id": "p59:0-844:sentence",
+            "kind": "sentence",
+            "page_no": 59,
+            "trigger": "드디어 나 씨께로 옮아가고야 말았습니다",
+            "trigger_start": 768,
+            "trigger_end": 789,
+            "evidence": {
+              "start": 0,
+              "end": 844
+            }
+          }
+        ],
+        "rejected_support": [],
+        "notes": [],
+        "check": "needs_review",
+        "reasons": [
+          "single_run",
+          "change_needs_review"
+        ],
+        "runs_agreed": 1,
+        "verifier_why": "몽란의 마음이 나용귀에게 옮아갔다는 말은 임경부가 유불란의 살해 동기를 추리하며 내놓은 추측('비교하여보았을 것이오', '번민하기를 마지않았을 것이오')이고, 몽란 자신은 나 씨를 사랑하지 않는다고 단언했다고 되어 있어, 몽란이 나용귀를 사랑한다는 사실의 근거가 되지 못한다."
+      },
+      "reasons": [
+        "verifier_rejected"
+      ],
+      "chapter_no": 5
+    },
+    {
+      "candidate": {
+        "relationship": {
+          "character_a": "나용귀",
+          "character_b": "이몽란",
+          "label": "탐낸다",
+          "established_page": 61,
+          "rationale": "백검사가 대사에서 나용귀가 몽란에게 사랑을 받아보려다 거절당했다고 말한다. 또 거짓 자백으로 유불란에게 가던 몽란의 사랑을 자기에게로 돌려놓으려 했다고 말하므로 백검사의 claim이다.",
+          "evidence": {
+            "source_page": 61,
+            "quote": "“음! 잘 말했나—— 그러면 먼저 결론부터 말해보자. 너는 해왕좌의 좌장 박영민을 살해한 범인이다. 방법은 유불란 씨의 탐정극 『가상범인』과 꼭 같다. 동기는 네가 몽란에게 사랑을 받아보려다 거절당한 것. 좌장이 너를 독사와도 같이 싫어하고 미워한 것이다.”\n그때 나용귀는 픽 하고 비웃으면서\n“당신은 대체 무엇을 말하고 있는지 나는 도무지 알 수가 없습니다. 그와 같은 방법으로 그와 같은 동기에서 해왕좌의 좌장 박영민을 죽였다고 처음부터 나는 정직하게 자백하지를 않았습니까? 그것은 임경부가 사진이 어떠니, 시계가 멎어 있었으니 어떠니 하면서 나에게 생에 대한 희망을 가지게 한 것이 아닙니까?”",
+            "start_char": 346,
+            "end_char": 681
+          },
+          "assertion_status": "claim",
+          "semantics": {
+            "version": 2,
+            "direction": "a_to_b",
+            "kind": "social",
+            "relation_key": "lust",
+            "summary": "백검사는 나용귀가 이몽란의 사랑을 차지하려 했다고 주장한다.",
+            "assertion_status": "claim",
+            "temporal_scope": "ongoing",
+            "state": "active",
+            "evidence": {
+              "source_page": 61,
+              "quote": "“음! 잘 말했나—— 그러면 먼저 결론부터 말해보자. 너는 해왕좌의 좌장 박영민을 살해한 범인이다. 방법은 유불란 씨의 탐정극 『가상범인』과 꼭 같다. 동기는 네가 몽란에게 사랑을 받아보려다 거절당한 것. 좌장이 너를 독사와도 같이 싫어하고 미워한 것이다.”\n그때 나용귀는 픽 하고 비웃으면서\n“당신은 대체 무엇을 말하고 있는지 나는 도무지 알 수가 없습니다. 그와 같은 방법으로 그와 같은 동기에서 해왕좌의 좌장 박영민을 죽였다고 처음부터 나는 정직하게 자백하지를 않았습니까? 그것은 임경부가 사진이 어떠니, 시계가 멎어 있었으니 어떠니 하면서 나에게 생에 대한 희망을 가지게 한 것이 아닙니까?”",
+              "start_char": 346,
+              "end_char": 681
+            },
+            "attribution": "백검사",
+            "change_evidence": {
+              "source_page": 61,
+              "quote": "“음! 잘 말했나—— 그러면 먼저 결론부터 말해보자. 너는 해왕좌의 좌장 박영민을 살해한 범인이다. 방법은 유불란 씨의 탐정극 『가상범인』과 꼭 같다. 동기는 네가 몽란에게 사랑을 받아보려다 거절당한 것. 좌장이 너를 독사와도 같이 싫어하고 미워한 것이다.”\n그때 나용귀는 픽 하고 비웃으면서\n“당신은 대체 무엇을 말하고 있는지 나는 도무지 알 수가 없습니다. 그와 같은 방법으로 그와 같은 동기에서 해왕좌의 좌장 박영민을 죽였다고 처음부터 나는 정직하게 자백하지를 않았습니까? 그것은 임경부가 사진이 어떠니, 시계가 멎어 있었으니 어떠니 하면서 나에게 생에 대한 희망을 가지게 한 것이 아닙니까?”",
+              "start_char": 346,
+              "end_char": 681
+            }
+          },
+          "change_type": "disclosure",
+          "change_evidence": {
+            "source_page": 61,
+            "quote": "“음! 잘 말했나—— 그러면 먼저 결론부터 말해보자. 너는 해왕좌의 좌장 박영민을 살해한 범인이다. 방법은 유불란 씨의 탐정극 『가상범인』과 꼭 같다. 동기는 네가 몽란에게 사랑을 받아보려다 거절당한 것. 좌장이 너를 독사와도 같이 싫어하고 미워한 것이다.”\n그때 나용귀는 픽 하고 비웃으면서\n“당신은 대체 무엇을 말하고 있는지 나는 도무지 알 수가 없습니다. 그와 같은 방법으로 그와 같은 동기에서 해왕좌의 좌장 박영민을 죽였다고 처음부터 나는 정직하게 자백하지를 않았습니까? 그것은 임경부가 사진이 어떠니, 시계가 멎어 있었으니 어떠니 하면서 나에게 생에 대한 희망을 가지게 한 것이 아닙니까?”",
+            "start_char": 346,
+            "end_char": 681
+          }
+        },
+        "character_a_id": "나용귀",
+        "character_b_id": "이몽란",
+        "support": [
+          {
+            "window_id": "p61:346-681:sentence",
+            "kind": "sentence",
+            "page_no": 61,
+            "trigger": "네가 몽란에게 사랑을 받아보려다 거절당한 것",
+            "trigger_start": 435,
+            "trigger_end": 459,
+            "evidence": {
+              "start": 346,
+              "end": 681
+            }
+          }
+        ],
+        "rejected_support": [
+          {
+            "window_id": "p63:33-272:adjacent",
+            "reason": "trigger_sentence_lacks_endpoint"
+          }
+        ],
+        "notes": []
+      },
+      "reasons": [
+        "Complete semantic v2 contract, specific predicate, qualified subject/object summary and exact dated evidence required"
+      ],
+      "chapter_no": 5
+    },
+    {
+      "candidate": {
+        "relationship": {
+          "character_a": "유불란",
+          "character_b": "나용귀",
+          "label": "적대한다",
+          "established_page": 62,
+          "rationale": "백검사가 나용귀에게 하는 대사에서 유불란이 '너무도 노골적으로 네게다 싸움을 걸었다'고 말한다. 이는 범인으로 보는 상대에게 맞선 것으로, 백검사의 claim이다.",
+          "evidence": {
+            "source_page": 62,
+            "quote": "“너는 유불란 씨로부터 그가 창작한 『가상범인』이라는 연극에 출연해달라는 부탁을 받았을 때 너는 그의 상상력이 얼마나 정확하였는지를 알았을 것이며, 따라서 너의 놀라움은 진실로 컸을 것이다. 유불란 씨는 타는 불덩어리와 같은 정열을 가슴에 품고 너무도 노골적으로 네게다 싸움을 걸었다. 그러나 너 역시 유불란 씨에 지지 않을 만큼 대담한 사나이였었다. 그리하여 너는 무대에 서기를 승낙하였던 것이다. 연극의 순서를 따라서 너는 제1탄으로 박영민을 쏘았다. 아니, 정확히 말하면 박영민으로 분장한 배우를 쏘았다. 거기까지는 괜찮으나, 그러나 너는 거기서 뜻하지 않은 실패를 하였던 것이다. 왜 그러냐 하면 너는 의성술을 가지고 있느니만큼 피해자 박영민으로 분장한 홍이란 배우의 목소리를 흉내 냈으면 그만이었을 것인데, 그러나 너는 너무도 충실한 예술가였다.\n연극을 하고 있는 동안 너는 너 자신도 저항할 수 없는 예술적 박진성을 전신에 느꼈던 것이다. 게다가 또 한편 폭로적 흥미까지 느낀 너는 되는 대로 되라는 자포자기에서 연극인지 사실인지를 분별할 수 없을 만큼 너의 정신을 열중하였다.\n살인의 혐의라든가 또한 무서운 형벌이라든가, 그러한 속세에서 벗어난 너는 연극에 너무나 충실하였다. 그리하여 너도 모르게 너의 입에서 흘러나온 목소리, 그것은 좌장 그 사람의 음성이었으며 몽란 그 사람의 목소리였다. 이러한 나의 의견을 너는 진심으로 부인할 용기가 있는가?”\n그리고 백검사는 대답을 재촉하는 듯이 나용귀를 바라보았다.",
+            "start_char": 0,
+            "end_char": 740
+          },
+          "assertion_status": "claim",
+          "semantics": {
+            "version": 2,
+            "direction": "a_to_b",
+            "kind": "emotion",
+            "relation_key": "hostility",
+            "summary": "백검사는 유불란이 『가상범인』으로 나용귀에게 노골적으로 싸움을 걸었다고 주장한다.",
+            "assertion_status": "claim",
+            "temporal_scope": "ongoing",
+            "state": "active",
+            "evidence": {
+              "source_page": 62,
+              "quote": "“너는 유불란 씨로부터 그가 창작한 『가상범인』이라는 연극에 출연해달라는 부탁을 받았을 때 너는 그의 상상력이 얼마나 정확하였는지를 알았을 것이며, 따라서 너의 놀라움은 진실로 컸을 것이다. 유불란 씨는 타는 불덩어리와 같은 정열을 가슴에 품고 너무도 노골적으로 네게다 싸움을 걸었다. 그러나 너 역시 유불란 씨에 지지 않을 만큼 대담한 사나이였었다. 그리하여 너는 무대에 서기를 승낙하였던 것이다. 연극의 순서를 따라서 너는 제1탄으로 박영민을 쏘았다. 아니, 정확히 말하면 박영민으로 분장한 배우를 쏘았다. 거기까지는 괜찮으나, 그러나 너는 거기서 뜻하지 않은 실패를 하였던 것이다. 왜 그러냐 하면 너는 의성술을 가지고 있느니만큼 피해자 박영민으로 분장한 홍이란 배우의 목소리를 흉내 냈으면 그만이었을 것인데, 그러나 너는 너무도 충실한 예술가였다.\n연극을 하고 있는 동안 너는 너 자신도 저항할 수 없는 예술적 박진성을 전신에 느꼈던 것이다. 게다가 또 한편 폭로적 흥미까지 느낀 너는 되는 대로 되라는 자포자기에서 연극인지 사실인지를 분별할 수 없을 만큼 너의 정신을 열중하였다.\n살인의 혐의라든가 또한 무서운 형벌이라든가, 그러한 속세에서 벗어난 너는 연극에 너무나 충실하였다. 그리하여 너도 모르게 너의 입에서 흘러나온 목소리, 그것은 좌장 그 사람의 음성이었으며 몽란 그 사람의 목소리였다. 이러한 나의 의견을 너는 진심으로 부인할 용기가 있는가?”\n그리고 백검사는 대답을 재촉하는 듯이 나용귀를 바라보았다.",
+              "start_char": 0,
+              "end_char": 740
+            },
+            "attribution": "백검사",
+            "change_evidence": {
+              "source_page": 62,
+              "quote": "“너는 유불란 씨로부터 그가 창작한 『가상범인』이라는 연극에 출연해달라는 부탁을 받았을 때 너는 그의 상상력이 얼마나 정확하였는지를 알았을 것이며, 따라서 너의 놀라움은 진실로 컸을 것이다. 유불란 씨는 타는 불덩어리와 같은 정열을 가슴에 품고 너무도 노골적으로 네게다 싸움을 걸었다. 그러나 너 역시 유불란 씨에 지지 않을 만큼 대담한 사나이였었다. 그리하여 너는 무대에 서기를 승낙하였던 것이다. 연극의 순서를 따라서 너는 제1탄으로 박영민을 쏘았다. 아니, 정확히 말하면 박영민으로 분장한 배우를 쏘았다. 거기까지는 괜찮으나, 그러나 너는 거기서 뜻하지 않은 실패를 하였던 것이다. 왜 그러냐 하면 너는 의성술을 가지고 있느니만큼 피해자 박영민으로 분장한 홍이란 배우의 목소리를 흉내 냈으면 그만이었을 것인데, 그러나 너는 너무도 충실한 예술가였다.\n연극을 하고 있는 동안 너는 너 자신도 저항할 수 없는 예술적 박진성을 전신에 느꼈던 것이다. 게다가 또 한편 폭로적 흥미까지 느낀 너는 되는 대로 되라는 자포자기에서 연극인지 사실인지를 분별할 수 없을 만큼 너의 정신을 열중하였다.\n살인의 혐의라든가 또한 무서운 형벌이라든가, 그러한 속세에서 벗어난 너는 연극에 너무나 충실하였다. 그리하여 너도 모르게 너의 입에서 흘러나온 목소리, 그것은 좌장 그 사람의 음성이었으며 몽란 그 사람의 목소리였다. 이러한 나의 의견을 너는 진심으로 부인할 용기가 있는가?”\n그리고 백검사는 대답을 재촉하는 듯이 나용귀를 바라보았다.",
+              "start_char": 0,
+              "end_char": 740
+            }
+          },
+          "change_type": "disclosure",
+          "change_evidence": {
+            "source_page": 62,
+            "quote": "“너는 유불란 씨로부터 그가 창작한 『가상범인』이라는 연극에 출연해달라는 부탁을 받았을 때 너는 그의 상상력이 얼마나 정확하였는지를 알았을 것이며, 따라서 너의 놀라움은 진실로 컸을 것이다. 유불란 씨는 타는 불덩어리와 같은 정열을 가슴에 품고 너무도 노골적으로 네게다 싸움을 걸었다. 그러나 너 역시 유불란 씨에 지지 않을 만큼 대담한 사나이였었다. 그리하여 너는 무대에 서기를 승낙하였던 것이다. 연극의 순서를 따라서 너는 제1탄으로 박영민을 쏘았다. 아니, 정확히 말하면 박영민으로 분장한 배우를 쏘았다. 거기까지는 괜찮으나, 그러나 너는 거기서 뜻하지 않은 실패를 하였던 것이다. 왜 그러냐 하면 너는 의성술을 가지고 있느니만큼 피해자 박영민으로 분장한 홍이란 배우의 목소리를 흉내 냈으면 그만이었을 것인데, 그러나 너는 너무도 충실한 예술가였다.\n연극을 하고 있는 동안 너는 너 자신도 저항할 수 없는 예술적 박진성을 전신에 느꼈던 것이다. 게다가 또 한편 폭로적 흥미까지 느낀 너는 되는 대로 되라는 자포자기에서 연극인지 사실인지를 분별할 수 없을 만큼 너의 정신을 열중하였다.\n살인의 혐의라든가 또한 무서운 형벌이라든가, 그러한 속세에서 벗어난 너는 연극에 너무나 충실하였다. 그리하여 너도 모르게 너의 입에서 흘러나온 목소리, 그것은 좌장 그 사람의 음성이었으며 몽란 그 사람의 목소리였다. 이러한 나의 의견을 너는 진심으로 부인할 용기가 있는가?”\n그리고 백검사는 대답을 재촉하는 듯이 나용귀를 바라보았다.",
+            "start_char": 0,
+            "end_char": 740
+          }
+        },
+        "character_a_id": "유불란",
+        "character_b_id": "나용귀",
+        "support": [
+          {
+            "window_id": "p62:0-740:sentence",
+            "kind": "sentence",
+            "page_no": 62,
+            "trigger": "유불란 씨는 타는 불덩어리와 같은 정열을 가슴에 품고 너무도 노골적으로 네게다 싸움을 걸었다",
+            "trigger_start": 107,
+            "trigger_end": 158,
+            "evidence": {
+              "start": 0,
+              "end": 740
+            }
+          }
+        ],
+        "rejected_support": [],
+        "notes": [],
+        "check": "needs_review",
+        "reasons": [
+          "single_run",
+          "change_needs_review"
+        ],
+        "runs_agreed": 1,
+        "verifier_why": "인용에서 '너'로 불리는 나용귀에게 유불란 씨가 '노골적으로 싸움을 걸었다'는 말은 백검사가 스스로 '나의 의견'이라 부르며 부인할 수 있느냐고 묻는 추론일 뿐이고, 연극 출연을 통한 한 번의 도전이어서 대상을 적으로 여기거나 계속 맞서는 관계가 사실로 확인되지 않는다."
+      },
+      "reasons": [
+        "verifier_rejected"
+      ],
+      "chapter_no": 5
+    },
+    {
+      "candidate": {
+        "relationship": {
+          "character_a": "임경부",
+          "character_b": "유불란",
+          "label": "의심한다",
+          "established_page": 57,
+          "rationale": "경부가 유불란에게 눈보라 치는 밤을 일부러 고른 것이 당신이라고 몰아세운다. 또 유불란이 몽란을 죽인 동기를 말하겠다고 하여 유불란을 범인으로 다루므로 임경부의 claim이다.",
+          "evidence": {
+            "source_page": 57,
+            "quote": "“유불란 씨, 연극은 그만두는 것이 어떻소? 일부러 눈보라 치는 밤을 선택한 것은 당신이 아니었습니까?”\n하고 경부는 또 한 번 픽 웃었다.",
+            "start_char": 601,
+            "end_char": 679
+          },
+          "assertion_status": "claim",
+          "semantics": {
+            "version": 2,
+            "direction": "a_to_b",
+            "kind": "emotion",
+            "relation_key": "suspicion",
+            "summary": "임경부는 유불란이 계획적으로 몽란을 죽였다고 보고 그렇게 주장한다.",
+            "assertion_status": "claim",
+            "temporal_scope": "ongoing",
+            "state": "active",
+            "evidence": {
+              "source_page": 57,
+              "quote": "“유불란 씨, 연극은 그만두는 것이 어떻소? 일부러 눈보라 치는 밤을 선택한 것은 당신이 아니었습니까?”\n하고 경부는 또 한 번 픽 웃었다.",
+              "start_char": 601,
+              "end_char": 679
+            },
+            "attribution": "임경부"
+          },
+          "change_type": "establishment"
+        },
+        "character_a_id": "임경부",
+        "character_b_id": "유불란",
+        "support": [
+          {
+            "window_id": "p57:601-679:sentence",
+            "kind": "sentence",
+            "page_no": 57,
+            "trigger": "일부러 눈보라 치는 밤을 선택한 것은 당신이 아니었습니까?",
+            "trigger_start": 626,
+            "trigger_end": 658,
+            "evidence": {
+              "start": 601,
+              "end": 679
+            }
+          },
+          {
+            "window_id": "p59:0-844:sentence",
+            "kind": "sentence",
+            "page_no": 59,
+            "trigger": "당신이 몽란을 죽인 동기를 내 입으로 말해보라는 말이지요",
+            "trigger_start": 308,
+            "trigger_end": 339,
+            "evidence": {
+              "start": 0,
+              "end": 844
+            }
+          }
+        ],
+        "rejected_support": [],
+        "notes": []
+      },
+      "reasons": [
+        "Complete semantic v2 contract, specific predicate, qualified subject/object summary and exact dated evidence required"
+      ],
+      "chapter_no": 5
+    },
+    {
+      "candidate": {
+        "relationship": {
+          "character_a": "박영민",
+          "character_b": "나용귀",
+          "label": "미워한다",
+          "established_page": 61,
+          "rationale": "백검사의 대사가 '좌장이 너를 독사와도 같이 싫어하고 미워한 것'이라고 말하므로 백검사의 claim이다. 좌장은 이미 살해되었으므로 관계는 끝난 상태다.",
+          "evidence": {
+            "source_page": 61,
+            "quote": "“음! 잘 말했나—— 그러면 먼저 결론부터 말해보자. 너는 해왕좌의 좌장 박영민을 살해한 범인이다. 방법은 유불란 씨의 탐정극 『가상범인』과 꼭 같다. 동기는 네가 몽란에게 사랑을 받아보려다 거절당한 것. 좌장이 너를 독사와도 같이 싫어하고 미워한 것이다.”\n그때 나용귀는 픽 하고 비웃으면서\n“당신은 대체 무엇을 말하고 있는지 나는 도무지 알 수가 없습니다. 그와 같은 방법으로 그와 같은 동기에서 해왕좌의 좌장 박영민을 죽였다고 처음부터 나는 정직하게 자백하지를 않았습니까? 그것은 임경부가 사진이 어떠니, 시계가 멎어 있었으니 어떠니 하면서 나에게 생에 대한 희망을 가지게 한 것이 아닙니까?”",
+            "start_char": 346,
+            "end_char": 681
+          },
+          "assertion_status": "claim",
+          "semantics": {
+            "version": 2,
+            "direction": "a_to_b",
+            "kind": "emotion",
+            "relation_key": "hatred",
+            "summary": "백검사는 박영민(좌장)이 나용귀를 독사같이 싫어하고 미워했다고 주장한다.",
+            "assertion_status": "claim",
+            "temporal_scope": "ongoing",
+            "state": "ended",
+            "evidence": {
+              "source_page": 61,
+              "quote": "“음! 잘 말했나—— 그러면 먼저 결론부터 말해보자. 너는 해왕좌의 좌장 박영민을 살해한 범인이다. 방법은 유불란 씨의 탐정극 『가상범인』과 꼭 같다. 동기는 네가 몽란에게 사랑을 받아보려다 거절당한 것. 좌장이 너를 독사와도 같이 싫어하고 미워한 것이다.”\n그때 나용귀는 픽 하고 비웃으면서\n“당신은 대체 무엇을 말하고 있는지 나는 도무지 알 수가 없습니다. 그와 같은 방법으로 그와 같은 동기에서 해왕좌의 좌장 박영민을 죽였다고 처음부터 나는 정직하게 자백하지를 않았습니까? 그것은 임경부가 사진이 어떠니, 시계가 멎어 있었으니 어떠니 하면서 나에게 생에 대한 희망을 가지게 한 것이 아닙니까?”",
+              "start_char": 346,
+              "end_char": 681
+            },
+            "attribution": "백검사",
+            "change_evidence": {
+              "source_page": 61,
+              "quote": "“음! 잘 말했나—— 그러면 먼저 결론부터 말해보자. 너는 해왕좌의 좌장 박영민을 살해한 범인이다. 방법은 유불란 씨의 탐정극 『가상범인』과 꼭 같다. 동기는 네가 몽란에게 사랑을 받아보려다 거절당한 것. 좌장이 너를 독사와도 같이 싫어하고 미워한 것이다.”\n그때 나용귀는 픽 하고 비웃으면서\n“당신은 대체 무엇을 말하고 있는지 나는 도무지 알 수가 없습니다. 그와 같은 방법으로 그와 같은 동기에서 해왕좌의 좌장 박영민을 죽였다고 처음부터 나는 정직하게 자백하지를 않았습니까? 그것은 임경부가 사진이 어떠니, 시계가 멎어 있었으니 어떠니 하면서 나에게 생에 대한 희망을 가지게 한 것이 아닙니까?”",
+              "start_char": 346,
+              "end_char": 681
+            }
+          },
+          "change_type": "disclosure",
+          "change_evidence": {
+            "source_page": 61,
+            "quote": "“음! 잘 말했나—— 그러면 먼저 결론부터 말해보자. 너는 해왕좌의 좌장 박영민을 살해한 범인이다. 방법은 유불란 씨의 탐정극 『가상범인』과 꼭 같다. 동기는 네가 몽란에게 사랑을 받아보려다 거절당한 것. 좌장이 너를 독사와도 같이 싫어하고 미워한 것이다.”\n그때 나용귀는 픽 하고 비웃으면서\n“당신은 대체 무엇을 말하고 있는지 나는 도무지 알 수가 없습니다. 그와 같은 방법으로 그와 같은 동기에서 해왕좌의 좌장 박영민을 죽였다고 처음부터 나는 정직하게 자백하지를 않았습니까? 그것은 임경부가 사진이 어떠니, 시계가 멎어 있었으니 어떠니 하면서 나에게 생에 대한 희망을 가지게 한 것이 아닙니까?”",
+            "start_char": 346,
+            "end_char": 681
+          }
+        },
+        "character_a_id": "박영민",
+        "character_b_id": "나용귀",
+        "support": [
+          {
+            "window_id": "p61:346-681:sentence",
+            "kind": "sentence",
+            "page_no": 61,
+            "trigger": "좌장이 너를 독사와도 같이 싫어하고 미워한 것이다",
+            "trigger_start": 461,
+            "trigger_end": 488,
+            "evidence": {
+              "start": 346,
+              "end": 681
+            }
+          }
+        ],
+        "rejected_support": [],
+        "notes": []
+      },
+      "reasons": [
+        "Complete semantic v2 contract, specific predicate, qualified subject/object summary and exact dated evidence required"
+      ],
+      "chapter_no": 5
+    }
+  ],
+  "merge_review": [
+    {
+      "kind": "relationship",
+      "candidate": {
+        "character_a_id": "유불란",
+        "character_b_id": "이몽란",
+        "label": "사랑한다",
+        "established_page": 56,
+        "evidence": {
+          "source_page": 56,
+          "quote": "“그러나 나는 그 복면한 여자가, 가슴에다 ‘칠’호를 붙인 그 가장한 여자가 자기의 가장 사랑하는 몽란일 줄이야 어찌 알았겠습니까 ? 이와 같이 잔인하고 비참한 일이 또 어데 있으리요? 나는, 나는 이 손으로 몽란을 죽였습니다. 그는 그때 아무 말도 없이─누가 그에게 재갈을 물렸을 줄을 어찌 알았으리요—— 나의 허리와 다리를 쓸어 만져보며 제발 살려달라고 애원하는 그가 바로 몽란이었을 줄이야 꿈에도 생각하지 못하였습니다. 그러나 그것은 결코 나의 자유의사로 죽인 것이 아니고 무서운 권총의 협박을 받았기 때문입니다. 나는 무서운 꿈속을 헤매면서 행여나 그것이 단지 꿈에 지나지 않기를 얼마나 고대하고 기다리었겠습니까? 그러나 그것은 일장의 악몽이 아니고 현실이었습니다!”\n유불란은 아직도 꿈속의 사람과 같이 사방을 돌아다보았다.",
+          "start_char": 118,
+          "end_char": 527
+        },
+        "rationale": "따옴표 안 대사에서 유불란이 몽란을 '자기의 가장 사랑하는 몽란'이라 부르고, 창 끝에 말한 사람이 유불란으로 드러나므로 유불란의 claim이다.",
+        "change_type": "establishment",
+        "semantics": {
+          "version": 2,
+          "direction": "a_to_b",
+          "kind": "social",
+          "relation_key": "affection",
+          "summary": "유불란은 이몽란을 자기가 가장 사랑하는 사람이라고 말한다(유불란의 주장).",
+          "assertion_status": "claim",
+          "temporal_scope": "ongoing",
+          "state": "active",
+          "evidence": {
+            "source_page": 56,
+            "quote": "“그러나 나는 그 복면한 여자가, 가슴에다 ‘칠’호를 붙인 그 가장한 여자가 자기의 가장 사랑하는 몽란일 줄이야 어찌 알았겠습니까 ? 이와 같이 잔인하고 비참한 일이 또 어데 있으리요? 나는, 나는 이 손으로 몽란을 죽였습니다. 그는 그때 아무 말도 없이─누가 그에게 재갈을 물렸을 줄을 어찌 알았으리요—— 나의 허리와 다리를 쓸어 만져보며 제발 살려달라고 애원하는 그가 바로 몽란이었을 줄이야 꿈에도 생각하지 못하였습니다. 그러나 그것은 결코 나의 자유의사로 죽인 것이 아니고 무서운 권총의 협박을 받았기 때문입니다. 나는 무서운 꿈속을 헤매면서 행여나 그것이 단지 꿈에 지나지 않기를 얼마나 고대하고 기다리었겠습니까? 그러나 그것은 일장의 악몽이 아니고 현실이었습니다!”\n유불란은 아직도 꿈속의 사람과 같이 사방을 돌아다보았다.",
+            "start_char": 118,
+            "end_char": 527
+          },
+          "attribution": "유불란",
+          "verification": {
+            "check": "confirmed",
+            "reasons": [],
+            "runs_agreed": 2
+          }
+        }
+      },
+      "reason": "Restatement cannot replace the latest relationship without explicit change/disclosure evidence"
+    }
+  ]
+}

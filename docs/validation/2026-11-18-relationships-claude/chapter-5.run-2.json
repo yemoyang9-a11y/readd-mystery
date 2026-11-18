@@ -1,0 +1,119 @@
+{
+  "key": "065a278e7b2cfce3af37db2bf264454fa425e365b79ba0cbf4231c2e89c31af8",
+  "chapter_no": 5,
+  "run": 2,
+  "response": "{\"relations\":[{\"character_a\":\"나용귀\",\"character_b\":\"유불란\",\"lasting\":true,\"category\":\"attitude\",\"type\":\"hatred\",\"type_question\":true,\"exclusions\":{},\"subject\":\"나용귀\",\"assertion_status\":\"fact\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"나용귀는 유불란을 미워한다.\",\"rationale\":\"따옴표 밖 서술이 나용귀가 미움이 가득 찬 눈초리를 불란에게 던졌다고 직접 말한다. 이는 나용귀가 유불란을 미워한다는 판정 질문에 예라고 답하게 한다.\",\"support\":[{\"window_id\":\"p57:136-285:sentence\",\"trigger\":\"미움이 가득 찬 눈초리를 불란에게 던졌다\"}]},{\"character_a\":\"나용귀\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"romance\",\"type\":\"affection\",\"type_question\":true,\"exclusions\":{},\"subject\":\"나용귀\",\"assertion_status\":\"claim\",\"attribution\":\"백검사\",\"state\":\"active\",\"change_type\":\"disclosure\",\"summary\":\"나용귀가 이몽란의 사랑을 자기에게 돌려놓으려 했다고, 곧 나용귀가 이몽란을 연모한다고 백검사는 주장한다.\",\"rationale\":\"백검사의 대사 안에서 나용귀가 몽란의 사랑을 자기에게 돌려놓고자 했다고 말한다. 이는 나용귀가 몽란을 연모한다는 백검사의 주장이다. 대사 안의 내용이므로 fact가 아니다.\",\"support\":[{\"window_id\":\"p63:33-272:adjacent\",\"trigger\":\"유불란 씨에게 흘러가고 있던 몽란의 사랑을 네게로 돌려놓고자 했던 것이다\"}]},{\"character_a\":\"유불란\",\"character_b\":\"이몽란\",\"lasting\":true,\"category\":\"romance\",\"type\":\"affection\",\"type_question\":true,\"exclusions\":{},\"subject\":\"유불란\",\"assertion_status\":\"claim\",\"attribution\":\"유불란\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"유불란은 이몽란을 가장 사랑한다고 유불란은 주장한다.\",\"rationale\":\"유불란이 대사에서 몽란을 '자기의 가장 사랑하는 몽란'이라 부르며 자기 감정을 말한다. 대사이므로 유불란의 주장이다.\",\"support\":[{\"window_id\":\"p56:118-527:sentence\",\"trigger\":\"자기의 가장 사랑하는 몽란\"}]},{\"character_a\":\"나용귀\",\"character_b\":\"박영민\",\"lasting\":true,\"category\":\"attitude\",\"type\":\"hatred\",\"type_question\":true,\"exclusions\":{},\"subject\":\"박영민\",\"assertion_status\":\"claim\",\"attribution\":\"백검사\",\"state\":\"ended\",\"change_type\":\"disclosure\",\"summary\":\"박영민이 나용귀를 독사와 같이 싫어하고 미워했다고 백검사는 주장한다.\",\"rationale\":\"백검사가 나용귀에게 하는 대사에서 좌장(박영민)이 나용귀를 미워했다고 말한다. 대사 안의 내용이므로 백검사의 주장이다.\",\"support\":[{\"window_id\":\"p61:346-681:sentence\",\"trigger\":\"좌장이 너를 독사와도 같이 싫어하고 미워한 것이다\"}]},{\"character_a\":\"유불란\",\"character_b\":\"임경부\",\"lasting\":true,\"category\":\"adversarial\",\"type\":\"suspicion\",\"type_question\":true,\"exclusions\":{},\"subject\":\"임경부\",\"assertion_status\":\"claim\",\"attribution\":\"임경부\",\"state\":\"active\",\"change_type\":\"establishment\",\"summary\":\"유불란이 몽란을 죽인 범인이라고 임경부는 주장한다.\",\"rationale\":\"임경부가 대사에서 유불란이 몽란을 죽인 동기를 말하겠다고 하며 유불란을 살인범으로 본다. 대사이므로 임경부의 주장이다.\",\"support\":[{\"window_id\":\"p59:0-844:sentence\",\"trigger\":\"당신이 몽란을 죽인 동기를 내 입으로 말해보라는 말이지요\"}]}]}",
+  "parsed": {
+    "relations": [
+      {
+        "character_a": "나용귀",
+        "character_b": "유불란",
+        "lasting": true,
+        "category": "attitude",
+        "type": "hatred",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "나용귀",
+        "assertion_status": "fact",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "나용귀는 유불란을 미워한다.",
+        "rationale": "따옴표 밖 서술이 나용귀가 미움이 가득 찬 눈초리를 불란에게 던졌다고 직접 말한다. 이는 나용귀가 유불란을 미워한다는 판정 질문에 예라고 답하게 한다.",
+        "support": [
+          {
+            "window_id": "p57:136-285:sentence",
+            "trigger": "미움이 가득 찬 눈초리를 불란에게 던졌다"
+          }
+        ]
+      },
+      {
+        "character_a": "나용귀",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "affection",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "나용귀",
+        "assertion_status": "claim",
+        "attribution": "백검사",
+        "state": "active",
+        "change_type": "disclosure",
+        "summary": "나용귀가 이몽란의 사랑을 자기에게 돌려놓으려 했다고, 곧 나용귀가 이몽란을 연모한다고 백검사는 주장한다.",
+        "rationale": "백검사의 대사 안에서 나용귀가 몽란의 사랑을 자기에게 돌려놓고자 했다고 말한다. 이는 나용귀가 몽란을 연모한다는 백검사의 주장이다. 대사 안의 내용이므로 fact가 아니다.",
+        "support": [
+          {
+            "window_id": "p63:33-272:adjacent",
+            "trigger": "유불란 씨에게 흘러가고 있던 몽란의 사랑을 네게로 돌려놓고자 했던 것이다"
+          }
+        ]
+      },
+      {
+        "character_a": "유불란",
+        "character_b": "이몽란",
+        "lasting": true,
+        "category": "romance",
+        "type": "affection",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "유불란",
+        "assertion_status": "claim",
+        "attribution": "유불란",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "유불란은 이몽란을 가장 사랑한다고 유불란은 주장한다.",
+        "rationale": "유불란이 대사에서 몽란을 '자기의 가장 사랑하는 몽란'이라 부르며 자기 감정을 말한다. 대사이므로 유불란의 주장이다.",
+        "support": [
+          {
+            "window_id": "p56:118-527:sentence",
+            "trigger": "자기의 가장 사랑하는 몽란"
+          }
+        ]
+      },
+      {
+        "character_a": "나용귀",
+        "character_b": "박영민",
+        "lasting": true,
+        "category": "attitude",
+        "type": "hatred",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "박영민",
+        "assertion_status": "claim",
+        "attribution": "백검사",
+        "state": "ended",
+        "change_type": "disclosure",
+        "summary": "박영민이 나용귀를 독사와 같이 싫어하고 미워했다고 백검사는 주장한다.",
+        "rationale": "백검사가 나용귀에게 하는 대사에서 좌장(박영민)이 나용귀를 미워했다고 말한다. 대사 안의 내용이므로 백검사의 주장이다.",
+        "support": [
+          {
+            "window_id": "p61:346-681:sentence",
+            "trigger": "좌장이 너를 독사와도 같이 싫어하고 미워한 것이다"
+          }
+        ]
+      },
+      {
+        "character_a": "유불란",
+        "character_b": "임경부",
+        "lasting": true,
+        "category": "adversarial",
+        "type": "suspicion",
+        "type_question": true,
+        "exclusions": {},
+        "subject": "임경부",
+        "assertion_status": "claim",
+        "attribution": "임경부",
+        "state": "active",
+        "change_type": "establishment",
+        "summary": "유불란이 몽란을 죽인 범인이라고 임경부는 주장한다.",
+        "rationale": "임경부가 대사에서 유불란이 몽란을 죽인 동기를 말하겠다고 하며 유불란을 살인범으로 본다. 대사이므로 임경부의 주장이다.",
+        "support": [
+          {
+            "window_id": "p59:0-844:sentence",
+            "trigger": "당신이 몽란을 죽인 동기를 내 입으로 말해보라는 말이지요"
+          }
+        ]
+      }
+    ]
+  }
+}
