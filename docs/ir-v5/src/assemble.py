@@ -26,7 +26,14 @@ for i, e in enumerate(order):
             pg.show_pdf_page(NUM, new, n_html + patches.index(n), clip=NUM, overlay=True)
     else:
         pg = out.new_page(width=960, height=540)
-        pg.show_pdf_page(pg.rect, new, hi); hi += 1
+        pg.show_pdf_page(pg.rect, new, hi)
+        # v8: HTML 쪽의 링크(<a href>)를 그대로 옮긴다 (show_pdf_page는 링크를 옮기지 않는다)
+        sx, sy = pg.rect.width / new[hi].rect.width, pg.rect.height / new[hi].rect.height
+        for l in new[hi].get_links():
+            if l.get("uri"):
+                r = l["from"]
+                pg.insert_link({"kind": fitz.LINK_URI, "uri": l["uri"], "from": fitz.Rect(r.x0*sx, r.y0*sy, r.x1*sx, r.y1*sy)})
+        hi += 1
 out.save(sys.argv[2], garbage=4, deflate=True)
 chk = fitz.open(sys.argv[2])
 print("pages", chk.page_count, "links", {i+1: len(chk[i].get_links()) for i in range(chk.page_count) if chk[i].get_links()})
