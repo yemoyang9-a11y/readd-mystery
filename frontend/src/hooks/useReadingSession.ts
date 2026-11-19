@@ -37,6 +37,8 @@ export interface ReadingSessionState {
   returnToOrigin: () => void;
   dismissJumpOrigin: () => void;
   moveTo: (page: number) => void;
+  /** 지금 쪽 진도 이벤트가 서버에 저장될 때까지 기다린다 (커뮤니티 관문 앞, 대표 결정 2026-11-19 정정) */
+  flushProgress: () => Promise<void>;
   requestTocJump: (page: number) => void;
   tocJumpConfirm: number | null;
   /** 'move' = 이동만 하기, 'read_through' = 앞부분은 이미 읽었어요 (그 이동 이벤트에 claim) */
@@ -474,6 +476,12 @@ export function useReadingSession(bookId: string): ReadingSessionState {
     returnToOrigin,
     dismissJumpOrigin,
     moveTo: setCurrentPage,
+    /**
+     * 지금 쪽의 진도 이벤트가 서버에 저장될 때까지 기다린다 — 보낸 것이 있으면 그것을, 없으면 다시 보낸다.
+     * 커뮤니티 관문(서버 reached_end, 대표 결정 2026-11-19 정정)은 저장된 가장 먼 쪽을 보므로,
+     * 마지막 쪽에서 커뮤니티로 갈 때 먼저 부른다. 보내는 것은 이동 사실뿐이다 (절대 규칙 8번).
+     */
+    flushProgress: ensureHistoryPosition,
     requestTocJump,
     tocJumpConfirm,
     confirmTocJump,

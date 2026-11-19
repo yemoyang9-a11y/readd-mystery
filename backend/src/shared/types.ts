@@ -47,6 +47,16 @@ export interface CutoffSnapshot {
    */
   is_complete: boolean;
 
+  /**
+   * 끝까지 갔는가 — 진도 레코드가 있고 가장 멀리 펼친 쪽(저장값 max_page)이 마지막 쪽 이상.
+   *
+   * 커뮤니티 입장 조건 전용이다 (대표 결정 2026-11-19 정정 — "끝까지 간 독자만, 차례 읽기는
+   * 따지지 않음"). 스포일러 상한이 아니다: cutoff·is_complete·챗봇·관계도·타임라인과 무관하다.
+   * 파생값이므로 기준점 결정기(cutoff.service.ts)에서만 계산한다 (절대 규칙 2번, R2).
+   * 클라이언트는 이 값을 보내지 않는다 — 서버가 진도 이벤트로 저장한 max_page에서만 나온다 (절대 규칙 8번).
+   */
+  reached_end: boolean;
+
   /** 현재 장 정보 */
   chapter: {
     chapter_no: number;

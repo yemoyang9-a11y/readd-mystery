@@ -3,7 +3,7 @@ import { CommunityScreen } from '../mobile/pages/MobileCommunity';
 
 /**
  * PC 책 이야기방 (E2E #86) — 휴대폰 이야기방과 같은 본체를 위 줄 메뉴 아래 가운데 단에 그린다.
- * 대표 결정 2026-11-19 "커뮤니티 관문 없애기" — 공개 도서면 누구나 들어온다.
+ * 커뮤니티 관문(끝까지 간 독자만, 대표 결정 2026-11-19 정정)은 본체가 서버 응답(COMMUNITY_LOCKED)으로만 따른다 (FR-BRF-005 🚦, FR-SPL-005 🚦).
  */
 // COMMUNITY
 export default function BookCommunity() {

@@ -55,6 +55,7 @@ const SNAPSHOT: CutoffSnapshot = {
   frontier_confirm: null,
   percent: 23.5,
   is_complete: false,
+  reached_end: false,
   chapter: { chapter_no: 3, title: '제3장' },
   resume_chapter: { chapter_no: 3, title: '제3장' },
 };

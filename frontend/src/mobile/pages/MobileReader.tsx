@@ -38,7 +38,7 @@ export default function MobileReader() {
 // FR-PRG-003 🚦 FR-BRF-001
 function MobileReadingSession() {
   const { bookId = '' } = useParams();
-  const { entryError, retryEntry, page, pageError, retryPage, currentPage, totalPages, chapters, bookTitle, jumpOrigin, returnToOrigin, dismissJumpOrigin, moveTo, requestTocJump, tocJumpConfirm, confirmTocJump, cancelTocJump, highlightedQuote, panelOpen, togglePanel, ssabiPanelProps, quote } =
+  const { entryError, retryEntry, page, pageError, retryPage, currentPage, totalPages, chapters, bookTitle, jumpOrigin, returnToOrigin, dismissJumpOrigin, moveTo, flushProgress, requestTocJump, tocJumpConfirm, confirmTocJump, cancelTocJump, highlightedQuote, panelOpen, togglePanel, ssabiPanelProps, quote } =
     useReadingSession(bookId);
   const backToBook = useBackToBook(bookId);
   const navigate = useNavigate();
@@ -50,7 +50,7 @@ function MobileReadingSession() {
   const [noteQuote, setNoteQuote] = useState<{ text: string; token: number } | null>(null);
   const viewport = useVisualViewport();
   // 대표 결정 2026-11-19 — 마지막 쪽(N) 다음의 끝 페이지(N+1). 화면 상태일 뿐이라 진도 이벤트를
-  // 보내지 않고 서버 쪽 수·기준점도 바꾸지 않는다 (절대 규칙 2·8·9, FR-PRG-003 🚦). 완독 판별은 하지 않는다.
+  // 보내지 않고 서버 쪽 수·기준점도 바꾸지 않는다 (절대 규칙 2·8·9, FR-PRG-003 🚦). 커뮤니티 관문은 서버가 저장된 가장 먼 쪽으로 정한다(대표 결정 2026-11-19 정정).
   const onLastPage = page !== null && page.page_no === currentPage && page.next_page === null;
   const [endPageOpen, setEndPageOpen] = useState(false);
   const endPageReturnRef = useRef<HTMLElement | null>(null);
@@ -206,6 +206,7 @@ function MobileReadingSession() {
           returnFocusRef={endPageReturnRef}
           onBack={() => setEndPageOpen(false)}
           onCommunity={openCommunity}
+          flushProgress={flushProgress}
         />
       ) : null}
       {prefsOpen ? (

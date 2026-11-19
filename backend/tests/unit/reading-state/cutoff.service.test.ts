@@ -132,6 +132,48 @@ describe('기준점 결정기 — getCutoffSnapshot', () => {
     });
   });
 
+  // 대표 결정 2026-11-19 정정 — 커뮤니티는 끝까지 간 독자(가장 멀리 펼친 쪽 = 마지막 쪽)만.
+  // 차례 읽기는 따지지 않는다. 스포일러 상한(cutoff·is_complete)과는 따로 움직인다.
+  describe('reached_end — 끝까지 갔는가 (커뮤니티 입장 전용, 대표 결정 2026-11-19 정정)', () => {
+    function withPosition(position: { current_page: number; max_page?: number; read_pages?: number[] }) {
+      const { positions, books } = makeSeededFakes();
+      positions.set(SEED_DEVICE_ID, SEED_BOOK_ID, { ...position, event_seq: 1 });
+      return createCutoffService({ positions, books }).getCutoffSnapshot(SEED_DEVICE_ID, SEED_BOOK_ID);
+    }
+    const LAST = SEED_BOOK.total_pages;
+
+    test('목차로 마지막 쪽에 건너뛴 독자는 reached_end == true — cutoff·is_complete 는 그대로', async () => {
+      const snapshot = await withPosition({ current_page: LAST, max_page: LAST, read_pages: [1, 2, 3] });
+      expect(snapshot.reached_end).toBe(true);
+      expect(snapshot.cutoff).toBe(3);
+      expect(snapshot.is_complete).toBe(false);
+      expect(snapshot.percent).toBe(10);
+    });
+
+    test('마지막 쪽에 갔다가 되돌아가도 reached_end == true (max_page 는 줄지 않는다)', async () => {
+      const snapshot = await withPosition({ current_page: 5, max_page: LAST, read_pages: [1, 2, 3, 4, 5] });
+      expect(snapshot.reached_end).toBe(true);
+      expect(snapshot.cutoff).toBe(5);
+    });
+
+    test('가장 멀리 펼친 쪽이 마지막 쪽 하나 앞이면 reached_end == false — 차례로 다 읽었어도 마찬가지', async () => {
+      const pages = Array.from({ length: LAST - 1 }, (_, i) => i + 1);
+      const snapshot = await withPosition({ current_page: LAST - 1, max_page: LAST - 1, read_pages: pages });
+      expect(snapshot.reached_end).toBe(false);
+    });
+
+    test('진도 레코드가 없으면(책을 한 번도 열지 않음) reached_end == false', async () => {
+      const snapshot = await serviceWith(null).getCutoffSnapshot(SEED_DEVICE_ID, SEED_BOOK_ID);
+      expect(snapshot.reached_end).toBe(false);
+    });
+
+    test('1쪽부터 마지막 쪽까지 차례로 읽은 독자는 reached_end == true, is_complete == true (positive 쌍)', async () => {
+      const snapshot = await serviceWith(LAST).getCutoffSnapshot(SEED_DEVICE_ID, SEED_BOOK_ID);
+      expect(snapshot.reached_end).toBe(true);
+      expect(snapshot.is_complete).toBe(true);
+    });
+  });
+
   describe('데이터 정합성 결함은 조용히 삼키지 않는다 (실패 = 미노출 — FR-SPL-005 🚦)', () => {
     test('도서가 없으면 스냅샷을 만들지 않는다', async () => {
       const { positions, books } = makeSeededFakes();

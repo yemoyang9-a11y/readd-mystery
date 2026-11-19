@@ -2,10 +2,13 @@
  * 책 끝 페이지(N+1) — 대표 결정 2026-11-19 "책 끝 페이지와 커뮤니티 관문 없애기"
  *
  * 끝 페이지는 화면에만 있다. 마지막 쪽(N)에서 '다음'을 눌러 N+1로 가고 돌아오는 동안
- * 진도 이벤트는 0건이어야 한다 (절대 규칙 2·8·9, FR-PRG-003 🚦). 완독 판별은 하지 않는다.
+ * 진도 이벤트는 0건이어야 한다 (절대 규칙 2·8·9, FR-PRG-003 🚦). 화면은 완독 판별을 하지 않는다.
+ * 커뮤니티 관문은 서버가 저장된 가장 먼 쪽으로 정한다 (대표 결정 2026-11-19 정정 — 끝까지 간 독자만,
+ * 차례 읽기는 따지지 않음). 그래서 리뷰·커뮤니티 이동 전에 마지막 쪽 진도 저장을 기다린다.
  * 예전 완독 화면(서버 is_complete 로 저절로 뜨던 창)과 마지막 쪽 "완독했어요" 블록은 없앴다.
  */
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { AxiosError, type AxiosResponse } from 'axios';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import MobileReader from './MobileReader';
@@ -33,6 +36,26 @@ vi.mock('../../hooks/useHeartbeat', () => ({ useHeartbeat: vi.fn() }));
 
 const BOOK = 'takryu';
 const LAST_PAGE = 30;
+
+function lockedError() {
+  return new AxiosError('locked', 'ERR_BAD_REQUEST', undefined, null, {
+    status: 403,
+    data: { error: 'COMMUNITY_LOCKED' },
+  } as AxiosResponse);
+}
+
+const REVIEW = {
+  post_id: 'p-1',
+  kind: 'review' as const,
+  body: '좋았어요',
+  nickname: '독자 ab12',
+  created_at: new Date().toISOString(),
+  comment_count: 0,
+  like_count: 0,
+  liked_by_me: false,
+  is_mine: true,
+  deleted: false,
+};
 
 function position(isComplete: boolean): PositionResponse {
   return { applied_cutoff: 5, current_chapter_no: 1, read_chapter_nos: [], is_complete: isComplete };
@@ -230,5 +253,60 @@ describe('책 끝 페이지(N+1) — 대표 결정 2026-11-19', () => {
     expect(screen.getByTestId('book-end-page')).toBeInTheDocument();
     fireEvent.keyDown(within(endPage).getByRole('button', { name: '완독자 커뮤니티로 이동하기' }), { key: 'ArrowLeft' });
     expect(screen.queryByTestId('book-end-page')).toBeNull();
+  });
+
+  // 대표 결정 2026-11-19 정정 — 커뮤니티는 서버에 저장된 가장 먼 쪽이 마지막 쪽인 독자만 들어간다.
+  // 목차로 건너뛰어 마지막 쪽 진도 이벤트가 아직 가는 중이면, 저장을 기다린 뒤에 간다.
+  test('대표 결정 2026-11-19 정정: 마지막 쪽 진도 저장이 끝나기 전에는 커뮤니티로 가지 않고, 저장되면 간다', async () => {
+    let finish: (value: unknown) => void = () => undefined;
+    sendProgressMock.mockImplementation(
+      (_book: string, page: number) =>
+        page === LAST_PAGE
+          ? new Promise((resolve) => {
+              finish = () => resolve({ success: true, applied_cutoff: 5, confirm: null });
+            })
+          : Promise.resolve({ success: true, applied_cutoff: 5, confirm: null })
+    );
+    renderReader();
+    const endPage = await openEndPage();
+    await userEvent.click(within(endPage).getByRole('button', { name: '완독자 커뮤니티로 이동하기' }));
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(screen.queryByText('커뮤니티 화면')).toBeNull();
+
+    finish(undefined);
+    expect(await screen.findByText('커뮤니티 화면')).toBeInTheDocument();
+    // 보낸 것은 이동 사실(마지막 쪽)뿐이다 — 끝 페이지 번호나 완독 값을 보내지 않는다 (절대 규칙 8번)
+    for (const call of sendProgressMock.mock.calls) {
+      expect(call[1]).toBeLessThanOrEqual(LAST_PAGE);
+      expect(JSON.stringify(call)).not.toMatch(/reached_end|is_complete/);
+    }
+  });
+
+  test('진도 저장이 실패해도 커뮤니티 화면으로는 간다 — 막을지는 서버 관문이 정한다', async () => {
+    sendProgressMock.mockResolvedValue(null);
+    renderReader();
+    const endPage = await openEndPage();
+    await userEvent.click(within(endPage).getByRole('button', { name: '완독자 커뮤니티로 이동하기' }));
+    expect(await screen.findByText('커뮤니티 화면')).toBeInTheDocument();
+  });
+
+  test('대표 결정 2026-11-19 정정: 리뷰가 진도 저장보다 먼저 닿아 403 COMMUNITY_LOCKED 이면 저장을 기다렸다가 한 번만 다시 올린다', async () => {
+    createPostMock.mockRejectedValueOnce(lockedError()).mockResolvedValueOnce(REVIEW);
+    renderReader();
+    const endPage = await openEndPage();
+    await userEvent.type(within(endPage).getByPlaceholderText('이 책을 한 줄로 남겨 보세요'), '좋았어요');
+    await userEvent.click(within(endPage).getByRole('button', { name: '남기기' }));
+    expect(await within(endPage).findByRole('heading', { name: '내 한 줄 리뷰' })).toBeInTheDocument();
+    expect(createPostMock).toHaveBeenCalledTimes(2);
+  });
+
+  test('다시 올려도 403 이면 알리고 더 시도하지 않는다 (재시도는 한 번뿐)', async () => {
+    createPostMock.mockRejectedValue(lockedError());
+    renderReader();
+    const endPage = await openEndPage();
+    await userEvent.type(within(endPage).getByPlaceholderText('이 책을 한 줄로 남겨 보세요'), '좋았어요');
+    await userEvent.click(within(endPage).getByRole('button', { name: '남기기' }));
+    expect(await within(endPage).findByRole('alert')).toHaveTextContent('리뷰를 남기지 못했어요');
+    expect(createPostMock).toHaveBeenCalledTimes(2);
   });
 });

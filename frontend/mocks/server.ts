@@ -153,6 +153,18 @@ export function mockConfirmFrontier(bookId: string, _choice: FrontierChoice): Pr
   return { success: true, applied_cutoff: deriveCutoff(page), confirm: null };
 }
 
+/**
+ * 서버 커뮤니티 관문 대역 — 백엔드 getCutoffSnapshot().reached_end 자리를 대신한다
+ * (대표 결정 2026-11-19 정정: 끝까지 간 독자만, 차례 읽기는 따지지 않음).
+ * reached_end = 진도 있음 && 가장 멀리 펼친 쪽 >= 마지막 쪽. 서버 대역이라 파생이 여기 있다.
+ */
+export function mockReachedEnd(bookId: string): boolean {
+  const chapters = chaptersOf(bookId);
+  if (chapters.length === 0) return false;
+  const furthest = Math.max(maxPages[bookId] ?? 0, pageOf(bookId) ?? 0);
+  return furthest > 0 && furthest >= chapters[chapters.length - 1].end_page;
+}
+
 // FR-BRF-005
 export function mockCatalogResponse(): CatalogResponse {
   return {

@@ -7,6 +7,7 @@ import {
   deleteCommunityPost,
   fetchCommunityPost,
   reportCommunityTarget,
+  type CommunityFailure,
 } from '../../services/communityService';
 import { DeleteDialog, ReportDialog } from './CommunityConfirmDialogs';
 import { KIND_LABEL, relativeTime } from './communityFormat';
@@ -74,11 +75,13 @@ function ItemMenu({ label, onReport }: { label: string; onReport: () => void }) 
 export default function CommunityPostView({
   bookId,
   postId,
+  onFailure,
   onRemoved,
   desktop = false,
 }: {
   bookId: string;
   postId: string;
+  onFailure: (failure: CommunityFailure) => void;
   onRemoved: () => void;
   /** PC 가운데 단(E2E #86) — 댓글 입력줄을 화면 폭 대신 단 폭에 붙인다 */
   desktop?: boolean;
@@ -102,10 +105,12 @@ export default function CommunityPostView({
         setComments(detail.comments);
       })
       .catch((cause) => {
-        if (classifyCommunityError(cause) === 'not_found') onRemoved();
+        const failure = classifyCommunityError(cause);
+        if (failure === 'locked') onFailure(failure);
+        else if (failure === 'not_found') onRemoved();
         else setLoadFailed(true);
       });
-  }, [bookId, postId, onRemoved]);
+  }, [bookId, postId, onFailure, onRemoved]);
 
   useEffect(load, [load]);
 
@@ -124,7 +129,8 @@ export default function CommunityPostView({
       load();
     } catch (cause) {
       const failure = classifyCommunityError(cause);
-      if (failure === 'not_found') onRemoved();
+      if (failure === 'locked') onFailure(failure);
+      else if (failure === 'not_found') onRemoved();
       else
         setNotice(
           failure === 'rate_limited'
@@ -148,8 +154,10 @@ export default function CommunityPostView({
         await deleteCommunityComment(bookId, target.id);
         load();
       }
-    } catch {
-      setNotice('삭제하지 못했어요. 잠시 후 다시 시도해 주세요.');
+    } catch (cause) {
+      const failure = classifyCommunityError(cause);
+      if (failure === 'locked') onFailure(failure);
+      else setNotice('삭제하지 못했어요. 잠시 후 다시 시도해 주세요.');
     }
   }
 
@@ -160,7 +168,8 @@ export default function CommunityPostView({
       setReporting(null);
       setNotice('신고가 접수됐어요.');
       return true;
-    } catch {
+    } catch (cause) {
+      if (classifyCommunityError(cause) === 'locked') onFailure('locked');
       return false;
     }
   }
@@ -238,7 +247,8 @@ export default function CommunityPostView({
               state={{ like_count: post.like_count, liked_by_me: post.liked_by_me }}
               onChange={(next) => setPost((prev) => (prev ? { ...prev, ...next } : prev))}
               onFailure={(failure) => {
-                if (failure === 'not_found') onRemoved();
+                if (failure === 'locked') onFailure(failure);
+                else if (failure === 'not_found') onRemoved();
               }}
             />
           </div>
