@@ -9,6 +9,7 @@ import type { AddressInfo } from 'net';
 import {
   adminAuth,
   adminLoginRouter,
+  defaultPassword,
   signAdminSession,
 } from '../../../src/modules/ingest/admin-auth';
 
@@ -135,6 +136,25 @@ describe('FR-ADM-006 🚦 관리자 비밀번호 로그인', () => {
       expect((await jobs(s.base, API_TOKEN)).status).toBe(200);
     } finally {
       await s.close();
+    }
+  });
+
+  test('Fly 비밀값 이름은 ADMIN_PASSWORD 또는 ADMIN — ADMIN_PASSWORD 가 먼저', () => {
+    const saved = { p: process.env.ADMIN_PASSWORD, a: process.env.ADMIN };
+    try {
+      delete process.env.ADMIN_PASSWORD;
+      process.env.ADMIN = 'from-admin-name';
+      expect(defaultPassword()).toBe('from-admin-name');
+      process.env.ADMIN_PASSWORD = 'from-full-name';
+      expect(defaultPassword()).toBe('from-full-name');
+      delete process.env.ADMIN_PASSWORD;
+      delete process.env.ADMIN;
+      expect(defaultPassword()).toBeUndefined();
+    } finally {
+      if (saved.p === undefined) delete process.env.ADMIN_PASSWORD;
+      else process.env.ADMIN_PASSWORD = saved.p;
+      if (saved.a === undefined) delete process.env.ADMIN;
+      else process.env.ADMIN = saved.a;
     }
   });
 });

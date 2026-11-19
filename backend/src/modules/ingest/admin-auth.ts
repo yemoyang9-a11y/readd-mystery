@@ -55,7 +55,8 @@ async function validAdminSession(
   }
 }
 
-const defaultPassword = () => process.env.ADMIN_PASSWORD;
+// 대표가 Fly 비밀값을 `ADMIN` 이름으로 넣었다(2026-11-19) — 두 이름 모두 읽는다. ADMIN_PASSWORD 가 먼저다
+export const defaultPassword = () => process.env.ADMIN_PASSWORD || process.env.ADMIN;
 const defaultSecret = () => process.env.AUTH_TOKEN_SECRET;
 
 /**
