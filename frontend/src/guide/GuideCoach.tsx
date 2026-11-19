@@ -83,7 +83,21 @@ function placeSkip({
     if (bubble && overlaps(box, bubble)) continue;
     return Math.round(top);
   }
+  // 비춘 곳이 화면 대부분을 덮는 단계(사이드 탭 둘러보기)는 비춘 곳과 겹치는 것은 받아들이고
+  // 말풍선과만 겹치지 않는 자리를 고른다 — 말풍선의 "다음"과 건너뛰기가 서로 가리지 않게
+  for (const top of candidates) {
+    if (top === null) continue;
+    if (top < safeTop + 4 || top + size.height > viewport.height - safeBottom - 4) continue;
+    if (bubble && overlaps({ top, left, width: size.width, height: size.height }, bubble)) continue;
+    return Math.round(top);
+  }
   return Math.round(first);
+}
+
+/** 지금 비출 요소 — try 단계에서 눌러 본 뒤에는 결과까지 담은 넓은 곳(afterTry)이 있으면 그것 */
+function currentTarget(step: GuideStep, tried: boolean): Element | null {
+  if (tried && step.afterTry) return step.afterTry() ?? step.target();
+  return step.target();
 }
 
 function prefersReducedMotion(): boolean {
@@ -115,8 +129,9 @@ export default function GuideCoach({
   index: number;
   total: number;
   progress: GuideProgress;
+  /** 비춘 곳을 눌렀다. tap 단계는 다음 단계로, try 단계는 그 자리에서 가이드 동작(예: 아모 답 보이기)만 한다 */
   onTargetTap: () => void;
-  /** 말풍선의 "다음" — 비춘 곳을 누른 것과 같은 동작 */
+  /** 말풍선의 "다음" — tap 단계는 비춘 곳을 누른 것과 같고, try·look 단계는 바로 다음 단계로 간다 */
   onNext: () => void;
   onSkip: () => void;
   onFinish: () => void;
@@ -132,6 +147,13 @@ export default function GuideCoach({
   const skipRef = useRef<HTMLButtonElement>(null);
   const safeProbe = useRef<HTMLDivElement>(null);
   const [skipTop, setSkipTop] = useState<number | null>(null);
+  // try 단계에서 비춘 곳을 한 번 눌러 봤는가 — 눌러 본 뒤에는 결과까지 보이게 넓은 곳(afterTry)을 비춘다
+  const [tried, setTried] = useState(false);
+  const triedRef = useRef(false);
+  triedRef.current = tried;
+  useEffect(() => {
+    setTried(false);
+  }, [step.id]);
 
   // 비춘 요소의 자리를 매 프레임 따라간다 — 열리는 패널·바뀌는 쪽·스크롤을 별도 신호 없이 따라잡는다
   useLayoutEffect(() => {
@@ -143,7 +165,7 @@ export default function GuideCoach({
     // 단계가 바뀌면 지난 단계의 자리를 버리고 처음부터 잰다
     let last: Rect | null | undefined;
     const measure = () => {
-      const el = stepRef.current.target();
+      const el = currentTarget(stepRef.current, triedRef.current);
       let next: Rect | null = null;
       if (el) {
         if (scrolledFor.current !== stepRef.current.id) {
@@ -181,19 +203,34 @@ export default function GuideCoach({
     };
     measure();
     return () => window.cancelAnimationFrame(frame);
-  }, [step, viewport.width, viewport.height]);
+  }, [step, tried, viewport.width, viewport.height]);
 
   useEffect(() => {
     function guard(event: Event) {
       const node = event.target as Node | null;
       if (node instanceof Element && node.closest('[data-guide-ui]')) return;
-      const target = stepRef.current.target();
-      if (target && node && target.contains(node)) {
-        // 비춘 요소 자신의 click 처리가 끝난 뒤에 넘긴다. 바로 넘기면 브라우저가 이 리스너 직후
-        // 리렌더해서(마이크로태스크) 다음 단계에서 사라지는 요소(물어보기·노트에 적기 버튼)가
-        // 자기 onClick 을 받기 전에 없어진다.
-        if (event.type === 'click' && !stepRef.current.doneWhen && !stepRef.current.final) {
-          window.setTimeout(() => tapRef.current(), 0);
+      const current = stepRef.current;
+      const mode = current.mode ?? 'tap';
+      const target = mode === 'look' ? null : currentTarget(current, triedRef.current);
+      if (target && node && target.contains(node) && !current.final) {
+        // 가이드가 대신하는 누르기 — 요소의 원래 동작(입력 칸 채우기·초점)은 막고 가이드 동작만 한다
+        const swallow = current.swallowTap && !triedRef.current;
+        if (event.type === 'click') {
+          if (mode === 'try') {
+            if (!triedRef.current) {
+              setTried(true);
+              window.setTimeout(() => tapRef.current(), 0);
+            }
+          } else {
+            // 비춘 요소 자신의 click 처리가 끝난 뒤에 넘긴다. 바로 넘기면 브라우저가 이 리스너 직후
+            // 리렌더해서(마이크로태스크) 다음 단계에서 사라지는 요소(노트에 적기 버튼)가
+            // 자기 onClick 을 받기 전에 없어진다.
+            window.setTimeout(() => tapRef.current(), 0);
+          }
+        }
+        if (swallow) {
+          event.stopPropagation();
+          if (event.cancelable) event.preventDefault();
         }
         return;
       }
@@ -264,7 +301,7 @@ export default function GuideCoach({
       }
     : null;
 
-  const place = step.place ?? 'auto';
+  const place = (tried && step.afterTry ? step.afterTryPlace : step.place) ?? 'auto';
   let bubbleStyle: CSSProperties;
   if (place === 'top' || (!rect && place !== 'bottom')) {
     bubbleStyle = { top: 'calc(var(--safe-top) + 12px)' };

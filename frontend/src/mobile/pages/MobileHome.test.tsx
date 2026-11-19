@@ -1,8 +1,7 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import MobileHome from './MobileHome';
-import type { BriefingResponse } from '../../types';
 
 const catalog = vi.hoisted(() => ({ books: [] as unknown[] }));
 const briefingApi = vi.hoisted(() => ({ fetchBriefing: vi.fn() }));
@@ -29,16 +28,6 @@ const readingBook = {
   genre: '미스터리',
   registered_at: '2026-11-01',
   progress: { current_page: 13, percent: 19.1, is_complete: false, last_read_at: '2026-11-17T00:00:00Z' },
-};
-
-const serverBriefing: BriefingResponse = {
-  applied_cutoff: 13,
-  recap: null,
-  // 기준점의 장(3장)과 이어 읽기 위치의 장(2장)이 다른 독자 — 되돌아가 읽는 중
-  current_chapter: { chapter_no: 3, title: '지문' },
-  resume_chapter: { chapter_no: 2, title: '해왕좌의 밤' },
-  progress: { current_page: 13, total_pages: 68, percent: 19.1 },
-  last_read_at: null,
 };
 
 function Where() {
@@ -164,65 +153,48 @@ describe('모바일 홈 3D 책 캐러셀', () => {
     covers.forEach((face) => expect(face.textContent).toBe(''));
   });
 
-  // 2026-11-17 대표 결정 — 작은 "이어서 읽기 · 13p" 버튼 자리를 큰 이어 읽기 카드가 대신한다
-  test('FR-BRF-005: 이어서 읽기 카드에는 퍼센트 글자 대신 마지막으로 펼친 쪽이 p로 보인다', async () => {
-    catalog.books = [readingBook];
-    briefingApi.fetchBriefing.mockResolvedValue(serverBriefing);
+  // 대표 지시 2026-11-19 — 왼쪽 위 RE:ADD 워드마크(명조), 오른쪽 위 작은 이어서 읽기. 큰 이어 읽기 카드는 없앤다
+  test('홈 머리 줄 왼쪽 위에 명조 RE:ADD 워드마크가 있다', () => {
     renderHome();
-    const link = screen.getByRole('link', { name: /이어서 읽기/ });
-    expect(link).toHaveTextContent('13p');
-    expect(link.textContent).not.toContain('%');
-    expect(link.textContent).not.toContain('19');
-    await waitFor(() => expect(link).toHaveTextContent('제2장 해왕좌의 밤 · 13p'));
+    const head = screen.getByTestId('home-head');
+    const mark = within(head).getByText('RE:ADD');
+    expect(mark).toBe(screen.getByTestId('home-wordmark'));
+    expect(mark.className).toContain('font-dashSerif');
+    expect(head.firstElementChild).toBe(mark);
   });
 
-  test('FR-BRF-005: 진도 기록이 있으면 홈에 큰 이어 읽기 카드 — 표지·제목·서버의 장 이름·쪽·진도 바, 누르면 브리핑', async () => {
-    catalog.books = [readingBook];
-    briefingApi.fetchBriefing.mockResolvedValue(serverBriefing);
-    renderHome();
-    const card = screen.getByTestId('home-continue-card');
-    expect(card.tagName).toBe('A');
-    expect(card).toHaveAttribute('href', '/books/bk-95898cdf13/briefing');
-    expect(within(card).getByRole('img', { name: '가상범인 표지' })).toHaveAttribute('src', '/covers/gasangbeomin.webp');
-    expect(card).toHaveTextContent('가상범인');
-    // 진도 바 폭은 GET /books 가 준 percent 그대로 (프론트 재계산 없음)
-    expect(within(card).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '19.1');
-    // 장 이름은 서버 브리핑 응답의 resume_chapter(이어 읽기 위치의 장) 그대로 — 쪽과 같은 위치다.
-    // 기준점의 장(current_chapter)은 쓰지 않는다
-    await waitFor(() => expect(card).toHaveTextContent('제2장 해왕좌의 밤'));
-    expect(card).not.toHaveTextContent('지문');
-    expect(briefingApi.fetchBriefing).toHaveBeenCalledWith('bk-95898cdf13');
-    // 작은 이어서 읽기 버튼과 중복되지 않는다 — 이어 읽기 링크는 카드 하나
-    expect(screen.getAllByRole('link', { name: /이어서 읽기/ })).toHaveLength(1);
-  });
-
-  test('FR-SPL-005: 장 이름을 못 받아도 카드는 서버의 쪽·진도 바로 뜨고 장 이름만 빠진다', async () => {
-    catalog.books = [readingBook];
-    renderHome();
-    const card = screen.getByTestId('home-continue-card');
-    await waitFor(() => expect(briefingApi.fetchBriefing).toHaveBeenCalled());
-    expect(card).toHaveTextContent('13p');
-    expect(card).not.toHaveTextContent('제');
-  });
-
-  test('FR-SPL-005: 서버가 이어 읽기 위치의 장을 못 주면(resume_chapter null) 장 이름만 빠진다 — 기준점의 장으로 메우지 않는다', async () => {
-    catalog.books = [readingBook];
-    briefingApi.fetchBriefing.mockResolvedValue({ ...serverBriefing, resume_chapter: null });
-    renderHome();
-    const card = screen.getByTestId('home-continue-card');
-    await waitFor(() => expect(briefingApi.fetchBriefing).toHaveBeenCalled());
-    await Promise.resolve();
-    expect(card).toHaveTextContent('13p');
-    expect(card).not.toHaveTextContent('제');
-    expect(card).not.toHaveTextContent('지문');
-  });
-
-  test('진도 기록이 있는 책이 없으면 이어 읽기 카드가 없다', () => {
+  test('FR-BRF-001: 읽던 책이 없으면 이어서 읽기 버튼이 0개다', () => {
     catalog.books = [{ ...readingBook, progress: undefined }];
     renderHome();
-    expect(screen.queryByTestId('home-continue-card')).toBeNull();
+    expect(screen.queryByTestId('home-continue')).toBeNull();
     expect(screen.queryByRole('link', { name: /이어서 읽기/ })).toBeNull();
     expect(briefingApi.fetchBriefing).not.toHaveBeenCalled();
+  });
+
+  test('FR-BRF-001: 읽던 책이 있으면 머리 줄 오른쪽에 작은 이어서 읽기 버튼 1개 — 누르면 그 책 브리핑', async () => {
+    const user = userEvent.setup();
+    catalog.books = [readingBook];
+    renderHome();
+    const links = screen.getAllByRole('link', { name: /이어서 읽기/ });
+    expect(links).toHaveLength(1);
+    const button = links[0];
+    expect(button).toBe(screen.getByTestId('home-continue'));
+    // 머리 줄의 마지막(오른쪽) 칸, 워드마크와 같은 줄
+    const head = screen.getByTestId('home-head');
+    expect(head.lastElementChild).toBe(button);
+    expect(head.className).toMatch(/\bjustify-between\b/);
+    // 작게: 표지·진도 바 없음, 누르는 높이 44px 유지
+    expect(within(button).queryByRole('img')).toBeNull();
+    expect(within(button).queryByRole('progressbar')).toBeNull();
+    expect(button.className).toMatch(/\bmin-h-11\b/);
+    expect(button).toHaveTextContent('이어서 읽기');
+    expect(button).toHaveTextContent('가상범인');
+    // FR-BRF-005 🚦 — 퍼센트 글자를 쓰지 않는다. 쪽은 서버 값 그대로 이름에만
+    expect(button.textContent).not.toContain('%');
+    expect(button).toHaveAccessibleName('이어서 읽기, 가상범인, 13p');
+    expect(screen.queryByTestId('home-continue-card')).toBeNull();
+    await user.click(button);
+    expect(screen.getByTestId('where')).toHaveTextContent('/books/bk-95898cdf13/briefing');
   });
 
   test('책마다 책등에 제목이 있다', () => {
@@ -266,7 +238,7 @@ describe('모바일 홈 3D 책 캐러셀', () => {
   });
 });
 
-describe('작은 화면에서 이어 읽기 카드가 있으면 입체 책 영역만 줄인다', () => {
+describe('이어서 읽기 버튼은 머리 줄 안에 있어 입체 책 영역을 줄이지 않는다', () => {
   const original = { w: window.innerWidth, h: window.innerHeight };
   function screenSize(w: number, h: number) {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: w });
@@ -275,47 +247,17 @@ describe('작은 화면에서 이어 읽기 카드가 있으면 입체 책 영�
   const stageHeight = () => parseFloat(screen.getByTestId('book-carousel').style.height);
   afterEach(() => screenSize(original.w, original.h));
 
-  test('390×664에서 카드가 있으면 입체 책 영역이 카드 없을 때보다 50px 이상 낮다', () => {
-    screenSize(390, 664);
-    catalog.books = [{ ...readingBook, progress: undefined }];
-    const { unmount } = renderHome();
-    const withoutCard = stageHeight();
-    unmount();
-
-    catalog.books = [readingBook];
-    renderHome();
-    expect(screen.getByTestId('home-continue-card')).toBeInTheDocument();
-    expect(withoutCard - stageHeight()).toBeGreaterThanOrEqual(50);
-  });
-
-  test('카드가 없으면 작은 화면이어도 입체 책 영역 높이는 지금과 같다', () => {
+  test('390×664에서 읽던 책이 있어도 입체 책 영역 높이가 같다', () => {
     screenSize(390, 664);
     catalog.books = [];
-    renderHome();
-    expect(stageHeight()).toBeCloseTo(300 * (664 / 760), 5);
-  });
-
-  test('큰 화면(430×932)은 카드가 있어도 입체 책 영역 높이가 줄지 않는다', () => {
-    screenSize(430, 932);
-    catalog.books = [];
     const { unmount } = renderHome();
-    const withoutCard = stageHeight();
+    const without = stageHeight();
     unmount();
 
     catalog.books = [readingBook];
     renderHome();
-    expect(stageHeight()).toBe(withoutCard);
-  });
-
-  test('430×739은 카드가 있어도 10px 넘게 줄지 않는다', () => {
-    screenSize(430, 739);
-    catalog.books = [];
-    const { unmount } = renderHome();
-    const withoutCard = stageHeight();
-    unmount();
-
-    catalog.books = [readingBook];
-    renderHome();
-    expect(withoutCard - stageHeight()).toBeLessThanOrEqual(10);
+    expect(screen.getByTestId('home-continue')).toBeInTheDocument();
+    expect(stageHeight()).toBe(without);
+    expect(without).toBeCloseTo(300 * (664 / 760), 5);
   });
 });

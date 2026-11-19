@@ -4,7 +4,7 @@
  * 화면 문구는 코드 안의 문자열(따옴표·템플릿)과 JSX 글자에서만 나온다. 그래서 src 아래 화면 코드(테스트 제외)를
  * TypeScript 구문 트리로 읽어 문자열·JSX 글자만 모아 "싸비"가 0건인지 본다.
  * 주석·식별자·파일명은 내부 이름이라 그대로 둔다 — 구문 트리에서 주석과 식별자는 문자열로 잡히지 않는다.
- * (홈 화면 앱 이름 index.html·manifest 는 별도 결정 대상이라 이 시험 범위 밖이다)
+ * (홈 화면 앱 이름 index.html·manifest 는 appName.test.ts 가 본다 — 2026-11-19 RE:ADD)
  */
 // @ts-expect-error 이 프로젝트 tsconfig 에는 node 타입이 없다
 import { readFileSync, readdirSync, statSync } from 'node:fs';

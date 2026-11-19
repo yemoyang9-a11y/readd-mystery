@@ -14,7 +14,6 @@ import type { QuoteSelectionPopover } from '../hooks/useQuoteSelection';
 import type { ChatbotConversationTurn, NoteDraft, ReadingNote } from '../types';
 import { markOnboarded } from '../services/onboardingService';
 import GuideCoach from './GuideCoach';
-import { CaseLabel } from '../mobile/components/CaseMotifs';
 import { GUIDE_STEPS } from './guideSteps';
 import {
   DEMO_AMO_ANSWER,
@@ -24,10 +23,10 @@ import {
   DEMO_CHARACTER_NAMES,
   DEMO_CLUE,
   DEMO_CLUE_PAGE,
-  DEMO_COMMUNITY_POSTS,
   DEMO_COVER,
   DEMO_GRAPH,
   DEMO_PAGES,
+  DEMO_QUESTION,
   DEMO_SHOWCASE,
   DEMO_START_PAGE,
   DEMO_TIMELINE,
@@ -36,16 +35,19 @@ import {
   DEMO_NEIGHBORS,
 } from './demoBook';
 
-type Screen = 'home' | 'briefing' | 'reader' | 'community';
+type Screen = 'home' | 'briefing' | 'reader';
 
 const HEADER_HEIGHT = 56;
-const ANSWER_DELAY_MS = 450;
 const noop = () => {};
 const TWO_DAYS_AGO = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
 
 /**
- * 첫 이용 가이드 — 데모 책 한 권으로 홈 → 브리핑 → 읽기 → 싸비 → 완독 → 커뮤니티를
- * 직접 눌러 보며 지나간다 (2026-11-18 대표 지시: "단순 텍스트가 아닌 실제 클릭해보며").
+ * 첫 이용 가이드 — 데모 책 한 권으로 홈 → 브리핑 → 읽기 → 사이드 탭 네 도구를 지나간다
+ * (2026-11-18 대표 지시: "단순 텍스트가 아닌 실제 클릭해보며").
+ *
+ * 2026-11-19 대표 지시 — 8단계로 다시 짰다(docs/context/guide-redesign-2026-11-19.md 2장).
+ * 한 단계 = 한 기능 설명 + 누르기 최대 1번. 노트 저장·질문 보내기·사이드 탭 열기는 가이드가
+ * 데모 상태만 바꿔 대신하고, 끝까지 넘기기와 완독자 이야기방은 마무리 카드 설명으로 대신한다.
  *
  * 화면은 실제 컴포넌트(입체 책·브리핑·읽기 화면·싸비 패널)에 데모 데이터를 넣어 그린다.
  * 모든 상태는 이 컴포넌트 안에만 있다 — 진도·노트·챗봇·리캡 API를 부르지 않는다.
@@ -64,28 +66,22 @@ export default function GuidePage() {
   const [page, setPage] = useState(DEMO_START_PAGE);
   const [panelOpen, setPanelOpen] = useState(false);
   const [notes, setNotes] = useState<ReadingNote[]>([]);
-  const [noteQuote, setNoteQuote] = useState<{ text: string; token: number } | null>(null);
   const [chatTurns, setChatTurns] = useState<ChatbotConversationTurn[]>([]);
-  const [chatStreaming, setChatStreaming] = useState(false);
   const [popover, setPopover] = useState<QuoteSelectionPopover | null>(null);
   const finished = useRef(false);
-  const answerTimer = useRef<number | null>(null);
 
   const step = GUIDE_STEPS[stepAt];
   const progress = { page };
 
-  useEffect(() => () => {
-    if (answerTimer.current !== null) window.clearTimeout(answerTimer.current);
-  }, []);
-
-  // 여러 번 누르는 단계(끝까지 읽기)는 상태가 조건을 채우면 넘어간다
+  // 사이드 탭은 가이드가 대신 연다 — 단계마다 정해 둔 탭이 있으면 열고, 없으면 닫는다
   useEffect(() => {
-    if (step.doneWhen?.(progress)) setStepAt((at) => Math.min(at + 1, GUIDE_STEPS.length - 1));
-  });
+    setPanelOpen(Boolean(step.tab));
+  }, [step.tab]);
 
-  // 단서 문장을 누른 뒤에는 실제 읽기 화면처럼 "물어보기 · 노트에 적기" 버튼을 그 문장 아래에 띄운다
+  // 3단계: 실제 읽기 화면에서 문장을 길게 눌러 고른 모습 그대로 — 단서 문장을 표시하고
+  // "물어보기 · 노트에 적기" 버튼을 그 문장 아래에 띄워 둔다
   useLayoutEffect(() => {
-    if (step.id !== 'note-clue') {
+    if (step.id !== 'pick-sentence') {
       setPopover(null);
       return;
     }
@@ -97,15 +93,16 @@ export default function GuidePage() {
   const advance = useCallback(() => setStepAt((at) => Math.min(at + 1, GUIDE_STEPS.length - 1)), []);
 
   /**
-   * 말풍선의 "다음" (대표 지시 2026-11-19) — 비춘 곳을 누른 것과 같은 동작이다.
-   * 비춘 요소에 click 을 보내면 그 요소의 원래 동작(책 열기·탭 전환·저장 등)과 코치의
-   * 단계 넘김이 같이 일어난다. 여러 번 누르는 단계(끝까지 읽기)는 데모 책 끝 쪽으로 바로 간다.
+   * 말풍선의 "다음" (대표 지시 2026-11-19).
+   * tap 단계는 비춘 곳을 누른 것과 같은 동작이다 — 비춘 요소에 click 을 보내면 그 요소의 원래
+   * 동작(책 열기·이어서 읽기·노트에 적기)과 코치의 단계 넘김이 같이 일어난다.
+   * try·look 단계(사이드 탭 네 도구)는 둘러보기만 하고 바로 다음 단계로 간다.
    * 데모 상태만 바뀐다 — 실제 진도 API 는 부르지 않는다(FR-SPL-002 🚦, 절대 규칙 8번).
    */
   function goNext() {
     if (step.final) return;
-    if (step.doneWhen) {
-      setPage(DEMO_TOTAL_PAGES);
+    if ((step.mode ?? 'tap') !== 'tap') {
+      advance();
       return;
     }
     const el = step.target();
@@ -148,15 +145,29 @@ export default function GuidePage() {
     return true;
   };
 
+  /** 아모에게 묻기 — 서버를 부르지 않고 데모용으로 미리 쓴 답을 바로 보여 준다 (대표 지시 2026-11-19) */
   function ask(query: string) {
-    // 휴대폰 키보드를 내려 싸비 닫기 버튼이 다시 보이게 한다
+    // 휴대폰 키보드를 내려 답이 가려지지 않게 한다
     (document.activeElement as HTMLElement | null)?.blur?.();
-    setChatTurns((prev) => [...prev, { role: 'user', text: query }]);
-    setChatStreaming(true);
-    answerTimer.current = window.setTimeout(() => {
-      setChatTurns((prev) => [...prev, { role: 'assistant', text: DEMO_AMO_ANSWER }]);
-      setChatStreaming(false);
-    }, ANSWER_DELAY_MS);
+    setChatTurns((prev) => [...prev, { role: 'user', text: query }, { role: 'assistant', text: DEMO_AMO_ANSWER }]);
+  }
+
+  /**
+   * 비춘 곳을 눌렀을 때. tap 단계는 다음 단계로 간다(요소 자신의 동작은 이미 일어났다).
+   * try 단계는 그 자리에 머문다 — 7단계 추천 질문만 가이드가 대신 보내고 답을 보여 준다.
+   */
+  function onTargetTap() {
+    if ((step.mode ?? 'tap') === 'tap') {
+      advance();
+      return;
+    }
+    if (step.id === 'ask-amo') ask(DEMO_QUESTION);
+  }
+
+  /** 3단계 "노트에 적기" — 노트 창 없이 가이드가 바로 저장하고 사이드 탭(추리 노트)을 연다 */
+  function saveClueNote() {
+    void addNote({ page_no: DEMO_CLUE_PAGE, kind: 'clue', body: DEMO_CLUE });
+    setPanelOpen(true);
   }
 
   let body;
@@ -171,8 +182,9 @@ export default function GuidePage() {
         }}
       >
         <h1 className="sr-only">이용 가이드</h1>
-        <div className="flex items-center justify-between px-5 pt-3">
-          <span className="font-dashSans text-[17px] font-bold tracking-[0.04em]">RE:ADD</span>
+        {/* 실제 홈과 같은 머리 줄 — 왼쪽 위 명조 RE:ADD (대표 지시 2026-11-19) */}
+        <div className="flex min-h-11 items-center justify-between px-5 pt-3">
+          <span className="font-dashSerif text-[21px] font-bold tracking-[0.02em] text-white">RE:ADD</span>
         </div>
         <div className="flex flex-1 flex-col justify-center">
           <BookCarousel3D
@@ -231,7 +243,7 @@ export default function GuidePage() {
       />
     );
   } else if (screen === 'reader') {
-    const clueShown = page === DEMO_CLUE_PAGE && (step.id === 'pick-clue' || step.id === 'note-clue');
+    const clueShown = page === DEMO_CLUE_PAGE && step.id === 'pick-sentence';
     body = (
       <div data-testid="guide-reader" data-mobile="true" className="relative h-[100dvh] overflow-hidden bg-brief-page">
         <div className="absolute inset-0">
@@ -248,7 +260,7 @@ export default function GuidePage() {
             onQuote={noop}
             onNote={noop}
             insetTop={`calc(var(--safe-top) + ${HEADER_HEIGHT}px)`}
-            onOpenCommunity={() => setScreen('community')}
+            onOpenCommunity={noop}
             onBack={noop}
           />
         </div>
@@ -276,7 +288,7 @@ export default function GuidePage() {
           label="사이드 탭"
           controls="ssabi-panel"
           open={panelOpen}
-          onToggle={() => setPanelOpen((open) => !open)}
+          onToggle={noop}
           hidden={panelOpen || viewport.keyboardOpen}
         />
         {popover ? (
@@ -284,19 +296,20 @@ export default function GuidePage() {
             popover={popover}
             limitBottom={window.innerHeight - 60}
             onAsk={noop}
-            onNote={() => {
-              setNoteQuote((prev) => ({ text: DEMO_CLUE, token: (prev?.token ?? 0) + 1 }));
-              setPanelOpen(true);
-            }}
+            onNote={saveClueNote}
           />
         ) : null}
         <MobileSsabiSheet open={panelOpen} height={viewport.height} offsetTop={viewport.offsetTop} keyboardOpen={viewport.keyboardOpen}>
           {viewport.keyboardOpen ? null : (
             <div className="absolute right-6 z-10" style={{ top: 'calc(var(--safe-top) + 16px)' }}>
-              <SsabiToggleButton open={panelOpen} onToggle={() => setPanelOpen((open) => !open)} />
+              <SsabiToggleButton open={panelOpen} onToggle={noop} />
             </div>
           )}
           <SsabiPanel
+            // 단계마다 가이드가 정한 탭으로 연다 — 탭이 바뀌면 새로 그려 그 탭에서 시작한다
+            key={step.tab ?? 'none'}
+            initialTab={step.tab ?? null}
+            initialTabEpoch={1}
             bookTitle={DEMO_TITLE}
             sessionEpoch={1}
             onTabChange={noop}
@@ -311,9 +324,12 @@ export default function GuidePage() {
             onAddNote={addNote}
             onEditNote={editNote}
             onRemoveNote={removeNote}
-            onJumpToNote={() => setPanelOpen(false)}
+            onJumpToNote={(to) => {
+              setPage(to);
+              setPanelOpen(false);
+            }}
             chatTurns={chatTurns}
-            chatStreaming={chatStreaming}
+            chatStreaming={false}
             chatError={null}
             chatConversations={[]}
             chatHistoryOpen={false}
@@ -322,16 +338,12 @@ export default function GuidePage() {
             onNewChat={noop}
             onToggleChatHistory={noop}
             onSelectChatConversation={noop}
-            pendingNoteQuote={noteQuote}
-            onNoteQuoteHandled={() => setNoteQuote(null)}
             compactHeader={viewport.keyboardOpen}
             requireTextToSend
           />
         </MobileSsabiSheet>
       </div>
     );
-  } else {
-    body = <GuideCommunity />;
   }
 
   return (
@@ -342,77 +354,11 @@ export default function GuidePage() {
         index={stepAt}
         total={GUIDE_STEPS.length}
         progress={progress}
-        onTargetTap={advance}
+        onTargetTap={onTargetTap}
         onNext={goNext}
         onSkip={() => void finish()}
         onFinish={() => void finish()}
       />
-    </div>
-  );
-}
-
-/** 완독자 커뮤니티 — 데모 글 몇 개만 보여 주는 가벼운 복제 화면(실제 게시판을 부르지 않는다) */
-function GuideCommunity() {
-  // 실제 완독자 이야기 화면(MobileCommunity)과 같은 모양 — 미스터리 브랜딩 (2026-11-18)
-  return (
-    <div
-      data-testid="guide-community"
-      className="min-h-[100dvh] bg-[#0d0a0b] font-dashSans text-[#ece6e0]"
-      style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'calc(84px + var(--safe-bottom))' }}
-    >
-      <header className="flex items-center gap-3 px-4 pb-3 pt-2">
-        <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-full border border-[#35292c] bg-[#1e1618]">
-          <svg viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9.5 4.8 6.5 8 9.5 11.2" />
-          </svg>
-        </span>
-        <div className="min-w-0">
-          <CaseLabel>Case closed</CaseLabel>
-          <h1 className="m-0 mt-0.5 truncate font-dashSerif text-[20px] font-bold leading-tight">{DEMO_TITLE} 완독자 이야기</h1>
-        </div>
-      </header>
-      <div className="flex gap-1.5 px-4 pb-3">
-        {['전체', '범인 추리', '감상'].map((label, i) => (
-          <span
-            key={label}
-            className={`flex min-h-11 shrink-0 items-center rounded-full border px-3.5 text-[14px] font-bold ${
-              i === 0 ? 'border-[#c4475f] bg-[#1e1618] text-[#e58a9b]' : 'border-[#35292c] text-[#a89e9a]'
-            }`}
-          >
-            {label}
-          </span>
-        ))}
-      </div>
-      <ul className="m-0 flex list-none flex-col gap-3 px-4">
-        {DEMO_COMMUNITY_POSTS.map((post) => (
-          <li key={post.id} className="rounded-[14px] border border-[#35292c] bg-[#1e1618] px-4 pt-4 text-[#ece6e0]">
-            <span className="flex items-center gap-2">
-              <span
-                className={`inline-flex h-6 items-center rounded-[4px] border px-2 text-[12px] font-bold tracking-[0.06em] ${
-                  post.kind === '범인 추리'
-                    ? 'border-[#c4475f]/60 bg-[#2d161d] text-[#e58a9b]'
-                    : 'border-[#4a3f41] bg-[#2a2224] text-[#d8cfca]'
-                }`}
-              >
-                {post.kind}
-              </span>
-              <span className="text-[13px] font-bold">{post.nickname}</span>
-            </span>
-            <span className="mt-2 block break-words pb-3 text-[15px] leading-[1.65]">{post.body}</span>
-            <span className="flex min-h-11 items-center border-t border-[#35292c]/70 text-[13px] font-bold text-[#a89e9a]">
-              댓글 {post.comments}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <div
-        className="fixed inset-x-0 bottom-0 z-10 border-t border-[#35292c] bg-[#0d0a0b] px-4 pt-3"
-        style={{ paddingBottom: 'max(12px, var(--safe-bottom))' }}
-      >
-        <span className="flex h-12 w-full items-center justify-center rounded-full bg-[#8f1d35] text-[15px] font-bold text-white">
-          글쓰기
-        </span>
-      </div>
     </div>
   );
 }
