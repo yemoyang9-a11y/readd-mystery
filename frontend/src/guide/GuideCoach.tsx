@@ -39,6 +39,53 @@ function sameRect(a: Rect | null, b: Rect | null): boolean {
   );
 }
 
+/** 건너뛰기 버튼이 화면 오른쪽 끝에서 떨어지는 거리(px) — Tailwind right-4 */
+const SKIP_EDGE = 16;
+
+function overlaps(a: Rect, b: Rect): boolean {
+  return a.left < b.left + b.width && b.left < a.left + a.width && a.top < b.top + b.height && b.top < a.top + a.height;
+}
+
+/**
+ * 건너뛰기 자리(top, px) — 화면 오른쪽 위가 기본이고, 비춘 곳이나 말풍선과 겹치면
+ * 그 아래·위로 옮긴다. 비춘 곳을 가리면 그 단계를 누를 수 없게 되기 때문이다.
+ */
+function placeSkip({
+  hole,
+  bubble,
+  size,
+  viewport,
+  safeTop,
+  safeBottom,
+}: {
+  hole: Rect | null;
+  bubble: Rect | null;
+  size: { width: number; height: number };
+  viewport: { width: number; height: number };
+  safeTop: number;
+  safeBottom: number;
+}): number {
+  const first = safeTop + 12;
+  const candidates = [
+    first,
+    bubble ? bubble.top + bubble.height + 8 : null,
+    hole ? hole.top + hole.height + 8 : null,
+    viewport.height - safeBottom - 16 - size.height,
+    bubble ? bubble.top - 8 - size.height : null,
+    hole ? hole.top - 8 - size.height : null,
+  ];
+  const left = viewport.width - SKIP_EDGE - size.width;
+  for (const top of candidates) {
+    if (top === null) continue;
+    if (top < safeTop + 4 || top + size.height > viewport.height - safeBottom - 4) continue;
+    const box = { top, left, width: size.width, height: size.height };
+    if (hole && overlaps(box, hole)) continue;
+    if (bubble && overlaps(box, bubble)) continue;
+    return Math.round(top);
+  }
+  return Math.round(first);
+}
+
 function prefersReducedMotion(): boolean {
   return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
@@ -49,6 +96,10 @@ function prefersReducedMotion(): boolean {
  * 화면 아래의 실제 컴포넌트는 그대로 둔다. 이 층은 눈에 보이는 막(포인터를 통과시킨다)과
  * window 캡처 단계의 입력 차단 두 겹이다 — 비춘 요소 안의 입력만 통과하고, 그 요소를
  * 누르는 순간(click) 다음 단계로 간다. 말풍선·건너뛰기는 data-guide-ui 라 늘 누를 수 있다.
+ *
+ * 대표 지시 2026-11-19 — 건너뛰기는 말풍선에서 빼서 화면 오른쪽에 두고, 말풍선 아래 줄의
+ * 예전 건너뛰기 자리에는 "다음"을 둔다. "다음"은 비춘 곳을 누른 것과 같은 동작이다(onNext).
+ * 마지막 단계는 기존 마무리 버튼(문구·동작)을 그대로 쓴다.
  */
 export default function GuideCoach({
   step,
@@ -56,6 +107,7 @@ export default function GuideCoach({
   total,
   progress,
   onTargetTap,
+  onNext,
   onSkip,
   onFinish,
 }: {
@@ -64,6 +116,8 @@ export default function GuideCoach({
   total: number;
   progress: GuideProgress;
   onTargetTap: () => void;
+  /** 말풍선의 "다음" — 비춘 곳을 누른 것과 같은 동작 */
+  onNext: () => void;
   onSkip: () => void;
   onFinish: () => void;
 }) {
@@ -74,6 +128,10 @@ export default function GuideCoach({
   const tapRef = useRef(onTargetTap);
   tapRef.current = onTargetTap;
   const scrolledFor = useRef<string | null>(null);
+  const bubbleRef = useRef<HTMLElement>(null);
+  const skipRef = useRef<HTMLButtonElement>(null);
+  const safeProbe = useRef<HTMLDivElement>(null);
+  const [skipTop, setSkipTop] = useState<number | null>(null);
 
   // 비춘 요소의 자리를 매 프레임 따라간다 — 열리는 패널·바뀌는 쪽·스크롤을 별도 신호 없이 따라잡는다
   useLayoutEffect(() => {
@@ -98,6 +156,23 @@ export default function GuideCoach({
       if (last === undefined || !sameRect(last, next)) {
         last = next;
         setRect(next);
+      }
+      const skipEl = skipRef.current;
+      if (skipEl) {
+        const safe = safeProbe.current?.getBoundingClientRect();
+        const bubbleBox = bubbleRef.current?.getBoundingClientRect();
+        const size = skipEl.getBoundingClientRect();
+        const top = placeSkip({
+          hole: next
+            ? { top: next.top - PAD, left: next.left - PAD, width: next.width + PAD * 2, height: next.height + PAD * 2 }
+            : null,
+          bubble: bubbleBox && bubbleBox.height > 0 ? bubbleBox : null,
+          size: { width: size.width, height: size.height },
+          viewport: { width: window.innerWidth, height: window.innerHeight },
+          safeTop: safe?.top ?? 0,
+          safeBottom: safe ? Math.max(0, window.innerHeight - safe.bottom) : 0,
+        });
+        setSkipTop((prev) => (prev === top ? prev : top));
       }
       if (window.innerWidth !== viewport.width || window.innerHeight !== viewport.height) {
         setViewport({ width: window.innerWidth, height: window.innerHeight });
@@ -137,13 +212,13 @@ export default function GuideCoach({
       <span className="text-[#e58a9b]">{String(index + 1).padStart(2, '0')}</span> / {String(total).padStart(2, '0')}
     </span>
   );
-  const skip = (
+  const nextButton = (
     <button
       type="button"
-      onClick={onSkip}
-      className="min-h-11 rounded-full px-3 font-dashSans text-[14px] font-bold text-[#ece6e0] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b]"
+      onClick={onNext}
+      className="min-h-11 rounded-full bg-[#8f1d35] px-5 font-dashSans text-[14px] font-bold text-white transition-colors hover:bg-[#a3243f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1e1618]"
     >
-      건너뛰기
+      다음
     </button>
   );
 
@@ -220,6 +295,7 @@ export default function GuideCoach({
         role="dialog"
         aria-label="이용 가이드"
         aria-live="polite"
+        ref={bubbleRef}
         data-testid="guide-bubble"
         className="fixed inset-x-4 z-[101] mx-auto max-w-[358px] animate-pop-in rounded-[16px] border border-[#35292c] bg-[#1e1618] px-4 pb-2 pt-4 text-[#ece6e0] shadow-[0_18px_40px_rgba(0,0,0,0.5)] motion-reduce:animate-none"
         style={bubbleStyle}
@@ -228,11 +304,28 @@ export default function GuideCoach({
           <AmoSherlock className="h-12 w-auto shrink-0" />
           <p className="m-0 min-w-0 flex-1 break-keep pt-1 font-amo text-[15px] leading-[1.6] text-[#ece6e0]">{text}</p>
         </div>
-        <div className="mt-2 flex items-center justify-between border-t border-[#35292c] pl-1">
+        <div className="mt-2 flex items-center justify-between border-t border-[#35292c] pb-1 pl-1 pt-2">
           {counter}
-          {skip}
+          {nextButton}
         </div>
       </section>
+      <div
+        ref={safeProbe}
+        aria-hidden="true"
+        className="pointer-events-none invisible fixed inset-x-0"
+        style={{ top: 'var(--safe-top)', bottom: 'var(--safe-bottom)' }}
+      />
+      <button
+        ref={skipRef}
+        type="button"
+        data-guide-ui
+        data-guide-skip
+        onClick={onSkip}
+        className="fixed right-4 z-[102] min-h-11 rounded-full border border-[#4a3f41] bg-[#1e1618] px-4 font-dashSans text-[14px] font-bold text-[#ece6e0] shadow-[0_8px_20px_rgba(0,0,0,0.4)] hover:bg-[#2a2224] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b]"
+        style={{ top: skipTop ?? 'calc(var(--safe-top) + 12px)' }}
+      >
+        건너뛰기
+      </button>
     </>
   );
 }

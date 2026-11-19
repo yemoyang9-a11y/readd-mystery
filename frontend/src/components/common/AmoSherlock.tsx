@@ -33,11 +33,12 @@ export default function AmoSherlock({
           <path d={body} />
         </clipPath>
       </defs>
-      <ellipse cx="30" cy="148" rx="7.5" ry="10.5" transform="rotate(20 30 148)" fill="#f9dcbc" stroke={STROKE} strokeWidth="3" strokeLinejoin="round" />
-      <ellipse cx="130" cy="148" rx="7.5" ry="10.5" transform="rotate(-20 130 148)" fill="#f9dcbc" stroke={STROKE} strokeWidth="3" strokeLinejoin="round" />
-      <path d={body} fill="#f9dcbc" />
-      <rect x="0" y="150" width="160" height="50" fill="#efc08e" clipPath={`url(#${clip})`} />
-      <path d={body} fill="none" stroke={STROKE} strokeWidth="3" strokeLinejoin="round" />
+      {/* 대표 지시 2026-11-19 — 아모에게 손을 그리지 않는다(몸 양옆 손 두 개 제거) */}
+      <g data-amo-part="body">
+        <path d={body} fill="#f9dcbc" />
+        <rect x="0" y="150" width="160" height="50" fill="#efc08e" clipPath={`url(#${clip})`} />
+        <path d={body} fill="none" stroke={STROKE} strokeWidth="3" strokeLinejoin="round" />
+      </g>
       <g transform={thinking ? 'translate(3,-3)' : undefined}>
         <circle cx="60" cy="104" r="8.5" fill="#2a1a12" />
         <circle cx="100" cy="104" r="8.5" fill="#2a1a12" />
@@ -53,7 +54,7 @@ export default function AmoSherlock({
       ) : (
         <path d="M71 120Q80 129 89 120" fill="none" stroke={STROKE} strokeWidth="3.2" strokeLinecap="round" />
       )}
-      <g transform="rotate(-5 80 72)">
+      <g data-amo-part="hat" transform="rotate(-5 80 72)">
         <path d="M54 72Q80 94 106 72Z" fill="#5a3d26" stroke={STROKE} strokeWidth="3" strokeLinejoin="round" />
         <path d={hat} fill="#b58a5c" />
         <path d={hat} fill={`url(#${plaid})`} />
