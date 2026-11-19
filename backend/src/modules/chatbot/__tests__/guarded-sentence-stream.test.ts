@@ -5,6 +5,9 @@ import { stream as llmStream } from '../../llm-gateway/gateway';
 import { HARNESS_FIXED_ANSWER, HARNESS_VERBATIM_ANSWER } from '../harness/messages';
 import { verbatimLength } from '../harness/output-guard';
 import { createChatTiming } from '../timing';
+import { HOLDBACK_INTENTS, INTENT_POLICY } from '../harness/behavior-ladder';
+import { QUESTION_INTENTS, classifyQuestion } from '../harness/question-intent';
+import type { NotesReader } from '../notes-reader';
 
 jest.mock('../repository');
 jest.mock('../vector-search');
@@ -90,9 +93,9 @@ describe('작품 질문(guarded) — 문장 단위로 검사한 뒤에만 내보
     expect(chunks.filter((chunk) => /김철수|도망/u.test(chunk))).toHaveLength(0);
     expect(out).not.toContain('김철수');
     expect(out).not.toContain('도망');
-    // 깨끗한 앞 문장은 나가고, 고정 답변으로 맺는다
-    expect(chunks[0]).toBe('12쪽에서 그는 장갑을 벗었어요. ');
-    expect(out).toBe(`12쪽에서 그는 장갑을 벗었어요. \n\n${HARNESS_FIXED_ANSWER}`);
+    // 범인·결말 질문은 한 문장 늦게 내보낸다(holdback): 앞 문장은 다음 문장과 함께 검사를 통과해야
+    // 나가므로, 다음 문장이 위반이면 앞 문장도 나가지 않고 고정 답변만 나간다
+    expect(chunks).toEqual([HARNESS_FIXED_ANSWER]);
     // 재생성 없음: 모델 호출 1회
     expect(llmStream).toHaveBeenCalledTimes(1);
     expect(queryLog().harness).toEqual({
@@ -119,7 +122,9 @@ describe('작품 질문(guarded) — 문장 단위로 검사한 뒤에만 내보
     const chunks = await runChunks('집사가 범인이라는 내 가설이 맞아?');
     const out = chunks.join('');
     const released = modelPart(out, HARNESS_FIXED_ANSWER);
-    expect(released).toBe('12쪽에서 그는 장갑을 벗었어요. 그 뒤로 방을 나갔어요. \n\n');
+    // holdback: 위반 문장 바로 앞 문장("그 뒤로 방을 나갔어요.")도 나가지 않는다
+    expect(released).toBe('12쪽에서 그는 장갑을 벗었어요. \n\n');
+    expect(out).not.toContain('방을 나갔');
     expect(out).not.toMatch(/맞아요|집사가 했/u);
     expect(out.endsWith(HARNESS_FIXED_ANSWER)).toBe(true);
     expect(queryLog().harness.violations).toEqual([['verdict_phrase']]);
@@ -131,7 +136,8 @@ describe('작품 질문(guarded) — 문장 단위로 검사한 뒤에만 내보
     streamInChunks('12쪽에서 그는 장갑을 벗었어요.\n범인은 집사가\n아니에요.');
     const out = (await runChunks('범인이 집사 맞지?')).join('');
     expect(out).not.toContain('집사');
-    expect(out).toBe(`12쪽에서 그는 장갑을 벗었어요.\n\n\n${HARNESS_FIXED_ANSWER}`);
+    // holdback: 위반 덩어리 바로 앞 문장도 나가지 않는다
+    expect(out).toBe(HARNESS_FIXED_ANSWER);
   });
 
   test('FR-QNA-004: 기준 쪽수 초과 쪽을 가리키는 문장부터 0건 (재생성 없음)', async () => {
@@ -306,5 +312,205 @@ describe('작품 질문(guarded) — 문장 단위로 검사한 뒤에만 내보
     expect(llmStream).toHaveBeenCalledTimes(1);
     expect(queryLog().amo_style.findings[0]).toContain('multi_question');
     expect(queryLog().harness.regenerated).toBe(false);
+  });
+});
+
+/**
+ * FR-QNA-004 🚦, NFR-AI-005 (절대 규칙 11) — 판정 위험 질문은 한 문장 늦게 내보낸다(holdback).
+ * "범인은 집사." 단독으로는 검사를 통과하지만 뒤에 "맞아요."가 붙으면 앞 문장이 판정으로 확정된다.
+ * 위험 유형에서는 문장 N을 "나간 글 + N + N+1"이 검사를 통과한 뒤에야 내보내고, 마지막 문장은 답이
+ * 끝난 뒤 전체를 검사해 내보낸다. 사실 질문 등은 지금처럼 문장마다 바로 내보낸다(positive 쌍).
+ */
+describe('판정 위험 유형은 한 문장 늦게 내보낸다 (FR-QNA-004 🚦, NFR-AI-005)', () => {
+  let logSpy: jest.SpyInstance;
+  const notesReader: NotesReader = {
+    listNotes: jest.fn(async () => [
+      {
+        page_no: 12,
+        kind: 'hypothesis' as const,
+        body: '장갑이 마음에 걸림',
+        created_at: '2026-11-18T08:00:00.000Z',
+      },
+    ]),
+  };
+
+  // 실제 분류기로 각 위험 유형에 걸리는 질문
+  const RISKY: ReadonlyArray<readonly [string, string]> = [
+    ['culprit_or_ending', '범인이 누구야?'],
+    ['verify_hypothesis', '집사의 알리바이가 수상하지 않아?'],
+    ['reader_notes', '내 노트 보여줘'],
+  ];
+  const FACT_QUERY = '장갑은 누가 벗었어?';
+
+  beforeEach(() => {
+    process.env.MOCK_MODE = 'false';
+    (repo.findChapterSummaries as jest.Mock).mockResolvedValue([]);
+    (repo.getCurrentChapterText as jest.Mock).mockResolvedValue('');
+    (repo.findCharacters as jest.Mock).mockResolvedValue([]);
+    (repo.findRelationships as jest.Mock).mockResolvedValue([]);
+    (repo.findCharacterNotes as jest.Mock).mockResolvedValue([]);
+    (repo.findTerms as jest.Mock).mockResolvedValue([]);
+    (repo.findEvents as jest.Mock).mockResolvedValue([]);
+    (repo.getBackgroundKnowledge as jest.Mock).mockResolvedValue([]);
+    (repo.getBookMeta as jest.Mock).mockResolvedValue({ title: '가상범인', author: '김내성' });
+    (vectorSearch as jest.Mock).mockResolvedValue([
+      { page_no: 12, content: '그는 천천히 장갑을 벗었다.', distance: 0.1 },
+    ]);
+    logSpy = jest.spyOn(console, 'log').mockImplementation();
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+    logSpy.mockRestore();
+  });
+
+  function ask(query: string, timing = createChatTiming()): AsyncGenerator<string> {
+    return handleQuery(BOOK_ID, query, K, DEVICE_ID, undefined, undefined, undefined, false, {
+      notesReader,
+      timing,
+    });
+  }
+
+  async function collect(query: string): Promise<string[]> {
+    const chunks: string[] = [];
+    for await (const chunk of ask(query)) chunks.push(chunk);
+    return chunks;
+  }
+
+  function loggedIntent(): string {
+    const line = logSpy.mock.calls.find((call) => call[0] === '[Chatbot] Query log');
+    return JSON.parse(line![1]).harness.intent;
+  }
+
+  test('설정: 위험 유형 목록은 판정을 엄격히 보는(strictVerdict) 스트리밍 유형 전부이고, 사실·작품 밖 질문은 들어가지 않는다', () => {
+    for (const intent of QUESTION_INTENTS) {
+      const policy = INTENT_POLICY[intent];
+      if (policy.strictVerdict && policy.response !== 'fixed') {
+        expect(HOLDBACK_INTENTS.has(intent)).toBe(true);
+      }
+    }
+    expect(HOLDBACK_INTENTS.has('fact')).toBe(false);
+    expect(HOLDBACK_INTENTS.has('outside')).toBe(false);
+    for (const [intent, query] of RISKY) expect(classifyQuestion(query)).toBe(intent);
+    expect(classifyQuestion(FACT_QUERY)).toBe('fact');
+  });
+
+  test.each(RISKY)(
+    'FR-QNA-004: 뒤 문장("맞아요.")이 앞 문장("범인은 집사.")을 판정으로 확정하면 앞 문장이 독자에게 나간 것 0건 — %s',
+    async (intent, query) => {
+      streamInChunks('범인은 집사. 맞아요. 그날 밤 그는 도망쳤어요.');
+      const chunks = await collect(query);
+      expect(loggedIntent()).toBe(intent);
+      expect(chunks.filter((chunk) => /집사|맞아요|도망/u.test(chunk))).toHaveLength(0);
+      expect(chunks).toEqual([HARNESS_FIXED_ANSWER]);
+      expect(llmStream).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  test.each(RISKY)(
+    'FR-QNA-004: 앞 문장들이 이미 나간 뒤에도 위반 문장 바로 앞 문장은 0건 — %s',
+    async (_intent, query) => {
+      streamInChunks('12쪽에서 그는 장갑을 벗었어요. 범인은 집사. 맞아요.');
+      const out = (await collect(query)).join('');
+      expect(out).not.toContain('집사');
+      expect(out).toBe(`12쪽에서 그는 장갑을 벗었어요. \n\n${HARNESS_FIXED_ANSWER}`);
+    }
+  );
+
+  test.each(RISKY)(
+    'positive: 깨끗한 2문장 답은 위험 유형에서도 모두 나간다 — %s',
+    async (_intent, query) => {
+      const text = '12쪽에서 그는 장갑을 벗었어요. 그리고 방을 나갔어요.';
+      streamInChunks(text);
+      const chunks = await collect(query);
+      expect(chunks.join('')).toBe(text);
+      expect(chunks).toEqual(['12쪽에서 그는 장갑을 벗었어요. ', '그리고 방을 나갔어요.']);
+    }
+  );
+
+  /** 첫 문장 뒤에서 모델을 멈춰 두고, 그동안 첫 문장이 나가는지 본다 */
+  async function firstBeforeSecond(query: string): Promise<unknown> {
+    let finish!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    (llmStream as jest.Mock).mockReset();
+    (llmStream as jest.Mock).mockImplementation(async function* () {
+      yield '12쪽에서 그는 장갑을 벗었어요. ';
+      await gate;
+      yield '그리고 방을 나갔어요.';
+    });
+    const iterator = ask(query);
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const pendingFirst = iterator.next();
+      const first = await Promise.race([
+        pendingFirst,
+        new Promise((resolve) => {
+          timeout = setTimeout(() => resolve('held'), 200);
+        }),
+      ]);
+      finish();
+      const rest: string[] = [];
+      if (first === 'held') {
+        const r = await pendingFirst;
+        if (!r.done) rest.push(r.value);
+      }
+      for await (const chunk of { [Symbol.asyncIterator]: () => iterator }) rest.push(chunk);
+      return { first, rest };
+    } finally {
+      if (timeout) clearTimeout(timeout);
+      finish();
+      await iterator.return(undefined).catch(() => {});
+    }
+  }
+
+  test('positive: 사실 질문은 첫 문장이 둘째 문장이 오기 전에 나간다', async () => {
+    const { first, rest } = (await firstBeforeSecond(FACT_QUERY)) as {
+      first: unknown;
+      rest: string[];
+    };
+    expect(first).toEqual({ done: false, value: '12쪽에서 그는 장갑을 벗었어요. ' });
+    expect(rest).toEqual(['그리고 방을 나갔어요.']);
+  });
+
+  test.each(RISKY)(
+    'FR-QNA-004: 위험 유형은 둘째 문장이 와서 함께 검사하기 전에는 첫 문장이 0자 나간다 — %s',
+    async (_intent, query) => {
+      const { first, rest } = (await firstBeforeSecond(query)) as {
+        first: unknown;
+        rest: string[];
+      };
+      expect(first).toBe('held');
+      expect(rest).toEqual(['12쪽에서 그는 장갑을 벗었어요. ', '그리고 방을 나갔어요.']);
+    }
+  );
+
+  async function timed(query: string): Promise<Record<string, number | undefined>> {
+    let clock = 0;
+    (llmStream as jest.Mock).mockReset();
+    (llmStream as jest.Mock).mockImplementation(async function* () {
+      clock += 100;
+      yield '12쪽에서 그는 장갑을 벗었어요. ';
+      clock += 900;
+      yield '그리고 방을 나갔어요. ';
+      clock += 500;
+      yield '장갑은 탁자에 두었어요.';
+    });
+    const timing = createChatTiming(() => clock);
+    for await (const _chunk of ask(query, timing)) void _chunk;
+    return timing.snapshot();
+  }
+
+  test('NFR-PERF-008: 첫 문장이 검사 가능해진 시각(first_sentence_ready)과 보낸 시각(first_yield)을 함께 남긴다 — 사실 질문은 같다', async () => {
+    const t = await timed(FACT_QUERY);
+    expect(t.first_sentence_ready).toBe(100);
+    expect(t.first_yield).toBe(100);
+  });
+
+  test('NFR-PERF-008: 위험 유형은 holdback으로 늦어진 시간(first_yield − first_sentence_ready)이 둘째 문장 도착까지다', async () => {
+    const t = await timed('범인이 누구야?');
+    expect(t.first_sentence_ready).toBe(100);
+    expect(t.first_yield).toBe(1000);
   });
 });

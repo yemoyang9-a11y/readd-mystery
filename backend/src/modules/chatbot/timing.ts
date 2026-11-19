@@ -46,6 +46,12 @@ export const DURATION_STAGES = [
 export const ELAPSED_MARKS = [
   /** 요청 시작 → 첫 모델 호출의 첫 토큰 */
   'llm_first_token',
+  /**
+   * 요청 시작 → 모델 글에서 첫 문장이 끝나 검사할 수 있게 된 시각. FR-QNA-004 🚦 holdback 유형은
+   * 다음 문장까지 기다렸다 내보내므로 first_yield − first_sentence_ready가 holdback으로 늦어진 시간이다
+   * (그 밖의 유형은 둘이 거의 같다 — 차이는 검사 시간뿐)
+   */
+  'first_sentence_ready',
   /** 요청 시작 → 독자에게 첫 글자를 내보낸 시각(첫 yield) */
   'first_yield',
   /** 요청 시작 → 마지막 글자까지 */
