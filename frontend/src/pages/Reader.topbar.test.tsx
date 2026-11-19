@@ -117,8 +117,8 @@ describe('PC 읽기 화면 윗줄', () => {
     renderReader();
     await openedAt(11);
     expect(screen.queryByText(/까지 (읽음|알고)/)).toBeNull();
-    await user.click(screen.getByRole('button', { name: '싸비 열기' }));
-    expect(await screen.findByRole('tablist', { name: '싸비' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '사이드 탭 열기' }));
+    expect(await screen.findByRole('tablist', { name: '사이드 탭' })).toBeInTheDocument();
     expect(screen.queryByText(/까지 (읽음|알고)/)).toBeNull();
   });
 

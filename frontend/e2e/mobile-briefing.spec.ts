@@ -48,7 +48,7 @@ test.describe('모바일 브리핑', () => {
       opts: { briefingRecap: 'first' },
       ready: async (page) => {
         // 2026-11-17 첫 방문 브리핑 — 리캡 대신 작품 소개·배경지식·싸비 사용법과 '읽기 시작'
-        await expect(page.getByRole('region', { name: '싸비 사용법' })).toBeVisible();
+        await expect(page.getByRole('region', { name: '사이드 탭 사용법' })).toBeVisible();
         await expect(page.getByRole('button', { name: '읽기 시작' })).toBeVisible();
       },
     },
@@ -209,7 +209,7 @@ test.describe('모바일 브리핑', () => {
   test('D13: 첫 진입(cutoff 0)이면 리캡 스트리밍 요청 0건', async ({ page }) => {
     const log = await open(page, { briefingRecap: 'first' });
     // 2026-11-17 첫 방문 브리핑 — 리캡 칸 대신 싸비 사용법이 나온다
-    await expect(page.getByRole('region', { name: '싸비 사용법' })).toBeVisible();
+    await expect(page.getByRole('region', { name: '사이드 탭 사용법' })).toBeVisible();
     await expect(page.getByText('그동안 이런 이야기였어요')).toHaveCount(0);
     await page.waitForTimeout(800);
     expect(log.recapStreams).toBe(0);

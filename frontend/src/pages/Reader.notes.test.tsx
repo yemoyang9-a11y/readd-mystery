@@ -37,7 +37,7 @@ describe('Reader — 추리 노트 탭', () => {
     renderReader();
     await screen.findByRole('article');
 
-    await user.click(screen.getByRole('button', { name: '싸비 열기' }));
+    await user.click(screen.getByRole('button', { name: '사이드 탭 열기' }));
     await user.click(screen.getByRole('tab', { name: '추리 노트' }));
     await user.click(screen.getByRole('button', { name: '다음 페이지' }));
     await new Promise((resolve) => setTimeout(resolve, 150));
@@ -56,7 +56,7 @@ describe('Reader — 추리 노트 탭', () => {
     renderReader();
     await screen.findByRole('article');
     await user.click(screen.getByRole('button', { name: '다음 페이지' }));
-    await user.click(screen.getByRole('button', { name: '싸비 열기' }));
+    await user.click(screen.getByRole('button', { name: '사이드 탭 열기' }));
     await user.click(screen.getByRole('tab', { name: '추리 노트' }));
 
     await user.click(screen.getByRole('button', { name: '단서·가설 적기' }));

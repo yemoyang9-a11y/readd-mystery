@@ -93,7 +93,7 @@ test('목차 리스트가 열린 채로 싸비를 열면 리스트가 싸비 위
   await open(page);
   await page.getByRole('button', { name: /^목차 (열기|닫기)$/ }).click();
   await expect(page.getByTestId('toc-list')).toBeVisible();
-  await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
+  await page.getByRole('button', { name: /^사이드 탭 (열기|닫기)$/ }).click();
   await expect(page.getByTestId('mobile-ssabi')).toBeVisible();
   await expect(page.getByTestId('toc-list')).toHaveCount(0);
 });

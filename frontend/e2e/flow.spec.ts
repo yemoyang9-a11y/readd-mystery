@@ -230,7 +230,7 @@ test('FR-SPL-002: 이 흐름에서 싸비 관련 요청은 읽기 화면에서 �
   await page.waitForTimeout(500);
   expect(ssabiRequests.map((url) => url.pathname)).toEqual([]);
 
-  await press(page.getByRole('button', { name: '싸비 열기' }), testInfo);
+  await press(page.getByRole('button', { name: '사이드 탭 열기' }), testInfo);
 
   await expect.poll(() => ssabiRequests.length).toBe(1);
   await page.waitForTimeout(500);

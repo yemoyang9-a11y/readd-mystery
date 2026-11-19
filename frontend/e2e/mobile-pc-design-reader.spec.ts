@@ -26,7 +26,7 @@ test.describe('읽기 화면 — PC와 같은 디자인', () => {
 
   for (const handle of [
     { name: '목차', controls: 'toc-panel' },
-    { name: '싸비', controls: 'ssabi-panel' },
+    { name: '사이드 탭', controls: 'ssabi-panel' },
   ]) {
     test(`A3~A6: ${handle.name} 손잡이는 PC 토글과 같은 이름·색·테두리`, async ({ page }) => {
       await openReader(page);
@@ -42,7 +42,7 @@ test.describe('읽기 화면 — PC와 같은 디자인', () => {
       const open = page.getByRole('button', { name: `${handle.name} 닫기`, exact: true });
       await expect(open).toHaveAttribute('aria-expanded', 'true');
       await expect(page.locator(`#${handle.controls}`)).toBeVisible();
-      if (handle.name === '싸비') {
+      if (handle.name === '사이드 탭') {
         await expectClasses(open, ['rounded-full', 'border', 'bg-white', 'text-brief-ink', 'border-brief-ink']);
         return;
       }

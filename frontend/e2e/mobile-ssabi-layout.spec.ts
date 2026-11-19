@@ -12,8 +12,8 @@ async function openSsabi(page: Page) {
   await page.goto(`/books/${BOOK_ID}/read`);
   await expect(page.getByRole('article')).toContainText('15쪽.');
   await page.evaluate(() => document.fonts.ready);
-  await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
-  await expect(page.getByRole('tablist', { name: '싸비' })).toBeVisible();
+  await page.getByRole('button', { name: /^사이드 탭 (열기|닫기)$/ }).click();
+  await expect(page.getByRole('tablist', { name: '사이드 탭' })).toBeVisible();
 }
 
 // 2026-11-18 싸비 4탭(대표 승인 시안 A안) — 추리 노트 · 타임라인 · 인물관계도 · 아모
@@ -48,7 +48,7 @@ test('싸비 제목은 한 줄이다', async ({ page }) => {
 
 test('열린 싸비 위의 손잡이는 시트 내용을 가리지 않는다', async ({ page }) => {
   await openSsabi(page);
-  const handle = page.getByRole('button', { name: /^싸비 (열기|닫기)$/ });
+  const handle = page.getByRole('button', { name: /^사이드 탭 (열기|닫기)$/ });
   const box = (await handle.boundingBox())!;
   const covered = await page.evaluate(
     ({ x, y, w, h }) => {
@@ -77,9 +77,9 @@ test('목차를 연 채 싸비를 열었다 닫으면 목차 리스트가 다시
   await expect(page.getByRole('article')).toContainText('15쪽.');
   await page.getByRole('button', { name: /^목차 (열기|닫기)$/ }).click();
   await expect(page.getByTestId('toc-list')).toBeVisible();
-  await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
+  await page.getByRole('button', { name: /^사이드 탭 (열기|닫기)$/ }).click();
   await expect(page.getByTestId('mobile-ssabi')).toBeVisible();
-  await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
+  await page.getByRole('button', { name: /^사이드 탭 (열기|닫기)$/ }).click();
   await expect(page.getByTestId('mobile-ssabi')).toHaveCount(0);
   await expect(page.getByTestId('toc-list')).toHaveCount(0);
 });
@@ -87,7 +87,7 @@ test('목차를 연 채 싸비를 열었다 닫으면 목차 리스트가 다시
 test('싸비 제목과 닫기 버튼이 겹치지 않고 읽음 배지는 없다', async ({ page }) => {
   await openSsabi(page);
   const title = (await page.getByRole('heading', { level: 2, name: '탁류' }).boundingBox())!;
-  const close = (await page.getByRole('button', { name: '싸비 닫기' }).boundingBox())!;
+  const close = (await page.getByRole('button', { name: '사이드 탭 닫기' }).boundingBox())!;
   type Box = { x: number; y: number; width: number; height: number };
   const overlaps = (a: Box, b: Box) =>
     !(a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y);

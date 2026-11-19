@@ -273,7 +273,7 @@ export default function GuidePage() {
         <EdgeHandle side="left" label="목차" controls="guide-toc" open={false} onToggle={noop} hidden={panelOpen} />
         <EdgeHandle
           side="right"
-          label="싸비"
+          label="사이드 탭"
           controls="ssabi-panel"
           open={panelOpen}
           onToggle={() => setPanelOpen((open) => !open)}

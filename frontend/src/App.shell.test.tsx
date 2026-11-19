@@ -123,7 +123,7 @@ describe.each([
     expect(fade).toContainElement(screen.getByRole('article'));
 
     await user.click(screen.getByRole('button', { name: '다음 페이지' }));
-    await user.click(screen.getByRole('button', { name: '싸비 열기' }));
+    await user.click(screen.getByRole('button', { name: '사이드 탭 열기' }));
 
     expect(screen.getByTestId('route-fade')).toBe(fade);
   });

@@ -198,7 +198,7 @@ describe('처음 펼친 독자(진도 기록 없음, applied_cutoff 0)', () => {
     expect(screen.queryByText('아직 읽은 내용이 없습니다')).toBeNull();
     expect(screen.queryByRole('heading', { name: '그동안 이런 이야기였어요' })).toBeNull();
 
-    const guide = screen.getByRole('region', { name: '싸비 사용법' });
+    const guide = screen.getByRole('region', { name: '사이드 탭 사용법' });
     const steps = within(guide).getAllByRole('listitem');
     expect(steps).toHaveLength(3);
     expect(steps[0]).toHaveTextContent('읽은 쪽까지만 알려 줘요');
@@ -277,7 +277,7 @@ describe('처음 펼친 독자(진도 기록 없음, applied_cutoff 0)', () => {
 
   test('다시 온 독자에게는 사용법 안내를 띄우지 않는다', () => {
     render(<MobileBriefingView {...baseProps} briefing={briefing()} />);
-    expect(screen.queryByRole('region', { name: '싸비 사용법' })).toBeNull();
+    expect(screen.queryByRole('region', { name: '사이드 탭 사용법' })).toBeNull();
     expect(screen.queryByText(/처음 펼치시네요/)).toBeNull();
   });
 });

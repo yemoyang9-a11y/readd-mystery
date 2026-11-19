@@ -164,7 +164,7 @@ describe('FR-PRG-001: PC 읽기 화면 방향키 이동', () => {
   test('싸비 패널의 탭에 포커스가 있으면 방향키로 쪽이 넘어가지 않는다', async () => {
     renderReader();
     const input = await openedAt(25);
-    fireEvent.click(screen.getByRole('button', { name: '싸비 열기' }));
+    fireEvent.click(screen.getByRole('button', { name: '사이드 탭 열기' }));
     const tab = (await screen.findAllByRole('tab'))[0];
     tab.focus();
     fireEvent.keyDown(tab, { key: 'ArrowRight' });
@@ -193,7 +193,7 @@ describe('FR-PRG-001: PC 읽기 화면 방향키 이동', () => {
   test('싸비·목차 패널 안 버튼에 포커스가 있으면 방향키로 쪽이 넘어가지 않는다', async () => {
     renderReader();
     const input = await openedAt(25);
-    fireEvent.click(screen.getByRole('button', { name: '싸비 열기' }));
+    fireEvent.click(screen.getByRole('button', { name: '사이드 탭 열기' }));
     await screen.findAllByRole('tab');
     // 관계도 탭에는 시안대로 버튼 요소가 없다(그래프 인물은 svg 안) — 버튼이 있는 추리 노트 탭에서 확인한다
     fireEvent.click(screen.getByRole('tab', { name: '추리 노트' }));

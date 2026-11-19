@@ -14,7 +14,7 @@ async function openChat(page: Page) {
   await installMockApi(page);
   await page.goto(`/books/${BOOK_ID}/read`);
   await expect(page.getByRole('article')).toContainText('15쪽.');
-  await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
+  await page.getByRole('button', { name: /^사이드 탭 (열기|닫기)$/ }).click();
   await page.getByRole('tab', { name: '아모' }).click();
   const input = page.getByRole('textbox', { name: '질문' });
   await expect(input).toBeVisible();
@@ -32,13 +32,13 @@ test('G12: 키보드가 올라오면 입력창이 키보드 위에 있고 탭은
     .toBeLessThanOrEqual(visibleBottom + 1);
   const inputBox = (await input.boundingBox())!;
   expect(inputBox.y + inputBox.height).toBeLessThanOrEqual(visibleBottom);
-  await expect(page.getByRole('tablist', { name: '싸비' })).toBeInViewport();
-  await expect(page.getByRole('button', { name: /^싸비 (열기|닫기)$/ })).toHaveCount(0);
+  await expect(page.getByRole('tablist', { name: '사이드 탭' })).toBeInViewport();
+  await expect(page.getByRole('button', { name: /^사이드 탭 (열기|닫기)$/ })).toHaveCount(0);
 
-  await page.getByRole('tablist', { name: '싸비' }).locator('..').getByRole('tabpanel').click({ position: { x: 20, y: 20 } });
+  await page.getByRole('tablist', { name: '사이드 탭' }).locator('..').getByRole('tabpanel').click({ position: { x: 20, y: 20 } });
   await expect(input).not.toBeFocused();
   await hideKeyboard(page);
-  await expect(page.getByRole('button', { name: /^싸비 (열기|닫기)$/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^사이드 탭 (열기|닫기)$/ })).toBeVisible();
 });
 
 test('G13: 긴 질문은 6줄까지 늘어나다가 입력창 안에서 스크롤된다', async ({ page }) => {
@@ -74,7 +74,7 @@ test('Review fix 1: 화면을 확대해도 키보드로 오판하지 않아 손�
   await openChat(page);
   await zoomPage(page, 1.5);
   await page.waitForTimeout(300);
-  await expect(page.getByRole('button', { name: /^싸비 (열기|닫기)$/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^사이드 탭 (열기|닫기)$/ })).toBeVisible();
   // 2026-11-18 대표 지시 — 싸비 패널 머리는 책 제목이다
   await expect(page.getByRole('heading', { level: 2, name: '탁류' })).toBeVisible();
 });
@@ -106,7 +106,7 @@ test('피드백: 키보드가 올라와도 시트 아래로 본문이 보이지 
 
 test('피드백: 챗봇 탭에서 손잡이가 입력창·보내기 버튼을 가리지 않는다', async ({ page }) => {
   await openChat(page);
-  const handle = (await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).boundingBox())!;
+  const handle = (await page.getByRole('button', { name: /^사이드 탭 (열기|닫기)$/ }).boundingBox())!;
   for (const target of [page.getByRole('textbox', { name: '질문' }), page.getByRole('button', { name: '질문 보내기' })]) {
     const b = (await target.boundingBox())!;
     const overlap = !(b.x + b.width <= handle.x || handle.x + handle.width <= b.x || b.y + b.height <= handle.y || handle.y + handle.height <= b.y);
