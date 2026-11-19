@@ -3,7 +3,6 @@ import * as repo from '../repository';
 import { vectorSearch } from '../vector-search';
 import { stream as llmStream } from '../../llm-gateway/gateway';
 import { HARNESS_FIXED_ANSWER } from '../harness/messages';
-import { HINT_RETRY_NOTICE } from '../response-policy';
 
 jest.mock('../repository');
 jest.mock('../vector-search');
@@ -11,7 +10,7 @@ jest.mock('../../llm-gateway/gateway', () => ({ stream: jest.fn() }));
 
 /**
  * NFR-AI-005, 대표 결정 2026-11-17 — 서비스 경로 전체에서 다시 보기 권유가 위치 요청에만 나가는지.
- * 묻지 않은 권유: 재생성 1회 → 또 위반이면 고정 답변(guarded), 위반 문장에서 끊고 고정 답변(outside).
+ * 묻지 않은 권유: 위반 문장에서 끊고 고정 답변(guarded·outside 모두, 대표 결정 2026-11-19 — 재생성 없음).
  */
 
 const BOOK_ID = 'gasangbeomin';
@@ -74,26 +73,26 @@ describe('다시 보기 권유는 장면 위치를 물었을 때만 나간다 (N
   }
 
   test.each(REREAD_ANSWERS)(
-    'NFR-AI-005: 묻지 않았는데 "%s"가 두 번 나오면 독자에게 0건, 고정 답변만 나간다',
+    'NFR-AI-005: 묻지 않았는데 "%s"가 나오면 권유 문장은 독자에게 0건, 고정 답변으로 맺는다',
     async (answer) => {
       answers(answer, answer);
       const chunks = await runChunks(UNASKED);
-      expect(chunks).toEqual([HARNESS_FIXED_ANSWER]);
       expect(chunks.filter((c) => /다시|확인해/u.test(c))).toHaveLength(0);
-      expect(llmStream).toHaveBeenCalledTimes(2);
+      expect(chunks.join('').endsWith(HARNESS_FIXED_ANSWER)).toBe(true);
+      // 재생성 없음 (대표 결정 2026-11-19)
+      expect(llmStream).toHaveBeenCalledTimes(1);
       expect(harnessLog()).toMatchObject({
         intent: 'fact',
-        violations: [['steering_hint'], ['steering_hint']],
+        violations: [['steering_hint']],
         fixed_answer: true,
       });
     }
   );
 
-  test('NFR-AI-005: 묻지 않은 권유는 재생성 1회에서 암시 금지 지침을 받고, 깨끗한 재생성 답이 나간다', async () => {
-    answers('다시 읽어 보세요.', '12쪽에서 그는 장갑을 벗었어요.');
-    expect((await runChunks(UNASKED)).join('')).toBe('12쪽에서 그는 장갑을 벗었어요.');
-    expect(llmStream).toHaveBeenCalledTimes(2);
-    expect((llmStream as jest.Mock).mock.calls[1][1]).toContain(HINT_RETRY_NOTICE);
+  test('NFR-AI-005: 권유만 있는 답은 모델 글 0자, 고정 답변만 나간다', async () => {
+    answers('다시 읽어 보세요.', '호출되면 안 된다');
+    expect(await runChunks(UNASKED)).toEqual([HARNESS_FIXED_ANSWER]);
+    expect(llmStream).toHaveBeenCalledTimes(1);
   });
 
   test.each(REREAD_ANSWERS)(

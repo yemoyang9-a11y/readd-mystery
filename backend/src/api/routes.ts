@@ -9,6 +9,7 @@
 import express, { Request, Response } from 'express';
 import { checkRateLimit } from '../modules/llm-gateway/rate-limiter';
 import { handleQuery as handleChatbotQuery } from '../modules/chatbot/service';
+import { createChatTiming } from '../modules/chatbot/timing';
 import {
   resolveConversation,
   listConversations as listChatConversations,
@@ -208,13 +209,17 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
       .json({ error: 'BAD_REQUEST', message: 'from_page는 1 이상의 정수여야 합니다' });
   }
 
+  // NFR-PERF-008, 대표 결정 2026-11-19 (E): 단계별 시간. 이름과 숫자만 담아 done 프레임에 싣는다
+  const timing = createChatTiming();
   try {
+    const readyStart = timing.now();
     // FR-BRW-002 🚦 R12
     if (!(await ensureBookReady(contentServices.content, bookId, res))) return;
 
     // Rate Limit 체크 - SSE 열기 전에 (R4 요청)
     // NFR-AI-017, A1: 디바이스·도서당 분당 3회
     const rateLimitCheck = checkRateLimit(deviceId, bookId);
+    timing.add('book_ready', timing.now() - readyStart);
     if (!rateLimitCheck.allowed) {
       return res.status(429).json({
         error: 'RATE_LIMIT',
@@ -239,7 +244,9 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
 
     if (MOCK_MODE) {
       // Mock 모드: 테스트용 고정 K 값
-      const mockSnapshot = await mockGetCutoffSnapshot(deviceId, bookId);
+      const mockSnapshot = await timing.time('snapshot', () =>
+        mockGetCutoffSnapshot(deviceId, bookId)
+      );
       K = mockSnapshot.cutoff;
       isComplete = mockSnapshot.is_complete;
       console.log('[Mock] Using mock cutoff:', K);
@@ -249,6 +256,7 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
       // ⚠️ 호출 순서: recordProgressEvent → getCutoffSnapshot (R2 답신)
       // 대표 지시 2026-11-18 — 차례 넘김(from_page)도 함께 넘긴다. 진도 POST 가 늦거나 실패한 쪽도
       // 질문할 때 기준점에 들어간다 (FR-PRG-003 🚦, 3.3절 "넘긴 직후 물어도 반영")
+      const progressStart = timing.now();
       if (typeof page === 'number' && typeof seq === 'number') {
         await acceptProgress(
           req,
@@ -258,18 +266,23 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
         );
       }
       await readingState.sessionService.touchActivity(deviceId, bookId);
+      timing.add('progress', timing.now() - progressStart);
 
       // 기준점 스냅샷 가져오기 (R2 연동)
       // UC-27 A5: 질의 시점 고정, 스트리밍 중 페이지 변경해도 시작 시점 K 유지
       // FR-PRG-003 🚦: K = 진도 레코드 없음 ? 0 : 차례로 읽은 쪽 (2026-11-17)
-      const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
+      const snapshot = await timing.time('snapshot', () =>
+        readingState.cutoffService.getCutoffSnapshot(deviceId, bookId)
+      );
       K = snapshot.cutoff;
       isComplete = snapshot.is_complete;
 
       // 첫 페이지 예외(K=0)에서는 페이지 1 본문을 별도 섹션으로 우회 주입하지 않는다.
       if (pageIsIncludedInCutoff(snapshot.current_page, K)) {
         try {
-          const pageRow = await contentServices.pageService.getPage(bookId, snapshot.current_page);
+          const pageRow = await timing.time('page_text', () =>
+            contentServices.pageService.getPage(bookId, snapshot.current_page)
+          );
           if (pageRow) currentPageText = { pageNo: pageRow.page_no, content: pageRow.content };
         } catch (error) {
           // 실패해도 챗봇 응답 자체는 막지 않는다 — 이 섹션 없이 기존 K-bounded 근거로만 답한다
@@ -279,11 +292,8 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
 
       // 대화 이력 — 이어갈지/새로 열지는 여기서 정한다 (하루 롤오버·"새 채팅" 모두 이 경로)
       // conversationId는 문자열로 왕복할 수 있다 — parseConversationId 주석 참고.
-      const resolved = await resolveConversation(
-        deviceId,
-        bookId,
-        K,
-        parseConversationId(requestedConversationId)
+      const resolved = await timing.time('conversation', () =>
+        resolveConversation(deviceId, bookId, K, parseConversationId(requestedConversationId))
       );
       conversationId = resolved.conversationId;
     }
@@ -306,7 +316,7 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
         quoteText,
         currentPageText,
         isComplete,
-        { notesReader: chatNotesReader }
+        { notesReader: chatNotesReader, timing }
       )) {
         // SSE 프레임 통일 (R4 요청 - delta/done/error)
         // 부분 근거에 맞춘 답변도 생성되는 대로 일반 delta로 전달한다.
@@ -315,8 +325,14 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
 
       // 스트림 정상 종료 (applied_cutoff 포함 - R4 요청, NFR-OBS-003 🚦)
       // conversation_id — 프론트가 다음 질문부터 이 대화에 이어붙이도록 돌려준다
+      // timings_ms — 대표 결정 2026-11-19 (E). 단계 이름 → ms(횟수 항목은 횟수)만. 프론트는 무시해도 된다
       res.write(
-        `data: ${JSON.stringify({ type: 'done', applied_cutoff: K, conversation_id: conversationId })}\n\n`
+        `data: ${JSON.stringify({
+          type: 'done',
+          applied_cutoff: K,
+          conversation_id: conversationId,
+          timings_ms: timing.snapshot(),
+        })}\n\n`
       );
       return res.end();
     } catch (streamError) {

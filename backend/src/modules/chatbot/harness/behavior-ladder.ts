@@ -152,8 +152,10 @@ const ALL_VIOLATIONS: ReadonlyArray<GuardViolation> = [
 export interface IntentPolicy {
   /**
    * fixed: 모델을 부르지 않고 고정 답변.
-   * guarded: 전체 생성 → 출력 검사 → 위반이면 1회 재생성 → 또 위반이면 고정 답변.
-   * sentence_stream: 문장 단위로 검사한 뒤에만 내보내고, 위반 문장에서 끊어 고정 답변으로 맺는다(재생성 없음).
+   * guarded: 작품 질문. 문장 단위로 검사한 뒤에만 내보내고, 위반 문장에서 끊어 고정 답변으로 맺는다.
+   *   마침 부호 없는 줄바꿈·열린 따옴표에서는 끊지 않는 엄격한 경계를 쓴다(takeGuardedSentences).
+   *   재생성 없음 — 대표 결정 2026-11-19 (A). 그 전에는 전체 생성 → 검사 → 위반이면 1회 재생성이었다.
+   * sentence_stream: 작품 밖 질문. 같은 방식이되 기존 문장 경계(takeSentences)를 쓴다(재생성 없음).
    */
   response: 'fixed' | 'guarded' | 'sentence_stream';
   /** response가 fixed일 때의 답변과 로그 표지 */
@@ -266,7 +268,7 @@ export function permitsSceneRetrieval(
   );
 }
 
-/** 재생성 뒤에도(또는 문장 단위 검사에서) 막힌 답변을 대신하는 고정 답변 */
+/** 문장 단위 검사에서 막힌 답변을 대신해 맺는 고정 답변 */
 export function fixedAnswerFor(blocked: ReadonlyArray<GuardViolation>): string {
   // 원문 분량만 넘은 경우는 추리 판정 안내가 아니라 원문 상한 안내로 대체한다
   return blocked.every((violation) => violation === 'verbatim_over_limit')
@@ -274,7 +276,11 @@ export function fixedAnswerFor(blocked: ReadonlyArray<GuardViolation>): string {
     : HARNESS_FIXED_ANSWER;
 }
 
-/** 재생성 요청에 붙는 지침. 공통 지침 뒤에 위반 종류별 지침을 덧붙인다 */
+/**
+ * 재생성 요청에 붙는 지침. 공통 지침 뒤에 위반 종류별 지침을 덧붙인다.
+ * 대표 결정 2026-11-19 (A)부터 응답 경로는 재생성하지 않아 이 함수를 부르지 않는다. 재생성을
+ * 되살리는 결정이 나면 쓰도록 남겨 둔다.
+ */
 export function retryNoticeFor(violations: ReadonlyArray<GuardViolation>): string {
   return (
     HARNESS_RETRY_NOTICE +

@@ -1,6 +1,7 @@
 import type { SearchChunk } from '../../shared/types';
 import * as repo from './repository';
 import { embedQuery, EMBEDDING_DIM, EMBEDDING_MODEL } from '../llm-gateway/embedding';
+import { currentChatTiming } from './timing';
 
 /** 순위 융합 상수. Cormack 외(2009)의 Reciprocal Rank Fusion 기본값 */
 export const RRF_K = 60;
@@ -90,8 +91,12 @@ export async function vectorSearch(
     : query;
   const lexical = await repo.lexicalSearch(bookId, retrievalQuery, K, SEARCH_CONFIG.topN);
   let queryEmbedding: number[];
+  // 대표 결정 2026-11-19 (E): 임베딩 API 시간만 따로 잰다. 계측기가 없으면 재지 않는다
+  const timing = currentChatTiming();
   try {
-    queryEmbedding = await embedQuery(retrievalQuery);
+    queryEmbedding = timing
+      ? await timing.time('embedding', () => embedQuery(retrievalQuery))
+      : await embedQuery(retrievalQuery);
   } catch {
     // Catch only provider failure. Database failures remain visible errors.
     console.warn('[VectorSearch] Embedding unavailable; using cutoff-bounded lexical evidence', {

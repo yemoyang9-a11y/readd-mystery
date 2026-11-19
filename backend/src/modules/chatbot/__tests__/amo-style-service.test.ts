@@ -11,7 +11,8 @@ jest.mock('../../llm-gateway/gateway', () => ({ stream: jest.fn() }));
 
 /**
  * NFR-AI-005, 대표 지시 2026-11-18 — 아모 말투·형식 검사가 응답 경로에 붙는지.
- * 판정·암시·쪽수 검사(기존 시험)는 그대로이고, 형식 검사는 되묻기 여러 개만 재생성 1회를 부른다.
+ * 판정·암시·쪽수 검사(기존 시험)는 그대로다. 대표 결정 2026-11-19 (A)로 작품 질문도 문장 단위로
+ * 검사하며 내보내므로 재생성이 없다 — 되묻기 여러 개도 기록만 한다.
  */
 const K = 40;
 
@@ -70,30 +71,20 @@ describe('아모 말투·형식 검사 경로 (NFR-AI-005)', () => {
     return (llmStream as jest.Mock).mock.calls[call][1] as string;
   }
 
-  test('NFR-AI-005: 되묻기가 두 개면 1회 재생성하고 재생성 답이 나간다', async () => {
-    answers(
-      '12쪽에서 그는 장갑을 벗었어요. 어떤 점이 궁금하세요? 다른 장면도 볼까요?',
-      '12쪽에서 그는 장갑을 벗었어요. 어떤 점이 궁금하세요?'
-    );
-    const { out } = await run('장갑은 누가 벗었어?');
-    expect(out).toBe('12쪽에서 그는 장갑을 벗었어요. 어떤 점이 궁금하세요?');
-    expect(llmStream).toHaveBeenCalledTimes(2);
-    expect(promptOf(1)).toContain(AMO_STYLE_RETRY_NOTICE);
+  test('NFR-AI-005: 되묻기가 두 개여도 재생성 없이 기록만 하고 그 답이 문장마다 나간다 (정상 답을 막지 않는다)', async () => {
+    const text = '12쪽에서 그는 장갑을 벗었어요. 어떤 점이 궁금하세요? 다른 장면도 볼까요?';
+    answers(text);
+    const { out, chunks } = await run('장갑은 누가 벗었어?');
+    expect(out).toBe(text);
+    expect(out).not.toContain(HARNESS_FIXED_ANSWER);
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(llmStream).toHaveBeenCalledTimes(1);
+    expect(promptOf(0)).not.toContain(AMO_STYLE_RETRY_NOTICE);
     const log = queryLog();
-    expect(log.harness.regenerated).toBe(true);
+    expect(log.harness.regenerated).toBe(false);
     expect(log.harness.fixed_answer).toBe(false);
     expect(log.amo_style.findings[0]).toContain('multi_question');
-    expect(log.logical_model_calls).toBe(2);
-  });
-
-  test('NFR-AI-005: 재생성 답도 되묻기가 두 개면 고정 답변이 아니라 그 답이 나간다 (정상 답을 막지 않는다)', async () => {
-    const second = '12쪽에서 그는 장갑을 벗었어요. 누구를 말씀하시는 걸까요? 집사인가요?';
-    answers('12쪽이에요. 궁금하세요? 정말요?', second);
-    const { out } = await run('장갑은 누가 벗었어?');
-    expect(out).toBe(second);
-    expect(out).not.toBe(HARNESS_FIXED_ANSWER);
-    expect(llmStream).toHaveBeenCalledTimes(2);
-    expect(queryLog().harness.fixed_answer).toBe(false);
+    expect(log.logical_model_calls).toBe(1);
   });
 
   test('NFR-AI-005: 되묻기가 하나면 재생성하지 않는다 (positive 쌍)', async () => {
@@ -104,11 +95,13 @@ describe('아모 말투·형식 검사 경로 (NFR-AI-005)', () => {
     expect(queryLog().harness.regenerated).toBe(false);
   });
 
-  test('NFR-AI-005: 되묻기 재생성 답에 판정 표현이 생기면 기존대로 고정 답변', async () => {
-    answers('12쪽이에요. 궁금하세요? 정말요?', '네, 맞아요. 범인이에요.');
-    const { out } = await run('범인이 장갑 벗은 사람 맞지?');
-    expect(out).toBe(HARNESS_FIXED_ANSWER);
+  test('NFR-AI-005: 되묻기 뒤에 판정 표현이 나오면 그 문장부터 0건, 고정 답변으로 맺는다', async () => {
+    answers('12쪽이에요. 궁금하세요? 네, 맞아요. 범인이에요.');
+    const { out, chunks } = await run('범인이 장갑 벗은 사람 맞지?');
+    expect(chunks.filter((chunk) => /맞아요|범인이에요/u.test(chunk))).toHaveLength(0);
+    expect(out).toBe(`12쪽이에요. 궁금하세요? \n\n${HARNESS_FIXED_ANSWER}`);
     expect(queryLog().harness.fixed_answer).toBe(true);
+    expect(llmStream).toHaveBeenCalledTimes(1);
   });
 
   test('NFR-AI-005: 청하지 않은 제목·글머리표·이모지는 지우고 내용은 남긴다', async () => {
@@ -127,10 +120,15 @@ describe('아모 말투·형식 검사 경로 (NFR-AI-005)', () => {
   });
 
   test('NFR-AI-005: 출력 검사는 정리한 뒤의 글(화면에 보이는 글)로 본다', async () => {
-    answers('범인**은** 김철수입니다.', '범인은🙂 김철수예요.');
+    answers('범인**은** 김철수입니다.');
+    expect((await run('범인 누구야?')).out).toBe(HARNESS_FIXED_ANSWER);
+    expect(queryLog().harness.violations).toEqual([['verdict_phrase']]);
+    answers('범인은🙂 김철수예요.');
+    logSpy.mockClear();
     const { out } = await run('범인 누구야?');
     expect(out).toBe(HARNESS_FIXED_ANSWER);
-    expect(queryLog().harness.violations).toEqual([['verdict_phrase'], ['verdict_phrase']]);
+    expect(out).not.toContain('김철수');
+    expect(queryLog().harness.violations).toEqual([['verdict_phrase']]);
   });
 
   test('NFR-AI-005: 반말·길이 초과는 기록만 하고 답을 그대로 내보낸다', async () => {

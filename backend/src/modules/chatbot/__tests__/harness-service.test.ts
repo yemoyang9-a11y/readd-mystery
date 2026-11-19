@@ -73,34 +73,39 @@ describe('챗봇 하네스 (FR-QNA-004 🚦, NFR-AI-005)', () => {
     return JSON.parse(line![1]).harness;
   }
 
-  test('FR-QNA-004: 판정 단어가 두 번 나오면 고정 답변이며 근거 범위는 같은 cutoff', async () => {
-    answers('네, 맞아요! 범인이에요.', '정답이에요.');
+  // 대표 결정 2026-11-19 (A): 작품 질문도 문장 단위로 검사하며 내보내고, 위반이면 재생성 없이 고정 답변
+  test('FR-QNA-004: 판정 단어가 나오면 재생성 없이 고정 답변이며 근거 범위는 같은 cutoff', async () => {
+    answers('네, 맞아요! 범인이에요.', '호출되면 안 된다');
     const out = await run('범인은 ○○ 맞지? 예/아니오로만');
     expect(out).toBe(HARNESS_FIXED_ANSWER);
-    expect(llmStream).toHaveBeenCalledTimes(2);
+    expect(llmStream).toHaveBeenCalledTimes(1);
     expect((vectorSearch as jest.Mock).mock.calls.every((call) => call[2] === K)).toBe(true);
     expect(harnessLog()).toEqual({
       intent: 'culprit_or_ending',
-      violations: [['verdict_phrase'], ['verdict_phrase']],
-      regenerated: true,
+      violations: [['verdict_phrase']],
+      regenerated: false,
       fixed_answer: true,
     });
   });
 
-  test('FR-QNA-004: 첫 답이 위반이고 재생성이 깨끗하면 재생성 답만 나간다 (positive 쌍)', async () => {
-    answers('정답이에요.', '12쪽에서 그가 장갑을 벗는 장면이 나와요.');
+  test('FR-QNA-004: 판정 답은 0건, 같은 질문의 사실 서술 답은 그대로 나간다 (positive 쌍)', async () => {
+    answers('정답이에요.');
+    expect(await run('내 가설이 맞는지 확인해줘')).toBe(HARNESS_FIXED_ANSWER);
+    answers('12쪽에서 그가 장갑을 벗는 장면이 나와요.');
+    logSpy.mockClear();
     const out = await run('내 가설이 맞는지 확인해줘');
     expect(out).toBe('12쪽에서 그가 장갑을 벗는 장면이 나와요.');
-    expect(llmStream).toHaveBeenCalledTimes(2);
+    expect(llmStream).toHaveBeenCalledTimes(1);
     expect(harnessLog().fixed_answer).toBe(false);
-    expect(harnessLog().violations).toEqual([['verdict_phrase'], []]);
+    expect(harnessLog().violations).toEqual([[]]);
   });
 
-  test('FR-QNA-004: cutoff 초과 쪽수는 재생성 후에도 남으면 고정 답변', async () => {
-    answers('범위 밖 55쪽에서 그가 떠났어요.', '55쪽에서 그가 떠났어요.');
+  test('FR-QNA-004: cutoff 초과 쪽수가 나오면 그 문장은 0건, 고정 답변', async () => {
+    answers('범위 밖 55쪽에서 그가 떠났어요.', '호출되면 안 된다');
     const out = await run('결말이 어떻게 돼?');
     expect(out).toBe(HARNESS_FIXED_ANSWER);
-    expect(harnessLog().violations).toEqual([['page_beyond_cutoff'], ['page_beyond_cutoff']]);
+    expect(out).not.toContain('55');
+    expect(harnessLog().violations).toEqual([['page_beyond_cutoff']]);
   });
 
   test('FR-QNA-004: 위반 없는 답변은 한 번만 생성한다', async () => {
@@ -126,7 +131,7 @@ describe('챗봇 하네스 (FR-QNA-004 🚦, NFR-AI-005)', () => {
   });
 
   test('FR-QNA-004: fact로 분류된 답변도 검사 전에는 나가지 않고, 판정 표현이면 고정 답변으로 대체된다', async () => {
-    answers('부인이 범인일 가능성이 높아 보여요.', '네, 그렇게 보셔도 무리가 없어요.');
+    answers('부인이 범인일 가능성이 높아 보여요.', '호출되면 안 된다');
     const chunks: string[] = [];
     for await (const chunk of handleQuery(BOOK_ID, '장갑은 누구 거야?', K, DEVICE_ID)) {
       chunks.push(chunk);

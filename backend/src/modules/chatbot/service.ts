@@ -17,11 +17,9 @@ import {
   mentionsReaderNotes,
 } from './harness/question-intent';
 import { guardAnswer, type GuardViolation } from './harness/output-guard';
-import { takeSentences } from './harness/sentence-buffer';
-import { INTENT_POLICY, fixedAnswerFor, retryNoticeFor } from './harness/behavior-ladder';
+import { takeGuardedSentences, takeSentences } from './harness/sentence-buffer';
+import { INTENT_POLICY, fixedAnswerFor } from './harness/behavior-ladder';
 import {
-  AMO_STYLE_RETRY_NOTICE,
-  STYLE_REGENERATE,
   amoTurnGuidance,
   checkAmoStyle,
   normalizeAmoText,
@@ -29,6 +27,7 @@ import {
   type StyleContext,
   type StyleFinding,
 } from './harness/amo-style';
+import { chatTimingStore, createChatTiming, type ChatTiming } from './timing';
 
 const MOCK_MODE = process.env.MOCK_MODE === 'true';
 
@@ -36,6 +35,71 @@ export { CHATBOT_TASK };
 
 export interface ChatbotDeps {
   notesReader?: NotesReader;
+  /**
+   * 대표 결정 2026-11-19 (E): 단계별 시간 측정기. 라우트가 넘기면 라우트 단계(기준점 스냅샷 등)와
+   * 이어서 재고, 'done' 프레임의 timings_ms로 그대로 쓴다. 없으면 여기서 만든다
+   */
+  timing?: ChatTiming;
+}
+
+/** 요청이 어느 응답 경로로 끝났는지 — 시간 기록 한 줄에만 쓴다 */
+type ChatPath = 'amo_intro' | 'fixed' | 'notes_empty' | 'guarded' | 'sentence_stream';
+
+/**
+ * NFR-PERF-008, 대표 결정 2026-11-19 (E) — 단계별 시간을 재며 답을 내보낸다.
+ * 첫 글자를 내보낸 시각(first_yield)과 전체(total)를 여기서 남기고, 끝나면(실패·중단 포함)
+ * `[Chatbot Timing]` 한 줄을 남긴다. 기록에는 단계 이름과 숫자, 도서 ID, 기준 쪽수만 담는다.
+ * 응답 내용·근거 선택에는 관여하지 않는다(R4).
+ */
+export async function* handleQuery(
+  bookId: string,
+  query: string,
+  K: number,
+  deviceId: string,
+  conversationId?: number,
+  quote?: string,
+  currentPageText?: { pageNo: number; content: string },
+  isComplete = false,
+  deps: ChatbotDeps = {}
+): AsyncGenerator<string> {
+  const timing = deps.timing ?? createChatTiming();
+  const trace: { path?: ChatPath } = {};
+  let outcome: 'ok' | 'error' | 'closed' = 'closed';
+  try {
+    for await (const chunk of runQuery(
+      bookId,
+      query,
+      K,
+      deviceId,
+      conversationId,
+      quote,
+      currentPageText,
+      isComplete,
+      deps,
+      timing,
+      trace
+    )) {
+      timing.markOnce('first_yield');
+      timing.increment('deltas');
+      yield chunk;
+    }
+    outcome = 'ok';
+  } catch (error) {
+    outcome = 'error';
+    throw error;
+  } finally {
+    timing.mark('total');
+    console.log(
+      '[Chatbot Timing]',
+      JSON.stringify({
+        book_id: bookId,
+        cutoff_page: K,
+        path: trace.path ?? null,
+        outcome,
+        timings_ms: timing.snapshot(),
+      })
+    );
+  }
 }
 
 const NO_EVIDENCE_TOKEN = '[NO_EVIDENCE]';
@@ -69,16 +133,18 @@ function isAskingAboutAmo(query: string): boolean {
   );
 }
 
-export async function* handleQuery(
+async function* runQuery(
   bookId: string,
   query: string,
   K: number,
   deviceId: string,
-  conversationId?: number,
-  quote?: string,
-  currentPageText?: { pageNo: number; content: string },
-  isComplete = false,
-  deps: ChatbotDeps = {}
+  conversationId: number | undefined,
+  quote: string | undefined,
+  currentPageText: { pageNo: number; content: string } | undefined,
+  isComplete: boolean,
+  deps: ChatbotDeps,
+  timing: ChatTiming,
+  trace: { path?: ChatPath }
 ): AsyncGenerator<string> {
   const notesReader = deps.notesReader ?? emptyNotesReader;
   const intent = classifyQuestion(query);
@@ -95,7 +161,6 @@ export async function* handleQuery(
     query,
   };
   const listRequested = readerAskedForList(query);
-  const styleRegenerate: ReadonlySet<StyleFinding> = new Set(STYLE_REGENERATE);
   // This payload is loaded by the server route; still enforce K at the final boundary.
   currentPageText =
     currentPageText &&
@@ -108,6 +173,7 @@ export async function* handleQuery(
   let generationController: AbortController | undefined;
 
   if (isAskingAboutAmo(query)) {
+    trace.path = 'amo_intro';
     if (conversationId != null) {
       if (quote) await recordTurns(conversationId, query, AMO_INTRO_MESSAGE, K, quote);
       else await recordTurns(conversationId, query, AMO_INTRO_MESSAGE, K);
@@ -142,6 +208,7 @@ export async function* handleQuery(
 
   // NFR-AI-005: 고정 답변 유형(예측 요청)은 모델을 부르지 않는다
   if (policy.response === 'fixed' && policy.fixed) {
+    trace.path = 'fixed';
     const { answer: fixedText, tag } = policy.fixed;
     if (conversationId != null) {
       if (quote) await recordTurns(conversationId, query, fixedText, K, quote);
@@ -181,8 +248,9 @@ export async function* handleQuery(
   let preloadedNotes: ReaderNote[] | undefined;
   if (policy.readerNotes) {
     // FR-SPL-002 🚦: 노트 조회도 같은 스냅샷의 K를 상한으로 건다
-    preloadedNotes = await notesReader.listNotes(deviceId, bookId, K);
+    preloadedNotes = await timing.time('notes', () => notesReader.listNotes(deviceId, bookId, K));
     if (notesWithinCutoff(preloadedNotes, K).length === 0) {
+      trace.path = 'notes_empty';
       const emptyText = policy.readerNotes.emptyAnswer(K);
       const tag = policy.readerNotes.tag;
       if (conversationId != null) {
@@ -219,11 +287,16 @@ export async function* handleQuery(
     }
   }
 
+  trace.path = policy.response === 'sentence_stream' ? 'sentence_stream' : 'guarded';
   try {
-    const context = MOCK_MODE ? getMockContext(K) : await assembleContext(bookId, K);
+    const context = MOCK_MODE
+      ? getMockContext(K)
+      : await timing.time('context', () => assembleContext(bookId, K));
 
     const priorTurns =
-      conversationId != null && !MOCK_MODE ? await getConversationContext(conversationId, K) : [];
+      conversationId != null && !MOCK_MODE
+        ? await timing.time('history', () => getConversationContext(conversationId, K))
+        : [];
     // Resolve the user's subject before retrieval, using only cutoff-filtered history.
     // Past assistant claims are conversational context, never an identity lookup.
     const dialogue = resolveConversationContext(
@@ -236,11 +309,18 @@ export async function* handleQuery(
       dialogue.status === 'explicit' && !quote
         ? ''
         : dialogue.retrievalHint || quote?.slice(0, 500);
+    // 대표 결정 2026-11-19 (E): 검색 안의 임베딩 시간은 인자를 바꾸지 않고 같은 계측기로 잰다
     const searchResults = MOCK_MODE
       ? getMockSearchResults(query, K)
-      : subjectHint
-        ? await vectorSearch(bookId, query, K, subjectHint)
-        : await vectorSearch(bookId, query, K);
+      : await timing.time('vector_search', () =>
+          chatTimingStore.run(timing, () =>
+            subjectHint
+              ? vectorSearch(bookId, query, K, subjectHint)
+              : vectorSearch(bookId, query, K)
+          )
+        );
+    const promptStart = timing.now();
+    let notesMs = 0;
 
     // A8-2: the same K-bounded context, ordered append-only and sent before history so the
     // provider prefix cache can hit across turns. Selection is unchanged (FR-SPL-002 🚦, R4).
@@ -292,12 +372,15 @@ export async function* handleQuery(
     }
     let notes: ReaderNote[] = preloadedNotes ?? [];
     if (!preloadedNotes) {
+      const notesStart = timing.now();
       try {
         // FR-SPL-002 🚦: 노트 조회도 같은 스냅샷의 K를 상한으로 건다
         notes = await notesReader.listNotes(deviceId, bookId, K);
       } catch (error) {
         console.error('[Chatbot] notes lookup failed', { bookId, error });
       }
+      notesMs = timing.now() - notesStart;
+      timing.add('notes', notesMs);
     }
     fullPrompt += buildNotesSection(notes, K, query);
     // 대표 지시 2026-11-18 — 노트를 언급했는데 K 이하 노트가 없으면 "노트가 안 보인다"고 하지 않게 범위만 알린다
@@ -309,12 +392,14 @@ export async function* handleQuery(
     fullPrompt += amoTurnGuidance(styleContext);
     fullPrompt += `\n\n# 사용자 질문\n\n${query}`;
     fullPrompt = fullPrompt.replace(/^\n+/, '');
+    timing.add('prompt', timing.now() - promptStart - notesMs);
 
     const modelSelection = selectModel(query);
     logModelSelection(modelSelection, query);
     recordSelection(modelSelection.model);
 
     const task = CHATBOT_TASK;
+    let firstTokenSeen = false;
     const generateChunks = async function* (promptText: string): AsyncGenerator<string> {
       if (generationDeadline) clearTimeout(generationDeadline);
       generationController?.abort();
@@ -322,6 +407,11 @@ export async function* handleQuery(
       generationController = controller;
       // One generation request, including SDK transport retries, shares this deadline.
       generationDeadline = setTimeout(() => controller.abort(), 60_000);
+      // 대표 결정 2026-11-19 (E): 모델 첫 토큰·끝까지 시간
+      const callStart = timing.now();
+      const firstCall = !firstTokenSeen;
+      let callFirstToken = true;
+      timing.increment('model_calls');
       const streamSource = MOCK_MODE
         ? getMockLLMResponse(query)
         : llmStream(task, promptText, {
@@ -332,21 +422,31 @@ export async function* handleQuery(
           });
       let pending = '';
 
-      // Stream immediately. Only a possible split internal control token is held locally.
-      // FR-SPL-005: control tokens are errors, never canned answers or extra LLM calls.
-      for await (const chunk of streamSource) {
+      try {
+        // Stream immediately. Only a possible split internal control token is held locally.
+        // FR-SPL-005: control tokens are errors, never canned answers or extra LLM calls.
+        for await (const chunk of streamSource) {
+          controller.signal.throwIfAborted();
+          if (callFirstToken) {
+            callFirstToken = false;
+            firstTokenSeen = true;
+            timing.markOnce('llm_first_token');
+            if (firstCall) timing.add('llm_first_token_wait', timing.now() - callStart);
+          }
+          pending += chunk;
+          if (pending.includes(NO_EVIDENCE_TOKEN)) throw new Error('CHATBOT_INTERNAL_TOKEN');
+          let held = Math.min(pending.length, NO_EVIDENCE_TOKEN.length - 1);
+          while (held > 0 && !pending.endsWith(NO_EVIDENCE_TOKEN.slice(0, held))) held--;
+          const ready = pending.slice(0, pending.length - held);
+          pending = pending.slice(pending.length - held);
+          if (ready) yield ready;
+        }
         controller.signal.throwIfAborted();
-        pending += chunk;
-        if (pending.includes(NO_EVIDENCE_TOKEN)) throw new Error('CHATBOT_INTERNAL_TOKEN');
-        let held = Math.min(pending.length, NO_EVIDENCE_TOKEN.length - 1);
-        while (held > 0 && !pending.endsWith(NO_EVIDENCE_TOKEN.slice(0, held))) held--;
-        const ready = pending.slice(0, pending.length - held);
-        pending = pending.slice(pending.length - held);
-        if (ready) yield ready;
+        if (pending) yield pending;
+        clearTimeout(generationDeadline);
+      } finally {
+        timing.add('llm_total', timing.now() - callStart);
       }
-      controller.signal.throwIfAborted();
-      if (pending) yield pending;
-      clearTimeout(generationDeadline);
     };
 
     const allowedPages: Array<{ page_no: number; content: string }> = searchResults.map((r) => ({
@@ -355,7 +455,15 @@ export async function* handleQuery(
     }));
     if (currentPageText)
       allowedPages.push({ page_no: currentPageText.pageNo, content: currentPageText.content });
-    const guardAgainst = (text: string): GuardViolation[] =>
+    const guardAgainst = (text: string): GuardViolation[] => {
+      const guardStart = timing.now();
+      try {
+        return guardText(text);
+      } finally {
+        timing.add('guard', timing.now() - guardStart);
+      }
+    };
+    const guardText = (text: string): GuardViolation[] =>
       guardAnswer(text, {
         cutoff: K,
         pages: allowedPages,
@@ -370,106 +478,85 @@ export async function* handleQuery(
       }).violations;
 
     let responseText = '';
-    let modelCalls = 1;
+    // 대표 결정 2026-11-19 (A): 어느 응답 경로도 재생성하지 않는다(모델 호출 1회)
+    const modelCalls = 1;
     const attemptViolations: GuardViolation[][] = [];
     let fixedAnswer = false;
-    // NFR-AI-005: 시도마다의 형식 검사 결과(고친 것 + 기록). 하네스 로그와 따로 남긴다
+    // NFR-AI-005: 형식 검사 결과(고친 것 + 기록). 하네스 로그와 따로 남긴다
     const styleFindings: StyleFinding[][] = [];
 
-    if (policy.response !== 'sentence_stream') {
-      // FR-QNA-004 🚦 NFR-AI-005
-      let attemptPrompt = fullPrompt;
-      for (let attempt = 0; ; attempt++) {
-        let raw = '';
-        for await (const chunk of generateChunks(attemptPrompt)) raw += chunk;
-        if (!raw.trim()) throw new Error('CHATBOT_EMPTY_RESPONSE');
-        // 이모지·청하지 않은 목록 표지를 먼저 고치고, 독자에게 나갈 그 글을 출력 검사에 넘긴다
-        const normalized = normalizeAmoText(raw, { listRequested });
-        const text = normalized.text;
-        if (!text.trim()) throw new Error('CHATBOT_EMPTY_RESPONSE');
-        const violations = guardAgainst(text);
-        attemptViolations.push(violations);
-        const style = [...normalized.applied, ...checkAmoStyle(text, styleContext)];
-        styleFindings.push(style);
-        const blocked = violations.some((violation) => blocking.has(violation));
-        // 되묻기 여러 개는 첫 시도에서만 재생성한다. 재생성 답에 남아도 막지 않는다
-        const restyle = attempt === 0 && style.some((finding) => styleRegenerate.has(finding));
-        if (!blocked && !restyle) {
-          responseText = text;
-          break;
-        }
-        if (blocked && attempt === 1) {
-          responseText = fixedAnswerFor(violations.filter((v) => blocking.has(v)));
-          fixedAnswer = true;
-          break;
-        }
-        modelCalls++;
-        attemptPrompt =
-          fullPrompt +
-          (blocked ? retryNoticeFor(violations) : '') +
-          (restyle ? AMO_STYLE_RETRY_NOTICE : '');
+    // NFR-AI-005, FR-QNA-004 🚦 (절대 규칙 11·12), 대표 결정 2026-11-19 (A): 작품 질문(guarded)과
+    // 작품 밖 질문(sentence_stream) 모두 스트리밍하되, 이미 나간 글은 회수할 수 없으므로 문장 단위로
+    // 모아 "나간 텍스트 + 이번 문장"을 출력 검사(원문 200자 누적 상한 포함)에 통과시킨 뒤에만 내보낸다.
+    // 위반 문장과 그 뒤 글은 내보내지 않고 끊은 뒤 그 위반에 맞는 고정 답변으로 맺는다. 재생성은 없다.
+    // guarded는 작품 내용을 다루므로 더 엄격하게 끊는다(takeGuardedSentences: 마침 부호 없는 줄바꿈·
+    // 열린 따옴표에서는 끊지 않고, 긴 문장도 억지로 자르지 않는다). sentence_stream은 기존 경계 그대로다.
+    const split = policy.response === 'guarded' ? takeGuardedSentences : takeSentences;
+    let blocked: GuardViolation[] | undefined;
+    // 마지막으로 통과한 검사 결과 = 나간 글 전체의 검사 결과 (로그용, 같은 글을 다시 검사하지 않는다)
+    let releasedViolations: GuardViolation[] = [];
+    const streamStyle: StyleFinding[] = [];
+    // 문장마다 형식(이모지·청하지 않은 목록 표지)을 고친 뒤 검사한다. 고친 결과 빈 문장은 내보내지 않는다.
+    // 이모지를 지우며 문장 끝 공백이 지워지면 다음 문장과 붙지 않게 원래 끝 공백을 되살린다
+    const tidy = (sentence: string): string => {
+      const normalized = normalizeAmoText(sentence, { listRequested });
+      normalized.applied.forEach((finding) => {
+        if (!streamStyle.includes(finding)) streamStyle.push(finding);
+      });
+      const text = normalized.text;
+      if (!text) return '';
+      const trailing = /\s*$/u.exec(sentence)?.[0] ?? '';
+      return text.endsWith(trailing) ? text : text.replace(/[ \t]+$/u, '') + trailing;
+    };
+    const release = (sentence: string): boolean => {
+      const violations = guardAgainst(responseText + sentence);
+      if (violations.some((violation) => blocking.has(violation))) {
+        blocked = violations;
+        return false;
       }
-      yield responseText;
-    } else {
-      // NFR-AI-005, FR-QNA-004 🚦 (절대 규칙 11·12): outside는 스트리밍을 유지하되, 이미 나간
-      // 글은 회수할 수 없으므로 문장 단위로 모아 "나간 텍스트 + 이번 문장"을 출력 검사에 통과시킨
-      // 뒤에만 내보낸다. 위반 문장은 내보내지 않고 끊은 뒤 고정 답변으로 맺는다.
-      // 이 경로는 재생성하지 않는다(모델 호출 1회).
-      let blocked: GuardViolation[] | undefined;
-      const streamStyle: StyleFinding[] = [];
-      // 문장마다 형식을 고친 뒤 검사한다(재생성 없음). 고친 결과 빈 문장은 내보내지 않는다
-      const tidy = (sentence: string): string => {
-        const normalized = normalizeAmoText(sentence, { listRequested });
-        normalized.applied.forEach((finding) => {
-          if (!streamStyle.includes(finding)) streamStyle.push(finding);
-        });
-        return normalized.text;
-      };
-      const release = (sentence: string): boolean => {
-        const violations = guardAgainst(responseText + sentence);
-        if (violations.some((violation) => blocking.has(violation))) {
-          blocked = violations;
-          return false;
-        }
-        responseText += sentence;
-        return true;
-      };
-      let pending = '';
-      stream: for await (const chunk of generateChunks(fullPrompt)) {
-        const { sentences, rest } = takeSentences(pending + chunk);
-        pending = rest;
-        for (const raw of sentences) {
-          const sentence = tidy(raw);
-          if (!sentence) continue;
-          if (!release(sentence)) break stream;
-          yield sentence;
-        }
+      responseText += sentence;
+      releasedViolations = violations;
+      return true;
+    };
+    let pending = '';
+    stream: for await (const chunk of generateChunks(fullPrompt)) {
+      const { sentences, rest } = split(pending + chunk);
+      pending = rest;
+      for (const raw of sentences) {
+        const sentence = tidy(raw);
+        if (!sentence) continue;
+        if (!release(sentence)) break stream;
+        yield sentence;
       }
-      const tail = !blocked && pending ? tidy(pending) : '';
-      if (tail && release(tail)) yield tail;
-
-      if (blocked) {
-        const answer = fixedAnswerFor(blocked.filter((violation) => blocking.has(violation)));
-        const notice = `${responseText ? '\n\n' : ''}${answer}`;
-        responseText += notice;
-        yield notice;
-        attemptViolations.push(blocked);
-        fixedAnswer = true;
-      } else {
-        if (!responseText.trim()) throw new Error('CHATBOT_EMPTY_RESPONSE');
-        attemptViolations.push(guardAgainst(responseText));
-      }
-      // 문장 단위 경로는 이미 나간 글을 되돌릴 수 없으므로 형식 검사는 기록만 한다
-      styleFindings.push([
-        ...streamStyle,
-        ...(fixedAnswer ? [] : checkAmoStyle(responseText, styleContext)),
-      ]);
     }
+    const tail = !blocked && pending ? tidy(pending) : '';
+    if (tail && release(tail)) yield tail;
+
+    if (blocked) {
+      const answer = fixedAnswerFor(blocked.filter((violation) => blocking.has(violation)));
+      const notice = `${responseText ? '\n\n' : ''}${answer}`;
+      responseText += notice;
+      yield notice;
+      attemptViolations.push(blocked);
+      fixedAnswer = true;
+    } else {
+      if (!responseText.trim()) throw new Error('CHATBOT_EMPTY_RESPONSE');
+      attemptViolations.push(releasedViolations);
+    }
+    // 이미 나간 글은 되돌릴 수 없으므로 형식 검사는 기록만 한다. 되묻기 여러 개(multi_question)도
+    // 2026-11-19부터 재생성하지 않고 기록만 한다 (STYLE_REGENERATE)
+    styleFindings.push([
+      ...streamStyle,
+      ...(fixedAnswer ? [] : checkAmoStyle(responseText, styleContext)),
+    ]);
 
     if (conversationId != null) {
+      const recordStart = timing.now();
       if (quote) await recordTurns(conversationId, query, responseText, K, quote);
       else await recordTurns(conversationId, query, responseText, K);
+      timing.add('record', timing.now() - recordStart);
     }
+    timing.increment('regenerations', Math.max(0, modelCalls - 1));
 
     await logQuery(
       {
