@@ -50,7 +50,7 @@ describe('FR-PRG-003: 모바일 목차 점프 확인 창', () => {
     fireEvent.click(await screen.findByRole('button', { name: /신판 흥부전/ }));
 
     expect(screen.getByRole('dialog')).toHaveTextContent(
-      '21쪽으로 이동합니다. 앞부분을 이미 읽으셨다면 관계도와 챗봇이 이 쪽까지 다룹니다. 이동만 하면 지금까지 차례로 읽은 쪽까지만 다룹니다.'
+      '21쪽으로 이동합니다. 앞부분을 이미 읽으셨다면 관계도와 아모가 이 쪽까지 다룹니다. 이동만 하면 지금까지 차례로 읽은 쪽까지만 다룹니다.'
     );
     fireEvent.click(screen.getByRole('button', { name: '취소' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

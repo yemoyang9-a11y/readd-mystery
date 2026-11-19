@@ -20,7 +20,7 @@ describe('TocJumpDialog', () => {
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByRole('dialog')).toHaveTextContent(
-      '200쪽으로 이동합니다. 앞부분을 이미 읽으셨다면 관계도와 챗봇이 이 쪽까지 다룹니다. 이동만 하면 지금까지 차례로 읽은 쪽까지만 다룹니다.'
+      '200쪽으로 이동합니다. 앞부분을 이미 읽으셨다면 관계도와 아모가 이 쪽까지 다룹니다. 이동만 하면 지금까지 차례로 읽은 쪽까지만 다룹니다.'
     );
     const buttons = screen.getAllByRole('button').map((button) => button.textContent);
     expect(buttons).toEqual(['취소', '이동만 하기', '앞부분은 이미 읽었어요']);

@@ -47,7 +47,7 @@ export default function TocJumpDialog({
         className="max-h-[calc(100dvh-2rem)] overflow-y-auto w-full max-w-sm rounded-2xl border border-brief-rule bg-brief-page p-5 shadow-brief-soft-sm"
       >
         <p id="toc-jump-message" className="font-dashSans text-[15px] leading-relaxed text-brief-ink">
-          {targetPage}쪽으로 이동합니다. 앞부분을 이미 읽으셨다면 관계도와 챗봇이 이 쪽까지 다룹니다.
+          {targetPage}쪽으로 이동합니다. 앞부분을 이미 읽으셨다면 관계도와 아모가 이 쪽까지 다룹니다.
           이동만 하면 지금까지 차례로 읽은 쪽까지만 다룹니다.
         </p>
         <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
