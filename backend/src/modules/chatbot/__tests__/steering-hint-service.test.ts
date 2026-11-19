@@ -86,9 +86,8 @@ describe('암시형 답변은 재생성 1회 뒤 고정 답변으로 바뀐다 (
     answers('12쪽에서 그가 장갑을 벗는 장면이 나와요. 장갑에 주목해 보세요. 중요한 단서예요.');
     const chunks = await runChunks('내 가설이 맞는지 확인해줘');
     expect(chunks.filter((chunk) => /주목|단서/u.test(chunk))).toHaveLength(0);
-    expect(chunks.join('')).toBe(
-      `12쪽에서 그가 장갑을 벗는 장면이 나와요. \n\n${HARNESS_FIXED_ANSWER}`
-    );
+    // FR-QNA-004 🚦 holdback: 가설 확인 질문은 위반 문장 바로 앞 문장도 나가지 않는다
+    expect(chunks).toEqual([HARNESS_FIXED_ANSWER]);
     expect(harnessLog().violations).toEqual([['steering_hint']]);
   });
 

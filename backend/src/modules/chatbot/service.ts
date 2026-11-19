@@ -18,7 +18,7 @@ import {
 } from './harness/question-intent';
 import { guardAnswer, type GuardViolation } from './harness/output-guard';
 import { takeGuardedSentences, takeSentences } from './harness/sentence-buffer';
-import { INTENT_POLICY, fixedAnswerFor } from './harness/behavior-ladder';
+import { HOLDBACK_INTENTS, INTENT_POLICY, fixedAnswerFor } from './harness/behavior-ladder';
 import {
   amoTurnGuidance,
   checkAmoStyle,
@@ -508,15 +508,42 @@ async function* runQuery(
       const trailing = /\s*$/u.exec(sentence)?.[0] ?? '';
       return text.endsWith(trailing) ? text : text.replace(/[ \t]+$/u, '') + trailing;
     };
-    const release = (sentence: string): boolean => {
-      const violations = guardAgainst(responseText + sentence);
+    /** 검사를 통과하면 그 결과, 막는 위반이 있으면 blocked에 남기고 undefined */
+    const check = (text: string): GuardViolation[] | undefined => {
+      const violations = guardAgainst(text);
       if (violations.some((violation) => blocking.has(violation))) {
         blocked = violations;
-        return false;
+        return undefined;
       }
+      return violations;
+    };
+    const release = (sentence: string): boolean => {
+      const violations = check(responseText + sentence);
+      if (!violations) return false;
       responseText += sentence;
       releasedViolations = violations;
       return true;
+    };
+    // FR-QNA-004 🚦, NFR-AI-005 (절대 규칙 11) — 판정 위험 유형은 한 문장 늦게 내보낸다(holdback).
+    // 문장 N은 "나간 글 + N + N+1"과 "나간 글 + N"이 둘 다 검사를 통과해야 나간다. 뒤 문장이 앞 문장을
+    // 판정으로 확정하면("범인은 집사." + "맞아요.") 앞 문장도 나가지 않는다. 마지막 문장은 답이 끝난 뒤
+    // 전체 검사 후 내보낸다. 위반이면 아직 안 나간 문장(N 포함)은 버리고 고정 답변으로 맺는다.
+    // 그 밖의 유형은 held를 쓰지 않고 문장마다 바로 내보낸다.
+    const holdback = HOLDBACK_INTENTS.has(intent);
+    let held: string | undefined;
+    /** 이번 문장을 받아 지금 내보낼 문장을 돌려준다. 위반이면 undefined (blocked가 채워진다) */
+    const accept = (sentence: string): string | undefined | null => {
+      timing.markOnce('first_sentence_ready');
+      if (!holdback) return release(sentence) ? sentence : undefined;
+      if (held === undefined) {
+        held = sentence;
+        return null; // 다음 문장을 기다린다
+      }
+      if (!check(responseText + held + sentence)) return undefined;
+      const out = held;
+      if (!release(out)) return undefined;
+      held = sentence;
+      return out;
     };
     let pending = '';
     stream: for await (const chunk of generateChunks(fullPrompt)) {
@@ -525,12 +552,18 @@ async function* runQuery(
       for (const raw of sentences) {
         const sentence = tidy(raw);
         if (!sentence) continue;
-        if (!release(sentence)) break stream;
-        yield sentence;
+        const out = accept(sentence);
+        if (out === undefined) break stream;
+        if (out !== null) yield out;
       }
     }
     const tail = !blocked && pending ? tidy(pending) : '';
-    if (tail && release(tail)) yield tail;
+    if (tail) {
+      const out = accept(tail);
+      if (typeof out === 'string') yield out;
+    }
+    // 답이 끝났다: 남겨 둔 마지막 문장은 전체 검사를 통과해야 나간다
+    if (!blocked && held !== undefined && release(held)) yield held;
 
     if (blocked) {
       const answer = fixedAnswerFor(blocked.filter((violation) => blocking.has(violation)));

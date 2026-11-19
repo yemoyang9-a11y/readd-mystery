@@ -254,6 +254,24 @@ export const INTENT_POLICY: Record<QuestionIntent, IntentPolicy> = {
 };
 
 /**
+ * FR-QNA-004 🚦, NFR-AI-005 (절대 규칙 11) — 한 문장 늦게 내보내는(holdback) 판정 위험 유형.
+ *
+ * 문장마다 검사해 바로 내보내면 "범인은 집사." (단독으로는 통과) 다음 "맞아요." (위반)처럼 뒤 문장이
+ * 앞 문장의 뜻을 판정으로 확정할 때 앞 문장이 이미 나가 있다. 이 유형들에서는 문장 N을
+ * "나간 글 + N + N+1"이 검사를 통과한 뒤에야 내보내고, 마지막 문장은 답이 끝난 뒤 전체 검사 후
+ * 내보낸다. 위반이 나오면 아직 안 나간 문장(N 포함)은 내보내지 않고 고정 답변으로 맺는다.
+ *
+ * 판정을 엄격히 보는(strictVerdict) 유형 중 모델이 답을 쓰는 것만 담는다. prediction은 모델을 부르지
+ * 않는 고정 답변이라 넣지 않는다. 사실(fact)·작품 밖(outside) 질문은 지금처럼 바로 내보낸다.
+ * 근거 범위(K)에는 관여하지 않는다(R4) — 이미 고른 근거로 쓴 답을 내보내는 시점만 늦춘다.
+ */
+export const HOLDBACK_INTENTS: ReadonlySet<QuestionIntent> = new Set<QuestionIntent>([
+  'verify_hypothesis',
+  'culprit_or_ending',
+  'reader_notes',
+]);
+
+/**
  * 대표 결정 2026-11-17: 다시 보기 권유(retrieve_scene)는 독자가 장면 위치를 물었고, 그 질문 유형에
  * retrieve_scene이 허용될 때만 열린다. 출력 검사는 유형 이름을 견주지 않고 이 함수를 읽는다.
  */

@@ -99,7 +99,8 @@ describe('아모 말투·형식 검사 경로 (NFR-AI-005)', () => {
     answers('12쪽이에요. 궁금하세요? 네, 맞아요. 범인이에요.');
     const { out, chunks } = await run('범인이 장갑 벗은 사람 맞지?');
     expect(chunks.filter((chunk) => /맞아요|범인이에요/u.test(chunk))).toHaveLength(0);
-    expect(out).toBe(`12쪽이에요. 궁금하세요? \n\n${HARNESS_FIXED_ANSWER}`);
+    // FR-QNA-004 🚦 holdback: 판정 위험 질문은 위반 문장 바로 앞 문장("궁금하세요?")도 나가지 않는다
+    expect(out).toBe(`12쪽이에요. \n\n${HARNESS_FIXED_ANSWER}`);
     expect(queryLog().harness.fixed_answer).toBe(true);
     expect(llmStream).toHaveBeenCalledTimes(1);
   });
