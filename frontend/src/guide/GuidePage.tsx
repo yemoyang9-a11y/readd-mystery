@@ -96,6 +96,24 @@ export default function GuidePage() {
 
   const advance = useCallback(() => setStepAt((at) => Math.min(at + 1, GUIDE_STEPS.length - 1)), []);
 
+  /**
+   * 말풍선의 "다음" (대표 지시 2026-11-19) — 비춘 곳을 누른 것과 같은 동작이다.
+   * 비춘 요소에 click 을 보내면 그 요소의 원래 동작(책 열기·탭 전환·저장 등)과 코치의
+   * 단계 넘김이 같이 일어난다. 여러 번 누르는 단계(끝까지 읽기)는 데모 책 끝 쪽으로 바로 간다.
+   * 데모 상태만 바뀐다 — 실제 진도 API 는 부르지 않는다(FR-SPL-002 🚦, 절대 규칙 8번).
+   */
+  function goNext() {
+    if (step.final) return;
+    if (step.doneWhen) {
+      setPage(DEMO_TOTAL_PAGES);
+      return;
+    }
+    const el = step.target();
+    if (!el) return;
+    if (el instanceof HTMLElement) el.click();
+    else el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  }
+
   async function finish() {
     if (finished.current) return;
     finished.current = true;
@@ -325,6 +343,7 @@ export default function GuidePage() {
         total={GUIDE_STEPS.length}
         progress={progress}
         onTargetTap={advance}
+        onNext={goNext}
         onSkip={() => void finish()}
         onFinish={() => void finish()}
       />

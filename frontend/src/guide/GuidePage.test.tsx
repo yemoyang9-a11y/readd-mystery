@@ -134,6 +134,47 @@ test('가이드: 건너뛰기를 누르면 완료 표시 후 홈으로 간다', 
   expect(markOnboarded).toHaveBeenCalledTimes(1);
 });
 
+// 대표 지시 2026-11-19 — 건너뛰기는 화면 오른쪽, 말풍선의 예전 건너뛰기 자리에는 "다음"
+test('가이드: 말풍선 아래 줄 오른쪽에 "다음"이 있고, 건너뛰기는 말풍선 밖 화면 오른쪽에 있다', async () => {
+  renderGuide();
+  await waitFor(() => expect(GUIDE_STEPS[0].target()).not.toBeNull());
+  const bubble = screen.getByTestId('guide-bubble');
+  const next = screen.getByRole('button', { name: '다음' });
+  const skip = screen.getByRole('button', { name: '건너뛰기' });
+
+  expect(bubble).toContainElement(next);
+  // 아래 줄: 왼쪽 단계 표시, 오른쪽(마지막 자리) "다음"
+  const footer = next.parentElement!;
+  expect(footer.lastElementChild).toBe(next);
+  expect(footer.firstElementChild).toHaveAccessibleName(`${GUIDE_STEPS.length}단계 중 1단계`);
+
+  expect(bubble).not.toContainElement(skip);
+  expect(skip.closest('[data-guide-ui]')).not.toBeNull();
+  expect(skip).toHaveAttribute('data-guide-skip');
+  expect(skip.className).toMatch(/\bfixed\b/);
+  expect(skip.className).toMatch(/\bright-4\b/);
+});
+
+test('가이드: "다음"만 눌러도 단계마다 하나씩 넘어가고, 마지막엔 기존 "홈으로"로 마무리한다', async () => {
+  const user = userEvent.setup({ pointerEventsCheck: 0 });
+  renderGuide();
+
+  for (let i = 0; i < GUIDE_STEPS.length - 1; i += 1) {
+    await waitFor(() => expect(GUIDE_STEPS[i].target()).not.toBeNull());
+    expect(stepId()).toBe(GUIDE_STEPS[i].id);
+    await user.click(screen.getByRole('button', { name: '다음' }));
+    await waitFor(() => expect(stepId()).toBe(GUIDE_STEPS[i + 1].id));
+  }
+
+  // 마지막 단계: "다음" 대신 기존 마무리 버튼 문구·동작 그대로, 건너뛰기도 없다
+  expect(screen.queryByRole('button', { name: '다음' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '건너뛰기' })).not.toBeInTheDocument();
+  expect(markOnboarded).not.toHaveBeenCalled();
+  await user.click(screen.getByRole('button', { name: '홈으로' }));
+  await screen.findByText('진짜 홈 화면');
+  expect(markOnboarded).toHaveBeenCalledTimes(1);
+});
+
 // 대표 지시 2026-11-18 — 작품을 열려다 가입했으면 첫 안내를 마친 뒤 그 작품으로 이어 간다
 test('가이드: 가입 전에 열려던 작품(state.next)이 있으면 건너뛴 뒤 그 작품으로 간다', async () => {
   const user = userEvent.setup({ pointerEventsCheck: 0 });
