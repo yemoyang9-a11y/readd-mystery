@@ -85,7 +85,7 @@ async function swipeLeft() {
 
 const FOCUS_TOGGLE = '본문만 보기';
 
-const CONTROLS = ['뒤로 가기', '보기 설정', '목차 열기', '싸비 열기', '이전 페이지', '다음 페이지'];
+const CONTROLS = ['뒤로 가기', '보기 설정', '목차 열기', '사이드 탭 열기', '이전 페이지', '다음 페이지'];
 
 function expectControlsShown() {
   for (const name of CONTROLS) expect(screen.getByRole('button', { name })).toBeInTheDocument();
@@ -204,8 +204,8 @@ describe('FR-PRG-001: 모바일 읽기 화면 한 번 탭 = 본문만', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: '보기 설정' })).toBeNull());
     expectControlsShown();
 
-    fireEvent.click(screen.getAllByRole('button', { name: '싸비 열기' })[0]);
-    expect(await screen.findByRole('tablist', { name: '싸비' })).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: '사이드 탭 열기' })[0]);
+    expect(await screen.findByRole('tablist', { name: '사이드 탭' })).toBeInTheDocument();
     tap();
     expect(screen.getByRole('button', { name: '뒤로 가기' })).toBeInTheDocument();
   });

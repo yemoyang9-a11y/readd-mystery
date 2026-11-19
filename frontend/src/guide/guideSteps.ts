@@ -88,8 +88,8 @@ export const GUIDE_STEPS: GuideStep[] = [
   },
   {
     id: 'close-ssabi',
-    text: '아모는 추리가 맞는지 판정하지 않고, 읽은 쪽까지만 답해요. 싸비를 닫고 계속 읽어요.',
-    target: () => document.querySelector('button[aria-label="싸비 닫기"]'),
+    text: '아모는 추리가 맞는지 판정하지 않고, 읽은 쪽까지만 답해요. 사이드 탭을 닫고 계속 읽어요.',
+    target: () => document.querySelector('button[aria-label="사이드 탭 닫기"]'),
     place: 'bottom',
   },
   {
@@ -106,7 +106,7 @@ export const GUIDE_STEPS: GuideStep[] = [
   },
   {
     id: 'finish',
-    text: '싸비는 읽기 화면 오른쪽 손잡이로 언제든 열 수 있어요.',
+    text: '사이드 탭은 읽기 화면 오른쪽 손잡이로 언제든 열 수 있어요.',
     target: () => document.querySelector('[data-guide-finish]'),
     final: { title: '이제 진짜 책을 읽어 볼까요', action: '홈으로' },
   },

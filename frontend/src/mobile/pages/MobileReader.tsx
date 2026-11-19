@@ -191,7 +191,7 @@ function MobileReadingSession() {
           }}
         />
       ) : null}
-      <EdgeHandle side="right" label="싸비" controls="ssabi-panel" open={panelOpen} onToggle={togglePanel} hidden={panelOpen || viewport.keyboardOpen || chromeHidden} />
+      <EdgeHandle side="right" label="사이드 탭" controls="ssabi-panel" open={panelOpen} onToggle={togglePanel} hidden={panelOpen || viewport.keyboardOpen || chromeHidden} />
       <MobileSsabiSheet open={panelOpen} height={viewport.height} offsetTop={viewport.offsetTop} keyboardOpen={viewport.keyboardOpen}>
         {viewport.keyboardOpen ? null : (
           <div className="absolute right-6 z-10" style={{ top: 'calc(var(--safe-top) + 16px)' }}>

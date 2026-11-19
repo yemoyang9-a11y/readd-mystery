@@ -197,9 +197,9 @@ export default function MobileBriefingView({
 
             {RULE}
 
-            <section aria-label="싸비 사용법">
+            <section aria-label="사이드 탭 사용법">
               <h3 className="mb-3 font-dashSerif text-lg font-semibold tracking-[-.02em] text-brief-ink">
-                싸비는 이렇게 도와요
+                사이드 탭은 이렇게 도와요
               </h3>
               <ol className="m-0 flex list-none flex-col gap-2 p-0">
                 {SSABI_GUIDE_STEPS.map((step, i) => (

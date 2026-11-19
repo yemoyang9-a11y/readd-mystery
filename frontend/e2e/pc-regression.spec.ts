@@ -18,8 +18,8 @@ test('P2: PC 싸비를 연 화면이 기준선과 같다', async ({ page }) => {
   await installMockApi(page);
   await page.goto(`/books/${BOOK_ID}/read`);
   await expect(page.getByRole('article')).toContainText('15쪽.');
-  await page.getByRole('button', { name: '싸비 열기' }).click();
-  await expect(page.getByRole('tablist', { name: '싸비' })).toBeVisible();
+  await page.getByRole('button', { name: '사이드 탭 열기' }).click();
+  await expect(page.getByRole('tablist', { name: '사이드 탭' })).toBeVisible();
   await page.waitForTimeout(800);
   await page.evaluate(() => document.fonts.ready);
   await expect(page).toHaveScreenshot('pc-reader-ssabi.png');
@@ -54,7 +54,7 @@ test.describe('태블릿 세로(PC 화면)', () => {
     await installMockApi(page);
     await page.goto(`/books/${BOOK_ID}/read`);
     await expect(page.getByRole('article')).toContainText('15쪽.');
-    await page.getByRole('button', { name: '싸비 열기' }).click();
+    await page.getByRole('button', { name: '사이드 탭 열기' }).click();
     const tab = page.getByRole('tab', { name: '아모' });
     await tab.click();
     // 2026-11-18 싸비 4탭 승인 시안(1a53056) — 탭 높이는 PC·휴대폰 모두 44px(min-h-11)로 같다

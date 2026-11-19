@@ -187,7 +187,7 @@ export default function SsabiPanel({
       ) : null}
 
       {/* 4탭 — 시안 그대로 칸을 똑같이 나눈 밑줄 탭. 고른 탭은 강조색 글자·굵게·밑줄 2px */}
-      <div role="tablist" aria-label="싸비" className="flex border-b border-brief-rule px-2">
+      <div role="tablist" aria-label="사이드 탭" className="flex border-b border-brief-rule px-2">
         {TAB_ORDER.map((it) => (
           <button
             key={it}

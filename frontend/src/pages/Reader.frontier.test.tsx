@@ -80,9 +80,9 @@ describe.each([
   test('FR-PRG-003: confirm이 없으면 싸비를 열어도 카드가 없다', async () => {
     renderAt(element());
     await openedAt(5);
-    fireEvent.click(screen.getAllByRole('button', { name: '싸비 열기' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: '사이드 탭 열기' })[0]);
 
-    await screen.findByRole('tablist', { name: '싸비' });
+    await screen.findByRole('tablist', { name: '사이드 탭' });
     expect(screen.queryByRole('region', { name: '읽은 범위 확인' })).not.toBeInTheDocument();
   });
 
@@ -91,7 +91,7 @@ describe.each([
     confirmFrontierMock.mockResolvedValue({ success: true, applied_cutoff: 21, confirm: null });
     renderAt(element());
     await openedAt(5);
-    fireEvent.click(screen.getAllByRole('button', { name: '싸비 열기' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: '사이드 탭 열기' })[0]);
 
     const card = await screen.findByRole('region', { name: '읽은 범위 확인' });
     expect(card).toHaveTextContent('21쪽까지 넘겨 보셨어요. 거기까지 읽으셨나요? 지금은 5쪽까지를 기준으로 보여 드려요.');
@@ -106,7 +106,7 @@ describe.each([
     confirmFrontierMock.mockResolvedValue(null);
     renderAt(element());
     await openedAt(5);
-    fireEvent.click(screen.getAllByRole('button', { name: '싸비 열기' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: '사이드 탭 열기' })[0]);
 
     const card = await screen.findByRole('region', { name: '읽은 범위 확인' });
     fireEvent.click(within(card).getByRole('button', { name: '그대로 둘게요' }));

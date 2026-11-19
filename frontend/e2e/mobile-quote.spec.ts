@@ -159,7 +159,7 @@ test('피드백: "아모에게 묻기"를 누를 때는 선택이 먼저 풀리�
 
 test('PR 리뷰: 싸비 리캡에서 고른 문장도 "아모에게 묻기"로 챗봇에 인용된다', async ({ page }) => {
   await open(page);
-  await page.getByRole('button', { name: '싸비 열기' }).click();
+  await page.getByRole('button', { name: '사이드 탭 열기' }).click();
   await page.getByRole('tab', { name: '리캡' }).click();
   const recap = page.getByRole('tabpanel');
   await expect(recap).toContainText('줄거리');

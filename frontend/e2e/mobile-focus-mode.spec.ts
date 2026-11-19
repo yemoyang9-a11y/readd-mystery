@@ -38,7 +38,7 @@ test('FR-PRG-001: 한 번 탭하면 조작 요소가 모두 사라지고 본문 
   for (const name of ['뒤로 가기', '보기 설정', '이전 페이지', '다음 페이지']) {
     await expect(page.getByRole('button', { name, includeHidden: true })).toBeHidden();
   }
-  await expect(page.getByRole('button', { name: /목차 열기|싸비 열기/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /목차 열기|사이드 탭 열기/ })).toHaveCount(0);
   await page.waitForTimeout(300);
   expect(await boxes(page)).toEqual(before);
 

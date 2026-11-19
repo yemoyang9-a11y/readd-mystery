@@ -83,7 +83,7 @@ describe('관통 흐름 (mock 기준)', () => {
 
     // 싸비는 닫힌 채로 들어온다 — 사용자가 top-bar 우측 토글을 눌러야 열린다
     expect(screen.queryByRole('tab', { name: '인물관계도' })).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: '싸비 열기' }));
+    await userEvent.click(screen.getByRole('button', { name: '사이드 탭 열기' }));
 
     // 싸비 사이드창의 기본 탭은 인물 관계도다 (FR-SVB-002)
     expect(screen.getByRole('tab', { name: '인물관계도' })).toHaveAttribute(

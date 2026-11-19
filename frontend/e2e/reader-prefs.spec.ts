@@ -124,7 +124,7 @@ test.describe('모바일', () => {
 
   test('NFR-USE: 시트가 열린 동안 손잡이가 겹쳐 눌리지 않는다', async ({ page }) => {
     await openReader(page);
-    const handles = [page.getByRole('button', { name: '목차 열기' }), page.getByRole('button', { name: '싸비 열기' })];
+    const handles = [page.getByRole('button', { name: '목차 열기' }), page.getByRole('button', { name: '사이드 탭 열기' })];
     const centers = [];
     for (const handle of handles) {
       const box = (await handle.boundingBox())!;
