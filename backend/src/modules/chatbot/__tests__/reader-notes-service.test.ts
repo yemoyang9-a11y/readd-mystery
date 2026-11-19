@@ -118,13 +118,15 @@ describe('챗봇이 독자 노트 질문에 답한다 (대표 지시 2026-11-18,
     });
   });
 
-  test('FR-QNA-004: 노트 질문이어도 따옴표 밖에서 가설을 판정하면 재생성 후 고정 답변 (0건 통과)', async () => {
-    answers(`“${NOTE.body}”라고 적으셨는데, 맞아요.`, '네, 그 가설이 맞아요.');
+  // 대표 결정 2026-11-19 (A): 문장 단위로 검사하며 내보내고 재생성하지 않는다
+  test('FR-QNA-004: 노트 질문이어도 따옴표 밖에서 가설을 판정하면 고정 답변 (0건 통과, 재생성 없음)', async () => {
+    answers(`“${NOTE.body}”라고 적으셨는데, 맞아요.`, '호출되면 안 된다');
     const out = await run('내 노트 보여?', 2, readerWith([NOTE]));
     expect(out).toBe(HARNESS_FIXED_ANSWER);
+    expect(llmStream).toHaveBeenCalledTimes(1);
     expect(queryLog().harness).toMatchObject({
       intent: 'reader_notes',
-      violations: [['verdict_phrase'], ['verdict_phrase']],
+      violations: [['verdict_phrase']],
       fixed_answer: true,
     });
   });

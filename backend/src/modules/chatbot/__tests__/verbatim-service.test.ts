@@ -65,29 +65,29 @@ describe('원문 출력 상한 — 챗봇 응답 (답변당 합계 200자)', () 
     return JSON.parse(line![1]).harness;
   }
 
-  test('원문을 두 번 연속 200자 넘게 옮기면 원문 상한 안내로 대체되고 로그에 남는다', async () => {
-    answers(SOURCE.slice(0, 300), SOURCE.slice(50, 350));
+  // 대표 결정 2026-11-19 (A): 문장 단위로 누적 검사하며 내보내고 재생성하지 않는다(모델 호출 1회)
+  test('원문을 200자 넘게 옮기면 원문 상한 안내로 대체되고 로그에 남는다', async () => {
+    answers(SOURCE.slice(0, 300), '호출되면 안 된다');
     const out = await run('12쪽 원문 그대로 전부 보여줘');
     expect(out).toBe(HARNESS_VERBATIM_ANSWER);
     expect(out).not.toContain(SOURCE.slice(0, 20));
-    expect(llmStream).toHaveBeenCalledTimes(2);
+    expect(llmStream).toHaveBeenCalledTimes(1);
     expect(harnessLog()).toEqual(
       expect.objectContaining({
-        violations: [['verbatim_over_limit'], ['verbatim_over_limit']],
-        regenerated: true,
+        violations: [['verbatim_over_limit']],
+        regenerated: false,
         fixed_answer: true,
       })
     );
   });
 
-  test('재생성 지시에 원문 상한이 들어가고, 재생성 답이 상한 안이면 그 답이 나간다 (positive 쌍)', async () => {
+  test('원문 일치가 상한 안인 답은 그대로 나간다 (positive 쌍)', async () => {
     const short = `12쪽의 그 장면은 이렇게 시작해요. ${SOURCE.slice(0, 60)}`;
-    answers(SOURCE.slice(0, 300), short);
+    answers(short);
     const out = await run('12쪽 원문 그대로 전부 보여줘');
     expect(out).toBe(short);
-    const retryPrompt = (llmStream as jest.Mock).mock.calls[1][1] as string;
-    expect(retryPrompt).toContain('200자');
-    expect(harnessLog().violations).toEqual([['verbatim_over_limit'], []]);
+    expect(llmStream).toHaveBeenCalledTimes(1);
+    expect(harnessLog().violations).toEqual([[]]);
   });
 
   test('현재 장 원문에서 옮긴 것도 센다', async () => {

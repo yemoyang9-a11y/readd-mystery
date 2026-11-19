@@ -69,27 +69,37 @@ describe('암시형 답변은 재생성 1회 뒤 고정 답변으로 바뀐다 (
     return JSON.parse(line![1]).harness;
   }
 
-  test('NFR-AI-005: 암시 답이 두 번 나오면 독자에게 0건 나가고 고정 답변만 나간다', async () => {
-    answers('그 장면을 다시 보세요.', '장갑에 주목해 보세요. 중요한 단서예요.');
+  // 대표 결정 2026-11-19 (A): 작품 질문도 문장 단위로 검사하며 내보내고 재생성하지 않는다(모델 호출 1회)
+  test('NFR-AI-005: 암시 답은 독자에게 0건 나가고 고정 답변만 나간다 (재생성 없음)', async () => {
+    answers('그 장면을 다시 보세요.', '호출되면 안 된다');
     const chunks = await runChunks('내 가설이 맞는지 확인해줘');
     expect(chunks).toEqual([HARNESS_FIXED_ANSWER]);
-    expect(llmStream).toHaveBeenCalledTimes(2);
+    expect(llmStream).toHaveBeenCalledTimes(1);
     expect(harnessLog()).toMatchObject({
       intent: 'verify_hypothesis',
-      violations: [['steering_hint'], ['steering_hint']],
+      violations: [['steering_hint']],
       fixed_answer: true,
     });
-    // 재생성 요청에는 암시 금지 지침이 붙는다
-    const retryPrompt = (llmStream as jest.Mock).mock.calls[1][1] as string;
-    expect(retryPrompt).toContain('## 암시 금지 지침');
-    expect((llmStream as jest.Mock).mock.calls[0][1]).not.toContain('## 암시 금지 지침');
   });
 
-  test('NFR-AI-005: 첫 답이 칭찬 확인이고 재생성이 중립이면 재생성 답만 나간다 (positive 쌍)', async () => {
-    answers('거의 맞았어요!', '12쪽에서 그가 장갑을 벗는 장면이 나와요.');
+  test('NFR-AI-005: 사실 문장 뒤의 암시 문장부터는 0건 나간다', async () => {
+    answers('12쪽에서 그가 장갑을 벗는 장면이 나와요. 장갑에 주목해 보세요. 중요한 단서예요.');
+    const chunks = await runChunks('내 가설이 맞는지 확인해줘');
+    expect(chunks.filter((chunk) => /주목|단서/u.test(chunk))).toHaveLength(0);
+    expect(chunks.join('')).toBe(
+      `12쪽에서 그가 장갑을 벗는 장면이 나와요. \n\n${HARNESS_FIXED_ANSWER}`
+    );
+    expect(harnessLog().violations).toEqual([['steering_hint']]);
+  });
+
+  test('NFR-AI-005: 칭찬 확인 답은 0건 나가고, 중립 답은 그대로 나간다 (positive 쌍)', async () => {
+    answers('거의 맞았어요!');
+    expect(await runChunks('내 가설이 맞는지 확인해줘')).toEqual([HARNESS_FIXED_ANSWER]);
+    answers('12쪽에서 그가 장갑을 벗는 장면이 나와요.');
+    logSpy.mockClear();
     const chunks = await runChunks('내 가설이 맞는지 확인해줘');
     expect(chunks).toEqual(['12쪽에서 그가 장갑을 벗는 장면이 나와요.']);
-    expect(harnessLog().violations).toEqual([['steering_hint'], []]);
+    expect(harnessLog().violations).toEqual([[]]);
     expect(harnessLog().fixed_answer).toBe(false);
   });
 
@@ -145,7 +155,8 @@ describe('암시형 답변은 재생성 1회 뒤 고정 답변으로 바뀐다 (
     };
     answers(quoting, quoting);
     expect(await runChunks('내가 적은 노트 보여줘', 40, otherNote)).toEqual([HARNESS_FIXED_ANSWER]);
-    expect(harnessLog().violations[1]).toContain('steering_hint');
+    expect(harnessLog().violations[0]).toContain('steering_hint');
+    expect(llmStream).toHaveBeenCalledTimes(1);
   });
 
   test('NFR-AI-005: K 이하 노트가 없으면 모델을 부르지 않으므로 같은 문장은 0건 나간다', async () => {

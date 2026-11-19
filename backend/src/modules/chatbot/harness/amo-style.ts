@@ -12,8 +12,8 @@ import { takeSentences } from './sentence-buffer';
  *
  * 코드 검사의 강도 (오탐이 정상 답을 막지 않도록 보수적으로 정했다)
  * - 고침(답을 바꿔서 내보냄): 이모지 지우기, 청하지 않은 제목·글머리표 표지 지우기 — 내용은 남긴다
- * - 재생성 1회: 되묻는 질문 2개 이상(`multi_question`). 재생성 답도 그러면 그 답을 그대로 내보낸다
- *   (고정 답변으로 바꾸지 않는다). 문장 단위 경로(outside)는 재생성이 없으므로 기록만 한다
+ * - 기록만(대표 결정 2026-11-19 A부터): 되묻는 질문 2개 이상(`multi_question`). 그 전에는 재생성 1회를
+ *   불렀으나, 이제 작품 질문도 문장 단위로 검사하며 내보내 이미 나간 글을 되돌릴 수 없으므로 기록만 한다
  * - 기록만: 길이 초과, 반말·합쇼체 위주, "AI로서" 자기 설명, 아모 말 속 평가어, 되묻기를 허용하지
  *   않는 유형의 되묻기
  */
@@ -134,7 +134,10 @@ export const STYLE_FINDINGS = [
 ] as const;
 export type StyleFinding = (typeof STYLE_FINDINGS)[number];
 
-/** 재생성 1회를 부르는 형식 위반. 재생성 뒤에도 남으면 그 답을 그대로 내보낸다 */
+/**
+ * 재생성 1회를 부르던 형식 위반. 대표 결정 2026-11-19 (A)부터 응답 경로는 재생성하지 않으므로
+ * 기록(amo_style.findings)만 남는다. 재생성을 되살리는 결정이 나면 이 목록을 쓴다
+ */
 export const STYLE_REGENERATE: ReadonlyArray<StyleFinding> = ['multi_question'];
 
 // 화살표(↔ →)·©·®·™는 관계 설명·표기에 쓰이므로 이모지로 보지 않는다
@@ -223,7 +226,7 @@ function sentenceCount(answer: string): number {
 const AI_SELF_REFERENCE =
   /(?:저는|전|나는|난)\s*(?:AI|인공\s*지능|언어\s*모델|챗봇)(?:이라|라서|이기|로서|으로서|일\s*뿐)|(?:AI|인공\s*지능|언어\s*모델)(?:로서|으로서)|\bas\s+an\s+AI\b/iu;
 
-/** 형식 검사 결과. 답을 고치지 않는다 — 재생성 여부는 호출자가 STYLE_REGENERATE로 정한다 */
+/** 형식 검사 결과. 답을 고치지 않는다 — 2026-11-19부터 응답 경로는 기록만 한다 */
 export function checkAmoStyle(answer: string, context: StyleContext): StyleFinding[] {
   const findings: StyleFinding[] = [];
   const questions = countQuestionsBack(answer);

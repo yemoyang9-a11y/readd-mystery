@@ -17,11 +17,9 @@ import {
   mentionsReaderNotes,
 } from './harness/question-intent';
 import { guardAnswer, type GuardViolation } from './harness/output-guard';
-import { takeSentences } from './harness/sentence-buffer';
-import { INTENT_POLICY, fixedAnswerFor, retryNoticeFor } from './harness/behavior-ladder';
+import { takeGuardedSentences, takeSentences } from './harness/sentence-buffer';
+import { INTENT_POLICY, fixedAnswerFor } from './harness/behavior-ladder';
 import {
-  AMO_STYLE_RETRY_NOTICE,
-  STYLE_REGENERATE,
   amoTurnGuidance,
   checkAmoStyle,
   normalizeAmoText,
@@ -163,7 +161,6 @@ async function* runQuery(
     query,
   };
   const listRequested = readerAskedForList(query);
-  const styleRegenerate: ReadonlySet<StyleFinding> = new Set(STYLE_REGENERATE);
   // This payload is loaded by the server route; still enforce K at the final boundary.
   currentPageText =
     currentPageText &&
@@ -481,101 +478,77 @@ async function* runQuery(
       }).violations;
 
     let responseText = '';
-    let modelCalls = 1;
+    // 대표 결정 2026-11-19 (A): 어느 응답 경로도 재생성하지 않는다(모델 호출 1회)
+    const modelCalls = 1;
     const attemptViolations: GuardViolation[][] = [];
     let fixedAnswer = false;
-    // NFR-AI-005: 시도마다의 형식 검사 결과(고친 것 + 기록). 하네스 로그와 따로 남긴다
+    // NFR-AI-005: 형식 검사 결과(고친 것 + 기록). 하네스 로그와 따로 남긴다
     const styleFindings: StyleFinding[][] = [];
 
-    if (policy.response !== 'sentence_stream') {
-      // FR-QNA-004 🚦 NFR-AI-005
-      let attemptPrompt = fullPrompt;
-      for (let attempt = 0; ; attempt++) {
-        let raw = '';
-        for await (const chunk of generateChunks(attemptPrompt)) raw += chunk;
-        if (!raw.trim()) throw new Error('CHATBOT_EMPTY_RESPONSE');
-        // 이모지·청하지 않은 목록 표지를 먼저 고치고, 독자에게 나갈 그 글을 출력 검사에 넘긴다
-        const normalized = normalizeAmoText(raw, { listRequested });
-        const text = normalized.text;
-        if (!text.trim()) throw new Error('CHATBOT_EMPTY_RESPONSE');
-        const violations = guardAgainst(text);
-        attemptViolations.push(violations);
-        const style = [...normalized.applied, ...checkAmoStyle(text, styleContext)];
-        styleFindings.push(style);
-        const blocked = violations.some((violation) => blocking.has(violation));
-        // 되묻기 여러 개는 첫 시도에서만 재생성한다. 재생성 답에 남아도 막지 않는다
-        const restyle = attempt === 0 && style.some((finding) => styleRegenerate.has(finding));
-        if (!blocked && !restyle) {
-          responseText = text;
-          break;
-        }
-        if (blocked && attempt === 1) {
-          responseText = fixedAnswerFor(violations.filter((v) => blocking.has(v)));
-          fixedAnswer = true;
-          break;
-        }
-        modelCalls++;
-        attemptPrompt =
-          fullPrompt +
-          (blocked ? retryNoticeFor(violations) : '') +
-          (restyle ? AMO_STYLE_RETRY_NOTICE : '');
+    // NFR-AI-005, FR-QNA-004 🚦 (절대 규칙 11·12), 대표 결정 2026-11-19 (A): 작품 질문(guarded)과
+    // 작품 밖 질문(sentence_stream) 모두 스트리밍하되, 이미 나간 글은 회수할 수 없으므로 문장 단위로
+    // 모아 "나간 텍스트 + 이번 문장"을 출력 검사(원문 200자 누적 상한 포함)에 통과시킨 뒤에만 내보낸다.
+    // 위반 문장과 그 뒤 글은 내보내지 않고 끊은 뒤 그 위반에 맞는 고정 답변으로 맺는다. 재생성은 없다.
+    // guarded는 작품 내용을 다루므로 더 엄격하게 끊는다(takeGuardedSentences: 마침 부호 없는 줄바꿈·
+    // 열린 따옴표에서는 끊지 않고, 긴 문장도 억지로 자르지 않는다). sentence_stream은 기존 경계 그대로다.
+    const split = policy.response === 'guarded' ? takeGuardedSentences : takeSentences;
+    let blocked: GuardViolation[] | undefined;
+    // 마지막으로 통과한 검사 결과 = 나간 글 전체의 검사 결과 (로그용, 같은 글을 다시 검사하지 않는다)
+    let releasedViolations: GuardViolation[] = [];
+    const streamStyle: StyleFinding[] = [];
+    // 문장마다 형식(이모지·청하지 않은 목록 표지)을 고친 뒤 검사한다. 고친 결과 빈 문장은 내보내지 않는다.
+    // 이모지를 지우며 문장 끝 공백이 지워지면 다음 문장과 붙지 않게 원래 끝 공백을 되살린다
+    const tidy = (sentence: string): string => {
+      const normalized = normalizeAmoText(sentence, { listRequested });
+      normalized.applied.forEach((finding) => {
+        if (!streamStyle.includes(finding)) streamStyle.push(finding);
+      });
+      const text = normalized.text;
+      if (!text) return '';
+      const trailing = /\s*$/u.exec(sentence)?.[0] ?? '';
+      return text.endsWith(trailing) ? text : text.replace(/[ \t]+$/u, '') + trailing;
+    };
+    const release = (sentence: string): boolean => {
+      const violations = guardAgainst(responseText + sentence);
+      if (violations.some((violation) => blocking.has(violation))) {
+        blocked = violations;
+        return false;
       }
-      yield responseText;
-    } else {
-      // NFR-AI-005, FR-QNA-004 🚦 (절대 규칙 11·12): outside는 스트리밍을 유지하되, 이미 나간
-      // 글은 회수할 수 없으므로 문장 단위로 모아 "나간 텍스트 + 이번 문장"을 출력 검사에 통과시킨
-      // 뒤에만 내보낸다. 위반 문장은 내보내지 않고 끊은 뒤 고정 답변으로 맺는다.
-      // 이 경로는 재생성하지 않는다(모델 호출 1회).
-      let blocked: GuardViolation[] | undefined;
-      const streamStyle: StyleFinding[] = [];
-      // 문장마다 형식을 고친 뒤 검사한다(재생성 없음). 고친 결과 빈 문장은 내보내지 않는다
-      const tidy = (sentence: string): string => {
-        const normalized = normalizeAmoText(sentence, { listRequested });
-        normalized.applied.forEach((finding) => {
-          if (!streamStyle.includes(finding)) streamStyle.push(finding);
-        });
-        return normalized.text;
-      };
-      const release = (sentence: string): boolean => {
-        const violations = guardAgainst(responseText + sentence);
-        if (violations.some((violation) => blocking.has(violation))) {
-          blocked = violations;
-          return false;
-        }
-        responseText += sentence;
-        return true;
-      };
-      let pending = '';
-      stream: for await (const chunk of generateChunks(fullPrompt)) {
-        const { sentences, rest } = takeSentences(pending + chunk);
-        pending = rest;
-        for (const raw of sentences) {
-          const sentence = tidy(raw);
-          if (!sentence) continue;
-          if (!release(sentence)) break stream;
-          yield sentence;
-        }
+      responseText += sentence;
+      releasedViolations = violations;
+      return true;
+    };
+    let pending = '';
+    stream: for await (const chunk of generateChunks(fullPrompt)) {
+      const { sentences, rest } = split(pending + chunk);
+      pending = rest;
+      for (const raw of sentences) {
+        const sentence = tidy(raw);
+        if (!sentence) continue;
+        if (!release(sentence)) break stream;
+        yield sentence;
       }
-      const tail = !blocked && pending ? tidy(pending) : '';
-      if (tail && release(tail)) yield tail;
-
-      if (blocked) {
-        const answer = fixedAnswerFor(blocked.filter((violation) => blocking.has(violation)));
-        const notice = `${responseText ? '\n\n' : ''}${answer}`;
-        responseText += notice;
-        yield notice;
-        attemptViolations.push(blocked);
-        fixedAnswer = true;
-      } else {
-        if (!responseText.trim()) throw new Error('CHATBOT_EMPTY_RESPONSE');
-        attemptViolations.push(guardAgainst(responseText));
-      }
-      // 문장 단위 경로는 이미 나간 글을 되돌릴 수 없으므로 형식 검사는 기록만 한다
-      styleFindings.push([
-        ...streamStyle,
-        ...(fixedAnswer ? [] : checkAmoStyle(responseText, styleContext)),
-      ]);
     }
+    const tail = !blocked && pending ? tidy(pending) : '';
+    if (tail && release(tail)) yield tail;
+
+    if (blocked) {
+      const answer = fixedAnswerFor(blocked.filter((violation) => blocking.has(violation)));
+      const notice = `${responseText ? '\n\n' : ''}${answer}`;
+      responseText += notice;
+      yield notice;
+      attemptViolations.push(blocked);
+      fixedAnswer = true;
+    } else {
+      if (!responseText.trim()) throw new Error('CHATBOT_EMPTY_RESPONSE');
+      attemptViolations.push(releasedViolations);
+    }
+    // 이미 나간 글은 되돌릴 수 없으므로 형식 검사는 기록만 한다. 되묻기 여러 개(multi_question)도
+    // 2026-11-19부터 재생성하지 않고 기록만 한다 (STYLE_REGENERATE)
+    styleFindings.push([
+      ...streamStyle,
+      ...(fixedAnswer ? [] : checkAmoStyle(responseText, styleContext)),
+    ]);
 
     if (conversationId != null) {
       const recordStart = timing.now();
