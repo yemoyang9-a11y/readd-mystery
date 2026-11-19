@@ -29,6 +29,7 @@ import {
   type StyleContext,
   type StyleFinding,
 } from './harness/amo-style';
+import { chatTimingStore, createChatTiming, type ChatTiming } from './timing';
 
 const MOCK_MODE = process.env.MOCK_MODE === 'true';
 
@@ -36,6 +37,71 @@ export { CHATBOT_TASK };
 
 export interface ChatbotDeps {
   notesReader?: NotesReader;
+  /**
+   * 대표 결정 2026-11-19 (E): 단계별 시간 측정기. 라우트가 넘기면 라우트 단계(기준점 스냅샷 등)와
+   * 이어서 재고, 'done' 프레임의 timings_ms로 그대로 쓴다. 없으면 여기서 만든다
+   */
+  timing?: ChatTiming;
+}
+
+/** 요청이 어느 응답 경로로 끝났는지 — 시간 기록 한 줄에만 쓴다 */
+type ChatPath = 'amo_intro' | 'fixed' | 'notes_empty' | 'guarded' | 'sentence_stream';
+
+/**
+ * NFR-PERF-008, 대표 결정 2026-11-19 (E) — 단계별 시간을 재며 답을 내보낸다.
+ * 첫 글자를 내보낸 시각(first_yield)과 전체(total)를 여기서 남기고, 끝나면(실패·중단 포함)
+ * `[Chatbot Timing]` 한 줄을 남긴다. 기록에는 단계 이름과 숫자, 도서 ID, 기준 쪽수만 담는다.
+ * 응답 내용·근거 선택에는 관여하지 않는다(R4).
+ */
+export async function* handleQuery(
+  bookId: string,
+  query: string,
+  K: number,
+  deviceId: string,
+  conversationId?: number,
+  quote?: string,
+  currentPageText?: { pageNo: number; content: string },
+  isComplete = false,
+  deps: ChatbotDeps = {}
+): AsyncGenerator<string> {
+  const timing = deps.timing ?? createChatTiming();
+  const trace: { path?: ChatPath } = {};
+  let outcome: 'ok' | 'error' | 'closed' = 'closed';
+  try {
+    for await (const chunk of runQuery(
+      bookId,
+      query,
+      K,
+      deviceId,
+      conversationId,
+      quote,
+      currentPageText,
+      isComplete,
+      deps,
+      timing,
+      trace
+    )) {
+      timing.markOnce('first_yield');
+      timing.increment('deltas');
+      yield chunk;
+    }
+    outcome = 'ok';
+  } catch (error) {
+    outcome = 'error';
+    throw error;
+  } finally {
+    timing.mark('total');
+    console.log(
+      '[Chatbot Timing]',
+      JSON.stringify({
+        book_id: bookId,
+        cutoff_page: K,
+        path: trace.path ?? null,
+        outcome,
+        timings_ms: timing.snapshot(),
+      })
+    );
+  }
 }
 
 const NO_EVIDENCE_TOKEN = '[NO_EVIDENCE]';
@@ -69,16 +135,18 @@ function isAskingAboutAmo(query: string): boolean {
   );
 }
 
-export async function* handleQuery(
+async function* runQuery(
   bookId: string,
   query: string,
   K: number,
   deviceId: string,
-  conversationId?: number,
-  quote?: string,
-  currentPageText?: { pageNo: number; content: string },
-  isComplete = false,
-  deps: ChatbotDeps = {}
+  conversationId: number | undefined,
+  quote: string | undefined,
+  currentPageText: { pageNo: number; content: string } | undefined,
+  isComplete: boolean,
+  deps: ChatbotDeps,
+  timing: ChatTiming,
+  trace: { path?: ChatPath }
 ): AsyncGenerator<string> {
   const notesReader = deps.notesReader ?? emptyNotesReader;
   const intent = classifyQuestion(query);
@@ -108,6 +176,7 @@ export async function* handleQuery(
   let generationController: AbortController | undefined;
 
   if (isAskingAboutAmo(query)) {
+    trace.path = 'amo_intro';
     if (conversationId != null) {
       if (quote) await recordTurns(conversationId, query, AMO_INTRO_MESSAGE, K, quote);
       else await recordTurns(conversationId, query, AMO_INTRO_MESSAGE, K);
@@ -142,6 +211,7 @@ export async function* handleQuery(
 
   // NFR-AI-005: 고정 답변 유형(예측 요청)은 모델을 부르지 않는다
   if (policy.response === 'fixed' && policy.fixed) {
+    trace.path = 'fixed';
     const { answer: fixedText, tag } = policy.fixed;
     if (conversationId != null) {
       if (quote) await recordTurns(conversationId, query, fixedText, K, quote);
@@ -181,8 +251,9 @@ export async function* handleQuery(
   let preloadedNotes: ReaderNote[] | undefined;
   if (policy.readerNotes) {
     // FR-SPL-002 🚦: 노트 조회도 같은 스냅샷의 K를 상한으로 건다
-    preloadedNotes = await notesReader.listNotes(deviceId, bookId, K);
+    preloadedNotes = await timing.time('notes', () => notesReader.listNotes(deviceId, bookId, K));
     if (notesWithinCutoff(preloadedNotes, K).length === 0) {
+      trace.path = 'notes_empty';
       const emptyText = policy.readerNotes.emptyAnswer(K);
       const tag = policy.readerNotes.tag;
       if (conversationId != null) {
@@ -219,11 +290,16 @@ export async function* handleQuery(
     }
   }
 
+  trace.path = policy.response === 'sentence_stream' ? 'sentence_stream' : 'guarded';
   try {
-    const context = MOCK_MODE ? getMockContext(K) : await assembleContext(bookId, K);
+    const context = MOCK_MODE
+      ? getMockContext(K)
+      : await timing.time('context', () => assembleContext(bookId, K));
 
     const priorTurns =
-      conversationId != null && !MOCK_MODE ? await getConversationContext(conversationId, K) : [];
+      conversationId != null && !MOCK_MODE
+        ? await timing.time('history', () => getConversationContext(conversationId, K))
+        : [];
     // Resolve the user's subject before retrieval, using only cutoff-filtered history.
     // Past assistant claims are conversational context, never an identity lookup.
     const dialogue = resolveConversationContext(
@@ -236,11 +312,18 @@ export async function* handleQuery(
       dialogue.status === 'explicit' && !quote
         ? ''
         : dialogue.retrievalHint || quote?.slice(0, 500);
+    // 대표 결정 2026-11-19 (E): 검색 안의 임베딩 시간은 인자를 바꾸지 않고 같은 계측기로 잰다
     const searchResults = MOCK_MODE
       ? getMockSearchResults(query, K)
-      : subjectHint
-        ? await vectorSearch(bookId, query, K, subjectHint)
-        : await vectorSearch(bookId, query, K);
+      : await timing.time('vector_search', () =>
+          chatTimingStore.run(timing, () =>
+            subjectHint
+              ? vectorSearch(bookId, query, K, subjectHint)
+              : vectorSearch(bookId, query, K)
+          )
+        );
+    const promptStart = timing.now();
+    let notesMs = 0;
 
     // A8-2: the same K-bounded context, ordered append-only and sent before history so the
     // provider prefix cache can hit across turns. Selection is unchanged (FR-SPL-002 🚦, R4).
@@ -292,12 +375,15 @@ export async function* handleQuery(
     }
     let notes: ReaderNote[] = preloadedNotes ?? [];
     if (!preloadedNotes) {
+      const notesStart = timing.now();
       try {
         // FR-SPL-002 🚦: 노트 조회도 같은 스냅샷의 K를 상한으로 건다
         notes = await notesReader.listNotes(deviceId, bookId, K);
       } catch (error) {
         console.error('[Chatbot] notes lookup failed', { bookId, error });
       }
+      notesMs = timing.now() - notesStart;
+      timing.add('notes', notesMs);
     }
     fullPrompt += buildNotesSection(notes, K, query);
     // 대표 지시 2026-11-18 — 노트를 언급했는데 K 이하 노트가 없으면 "노트가 안 보인다"고 하지 않게 범위만 알린다
@@ -309,12 +395,14 @@ export async function* handleQuery(
     fullPrompt += amoTurnGuidance(styleContext);
     fullPrompt += `\n\n# 사용자 질문\n\n${query}`;
     fullPrompt = fullPrompt.replace(/^\n+/, '');
+    timing.add('prompt', timing.now() - promptStart - notesMs);
 
     const modelSelection = selectModel(query);
     logModelSelection(modelSelection, query);
     recordSelection(modelSelection.model);
 
     const task = CHATBOT_TASK;
+    let firstTokenSeen = false;
     const generateChunks = async function* (promptText: string): AsyncGenerator<string> {
       if (generationDeadline) clearTimeout(generationDeadline);
       generationController?.abort();
@@ -322,6 +410,11 @@ export async function* handleQuery(
       generationController = controller;
       // One generation request, including SDK transport retries, shares this deadline.
       generationDeadline = setTimeout(() => controller.abort(), 60_000);
+      // 대표 결정 2026-11-19 (E): 모델 첫 토큰·끝까지 시간
+      const callStart = timing.now();
+      const firstCall = !firstTokenSeen;
+      let callFirstToken = true;
+      timing.increment('model_calls');
       const streamSource = MOCK_MODE
         ? getMockLLMResponse(query)
         : llmStream(task, promptText, {
@@ -332,21 +425,31 @@ export async function* handleQuery(
           });
       let pending = '';
 
-      // Stream immediately. Only a possible split internal control token is held locally.
-      // FR-SPL-005: control tokens are errors, never canned answers or extra LLM calls.
-      for await (const chunk of streamSource) {
+      try {
+        // Stream immediately. Only a possible split internal control token is held locally.
+        // FR-SPL-005: control tokens are errors, never canned answers or extra LLM calls.
+        for await (const chunk of streamSource) {
+          controller.signal.throwIfAborted();
+          if (callFirstToken) {
+            callFirstToken = false;
+            firstTokenSeen = true;
+            timing.markOnce('llm_first_token');
+            if (firstCall) timing.add('llm_first_token_wait', timing.now() - callStart);
+          }
+          pending += chunk;
+          if (pending.includes(NO_EVIDENCE_TOKEN)) throw new Error('CHATBOT_INTERNAL_TOKEN');
+          let held = Math.min(pending.length, NO_EVIDENCE_TOKEN.length - 1);
+          while (held > 0 && !pending.endsWith(NO_EVIDENCE_TOKEN.slice(0, held))) held--;
+          const ready = pending.slice(0, pending.length - held);
+          pending = pending.slice(pending.length - held);
+          if (ready) yield ready;
+        }
         controller.signal.throwIfAborted();
-        pending += chunk;
-        if (pending.includes(NO_EVIDENCE_TOKEN)) throw new Error('CHATBOT_INTERNAL_TOKEN');
-        let held = Math.min(pending.length, NO_EVIDENCE_TOKEN.length - 1);
-        while (held > 0 && !pending.endsWith(NO_EVIDENCE_TOKEN.slice(0, held))) held--;
-        const ready = pending.slice(0, pending.length - held);
-        pending = pending.slice(pending.length - held);
-        if (ready) yield ready;
+        if (pending) yield pending;
+        clearTimeout(generationDeadline);
+      } finally {
+        timing.add('llm_total', timing.now() - callStart);
       }
-      controller.signal.throwIfAborted();
-      if (pending) yield pending;
-      clearTimeout(generationDeadline);
     };
 
     const allowedPages: Array<{ page_no: number; content: string }> = searchResults.map((r) => ({
@@ -355,7 +458,15 @@ export async function* handleQuery(
     }));
     if (currentPageText)
       allowedPages.push({ page_no: currentPageText.pageNo, content: currentPageText.content });
-    const guardAgainst = (text: string): GuardViolation[] =>
+    const guardAgainst = (text: string): GuardViolation[] => {
+      const guardStart = timing.now();
+      try {
+        return guardText(text);
+      } finally {
+        timing.add('guard', timing.now() - guardStart);
+      }
+    };
+    const guardText = (text: string): GuardViolation[] =>
       guardAnswer(text, {
         cutoff: K,
         pages: allowedPages,
@@ -467,9 +578,12 @@ export async function* handleQuery(
     }
 
     if (conversationId != null) {
+      const recordStart = timing.now();
       if (quote) await recordTurns(conversationId, query, responseText, K, quote);
       else await recordTurns(conversationId, query, responseText, K);
+      timing.add('record', timing.now() - recordStart);
     }
+    timing.increment('regenerations', Math.max(0, modelCalls - 1));
 
     await logQuery(
       {

@@ -26,6 +26,7 @@ data: {"type":"done","applied_cutoff":79}\n\n
 - 스트림 정상 완료
 - 프론트가 정상 종료와 연결 끊김을 구분하려면 필수
 - **`applied_cutoff`**: 이 응답에 적용된 기준점 K (R4 요청, NFR-OBS-003 🚦)
+- **`timings_ms`** (챗봇만, 선택): 단계 이름 → 소요 ms(`model_calls`·`regenerations`·`deltas`는 횟수). 대표 결정 2026-11-19(E) 성능 측정용이며 본문·근거 내용은 담지 않는다. 단계 목록은 `src/modules/chatbot/timing.ts`. 프론트는 무시해도 된다
 
 ### 3. Error (오류)
 
