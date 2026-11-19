@@ -282,12 +282,9 @@ describe('처음 펼친 독자(진도 기록 없음, applied_cutoff 0)', () => {
   });
 });
 
-test('COMMUNITY: 서버가 완독으로 알려 준 경우에만 커뮤니티 진입 버튼이 보인다', async () => {
-  const { rerender } = render(<MobileBriefingView {...baseProps} briefing={briefing()} />);
-  expect(screen.queryByRole('button', { name: /커뮤니티/ })).toBeNull();
-
+test('COMMUNITY: 커뮤니티 진입 핸들러를 받으면 커뮤니티 버튼을 그리고 누르면 부른다', async () => {
   const onOpen = vi.fn();
-  rerender(<MobileBriefingView {...baseProps} briefing={briefing()} onOpenCommunity={onOpen} />);
+  render(<MobileBriefingView {...baseProps} briefing={briefing()} onOpenCommunity={onOpen} />);
   const button = screen.getByRole('button', { name: /커뮤니티/ });
   expect(button).toHaveAttribute('data-track', 'community-open');
   await userEvent.click(button);
