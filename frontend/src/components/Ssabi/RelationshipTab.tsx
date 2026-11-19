@@ -10,7 +10,7 @@ import { centralNodeIndex } from './graphLayout';
  * 인물관계도 탭 — 2026-11-17 시안 `docs/superpowers/specs/mockups-2026-11-17/readd-relationship-simple.html`,
  * 2026-11-18 대표 지시로 시안 그대로만 남겼다.
  *
- * 제목 질문 "지금 누가 누구와 엮여 있을까요" → 그래프 → 선 모양 범례 한 줄 → "{중심 인물}과 이어진 사람" 카드.
+ * 제목 질문 "지금 누가 누구와 엮여 있을까요" → 그래프 → 선 모양 범례 한 줄 → 시점 되감기 막대(2026-11-19 대표 지시: 범례 바로 아래) → "{중심 인물}과 이어진 사람" 카드.
  * 시안에 없는 주요인물/전체 토글·인물 수·검색창·인물 목록·확대/축소/전체 보기/전체화면 버튼과
  * 배율(%) 표시는 없앴다. 손가락으로 끌기·벌려 확대하기만 보이지 않는 조작으로 남는다(RelationshipGraph).
  * 시점 되감기 막대는 2026-11-19 대표 지시로 피벗 전 방식 그대로 되살렸다(아래 "되감기 슬라이더").
@@ -152,8 +152,6 @@ export default function RelationshipTab({
           </li>
         </ul>
       </div>
-      <RelationDetails graph={shown} selectedId={activeSelected} selectedEdgeKey={selectedEdgeKey} />
-
       {/* 시점 되감기 (2026-11-19 대표 지시로 피벗 전 방식 그대로 복원). 받은 자료 안의 표시 필터라
           서버에 다시 묻지 않는다. 막대 폭은 정수 flexGrow — % 계산 없음 (절대 규칙 2번, 위 주석). */}
       {milestones.length > 1 ? (
@@ -209,6 +207,7 @@ export default function RelationshipTab({
           </div>
         </div>
       ) : null}
+      <RelationDetails graph={shown} selectedId={activeSelected} selectedEdgeKey={selectedEdgeKey} />
     </div>
   );
 }
