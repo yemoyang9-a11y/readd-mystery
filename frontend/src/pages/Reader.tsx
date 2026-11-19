@@ -15,10 +15,8 @@ import ReaderPrefsSheet from '../components/Reader/ReaderPrefsSheet';
 import JumpReturnBar from '../components/Reader/JumpReturnBar';
 import TocJumpDialog from '../components/Reader/TocJumpDialog';
 import { useBackToBook } from '../hooks/useBackToBook';
-import { APP_ROUTES, BOOK_ROUTES } from '../utils/routes';
-import { useCommunityAccess } from '../mobile/community/useCommunityAccess';
-import CompletionScreen from '../mobile/community/CompletionScreen';
-import { hasSeenCompletion, markCompletionSeen } from '../mobile/community/completionSeen';
+import { BOOK_ROUTES } from '../utils/routes';
+import BookEndPage from '../mobile/community/BookEndPage';
 
 /**
  * 읽기 화면 컨테이너 — S3 · S4 · S5
@@ -58,7 +56,6 @@ function ReadingSession() {
   const {
     entryError,
     retryEntry,
-    frontierConfirm,
     page,
     pageError,
     retryPage,
@@ -84,23 +81,15 @@ function ReadingSession() {
   const navigate = useNavigate();
   const prefsApi = useReaderPrefs();
 
-  // FR-BRF-005 🚦 — 완독은 서버의 is_complete 로만 안다. 마지막 쪽이 화면에 떴을 때만 묻는다
-  // (휴대폰 읽기 화면과 같은 원천, E2E #86)
+  // 대표 결정 2026-11-19 — 마지막 쪽(N) 다음의 끝 페이지(N+1). 휴대폰 읽기 화면과 같은 화면을 쓴다.
+  // 화면 상태일 뿐이라 진도 이벤트를 보내지 않는다 (절대 규칙 2·8·9, FR-PRG-003 🚦). 완독 판별은 하지 않는다.
   const onLastPage = page !== null && page.page_no === currentPage && page.next_page === null;
-  const communityAccess = useCommunityAccess(bookId, onLastPage, frontierConfirm);
-  // 완독 화면은 서버가 완독(open)이라고 답했을 때만, 책마다 한 번 저절로 뜬다.
-  // 닫으면 기억하고, 마지막 쪽의 완독 블록으로 다시 연다.
-  const [completionOpen, setCompletionOpen] = useState(false);
-  const completionReturnRef = useRef<HTMLElement | null>(null);
-  useEffect(() => {
-    if (communityAccess === 'open' && !hasSeenCompletion(bookId)) setCompletionOpen(true);
-    if (communityAccess !== 'open') setCompletionOpen(false);
-  }, [communityAccess, bookId]);
-  function leaveCompletion(then?: () => void) {
-    markCompletionSeen(bookId);
-    setCompletionOpen(false);
-    then?.();
-  }
+  const [endPageOpen, setEndPageOpen] = useState(false);
+  const endPageReturnRef = useRef<HTMLElement | null>(null);
+  const openEndPage = useCallback(() => {
+    endPageReturnRef.current = document.activeElement as HTMLElement | null;
+    setEndPageOpen(true);
+  }, []);
   const openCommunity = () => navigate(BOOK_ROUTES.community.replace(':bookId', bookId));
   const [prefsOpen, setPrefsOpen] = useState(false);
   const prefsButtonRef = useRef<HTMLButtonElement>(null);
@@ -189,13 +178,20 @@ function ReadingSession() {
       const target = event.target as HTMLElement | null;
       if (target?.closest?.(ARROW_KEY_OWNERS)) return;
       const to = event.key === 'ArrowLeft' ? prevPage : nextPage;
-      if (to === null) return;
+      if (to === null) {
+        // 마지막 쪽에서 → 는 끝 페이지(N+1)를 연다 — 진도 이벤트 없음 (대표 결정 2026-11-19)
+        if (event.key === 'ArrowRight' && onLastPage) {
+          event.preventDefault();
+          openEndPage();
+        }
+        return;
+      }
       event.preventDefault();
       moveTo(to);
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [prefsOpen, prevPage, nextPage, moveTo]);
+  }, [prefsOpen, prevPage, nextPage, moveTo, onLastPage, openEndPage]);
 
   const appRef = useRef<HTMLDivElement>(null);
   const {
@@ -292,17 +288,14 @@ function ReadingSession() {
           onCancel={cancelTocJump}
         />
       ) : null}
-      {completionOpen && communityAccess === 'open' ? (
-        <CompletionScreen
-          variant="dialog"
+      {endPageOpen && onLastPage ? (
+        <BookEndPage
           bookId={bookId}
           bookTitle={bookTitle ?? ''}
           totalPages={totalPages}
-          noteCount={ssabiPanelProps.notesFailed ? null : ssabiPanelProps.notes.length}
-          returnFocusRef={completionReturnRef}
-          onCommunity={() => leaveCompletion(openCommunity)}
-          onHome={() => leaveCompletion(() => navigate(APP_ROUTES.home))}
-          onClose={() => leaveCompletion()}
+          returnFocusRef={endPageReturnRef}
+          onBack={() => setEndPageOpen(false)}
+          onCommunity={openCommunity}
         />
       ) : null}
       {prefsOpen ? (
@@ -350,15 +343,7 @@ function ReadingSession() {
               highlightedQuote={highlightedQuote}
               chapterStart={chapters.find((chapter) => chapter.start_page === page.page_no) ?? null}
               prefs={prefsApi.prefs}
-              onOpenCommunity={communityAccess === 'open' ? openCommunity : undefined}
-              onOpenCompletion={
-                communityAccess === 'open'
-                  ? () => {
-                      completionReturnRef.current = document.activeElement as HTMLElement | null;
-                      setCompletionOpen(true);
-                    }
-                  : undefined
-              }
+              onEndPage={onLastPage ? openEndPage : undefined}
             />
           ) : pageError ? (
             <div className="flex h-full flex-col items-center justify-center gap-4">

@@ -78,8 +78,7 @@ export default function ReaderView({
   highlightedQuote,
   chapterStart,
   prefs = DEFAULT_READER_PREFS,
-  onOpenCommunity,
-  onOpenCompletion,
+  onEndPage,
 }: {
   content: string;
   currentPage: number;
@@ -94,10 +93,11 @@ export default function ReaderView({
   /** 이 페이지에서 새로 시작하는 장(있으면). Reader.tsx가 chapters에서 미리 찾아 넘긴다. */
   chapterStart?: { chapter_no: number; title: string } | null;
   prefs?: ReaderPrefs;
-  /** 서버가 완독(is_complete)이라고 알려 준 독자에게만 넘긴다 — 마지막 쪽 도달은 완독이 아니다 (FR-BRF-005 🚦, E2E #86) */
-  onOpenCommunity?: () => void;
-  /** 완독 화면을 다시 연다. onOpenCommunity 와 같은 조건에서만 넘긴다 */
-  onOpenCompletion?: () => void;
+  /**
+   * 마지막 쪽(nextPage === null)에서 '다음'을 누르면 부른다 — 화면에만 있는 끝 페이지(N+1)를 연다
+   * (대표 결정 2026-11-19). onMove 를 부르지 않으므로 진도 이벤트가 나가지 않는다 (절대 규칙 8·9, FR-PRG-003 🚦)
+   */
+  onEndPage?: () => void;
 }) {
   const [inputValue, setInputValue] = useState(String(currentPage));
 
@@ -148,44 +148,6 @@ export default function ReaderView({
             </header>
           ) : null}
           {highlightContent(content, highlightedQuote ?? null)}
-          {/* FR-BRF-005 🚦 — 완독 블록은 부르는 쪽이 서버 is_complete 를 받았을 때만 넘긴 콜백으로 그린다 */}
-          {nextPage === null && onOpenCommunity ? (
-            <section
-              aria-label="완독"
-              data-testid="completion-block"
-              className="mt-14 flex items-center justify-center gap-3 whitespace-normal border-t border-brief-rule pt-8 font-dashSans"
-            >
-              {onOpenCompletion ? (
-                <button
-                  type="button"
-                  data-track="completion-reopen"
-                  onClick={onOpenCompletion}
-                  className="min-h-11 rounded-full px-4 font-dashSerif text-[19px] font-bold text-brief-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8f1d35]"
-                  style={darkInk}
-                >
-                  완독했어요
-                </button>
-              ) : (
-                <p className="m-0 font-dashSerif text-[19px] font-bold text-brief-ink" style={darkInk}>
-                  완독했어요
-                </p>
-              )}
-              <span aria-hidden="true" className="text-brief-muted" style={darkInk}>
-                ·
-              </span>
-              <button
-                type="button"
-                data-track="community-open"
-                onClick={onOpenCommunity}
-                className="inline-flex min-h-11 items-center gap-1 rounded-full bg-[#8f1d35] px-5 text-[15px] font-bold text-white transition-colors hover:bg-[#a3243f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8f1d35] focus-visible:ring-offset-2"
-              >
-                커뮤니티
-                <span aria-hidden="true" className="text-[17px] font-semibold">
-                  ›
-                </span>
-              </button>
-            </section>
-          ) : null}
         </article>
       </div>
 
@@ -218,8 +180,8 @@ export default function ReaderView({
 
         <button
           type="button"
-          disabled={nextPage === null}
-          onClick={() => nextPage !== null && onMove(nextPage)}
+          disabled={nextPage === null && !onEndPage}
+          onClick={() => (nextPage !== null ? onMove(nextPage) : onEndPage?.())}
           className="disabled:opacity-40"
         >
           다음 페이지

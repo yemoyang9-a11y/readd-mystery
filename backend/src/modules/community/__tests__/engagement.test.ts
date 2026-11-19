@@ -1,11 +1,12 @@
 /**
  * 커뮤니티 공감·인기순·허브 (2026-11-18 대표 지시 "책 다 읽고 커뮤니티로 바로, 커뮤니티 형성")
  *
- * 접근 규칙은 기존 완독 게이트 그대로다 — 완독(서버 is_complete)한 독자만 글·개수·제목을 본다
- * (대표 결정 2026-11-17 ④). 새 경로도 모두 같은 게이트를 지나며, 미완독 독자의 요청에서는
- * 저장소를 아예 부르지 않는다 (절대 규칙 7 — 판별하려고 초과 데이터에 접근하지 않는다).
+ * 접근 규칙: 대표 결정 2026-11-19 "커뮤니티 관문 없애기"가 11-17 결정 ④(완독 독자만)를
+ * 대체했다. 명세 변경이며, 예전 "미완독 403·허브 잠김" 시험을 새 규칙 시험으로 바꿨다 —
+ * 미완독 독자도 공감·인기순을 쓰고, 허브는 모든 공개 도서를 글 수와 함께 연다.
+ * 그대로 남는 막음: 미공개(싸비 미완비) 도서는 404·허브 제외 (R12 🚦).
  *
- * 조항: FR-QNA-004 🚦 (완독 파생값), FR-SPL-005 🚦 / R11 (실패 = 미노출), R12 🚦 (미공개 도서)
+ * 조항: R12 🚦 (미공개 도서)
  * negative 는 positive 와 쌍으로 둔다 (CLAUDE.md 7장).
  */
 import * as fs from 'fs';
@@ -158,13 +159,9 @@ describe('커뮤니티 공감·인기순·허브', () => {
   let server: Server;
   let baseUrl: string;
   let store: FakeStore;
-  let completed: Set<string>;
-  let snapshotFails: Set<string>;
 
   beforeEach(async () => {
     store = new FakeStore();
-    completed = new Set([`${FINISHER}:${BOOK}`, `${FINISHER_2}:${BOOK}`]);
-    snapshotFails = new Set();
     const app = express();
     app.use(
       createCommunityRouter({
@@ -174,12 +171,6 @@ describe('커뮤니티 공감·인기순·허브', () => {
           findReadiness: async (bookId: string) =>
             CATALOG.find((b) => b.book_id === bookId)?.ssabi_ready ?? null,
           findCatalog: async () => CATALOG,
-        },
-        cutoff: {
-          getCutoffSnapshot: async (deviceId: string, bookId: string) => {
-            if (snapshotFails.has(bookId)) throw new Error('snapshot failed');
-            return { is_complete: completed.has(`${deviceId}:${bookId}`) } as any;
-          },
         },
       })
     );
@@ -207,20 +198,16 @@ describe('커뮤니티 공감·인기순·허브', () => {
 
   // ── 공감 ────────────────────────────────────────────────────────────────
 
-  test('FR-QNA-004: 미완독 독자는 공감·공감 취소 403, 저장소 접근 0건', async () => {
+  test('대표 결정 2026-11-19: 미완독 독자도 공감·공감 취소를 한다', async () => {
     const post = store.seed(BOOK, SECRET);
-    for (const method of ['POST', 'DELETE']) {
-      const res = await call(method, `${base}/posts/${post.post_id}/like`, NON_FINISHER);
-      expect(res.status).toBe(403);
-      const text = await res.text();
-      expect(text).not.toContain('like_count');
-      expect(text).not.toContain(SECRET);
-    }
-    expect(store.touched).toEqual([]);
-    expect(store.likes.size).toBe(0);
+    const liked = await call('POST', `${base}/posts/${post.post_id}/like`, NON_FINISHER);
+    expect(liked.status).toBe(200);
+    expect(await liked.json()).toEqual({ like_count: 1, liked_by_me: true });
+    const unliked = await call('DELETE', `${base}/posts/${post.post_id}/like`, NON_FINISHER);
+    expect(await unliked.json()).toEqual({ like_count: 0, liked_by_me: false });
   });
 
-  test('FR-QNA-004: 완독 독자는 공감·공감 취소가 되고 like_count·liked_by_me 가 반영된다', async () => {
+  test('공감·공감 취소가 되고 like_count·liked_by_me 가 반영된다', async () => {
     const post = store.seed(BOOK, SECRET);
     const liked = await call('POST', `${base}/posts/${post.post_id}/like`, FINISHER);
     expect(liked.status).toBe(200);
@@ -265,10 +252,13 @@ describe('커뮤니티 공감·인기순·허브', () => {
     expect((await call('POST', `${base}/posts/${live.post_id}/like`, FINISHER)).status).toBe(200);
   });
 
-  test('R12: 미공개 도서의 공감은 404', async () => {
-    completed.add(`${FINISHER}:${DRAFT}`);
+  test('R12: 미공개 도서의 공감은 404 — 저장소 접근 0건, 공개 도서는 된다 (positive 쌍)', async () => {
     const post = store.seed(DRAFT, '초안');
     expect((await call('POST', `/books/${DRAFT}/community/posts/${post.post_id}/like`, FINISHER)).status).toBe(404);
+    expect(store.touched).toEqual([]);
+    expect(store.likes.size).toBe(0);
+    const live = store.seed(BOOK, '보이는 글');
+    expect((await call('POST', `${base}/posts/${live.post_id}/like`, FINISHER)).status).toBe(200);
   });
 
   // ── 인기순 ──────────────────────────────────────────────────────────────
@@ -299,63 +289,39 @@ describe('커뮤니티 공감·인기순·허브', () => {
     expect((await call('GET', `${base}/posts?sort=new&cursor=${latest.next_cursor}`, FINISHER)).status).toBe(200);
   });
 
-  test('FR-QNA-004: 미완독 독자는 인기순 목록도 403, 저장소 접근 0건', async () => {
+  test('대표 결정 2026-11-19: 미완독 독자도 인기순 목록을 본다', async () => {
     store.seed(BOOK, SECRET);
     const res = await call('GET', `${base}/posts?sort=popular`, NON_FINISHER);
-    expect(res.status).toBe(403);
-    expect(await res.text()).not.toContain(SECRET);
-    expect(store.touched).toEqual([]);
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as any).posts.map((p: any) => p.body)).toEqual([SECRET]);
   });
 
   // ── 허브 ────────────────────────────────────────────────────────────────
 
-  test('FR-QNA-004: 허브 — 미완독 도서는 잠김으로만 오고 글 수가 없으며 개수 조회도 0건', async () => {
-    store.seed(BOOK, SECRET);
-    store.seed(OTHER, '다른 책의 결말');
-    const res = await call('GET', '/community/books', FINISHER);
-    expect(res.status).toBe(200);
-    const text = await res.text();
-    const body = JSON.parse(text);
-    const other = body.books.find((b: any) => b.book_id === OTHER);
-    expect(other).toEqual({ book_id: OTHER, title: '타원형의 거울', author: '김내성', cover_url: null, access: 'locked' });
-    expect(store.touched).not.toContain(`countVisiblePosts:${OTHER}`);
-    expect(text).not.toContain(SECRET);
-    expect(text).not.toContain('다른 책의 결말');
-  });
-
-  test('FR-QNA-004: 허브 — 완독 도서는 열림과 글 수(숨김·삭제 제외)가 온다', async () => {
+  test('대표 결정 2026-11-19: 허브 — 아무 책도 읽지 않은 독자에게도 모든 공개 도서가 글 수(숨김·삭제 제외)와 함께 온다', async () => {
     store.seed(BOOK, '하나');
     store.seed(BOOK, '둘');
     store.seed(BOOK, '숨김', { hidden: true });
     store.seed(BOOK, '삭제', { deleted: true });
-    const body = (await (await call('GET', '/community/books', FINISHER)).json()) as any;
-    expect(body.books.find((b: any) => b.book_id === BOOK)).toMatchObject({ access: 'open', post_count: 2 });
+    store.seed(OTHER, '다른 책');
+    const res = await call('GET', '/community/books', NON_FINISHER);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.books).toEqual([
+      { book_id: BOOK, title: '가상범인', author: '김내성', cover_url: null, post_count: 2 },
+      { book_id: OTHER, title: '타원형의 거울', author: '김내성', cover_url: null, post_count: 1 },
+    ]);
   });
 
-  test('FR-QNA-004: 허브 — 아무 책도 끝내지 않은 독자에게는 모든 도서가 잠김, 글 수 0개 필드', async () => {
-    store.seed(BOOK, SECRET);
-    const text = await (await call('GET', '/community/books', NON_FINISHER)).text();
+  test('R12: 허브에 미공개(싸비 미완비) 도서는 나오지 않고 글 수 조회도 0건 — 공개 도서는 나온다 (positive 쌍)', async () => {
+    store.seed(DRAFT, '초안의 결말');
+    const res = await call('GET', '/community/books', FINISHER);
+    const text = await res.text();
     const body = JSON.parse(text);
-    expect(body.books.map((b: any) => b.access)).toEqual(['locked', 'locked']);
-    expect(text).not.toContain('post_count');
-    expect(store.touched).toEqual([]);
-  });
-
-  test('R12: 허브에 미공개(싸비 미완비) 도서는 나오지 않는다', async () => {
-    completed.add(`${FINISHER}:${DRAFT}`);
-    const body = (await (await call('GET', '/community/books', FINISHER)).json()) as any;
     expect(body.books.map((b: any) => b.book_id)).toEqual([BOOK, OTHER]);
-  });
-
-  test('FR-SPL-005: 허브 — 기준점 조회가 실패한 도서는 잠김으로 내려가고 개수를 조회하지 않는다', async () => {
-    completed.add(`${FINISHER}:${OTHER}`);
-    snapshotFails.add(OTHER);
-    const body = (await (await call('GET', '/community/books', FINISHER)).json()) as any;
-    expect(body.books.find((b: any) => b.book_id === OTHER)).toEqual(expect.objectContaining({ access: 'locked' }));
-    expect(body.books.find((b: any) => b.book_id === OTHER).post_count).toBeUndefined();
-    expect(store.touched).not.toContain(`countVisiblePosts:${OTHER}`);
-    // positive 쌍 — 실패하지 않은 완독 도서는 그대로 열린다
-    expect(body.books.find((b: any) => b.book_id === BOOK).access).toBe('open');
+    expect(text).not.toContain('마인');
+    expect(text).not.toContain('초안의 결말');
+    expect(store.touched).not.toContain(`countVisiblePosts:${DRAFT}`);
   });
 
   test('허브: 독자 식별 헤더가 없으면 400', async () => {

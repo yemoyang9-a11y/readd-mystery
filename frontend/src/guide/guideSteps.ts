@@ -108,7 +108,7 @@ export const GUIDE_STEPS: GuideStep[] = [
   },
   {
     id: 'finish',
-    text: '끝까지 읽으면 완독자 이야기방에서 같은 책을 다 읽은 독자들과 이야기할 수 있어요. 사이드 탭은 읽기 화면 오른쪽 손잡이로 언제든 열 수 있어요.',
+    text: '마지막 쪽에서 한 장 더 넘기면 끝 페이지에서 한 줄 리뷰를 남기고 완독자 커뮤니티로 갈 수 있어요. 사이드 탭은 읽기 화면 오른쪽 손잡이로 언제든 열 수 있어요.',
     target: () => document.querySelector('[data-guide-finish]'),
     final: { title: '이제 진짜 책을 읽어 볼까요', action: '홈으로' },
   },

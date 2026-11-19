@@ -38,10 +38,10 @@ function post(overrides: Partial<CommunityPost> = {}): CommunityPost {
   };
 }
 
-function lockedError() {
-  return new AxiosError('locked', 'ERR_BAD_REQUEST', undefined, null, {
-    status: 403,
-    data: { error: 'COMMUNITY_LOCKED' },
+function notFoundError() {
+  return new AxiosError('gone', 'ERR_BAD_REQUEST', undefined, null, {
+    status: 404,
+    data: { error: 'NOT_FOUND' },
   } as AxiosResponse);
 }
 
@@ -88,14 +88,17 @@ describe('책 커뮤니티 — 공감·정렬·빈 상태', () => {
     expect(await screen.findByRole('button', { name: '공감 2' })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  test('FR-SPL-005: 공감 중 403(완독 잠금)이 오면 글이 사라지고 잠금 화면으로 바뀐다', async () => {
-    mocked.fetchCommunityPosts.mockResolvedValue({ posts: [post()], next_cursor: null });
-    mocked.likeCommunityPost.mockRejectedValue(lockedError());
+  test('공감 중 글이 사라졌으면(404) 목록을 다시 불러온다 — 잠금 화면 없음 (대표 결정 2026-11-19)', async () => {
+    mocked.fetchCommunityPosts
+      .mockResolvedValueOnce({ posts: [post()], next_cursor: null })
+      .mockResolvedValue({ posts: [], next_cursor: null });
+    mocked.likeCommunityPost.mockRejectedValue(notFoundError());
     renderAt('/books/bk1/community');
 
     await userEvent.click(await screen.findByRole('button', { name: '공감 4' }));
-    expect(await screen.findByText('끝까지 읽은 독자만 들어올 수 있어요')).toBeInTheDocument();
-    expect(screen.queryByText('범인은 집사다')).toBeNull();
+    expect(await screen.findByTestId('community-empty')).toBeInTheDocument();
+    expect(mocked.fetchCommunityPosts).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText('끝까지 읽은 독자만 들어올 수 있어요')).toBeNull();
   });
 
   test('삭제된 글에는 공감 버튼이 없다', async () => {
@@ -148,33 +151,31 @@ describe('책 커뮤니티 — 공감·정렬·빈 상태', () => {
   });
 });
 
-describe('커뮤니티 허브 — 서버 access 를 그대로 그린다 (FR-BRF-005 🚦)', () => {
-  test('FR-BRF-005: 잠긴 책은 글 수 없이 잠김으로만 보이고 브리핑으로 간다', async () => {
+describe('커뮤니티 허브 — 대표 결정 2026-11-19: 관문 없이 모든 공개 책이 열린 입구', () => {
+  test('대표 결정 2026-11-19: 모든 책이 글 수와 함께 보이고 잠김 안내("완독 후"·"끝까지 읽으면 열려요")는 0건', async () => {
     mocked.fetchCommunityHub.mockResolvedValue({
-      books: [{ book_id: 'bk-locked', title: '타원형의 거울', author: '김내성', cover_url: null, access: 'locked' }],
+      books: [
+        { book_id: 'bk-open', title: '가상범인', author: '김내성', cover_url: null, post_count: 7 },
+        { book_id: 'bk-new', title: '타원형의 거울', author: '김내성', cover_url: null, post_count: 0 },
+      ],
     });
     renderAt('/community');
 
-    const card = await screen.findByTestId('hub-book-bk-locked');
-    expect(card).toHaveTextContent('타원형의 거울');
-    expect(card).toHaveTextContent('완독 후');
-    expect(card.textContent).not.toMatch(/글 \d/);
-    expect(screen.getByRole('heading', { name: '끝까지 읽으면 열려요' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: '완독한 책' })).toBeNull();
-    await userEvent.click(card);
-    expect(await screen.findByText('브리핑 화면')).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: '가상범인 이야기방, 글 7개' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '타원형의 거울 이야기방, 글 0개' })).toBeInTheDocument();
+    expect(screen.queryByText('완독 후')).toBeNull();
+    expect(screen.queryByText('끝까지 읽으면 열려요')).toBeNull();
+    expect(screen.queryByText('완독한 책')).toBeNull();
   });
 
-  test('FR-BRF-005: 열린 책은 글 수와 함께 보이고 그 책 커뮤니티로 간다 (positive 쌍)', async () => {
+  test('책 카드를 누르면 그 책 커뮤니티로 간다', async () => {
     mocked.fetchCommunityHub.mockResolvedValue({
-      books: [{ book_id: 'bk-open', title: '가상범인', author: '김내성', cover_url: null, access: 'open', post_count: 7 }],
+      books: [{ book_id: 'bk-open', title: '가상범인', author: '김내성', cover_url: null, post_count: 7 }],
     });
     mocked.fetchCommunityPosts.mockResolvedValue({ posts: [post()], next_cursor: null });
     renderAt('/community');
 
-    const card = await screen.findByRole('link', { name: '가상범인 이야기방, 글 7개' });
-    expect(screen.getByRole('heading', { name: '완독한 책' })).toBeInTheDocument();
-    await userEvent.click(card);
+    await userEvent.click(await screen.findByRole('link', { name: '가상범인 이야기방, 글 7개' }));
     expect(await screen.findByText('범인은 집사다')).toBeInTheDocument();
     expect(mocked.fetchCommunityPosts).toHaveBeenCalledWith('bk-open', null, null);
   });

@@ -38,10 +38,10 @@ function post(overrides: Partial<CommunityPost> = {}): CommunityPost {
   };
 }
 
-function lockedError() {
-  return new AxiosError('locked', 'ERR_BAD_REQUEST', undefined, null, {
+function forbiddenError() {
+  return new AxiosError('forbidden', 'ERR_BAD_REQUEST', undefined, null, {
     status: 403,
-    data: { error: 'COMMUNITY_LOCKED' },
+    data: { error: 'FORBIDDEN' },
   } as AxiosResponse);
 }
 
@@ -61,20 +61,19 @@ beforeEach(() => {
   vi.resetAllMocks();
 });
 
-test('COMMUNITY: 완독 전(403)에는 안내와 이어서 읽기만 보이고 글·글쓰기는 없다', async () => {
-  mocked.fetchCommunityPosts.mockRejectedValue(lockedError());
+// 대표 결정 2026-11-19 "커뮤니티 관문 없애기" — 11-17 결정 ④를 대체한 명세 변경. 잠금 안내 화면을 없앴다.
+test('대표 결정 2026-11-19: 목록을 불러오지 못하면 잠금 안내 없이 다시 시도만 보이고 글 0건', async () => {
+  mocked.fetchCommunityPosts.mockRejectedValue(forbiddenError());
   renderScreen();
 
-  expect(await screen.findByText('끝까지 읽은 독자만 들어올 수 있어요')).toBeInTheDocument();
+  expect(await screen.findByText('이야기를 불러오지 못했어요')).toBeInTheDocument();
+  expect(screen.queryByText('끝까지 읽은 독자만 들어올 수 있어요')).toBeNull();
+  expect(screen.queryByRole('button', { name: '이어서 읽기' })).toBeNull();
   expect(screen.queryByRole('button', { name: '글쓰기' })).toBeNull();
-  expect(screen.queryByRole('list')).toBeNull();
   expect(screen.queryByText('범인은 집사다')).toBeNull();
-
-  await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
-  expect(await screen.findByText('읽기 화면')).toBeInTheDocument();
 });
 
-test('COMMUNITY: 완독 독자는 글 목록과 글쓰기 버튼이 보이고 필터가 서버 kind로 전달된다', async () => {
+test('COMMUNITY: 독자는 글 목록과 글쓰기 버튼이 보이고 필터가 서버 kind로 전달된다', async () => {
   mocked.fetchCommunityPosts.mockResolvedValue({ posts: [post()], next_cursor: null });
   renderScreen();
 
@@ -131,16 +130,17 @@ test('COMMUNITY: 글 상세에서 본인 댓글만 삭제할 수 있고 남의 �
   expect(mocked.deleteCommunityComment).toHaveBeenCalledWith('bk1', 'c1');
 });
 
-test('COMMUNITY: 댓글 등록 중 403이 오면 잠금 화면으로 바뀐다', async () => {
+test('COMMUNITY: 댓글 등록이 실패하면 글은 그대로 두고 알린다 — 잠금 화면 없음 (대표 결정 2026-11-19)', async () => {
   mocked.fetchCommunityPosts.mockResolvedValue({ posts: [post()], next_cursor: null });
   mocked.fetchCommunityPost.mockResolvedValue({ post: post(), comments: [] });
-  mocked.createCommunityComment.mockRejectedValue(lockedError());
+  mocked.createCommunityComment.mockRejectedValue(forbiddenError());
   renderScreen();
 
   await userEvent.click(await screen.findByText('범인은 집사다'));
   await userEvent.type(await screen.findByLabelText('댓글 입력'), '댓글');
   await userEvent.click(screen.getByRole('button', { name: '등록' }));
 
-  expect(await screen.findByText('끝까지 읽은 독자만 들어올 수 있어요')).toBeInTheDocument();
-  expect(screen.queryByText('범인은 집사다')).toBeNull();
+  expect(await screen.findByText('댓글을 남기지 못했어요. 잠시 후 다시 시도해 주세요.')).toBeInTheDocument();
+  expect(screen.queryByText('끝까지 읽은 독자만 들어올 수 있어요')).toBeNull();
+  expect(screen.getByText('범인은 집사다')).toBeInTheDocument();
 });

@@ -40,14 +40,14 @@ export interface ListPostsQuery {
   /** sort='popular' 커서 — 앞에서 건너뛸 글 수 */
   offset?: number;
   sort?: PostSort;
-  /** liked_by_me 계산용. 완독 게이트를 통과한 독자 ID */
+  /** liked_by_me 계산용. 요청한 독자 ID */
   viewerId?: string;
   limit: number;
 }
 
 export interface CommunityRepository {
   listPosts(bookId: string, query: ListPostsQuery): Promise<PostRow[]>;
-  /** viewerId — liked_by_me 계산용(완독 게이트를 통과한 독자). 없으면 false */
+  /** viewerId — liked_by_me 계산용(요청한 독자). 없으면 false */
   getPost(bookId: string, postId: string, viewerId?: string): Promise<PostRow | null>;
   listComments(bookId: string, postId: string): Promise<CommentRow[]>;
   createPost(bookId: string, readerId: string, kind: PostKind, body: string): Promise<PostRow>;
@@ -120,11 +120,11 @@ export interface CommunityModerationRepository {
 
 /**
  * 공감·커뮤니티 허브 (2026-11-18 대표 지시 "커뮤니티 형성").
- * CommunityRepository 와 따로 둔 이유: 기존 완독 게이트 시험의 저장소 대역을 건드리지 않으려고.
+ * CommunityRepository 와 따로 둔 이유: 기존 커뮤니티 시험의 저장소 대역을 건드리지 않으려고.
  * 라우터는 이 저장소가 있을 때만 공감·허브 경로를 연다. pg 저장소는 항상 구현한다.
  *
- * 모든 메서드는 라우터가 완독 게이트(getCutoffSnapshot().is_complete === true)를 통과시킨
- * 뒤에만 부른다 — 미완독 독자의 요청에서는 개수조차 조회하지 않는다 (절대 규칙 7, R11).
+ * 라우터는 독자 식별과 공개 도서 확인(R12 🚦)을 지난 뒤에만 부른다.
+ * 완독 관문은 대표 결정 2026-11-19로 없앴다.
  */
 export interface CommunityEngagementRepository {
   /** 숨김·삭제되지 않은 글에만 공감한다. 대상이 없으면 false. 이미 공감했으면 true(멱등) */

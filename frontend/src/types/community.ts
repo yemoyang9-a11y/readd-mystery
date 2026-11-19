@@ -42,20 +42,17 @@ export interface CommunityLikeState {
   liked_by_me: boolean;
 }
 
-interface CommunityHubBookBase {
+/**
+ * GET /community/books 의 도서 1건.
+ * 대표 결정 2026-11-19 "커뮤니티 관문 없애기" — 모든 공개 도서가 글 수와 함께 열린 입구로 온다.
+ */
+export interface CommunityHubBook {
   book_id: string;
   title: string;
   author: string;
   cover_url: string | null;
+  post_count: number;
 }
-
-/**
- * GET /community/books 의 도서 1건.
- * 잠긴 도서에는 서버가 글 수를 넣지 않는다 — 미완독 독자에게 글·개수·제목 0건 (대표 결정 2026-11-17)
- */
-export type CommunityHubBook =
-  | (CommunityHubBookBase & { access: 'open'; post_count: number })
-  | (CommunityHubBookBase & { access: 'locked' });
 
 export interface CommunityHubResponse {
   books: CommunityHubBook[];

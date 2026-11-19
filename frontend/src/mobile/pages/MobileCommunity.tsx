@@ -1,20 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import { useBackToBook } from '../../hooks/useBackToBook';
-import {
-  classifyCommunityError,
-  fetchCommunityPosts,
-  type CommunityFailure,
-} from '../../services/communityService';
+import { fetchCommunityPosts } from '../../services/communityService';
 import type { CommunityKind, CommunityLikeState, CommunityPost, CommunitySort } from '../../types';
-import { BOOK_ROUTES } from '../../utils/routes';
 import CommunityCompose from '../community/CommunityCompose';
 import CommunityPostView, { KindTag } from '../community/CommunityPostView';
 import { KIND_LABEL, relativeTime } from '../community/communityFormat';
 import LikeButton from '../community/LikeButton';
 import { CaseLabel } from '../components/CaseMotifs';
 
-type Status = 'loading' | 'ready' | 'locked' | 'error';
+type Status = 'loading' | 'ready' | 'error';
 type Filter = CommunityKind | null;
 
 const SORTS: { value: CommunitySort; label: string }[] = [
@@ -61,10 +56,10 @@ export default function MobileCommunity() {
 
 /**
  * 책 이야기방 본체. 휴대폰은 화면 전체, PC 는 위 줄 메뉴 아래 가운데 단(desktop, E2E #86)에 그린다.
- * 열림·잠김은 서버가 정한다 — 잠긴 독자는 글 목록·글 수 없이 잠김 안내만 본다 (FR-BRF-005 🚦, FR-SPL-005 🚦).
+ * 대표 결정 2026-11-19 "커뮤니티 관문 없애기" — 공개 도서면 누구나 읽고 쓴다. 잠김 안내는 없앴다.
+ * 불러오지 못하면 목록을 그리지 않는다 (FR-SPL-005 🚦 실패 = 미노출).
  */
 export function CommunityScreen({ bookId, desktop = false }: { bookId: string; desktop?: boolean }) {
-  const navigate = useNavigate();
   const backToBook = useBackToBook(bookId);
   const [status, setStatus] = useState<Status>('loading');
   const [filter, setFilter] = useState<Filter>(null);
@@ -77,10 +72,6 @@ export function CommunityScreen({ bookId, desktop = false }: { bookId: string; d
   const writeButtonRef = useRef<HTMLButtonElement>(null);
   const requestRef = useRef(0);
 
-  const handleFailure = useCallback((failure: CommunityFailure) => {
-    if (failure === 'locked') setStatus('locked');
-  }, []);
-
   const loadFirstPage = useCallback(() => {
     const request = (requestRef.current += 1);
     setStatus('loading');
@@ -91,9 +82,9 @@ export function CommunityScreen({ bookId, desktop = false }: { bookId: string; d
         setNextCursor(page.next_cursor);
         setStatus('ready');
       })
-      .catch((cause) => {
+      .catch(() => {
         if (request !== requestRef.current) return;
-        setStatus(classifyCommunityError(cause) === 'locked' ? 'locked' : 'error');
+        setStatus('error');
       });
   }, [bookId, filter, sort]);
 
@@ -109,8 +100,8 @@ export function CommunityScreen({ bookId, desktop = false }: { bookId: string; d
           : await fetchCommunityPosts(bookId, filter, nextCursor);
       setPosts((prev) => [...prev, ...page.posts]);
       setNextCursor(page.next_cursor);
-    } catch (cause) {
-      handleFailure(classifyCommunityError(cause));
+    } catch {
+      // 더 보기 실패 — 버튼이 남아 있어 다시 누를 수 있다
     } finally {
       setLoadingMore(false);
     }
@@ -172,23 +163,6 @@ export function CommunityScreen({ bookId, desktop = false }: { bookId: string; d
         ) : null}
       </header>
 
-      {status === 'locked' ? (
-        <div
-          role="alert"
-          className="mx-4 mt-10 flex flex-col items-center gap-5 rounded-[16px] border border-[#35292c] bg-[#1e1618] px-6 py-10 text-center"
-        >
-          <p className="m-0 break-keep text-[16px] font-bold">끝까지 읽은 독자만 들어올 수 있어요</p>
-          <button
-            type="button"
-            data-track="community-locked-continue"
-            onClick={() => navigate(BOOK_ROUTES.reader.replace(':bookId', bookId), { replace: true })}
-            className="min-h-11 rounded-full bg-[#8f1d35] px-7 text-[15px] font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b]"
-          >
-            이어서 읽기
-          </button>
-        </div>
-      ) : null}
-
       {status === 'error' ? (
         <div className="flex flex-col items-center gap-4 px-6 py-16 text-center">
           <p role="alert" className="m-0 text-[14px] text-[#a89e9a]">
@@ -208,7 +182,6 @@ export function CommunityScreen({ bookId, desktop = false }: { bookId: string; d
         <CommunityPostView
           bookId={bookId}
           postId={openPostId}
-          onFailure={handleFailure}
           desktop={desktop}
           onRemoved={() => {
             setOpenPostId(null);
@@ -217,7 +190,7 @@ export function CommunityScreen({ bookId, desktop = false }: { bookId: string; d
         />
       ) : null}
 
-      {status !== 'locked' && status !== 'error' && !detailOpen ? (
+      {status !== 'error' && !detailOpen ? (
         <>
           <div className="flex items-center gap-2 px-4 pb-3">
           <div role="group" aria-label="글 종류 필터" className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto">
@@ -314,8 +287,7 @@ export function CommunityScreen({ bookId, desktop = false }: { bookId: string; d
                         state={{ like_count: post.like_count, liked_by_me: post.liked_by_me }}
                         onChange={(next) => updateLike(post.post_id, next)}
                         onFailure={(failure) => {
-                          if (failure === 'locked') setStatus('locked');
-                          else if (failure === 'not_found') loadFirstPage();
+                          if (failure === 'not_found') loadFirstPage();
                         }}
                       />
                     )}
@@ -376,10 +348,6 @@ export function CommunityScreen({ bookId, desktop = false }: { bookId: string; d
           onPosted={() => {
             setComposing(false);
             loadFirstPage();
-          }}
-          onFailure={(failure) => {
-            setComposing(false);
-            handleFailure(failure);
           }}
         />
       ) : null}

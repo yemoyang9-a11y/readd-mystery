@@ -3,38 +3,25 @@ import { Link } from 'react-router';
 import { fetchCommunityHub } from '../../services/communityService';
 import type { CommunityHubBook } from '../../types';
 import { resolveCoverUrl } from '../../utils/coverOverrides';
-import { BOOK_ROUTES, briefingPath } from '../../utils/routes';
+import { BOOK_ROUTES } from '../../utils/routes';
 import { withBase } from '../../utils/assetUrl';
 import { CaseLabel } from '../components/CaseMotifs';
 
 type Status = 'loading' | 'ready' | 'error';
 
-function LockIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-      <rect x="3.5" y="7" width="9" height="6.5" rx="1.5" />
-      <path d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7" />
-    </svg>
-  );
-}
-
 function HubCard({ book }: { book: CommunityHubBook }) {
   const coverUrl = resolveCoverUrl(book.book_id, book.cover_url);
-  const open = book.access === 'open';
   return (
     <Link
-      to={open ? BOOK_ROUTES.community.replace(':bookId', book.book_id) : briefingPath(book.book_id)}
-      state={open ? undefined : { fromHome: true }}
-      data-track={open ? 'hub-community-open' : 'hub-community-locked'}
+      to={BOOK_ROUTES.community.replace(':bookId', book.book_id)}
+      data-track="hub-community-open"
       data-testid={`hub-book-${book.book_id}`}
-      aria-label={open ? `${book.title} 이야기방, 글 ${book.post_count}개` : `${book.title}, 끝까지 읽으면 열려요`}
-      className={`relative flex items-center gap-3.5 overflow-hidden rounded-dash-card border p-3 pr-4 transition-colors active:bg-dash-ink/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b] ${
-        open ? 'border-dash-line bg-dash-card' : 'border-dashed border-[#4a3237] bg-transparent'
-      }`}
+      aria-label={`${book.title} 이야기방, 글 ${book.post_count}개`}
+      className="relative flex items-center gap-3.5 overflow-hidden rounded-dash-card border border-dash-line bg-dash-card p-3 pr-4 transition-colors active:bg-dash-ink/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b]"
     >
-      {open ? <span aria-hidden="true" className="absolute inset-y-0 left-0 w-[3px] bg-[#c4475f]" /> : null}
+      <span aria-hidden="true" className="absolute inset-y-0 left-0 w-[3px] bg-[#c4475f]" />
       {/* 표지가 없으면 지어내지 않고 제목을 명조로 조판한다 (DESIGN.md) — 홈 이어 읽기 카드와 같은 방식 */}
-      <span className={`h-[62px] w-11 shrink-0 overflow-hidden rounded-[6px] ${open ? '' : 'opacity-55'}`}>
+      <span className="h-[62px] w-11 shrink-0 overflow-hidden rounded-[6px]">
         {coverUrl ? (
           <img src={withBase(coverUrl)} alt="" className="size-full object-cover" />
         ) : (
@@ -50,19 +37,12 @@ function HubCard({ book }: { book: CommunityHubBook }) {
         <b className="block truncate font-dashSerif text-[17px] font-bold leading-snug text-dash-ink">{book.title}</b>
         <span className="mt-0.5 block truncate text-[13px] text-dash-muted">{book.author}</span>
       </span>
-      {open ? (
-        <span className="flex shrink-0 items-center gap-1 text-[14px] font-bold text-[#e58a9b]">
-          글 {book.post_count}
-          <span aria-hidden="true" className="text-[18px] font-semibold">
-            ›
-          </span>
+      <span className="flex shrink-0 items-center gap-1 text-[14px] font-bold text-[#e58a9b]">
+        글 {book.post_count}
+        <span aria-hidden="true" className="text-[18px] font-semibold">
+          ›
         </span>
-      ) : (
-        <span className="flex shrink-0 items-center gap-1.5 text-[13px] font-semibold text-dash-muted">
-          <LockIcon />
-          완독 후
-        </span>
-      )}
+      </span>
     </Link>
   );
 }
@@ -70,9 +50,8 @@ function HubCard({ book }: { book: CommunityHubBook }) {
 /**
  * 커뮤니티 허브 (2026-11-18 대표 지시 "커뮤니티도 형성해줘")
  *
- * 열림·잠김은 서버가 도서마다 기준점 결정기로 정해 access 로 준다. 잠긴 도서는 서버가 글 수를
- * 보내지 않으므로 이 화면에도 글 수·제목·글 내용이 없다 (대표 결정 2026-11-17 ④, FR-BRF-005 🚦).
- * 조회에 실패하면 목록을 그리지 않는다 (FR-SPL-005 🚦 실패 = 미노출).
+ * 대표 결정 2026-11-19 "커뮤니티 관문 없애기" — 모든 공개 도서를 글 수와 함께 열린 입구로 보여 준다.
+ * 잠김 칸·"끝까지 읽으면 열려요" 안내는 없앴다. 조회에 실패하면 목록을 그리지 않는다 (FR-SPL-005 🚦 실패 = 미노출).
  */
 // COMMUNITY
 export default function MobileCommunityHub() {
@@ -97,9 +76,6 @@ export default function MobileCommunityHub() {
   }, []);
 
   useEffect(load, [load]);
-
-  const opened = books.filter((book) => book.access === 'open');
-  const locked = books.filter((book) => book.access === 'locked');
 
   return (
     <div data-testid="community-hub" className="mx-auto w-full max-w-[560px] px-4 py-5 font-dashSans text-dash-ink">
@@ -131,34 +107,14 @@ export default function MobileCommunityHub() {
         <p className="m-0 py-16 text-center text-[14px] text-dash-muted">공개된 책이 아직 없어요</p>
       ) : null}
 
-      {status === 'ready' && opened.length > 0 ? (
-        <section aria-labelledby="hub-open" className="mt-5">
-          <h2 id="hub-open" className="m-0 mb-2.5 text-[14px] font-bold tracking-[0.02em] text-dash-ink">
-            완독한 책
-          </h2>
-          <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
-            {opened.map((book) => (
-              <li key={book.book_id}>
-                <HubCard book={book} />
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {status === 'ready' && locked.length > 0 ? (
-        <section aria-labelledby="hub-locked" className="mt-7">
-          <h2 id="hub-locked" className="m-0 mb-2.5 text-[14px] font-bold tracking-[0.02em] text-dash-ink">
-            끝까지 읽으면 열려요
-          </h2>
-          <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
-            {locked.map((book) => (
-              <li key={book.book_id}>
-                <HubCard book={book} />
-              </li>
-            ))}
-          </ul>
-        </section>
+      {status === 'ready' && books.length > 0 ? (
+        <ul aria-label="책별 이야기방" className="m-0 mt-5 flex list-none flex-col gap-2.5 p-0">
+          {books.map((book) => (
+            <li key={book.book_id}>
+              <HubCard book={book} />
+            </li>
+          ))}
+        </ul>
       ) : null}
     </div>
   );

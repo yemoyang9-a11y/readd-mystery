@@ -1,9 +1,8 @@
 /**
  * 커뮤니티 백엔드 대역 — `VITE_USE_MOCK=true` 일 때만 쓰인다 (2026-11-18).
  *
- * ⚠️ 여기의 완독 판정은 **서버 완독 게이트의 대역**이다. 실제 게이트는 백엔드 커뮤니티 라우터가
- *    기준점 결정기(getCutoffSnapshot().is_complete)로 하며, 화면 코드는 이 판정을 갖지 않는다.
- *    게이트 시험은 backend/src/modules/community/__tests__ 에 있다.
+ * 접근 규칙은 서버와 같다 — 공개 도서면 누구나 읽고 쓴다(대표 결정 2026-11-19 "커뮤니티 관문 없애기").
+ * 대역이 막는 것은 서버처럼 없는 도서(404)뿐이다. 접근 시험은 backend/src/modules/community/__tests__ 에 있다.
  */
 import { AxiosError, type AxiosResponse } from 'axios';
 import { mockCatalogResponse, mockPositionResponse } from './server';
@@ -98,11 +97,9 @@ function reject(status: number, data?: unknown): never {
   throw new AxiosError('mock', 'ERR_BAD_REQUEST', undefined, null, { status, data } as AxiosResponse);
 }
 
-/** 서버 완독 게이트 대역 — 기준점 결정기 대역(mockPositionResponse)의 is_complete 만 본다 */
+/** 서버의 공개 도서 확인 대역 — 없는 도서는 404 (R12) */
 function gate(bookId: string): void {
-  const position = mockPositionResponse(bookId);
-  if (position.status !== 200) reject(404);
-  if (position.body.is_complete !== true) reject(403, { error: 'COMMUNITY_LOCKED' });
+  if (mockPositionResponse(bookId).status !== 200) reject(404);
 }
 
 function visibleComments(postId: string) {
@@ -215,11 +212,12 @@ export function mockHub(): CommunityHubResponse {
   return {
     books: mockCatalogResponse()
       .books.filter((book) => book.ssabi_ready)
-      .map((book) => {
-        const card = { book_id: book.book_id, title: book.title, author: book.author, cover_url: book.cover_url || null };
-        const position = mockPositionResponse(book.book_id);
-        if (position.status !== 200 || position.body.is_complete !== true) return { ...card, access: 'locked' as const };
-        return { ...card, access: 'open' as const, post_count: posts.filter((p) => p.book_id === book.book_id && !p.deleted).length };
-      }),
+      .map((book) => ({
+        book_id: book.book_id,
+        title: book.title,
+        author: book.author,
+        cover_url: book.cover_url || null,
+        post_count: posts.filter((p) => p.book_id === book.book_id && !p.deleted).length,
+      })),
   };
 }

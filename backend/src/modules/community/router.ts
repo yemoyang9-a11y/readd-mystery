@@ -1,7 +1,6 @@
 import { createHash } from 'crypto';
 import express, { Request, Response, Router } from 'express';
 import type { ContentRepository } from '../content/repository';
-import type { CutoffService } from '../reading-state/cutoff.service';
 import { attachReaderIdentity, resolveReaderId, UUID_PATTERN } from '../auth/reader-id.middleware';
 import type {
   CommentRow,
@@ -72,14 +71,12 @@ export function createCommunityRouter({
   community,
   engagement,
   content,
-  cutoff,
 }: {
   community: CommunityRepository;
   /** 공감·인기순·허브. 없으면 그 경로를 열지 않는다 (2026-11-18 대표 지시) */
   engagement?: CommunityEngagementRepository;
   content: Pick<ContentRepository, 'findReadiness'> &
     Partial<Pick<ContentRepository, 'findCatalog'>>;
-  cutoff: Pick<CutoffService, 'getCutoffSnapshot'>;
 }): Router {
   const router = express.Router();
   router.use('/books/:bookId/community', express.json(), attachReaderIdentity());
@@ -111,7 +108,14 @@ export function createCommunityRouter({
     };
   }
 
-  // FR-QNA-004 🚦, R12 🚦
+  /**
+   * 독자 식별 + 공개 도서 확인 (R12 🚦).
+   *
+   * 대표 결정 2026-11-19 "커뮤니티 관문 없애기" — 완독(is_complete) 관문을 없앴다.
+   * 11-17 결정 ④("완독한 독자만")를 대체하는 명세 변경이다. 그래서 커뮤니티는 기준점을
+   * 조회하지 않는다. 기준점·챗봇·관계도·타임라인의 스포일러 상한은 그대로다.
+   * 남는 위험(결정 기록): 결말 토론이 미완독 독자에게 보인다.
+   */
   async function authorize(req: Request, res: Response): Promise<string | null> {
     const readerId = resolveReaderId(req);
     if (!readerId || !UUID_PATTERN.test(readerId)) {
@@ -121,11 +125,6 @@ export function createCommunityRouter({
     const ready = await content.findReadiness(req.params.bookId);
     if (ready !== true) {
       notFound(res, 'Book not found');
-      return null;
-    }
-    const snapshot = await cutoff.getCutoffSnapshot(readerId, req.params.bookId);
-    if (snapshot.is_complete !== true) {
-      res.status(403).json({ error: 'COMMUNITY_LOCKED' });
       return null;
     }
     return readerId;
@@ -161,7 +160,7 @@ export function createCommunityRouter({
         if (sort === 'popular') offset = decoded;
         else before = decoded;
       }
-      // FR-QNA-004 🚦 — 게이트를 먼저 지난다. 미완독이면 저장소를 부르지 않는다
+      // R12 🚦 — 공개 도서 확인을 먼저 지난다. 미공개면 저장소를 부르지 않는다
       const readerId = await authorize(req, res);
       if (!readerId) return;
       const rows = await community.listPosts(bookId, {
@@ -329,7 +328,7 @@ export function createCommunityRouter({
   });
 
   if (engagement) {
-    // 2026-11-18 대표 지시 — 공감. 완독 게이트(authorize)를 지난 독자만 누르고 취소한다
+    // 2026-11-18 대표 지시 — 공감. 공개 도서 확인(authorize)을 지난 독자가 누르고 취소한다
     for (const method of ['post', 'delete'] as const) {
       router[method]('/books/:bookId/community/posts/:postId/like', async (req, res, next) => {
         try {
@@ -358,10 +357,8 @@ export function createCommunityRouter({
     /**
      * 커뮤니티 허브 — 공개 도서별 커뮤니티 입구 (2026-11-18 대표 지시).
      *
-     * 완독 여부는 도서마다 getCutoffSnapshot 의 is_complete 하나로만 정한다 (FR-QNA-004 🚦).
-     * 잠긴 도서에는 글 수·제목·글 내용을 넣지 않고, 글 수 조회 자체를 하지 않는다
-     * (대표 결정 2026-11-17 ④ "미완독자에게는 글·개수·제목을 보이지 않는다", 절대 규칙 7).
-     * 기준점 조회가 실패한 도서는 잠김으로 내린다 (FR-SPL-005 🚦 실패 = 미노출).
+     * 대표 결정 2026-11-19 "커뮤니티 관문 없애기" — 모든 독자에게 도서별 글 수와 함께
+     * 열린 입구로 보여 준다. 완독 여부를 묻지 않으므로 기준점을 조회하지 않는다.
      * 싸비 미완비 도서는 커뮤니티에 들어갈 수 없으므로 목록에서 뺀다 (R12 🚦).
      */
     router.get('/community/books', async (req, res, next) => {
@@ -373,24 +370,13 @@ export function createCommunityRouter({
         }
         const catalog = (await findCatalog()).filter((book) => book.ssabi_ready === true);
         const books = await Promise.all(
-          catalog.map(async (book) => {
-            const card = {
-              book_id: book.book_id,
-              title: book.title,
-              author: book.author,
-              cover_url: book.cover_url,
-            };
-            const complete = await cutoff
-              .getCutoffSnapshot(readerId, book.book_id)
-              .then((snapshot) => snapshot.is_complete === true)
-              .catch(() => false);
-            if (!complete) return { ...card, access: 'locked' as const };
-            return {
-              ...card,
-              access: 'open' as const,
-              post_count: await engagement.countVisiblePosts(book.book_id),
-            };
-          })
+          catalog.map(async (book) => ({
+            book_id: book.book_id,
+            title: book.title,
+            author: book.author,
+            cover_url: book.cover_url,
+            post_count: await engagement.countVisiblePosts(book.book_id),
+          }))
         );
         res.json({ books });
       } catch (error) {

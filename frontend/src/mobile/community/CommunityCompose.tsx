@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import type { RefObject } from 'react';
 import type { CommunityKind } from '../../types';
-import { classifyCommunityError, createCommunityPost, type CommunityFailure } from '../../services/communityService';
+import { classifyCommunityError, createCommunityPost } from '../../services/communityService';
 import CommunityDialog from './CommunityDialog';
 import { KIND_LABEL } from './communityFormat';
 
@@ -15,14 +15,12 @@ export default function CommunityCompose({
   returnFocusRef,
   onClose,
   onPosted,
-  onFailure,
 }: {
   bookId: string;
   initialKind: CommunityKind;
   returnFocusRef: RefObject<HTMLElement | null>;
   onClose: () => void;
   onPosted: () => void;
-  onFailure: (failure: CommunityFailure) => void;
 }) {
   const fieldId = useId();
   const [kind, setKind] = useState<CommunityKind>(initialKind);
@@ -39,13 +37,8 @@ export default function CommunityCompose({
       await createCommunityPost(bookId, kind, body.trim());
       onPosted();
     } catch (cause) {
-      const failure = classifyCommunityError(cause);
-      if (failure === 'locked') {
-        onFailure(failure);
-        return;
-      }
       setError(
-        failure === 'rate_limited'
+        classifyCommunityError(cause) === 'rate_limited'
           ? '글은 1시간에 10개까지 올릴 수 있어요. 잠시 후 다시 시도해 주세요.'
           : '글을 올리지 못했어요. 잠시 후 다시 시도해 주세요.'
       );

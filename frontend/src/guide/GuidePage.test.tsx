@@ -117,7 +117,7 @@ test('가이드 8단계 문구: "메모하고 싶은 문장"이 있고, "싸비"
   expect(texts[5]).toContain('인물관계도');
   expect(texts[6]).toContain('판정하거나 범인을 말하지 않아요');
   expect(texts[6]).toContain('쪽 번호');
-  expect(texts[7]).toContain('완독자 이야기방');
+  expect(texts[7]).toContain('완독자 커뮤니티');
   expect(texts[7]).toContain('오른쪽 손잡이');
 });
 

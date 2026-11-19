@@ -37,9 +37,7 @@ export default function MobileReaderView({
   chromeHidden = false,
   canToggleChrome = false,
   onToggleChrome,
-  onOpenCommunity,
-  onOpenCompletion,
-  onBack,
+  onEndPage,
 }: {
   content: string;
   currentPage: number;
@@ -57,11 +55,11 @@ export default function MobileReaderView({
   chromeHidden?: boolean;
   canToggleChrome?: boolean;
   onToggleChrome?: () => void;
-  /** 서버가 완독(is_complete)이라고 알려 준 독자에게만 넘긴다 — 마지막 쪽 도달은 완독이 아니다 (FR-BRF-005 🚦) */
-  onOpenCommunity?: () => void;
-  /** 완독 배지를 누르면 완독 화면을 다시 연다 (2026-11-18 대표 지시). onOpenCommunity 와 같은 조건에서만 넘긴다 */
-  onOpenCompletion?: () => void;
-  onBack?: () => void;
+  /**
+   * 마지막 쪽(nextPage === null)에서 '다음'(버튼·밀기)을 누르면 부른다 — 화면에만 있는 끝 페이지(N+1)를
+   * 연다 (대표 결정 2026-11-19). onMove 를 부르지 않으므로 진도 이벤트가 나가지 않는다 (절대 규칙 8·9, FR-PRG-003 🚦)
+   */
+  onEndPage?: () => void;
 }) {
   const theme = READER_THEMES[prefs.theme];
   const darkInk = prefs.theme === 'dark' ? { color: theme.color } : undefined;
@@ -88,8 +86,8 @@ export default function MobileReaderView({
 
   const { targetRef, bind } = useSwipePager<HTMLElement>({
     hasPrev: prevPage !== null,
-    hasNext: nextPage !== null,
-    onNext: () => nextPage !== null && onMove(nextPage),
+    hasNext: nextPage !== null || onEndPage !== undefined,
+    onNext: () => (nextPage !== null ? onMove(nextPage) : onEndPage?.()),
     onPrev: () => prevPage !== null && onMove(prevPage),
     disabled: swipeDisabled,
   });
@@ -225,50 +223,6 @@ export default function MobileReaderView({
             </header>
           ) : null}
           {highlightContent(content, highlightedQuote)}
-          {nextPage === null && onOpenCommunity ? (
-            <section
-              aria-label="완독"
-              data-testid="completion-block"
-              className="mt-12 whitespace-normal border-t border-brief-rule pt-8 text-center font-dashSans"
-            >
-              {onOpenCompletion ? (
-                <button
-                  type="button"
-                  data-track="completion-reopen"
-                  onClick={onOpenCompletion}
-                  className="m-0 min-h-11 rounded-full px-4 font-dashSerif text-[20px] font-bold text-brief-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8f1d35]"
-                  style={darkInk}
-                >
-                  <span>완독했어요</span>
-                  <span aria-hidden="true" className="ml-1 font-dashSans text-[18px] font-semibold">
-                    ›
-                  </span>
-                </button>
-              ) : (
-                <p className="m-0 font-dashSerif text-[20px] font-bold" style={darkInk}>
-                  완독했어요
-                </p>
-              )}
-              <button
-                type="button"
-                data-track="community-open"
-                onClick={onOpenCommunity}
-                className="mt-5 min-h-12 w-full rounded-full bg-[#8f1d35] px-6 text-[15px] font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8f1d35] focus-visible:ring-offset-2"
-              >
-                다른 독자들과 이야기하기
-              </button>
-              {onBack ? (
-                <button
-                  type="button"
-                  onClick={onBack}
-                  className="mt-2 min-h-11 w-full rounded-full text-[14px] font-bold text-brief-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8f1d35]"
-                  style={darkInk}
-                >
-                  책으로 돌아가기
-                </button>
-              ) : null}
-            </section>
-          ) : null}
         </article>
       </div>
 
@@ -309,8 +263,8 @@ export default function MobileReaderView({
 
         <button
           type="button"
-          disabled={nextPage === null}
-          onClick={() => nextPage !== null && onMove(nextPage)}
+          disabled={nextPage === null && !onEndPage}
+          onClick={() => (nextPage !== null ? onMove(nextPage) : onEndPage?.())}
           className="min-h-11 min-w-11 px-2 disabled:opacity-40"
         >
           다음 페이지

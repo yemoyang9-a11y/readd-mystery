@@ -47,7 +47,8 @@ const TWO_DAYS_AGO = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(
  *
  * 2026-11-19 대표 지시 — 8단계로 다시 짰다(docs/context/guide-redesign-2026-11-19.md 2장).
  * 한 단계 = 한 기능 설명 + 누르기 최대 1번. 노트 저장·질문 보내기·사이드 탭 열기는 가이드가
- * 데모 상태만 바꿔 대신하고, 끝까지 넘기기와 완독자 이야기방은 마무리 카드 설명으로 대신한다.
+ * 데모 상태만 바꿔 대신하고, 끝 페이지(N+1)와 완독자 커뮤니티는 마무리 카드 설명으로 대신한다
+ * (대표 결정 2026-11-19 — 데모 책은 끝 페이지를 열지 않고 서버도 부르지 않는다).
  *
  * 화면은 실제 컴포넌트(입체 책·브리핑·읽기 화면·싸비 패널)에 데모 데이터를 넣어 그린다.
  * 모든 상태는 이 컴포넌트 안에만 있다 — 진도·노트·챗봇·리캡 API를 부르지 않는다.
@@ -260,8 +261,6 @@ export default function GuidePage() {
             onQuote={noop}
             onNote={noop}
             insetTop={`calc(var(--safe-top) + ${HEADER_HEIGHT}px)`}
-            onOpenCommunity={noop}
-            onBack={noop}
           />
         </div>
         <div

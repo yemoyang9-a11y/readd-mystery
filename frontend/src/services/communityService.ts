@@ -13,11 +13,10 @@ import type {
   CommunitySort,
 } from '../types';
 
-export type CommunityFailure = 'locked' | 'rate_limited' | 'not_found' | 'failed';
+export type CommunityFailure = 'rate_limited' | 'not_found' | 'failed';
 
 export function classifyCommunityError(error: unknown): CommunityFailure {
   if (!isAxiosError(error)) return 'failed';
-  if (error.response?.status === 403 && error.response.data?.error === 'COMMUNITY_LOCKED') return 'locked';
   if (error.response?.status === 429) return 'rate_limited';
   if (error.response?.status === 404) return 'not_found';
   return 'failed';
@@ -25,7 +24,7 @@ export function classifyCommunityError(error: unknown): CommunityFailure {
 
 const base = (bookId: string) => `/books/${bookId}/community`;
 
-/** 백엔드 대역 — VITE_USE_MOCK=true 일 때만. 완독 게이트도 대역이 서버처럼 흉내 낸다 */
+/** 백엔드 대역 — VITE_USE_MOCK=true 일 때만 */
 const mock = () => import('../../mocks/community');
 
 // COMMUNITY
@@ -91,7 +90,7 @@ export async function reportCommunityTarget(
   await api.post(`${base(bookId)}/reports`, { target_type: targetType, target_id: targetId, reason });
 }
 
-/** 공감 — 완독 게이트 뒤에 있다. 숨김·삭제 글이면 404 (2026-11-18 대표 지시) */
+/** 공감 — 숨김·삭제 글이면 404 (2026-11-18 대표 지시) */
 export async function likeCommunityPost(bookId: string, postId: string): Promise<CommunityLikeState> {
   if (USE_MOCK) return (await mock()).mockSetLike(bookId, postId, true);
   const { data } = await api.post<CommunityLikeState>(`${base(bookId)}/posts/${postId}/like`);
@@ -104,10 +103,7 @@ export async function unlikeCommunityPost(bookId: string, postId: string): Promi
   return data;
 }
 
-/**
- * 커뮤니티 허브 — 공개 도서별 입구. 완독 여부는 서버가 도서마다 정해 access 로 준다.
- * 프론트는 access 를 그대로 그린다 (절대 규칙 2, FR-BRF-005 🚦)
- */
+/** 커뮤니티 허브 — 공개 도서별 입구와 글 수 (대표 결정 2026-11-19: 관문 없음) */
 export async function fetchCommunityHub(): Promise<CommunityHubResponse> {
   if (USE_MOCK) return (await mock()).mockHub();
   const { data } = await api.get<CommunityHubResponse>('/community/books');

@@ -329,8 +329,6 @@ function moderationSuite(
         createCommunityRouter({
           community: made.repos.community,
           content: { findReadiness: async (bookId: string) => bookId === BOOK },
-          // 완독 게이트는 이 파일의 관심사가 아니다 — 모두 완독자로 둔다.
-          cutoff: { getCutoffSnapshot: async () => ({ is_complete: true }) as any },
         })
       );
       app.use(
