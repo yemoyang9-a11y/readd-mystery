@@ -16,7 +16,7 @@ import type { ShowcaseBook } from '../data/homeShowcase';
  * 보내지도 않는다. 가이드는 진도·노트·챗봇 API를 한 번도 부르지 않으므로 실제 독자의
  * 기준점에 닿을 경로가 없다 (절대 규칙 1·8번, FR-SPL-002 🚦).
  *
- * 관계도·챗봇 답은 "4쪽까지 읽은 독자"가 보는 모습으로 미리 만들어 둔 고정값이다.
+ * 관계도·타임라인·챗봇 답은 "4쪽까지 읽은 독자"가 보는 모습으로 미리 만들어 둔 고정값(데모 전용 가짜 데이터)이다.
  * 화면이 쪽수로 걸러 내는 계산은 하지 않는다 (FR-BRF-005 🚦 — 기준점 계산 없음).
  */
 
@@ -24,8 +24,11 @@ export const DEMO_TITLE = '멈춘 시계';
 export const DEMO_AUTHOR = 'RE:ADD 가이드';
 export const DEMO_TOTAL_PAGES = 8;
 
-/** 브리핑에서 "지난번에 여기까지 읽었다"고 보여 주는 쪽. 가이드는 그다음 쪽에서 시작한다 */
-export const DEMO_START_PAGE = 3;
+/**
+ * 브리핑의 "이어서 읽기"로 펼치는 쪽. 브리핑은 3쪽까지 읽은 독자이고, 가이드는 그다음 쪽(단서 문장이 있는 4쪽)에서
+ * 시작한다 — 다음 페이지 넘기기는 가이드가 시키지 않는다 (대표 지시 2026-11-19).
+ */
+export const DEMO_START_PAGE = 4;
 
 /** 독자가 노트에 적어 보는 단서 문장 — 4쪽 본문에 그대로 들어 있다 */
 export const DEMO_CLUE = '서재의 괘종시계는 열 시 십 분에 멈춰 있었다.';
@@ -106,14 +109,14 @@ export const DEMO_SHOWCASE: ShowcaseBook = {
   hook: ['비 오는 밤의 호숫가 별장.', '사라진 은빛 회중시계.', '멈춘 시각이 말해 주는 것.'],
 };
 
-/** 브리핑 화면 — 2쪽까지 읽고 돌아온 독자 */
+/** 브리핑 화면 — 3쪽까지 읽고 돌아온 독자 (데모 고정값. 진도 바 숫자도 미리 적어 둔 값이다) */
 export const DEMO_BRIEFING: BriefingResponse = {
-  applied_cutoff: 2,
+  applied_cutoff: 3,
   recap:
-    '비 오는 밤, 추리소설 작가 한서진은 오랜 친구 윤태호의 호숫가 별장에 초대받아요. 윤태호는 할아버지에게 물려받은 은 회중시계를 서재에서 보여 주고, 저녁 자리에서 그 시계를 딸 윤미라에게 물려주겠다고 말해요.\n\n밤 아홉 시쯤 번개에 불이 잠깐 나가고, 집사 박정수가 촛불을 들고 문단속을 하러 나가요.',
+    '비 오는 밤, 추리소설 작가 한서진은 오랜 친구 윤태호의 호숫가 별장에 초대받아요. 윤태호는 할아버지에게 물려받은 은 회중시계를 서재에서 보여 주고, 저녁 자리에서 그 시계를 딸 윤미라에게 물려주겠다고 말해요.\n\n밤 아홉 시쯤 번개에 불이 잠깐 나가고, 집사 박정수가 촛불을 들고 문단속을 하러 나가요.\n\n아침이 되자 서재 진열장의 회중시계가 사라졌어요. 진열장 열쇠는 윤태호와 박 집사만 갖고 있고, 미라는 밤에 서재 쪽으로 가는 발소리를 들었다고 해요.',
   current_chapter: { chapter_no: 1, title: '비 오는 별장' },
   resume_chapter: { chapter_no: 1, title: '비 오는 별장' },
-  progress: { current_page: 2, total_pages: DEMO_TOTAL_PAGES, percent: 25 },
+  progress: { current_page: 3, total_pages: DEMO_TOTAL_PAGES, percent: 37.5 },
 } as BriefingResponse;
 
 export const DEMO_CHARACTER_NAMES = ['한서진', '윤태호', '윤미라', '박정수'];
@@ -179,46 +182,54 @@ export const DEMO_GRAPH: GraphResponse = {
 };
 
 /**
- * 4쪽까지 읽은 독자에게 보이는 타임라인 — 미리 만들어 둔 고정값 (결정 31: 다 읽은 장만 요약·사건).
- * 1장(1~4쪽)은 다 읽었고 2장은 읽는 중이다. 가이드 단계는 이 탭을 거치지 않지만, 눌러 봐도 비지 않게 둔다.
+ * 4쪽까지 읽은 독자에게 보이는 타임라인 — 가이드 데모 전용 가짜 데이터다(실제 작품·서버 응답이 아니다).
+ * 결정 31: 다 읽은 장만 핵심 한 줄·사건을 싣는다. 1장(1~4쪽)은 다 읽었고 2장은 읽는 중이다.
+ * 가이드 5단계(타임라인)에서 1장을 눌러 사건 카드를 펼쳐 본다 (대표 지시 2026-11-19).
+ * 화면은 이 값을 그대로 그린다 — 쪽수로 걸러 내는 계산은 하지 않는다 (FR-BRF-005 🚦).
  */
 export const DEMO_TIMELINE: TimelineResponse = {
   chapters: [
     {
       ...DEMO_CHAPTERS[0],
       completed: true,
-      summary: '서진이 친구 태호의 별장에 와요. 다음 날 아침, 서재 진열장의 회중시계가 없어져요.',
-      key_point: null,
+      summary:
+        '서진이 친구 태호의 별장에 와요. 태호는 회중시계를 딸 미라에게 물려주겠다고 해요. 다음 날 아침, 서재 진열장의 회중시계가 없어져요.',
+      key_point: '사라진 회중시계, 그리고 열 시 십 분에 멈춘 괘종시계.',
     },
     { ...DEMO_CHAPTERS[1], completed: false, summary: null, key_point: null },
   ],
   events: [
+    { id: 'demo-ev-1', event: '서진이 별장에 도착함', description: '비 오는 저녁, 서진이 태호의 호숫가 별장에 와요. 태호가 서재의 회중시계를 보여 줘요.', occurrence_page: 1 },
     { id: 'demo-ev-2', event: '불이 잠깐 꺼짐', description: '밤 아홉 시쯤 번개가 치고 집 안의 불이 잠깐 꺼졌다가 들어와요.', occurrence_page: 2 },
-    { id: 'demo-ev-3', event: '회중시계가 사라짐', description: '아침에 미라가 진열장이 비어 있는 것을 알아채요.', occurrence_page: 3 },
+    { id: 'demo-ev-3', event: '회중시계가 사라짐', description: '아침에 미라가 진열장이 비어 있는 것을 알아채요. 열쇠는 태호와 박 집사에게만 있어요.', occurrence_page: 3 },
+    { id: 'demo-ev-4', event: '괘종시계가 멈춰 있음', description: '서재의 괘종시계가 열 시 십 분에 멈춰 있어요. 박 집사는 밤에 태엽을 감아 두었다고 해요.', occurrence_page: 4 },
   ],
   applied_cutoff: 4,
 };
 
-/** 가이드에서 독자가 눌러 보는 인물 */
-export const DEMO_FOCUS_CHARACTER = 'taeho';
+/**
+ * 가이드에서 독자가 눌러 보는 인물. 관계도는 처음에 관계가 가장 많은 윤태호를 가운데에 두고,
+ * 이미 고른 인물을 다시 누르면 선택이 풀리므로(2026-11-19) 다른 인물(윤미라)을 누르게 한다.
+ */
+export const DEMO_FOCUS_CHARACTER = 'mira';
+
+/**
+ * 가이드 7단계에서 누르는 추천 질문 — 아모 탭의 추천 질문(SUGGESTED_QUESTIONS) 중 하나와 글자까지 같아야 한다.
+ * 누르면 가이드가 서버 없이 아래 고정 답(DEMO_AMO_ANSWER)을 바로 보여 준다.
+ */
+export const DEMO_QUESTION = '내 노트랑 관련된 장면 있어?';
 
 /**
  * 아모의 고정 답 — 독자의 노트를 이어 주되 맞다·틀리다 판정하지 않고, 4쪽까지만 말한다
  * (NFR-AI-005 🚦, FR-QNA-004 🚦). 원문 인용은 단서 한 문장뿐이다(결정 34, 200자 상한).
  */
-export const DEMO_AMO_ANSWER = `4쪽에 적어 둔 노트와 이어지는 장면이 있어요.
+export const DEMO_AMO_ANSWER = `적어 둔 노트와 이어지는 장면이 있어요.
 
 > ${DEMO_CLUE}
 
-바로 뒤에서 박 집사는 어젯밤에 태엽을 감아 두었다고 말해요. 3쪽에서는 미라가 밤에 서재 쪽으로 가는 발소리를 들었다고 했고요.
+바로 뒤에서 박 집사는 어젯밤에 태엽을 감아 두었다고 말해요(p.4). 미라는 밤에 서재 쪽으로 가는 발소리를 들었다고 했고요(p.3).
 
-이 단서가 무엇을 뜻하는지는 제가 정하지 않을게요. 지금까지 읽은 4쪽 안에서 같이 짚어 볼 수 있어요.`;
-
-export const DEMO_COMMUNITY_POSTS = [
-  { id: 'p1', kind: '범인 추리', nickname: '빗소리', body: '괘종시계가 멈춘 시각이 처음부터 마음에 걸렸어요. 다들 언제 눈치채셨어요?', comments: 4 },
-  { id: 'p2', kind: '감상', nickname: '호숫가', body: '범인보다 박 집사의 떨리던 손이 오래 남네요. 마지막 장면이 따뜻했어요.', comments: 2 },
-  { id: 'p3', kind: '범인 추리', nickname: '태엽', body: '복도 끝 벽시계는 언제부터 있었던 걸까요? 다시 읽어 보니 2장에서야 나오네요.', comments: 1 },
-];
+이 단서가 무엇을 뜻하는지는 제가 정하지 않을게요. 지금까지 읽은 데까지 같이 짚어 볼 수 있어요.`;
 
 /** 데모 책의 이웃 쪽 표 — 화면 안 고정 본문이라 미리 적어 둔다. 실제 책은 서버가 준다 (FR-BRF-005) */
 export const DEMO_NEIGHBORS: Record<number, { prev: number | null; next: number | null }> = {

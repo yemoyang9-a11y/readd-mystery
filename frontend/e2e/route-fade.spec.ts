@@ -63,13 +63,13 @@ test.describe('모바일 화면 전환', () => {
     await expect.poll(() => settledFade(page)).toEqual({ transform: 'none', opacity: '1', running: 0 });
   });
 
-  // 휴대폰에는 작품 페이지가 없다(작품 주소 = 브리핑). 홈 이어 읽기 카드 → 브리핑의 화면 아래 고정 '이어서 읽기'로 본다
+  // 휴대폰에는 작품 페이지가 없다(작품 주소 = 브리핑). 홈 머리 줄의 작은 이어서 읽기 → 브리핑의 화면 아래 고정 '이어서 읽기'로 본다
   test('NFR-USE: 브리핑으로 넘어가는 동안 화면 아래 고정 읽기 버튼이 흔들리지 않는다', async ({ page }) => {
     await installMockApi(page);
     await page.goto('/');
-    await expect(page.getByTestId('home-continue-card')).toBeVisible();
+    await expect(page.getByTestId('home-continue')).toBeVisible();
 
-    const samples = await clickAndSample(page, 'a[data-testid="home-continue-card"]', 'text=이어서 읽기');
+    const samples = await clickAndSample(page, 'a[data-testid="home-continue"]', 'text=이어서 읽기');
     await expect(page.getByRole('button', { name: '이어서 읽기' })).toBeVisible();
     await expect.poll(() => settledFade(page)).toEqual({ transform: 'none', opacity: '1', running: 0 });
     const final = (await page.getByRole('button', { name: '이어서 읽기' }).boundingBox())!;

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
-test('결정 10: 홈 화면 추가 manifest는 standalone이고 이름이 싸비다', async ({ page, request }) => {
+// 대표 지시 2026-11-19 — 앱 이름은 RE:ADD (홈 화면 아이콘 이름·창 제목)
+test('결정 10: 홈 화면 추가 manifest는 standalone이고 이름이 RE:ADD다', async ({ page, request }) => {
   await page.goto('/');
   const href = await page.locator('link[rel="manifest"]').getAttribute('href');
   expect(href).toBeTruthy();
@@ -12,8 +13,8 @@ test('결정 10: 홈 화면 추가 manifest는 standalone이고 이름이 싸비
   const manifest = await response.json();
   expect(manifest.display).toBe('standalone');
   expect(manifest.orientation, '태블릿 PC 화면을 세로로 고정하지 않는다').toBeUndefined();
-  expect(manifest.name).toBe('싸비');
-  expect(manifest.short_name).toBe('싸비');
+  expect(manifest.name).toBe('RE:ADD');
+  expect(manifest.short_name).toBe('RE:ADD');
   expect(new URL(manifest.start_url, manifestUrl).pathname).toBe('/');
   for (const icon of manifest.icons as { src: string }[]) {
     expect((await request.get(new URL(icon.src, manifestUrl).href)).status(), icon.src).toBe(200);
@@ -24,7 +25,8 @@ test('결정 10: iOS 홈 화면 메타와 아이콘이 있다', async ({ page, r
   await page.goto('/');
   await expect(page.locator('meta[name="apple-mobile-web-app-capable"]')).toHaveAttribute('content', 'yes');
   await expect(page.locator('meta[name="apple-mobile-web-app-status-bar-style"]')).toHaveAttribute('content', 'default');
-  await expect(page.locator('meta[name="apple-mobile-web-app-title"]')).toHaveAttribute('content', '싸비');
+  await expect(page.locator('meta[name="apple-mobile-web-app-title"]')).toHaveAttribute('content', 'RE:ADD');
+  await expect(page).toHaveTitle('RE:ADD');
   const icon = await page.locator('link[rel="apple-touch-icon"]').getAttribute('href');
   const response = await request.get(icon!);
   expect(response.status()).toBe(200);
