@@ -39,11 +39,12 @@ export default function QuoteAskButton({
       style={{ top, left, width: WIDTH, minHeight: HEIGHT }}
       className="fixed z-50 flex animate-pop-in overflow-hidden rounded-2xl border border-brief-rule bg-brief-card shadow-brief-soft"
     >
-      <button type="button" data-quote-ask {...stop} onClick={onAsk} className={action}>
-        챗봇에 물어보기
-      </button>
-      <button type="button" data-quote-ask {...stop} onClick={onNote} className={`${action} border-l border-brief-rule`}>
+      {/* 2026-11-19 대표 지시 — 왼쪽 "노트에 적기", 오른쪽 "아모에게 묻기". 화면에 "AI"·"챗봇"을 쓰지 않는다 */}
+      <button type="button" data-quote-ask {...stop} onClick={onNote} className={action}>
         노트에 적기
+      </button>
+      <button type="button" data-quote-ask {...stop} onClick={onAsk} className={`${action} border-l border-brief-rule`}>
+        아모에게 묻기
       </button>
     </div>
   );

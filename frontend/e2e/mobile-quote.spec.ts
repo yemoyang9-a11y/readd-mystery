@@ -33,19 +33,19 @@ async function selectFirstWords(page: Page): Promise<{ text: string; bottom: num
   });
 }
 
-test('G8: 꾹 눌러 고른 문장 아래에 "아모에게 물어보기"가 뜨고, 누르면 챗봇에 인용된다', async ({ page }) => {
+test('G8: 꾹 눌러 고른 문장 아래에 "아모에게 묻기"가 뜨고, 누르면 챗봇에 인용된다', async ({ page }) => {
   await open(page);
   const { text, bottom } = await selectFirstWords(page);
-  const ask = page.getByRole('button', { name: '아모에게 물어보기' });
+  const ask = page.getByRole('button', { name: '아모에게 묻기' });
   await expect(ask).toBeVisible();
-  await page.getByRole('button', { name: '아모에게 물어보기' }).evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await page.getByRole('button', { name: '아모에게 묻기' }).evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   const box = (await ask.boundingBox())!;
   expect(box.y).toBeGreaterThan(bottom);
   expect(box.height).toBeGreaterThanOrEqual(44);
 
   await ask.click();
   await expect(page.getByTestId('mobile-ssabi')).toBeVisible();
-  await expect(page.getByRole('tab', { name: '챗봇' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: '아모' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByText('선택한 문장')).toBeVisible();
   await expect(page.getByTestId('mobile-ssabi')).toContainText(text);
 });
@@ -62,10 +62,10 @@ test('G7: 글자가 선택된 동안에는 밀어도 넘어가지 않고, 선택
   await expect(page.getByRole('textbox', { name: '페이지로 이동' })).toHaveValue('16');
 });
 
-test('Final fix 1: 실제 탭으로 "아모에게 물어보기"를 누르면 인용된다', async ({ page }) => {
+test('Final fix 1: 실제 탭으로 "아모에게 묻기"를 누르면 인용된다', async ({ page }) => {
   await open(page);
   const { text } = await selectFirstWords(page);
-  await page.getByRole('button', { name: '아모에게 물어보기' }).tap();
+  await page.getByRole('button', { name: '아모에게 묻기' }).tap();
   await expect(page.getByTestId('mobile-ssabi')).toBeVisible();
   await expect(page.getByTestId('mobile-ssabi')).toContainText(text);
 });
@@ -83,7 +83,7 @@ test('Final fix 2: 손잡이로 선택 범위를 늘리면 늘어난 문장이 �
     selection.addRange(range);
     return range.toString().trim();
   });
-  await page.getByRole('button', { name: '아모에게 물어보기' }).tap();
+  await page.getByRole('button', { name: '아모에게 묻기' }).tap();
   await expect(page.getByTestId('mobile-ssabi')).toContainText(extended);
 });
 
@@ -112,9 +112,9 @@ test('Final fix 4: 화면 아래쪽 문장을 골라도 버튼이 화면 안, �
     }
     throw new Error('하단 근처 글줄을 찾지 못함');
   });
-  const ask = page.getByRole('button', { name: '아모에게 물어보기' });
+  const ask = page.getByRole('button', { name: '아모에게 묻기' });
   await expect(ask).toBeVisible();
-  await page.getByRole('button', { name: '아모에게 물어보기' }).evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await page.getByRole('button', { name: '아모에게 묻기' }).evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   const box = (await ask.boundingBox())!;
   const navTop = (await page.locator('nav').boundingBox())!.y;
   expect(box.y + box.height).toBeLessThanOrEqual(navTop);
@@ -123,9 +123,9 @@ test('Final fix 4: 화면 아래쪽 문장을 골라도 버튼이 화면 안, �
 test('모바일 인용 버튼은 PC와 같은 디자인이다(문구·색), 크기만 44px', async ({ page }) => {
   await open(page);
   await selectFirstWords(page);
-  const ask = page.getByRole('button', { name: '아모에게 물어보기' });
+  const ask = page.getByRole('button', { name: '아모에게 묻기' });
   await expect(ask).toBeVisible();
-  await page.getByRole('button', { name: '아모에게 물어보기' }).evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await page.getByRole('button', { name: '아모에게 묻기' }).evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   await expect(ask).toHaveClass(/border-brief-accent/);
   await expect(ask).toHaveClass(/bg-brief-accent-soft/);
   await expect(ask).toHaveClass(/text-brief-accent/);
@@ -135,7 +135,7 @@ test('모바일 인용 버튼은 PC와 같은 디자인이다(문구·색), 크�
 test('피드백: 문장을 고른 뒤 다른 곳을 짧게 탭하면 파란 선택과 버튼이 사라지고 다시 넘길 수 있다', async ({ page }) => {
   const { width, height } = await open(page);
   await selectFirstWords(page);
-  await expect(page.getByRole('button', { name: '아모에게 물어보기' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '아모에게 묻기' })).toBeVisible();
   await page.evaluate(
     ({ x, y }) => {
       const target = document.elementFromPoint(x, y)!;
@@ -145,19 +145,19 @@ test('피드백: 문장을 고른 뒤 다른 곳을 짧게 탭하면 파란 선�
     { x: width * 0.5, y: height * 0.7 }
   );
   await expect.poll(() => page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('');
-  await expect(page.getByRole('button', { name: '아모에게 물어보기' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '아모에게 묻기' })).toHaveCount(0);
   await swipe(page, { fromX: width * 0.8, toX: width * 0.2, y: height * 0.6, durationMs: 400 });
   await expect(page.getByRole('textbox', { name: '페이지로 이동' })).toHaveValue('16');
 });
 
-test('피드백: "아모에게 물어보기"를 누를 때는 선택이 먼저 풀리지 않고 인용된다', async ({ page }) => {
+test('피드백: "아모에게 묻기"를 누를 때는 선택이 먼저 풀리지 않고 인용된다', async ({ page }) => {
   await open(page);
   const { text } = await selectFirstWords(page);
-  await page.getByRole('button', { name: '아모에게 물어보기' }).tap();
+  await page.getByRole('button', { name: '아모에게 묻기' }).tap();
   await expect(page.getByTestId('mobile-ssabi')).toContainText(text);
 });
 
-test('PR 리뷰: 싸비 리캡에서 고른 문장도 "아모에게 물어보기"로 챗봇에 인용된다', async ({ page }) => {
+test('PR 리뷰: 싸비 리캡에서 고른 문장도 "아모에게 묻기"로 챗봇에 인용된다', async ({ page }) => {
   await open(page);
   await page.getByRole('button', { name: '싸비 열기' }).click();
   await page.getByRole('tab', { name: '리캡' }).click();
@@ -175,7 +175,7 @@ test('PR 리뷰: 싸비 리캡에서 고른 문장도 "아모에게 물어보기
     document.dispatchEvent(new Event('touchend'));
     return range.toString().trim();
   });
-  await page.getByRole('button', { name: '아모에게 물어보기' }).tap();
-  await expect(page.getByRole('tab', { name: '챗봇' })).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('button', { name: '아모에게 묻기' }).tap();
+  await expect(page.getByRole('tab', { name: '아모' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByTestId('mobile-ssabi')).toContainText(text);
 });

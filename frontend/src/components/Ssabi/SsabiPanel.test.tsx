@@ -55,9 +55,9 @@ describe('싸비 사이드창', () => {
   it('탭을 고르면 그 탭이 선택된다', async () => {
     render(<SsabiPanel {...baseProps} />);
 
-    await userEvent.click(screen.getByRole('tab', { name: 'AI 챗봇' }));
+    await userEvent.click(screen.getByRole('tab', { name: '아모' }));
 
-    expect(screen.getByRole('tab', { name: 'AI 챗봇' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: '아모' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('탭이 바뀌면 어느 탭이 열렸는지 알린다 — 컨테이너가 그 탭 데이터를 조회한다', async () => {
@@ -72,16 +72,16 @@ describe('싸비 사이드창', () => {
 
   it('FR-SVB-004: 같은 세션이면(epoch 동일) 다시 그려도 보던 탭이 유지된다', async () => {
     const { rerender } = render(<SsabiPanel {...baseProps} />);
-    await userEvent.click(screen.getByRole('tab', { name: 'AI 챗봇' }));
+    await userEvent.click(screen.getByRole('tab', { name: '아모' }));
 
     rerender(<SsabiPanel {...baseProps} currentPage={5} />);
 
-    expect(screen.getByRole('tab', { name: 'AI 챗봇' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: '아모' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('FR-SVB-004: epoch 이 바뀌면 새 세션이므로 기본 탭으로 돌아간다', async () => {
     const { rerender } = render(<SsabiPanel {...baseProps} />);
-    await userEvent.click(screen.getByRole('tab', { name: 'AI 챗봇' }));
+    await userEvent.click(screen.getByRole('tab', { name: '아모' }));
 
     rerender(<SsabiPanel {...baseProps} sessionEpoch={8} />);
 
@@ -91,11 +91,20 @@ describe('싸비 사이드창', () => {
     );
   });
 
-  it('결정 31 · 2026-11-18 승인 시안 A안: 탭은 추리 노트 · 타임라인 · 인물관계도 · AI 챗봇 네 개, 이 순서다', () => {
+  it('결정 31 · 2026-11-18 승인 시안 A안: 탭은 추리 노트 · 타임라인 · 인물관계도 · 아모 네 개, 이 순서다', () => {
     render(<SsabiPanel {...baseProps} />);
 
     const tabs = screen.getAllByRole('tab');
-    expect(tabs.map((t) => t.textContent)).toEqual(['추리 노트', '타임라인', '인물관계도', 'AI 챗봇']);
+    expect(tabs.map((t) => t.textContent)).toEqual(['추리 노트', '타임라인', '인물관계도', '아모']);
+  });
+
+  it('2026-11-19 대표 지시: 싸비 화면 문구·aria-label 어디에도 "AI" 표기가 없다', () => {
+    const { container } = render(<SsabiPanel {...baseProps} />);
+    expect(container.textContent).not.toMatch(/\bAI\b/);
+    for (const el of Array.from(container.querySelectorAll('[aria-label], [title], [placeholder]'))) {
+      const text = ['aria-label', 'title', 'placeholder'].map((a) => el.getAttribute(a) ?? '').join(' ');
+      expect(text).not.toMatch(/\bAI\b/);
+    }
   });
 
   it('FR-SPL-005 🚦: 관계도 조회가 실패하면 부분 표시로 넘어가지 않는다', () => {
@@ -139,12 +148,12 @@ describe('싸비 사이드창', () => {
 
     rerender(<SsabiPanel {...baseProps} pendingQuote={{ text: '정 주사', token: 1 }} />);
 
-    expect(screen.getByRole('tab', { name: 'AI 챗봇' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: '아모' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('2026-08-24: initialTab이 같은 세션(epoch 일치)이면 그 탭에서 바로 시작한다 — 패널 재마운트(닫았다 열기) 대역', () => {
     render(<SsabiPanel {...baseProps} initialTab="chatbot" initialTabEpoch={7} />);
-    expect(screen.getByRole('tab', { name: 'AI 챗봇' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: '아모' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('2026-08-24: initialTab이 있어도 epoch이 다르면(닫혀 있는 동안 세션이 바뀜, FR-SVB-004) 기본 탭으로 시작한다', () => {
@@ -164,7 +173,7 @@ describe('싸비 사이드창', () => {
 
     rerender(<SsabiPanel {...baseProps} pendingQuote={{ text: '정 주사', token: 2 }} />);
 
-    expect(screen.getByRole('tab', { name: 'AI 챗봇' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: '아모' })).toHaveAttribute('aria-selected', 'true');
   });
 
   describe('추리 노트 탭 (2026-11-15 추리 전환)', () => {

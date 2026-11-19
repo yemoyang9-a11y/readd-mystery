@@ -66,15 +66,31 @@ describe('RelationshipTab', () => {
     expect(within(details).getByText('부녀')).toBeInTheDocument();
   });
 
-  it('같은 인물을 다시 선택해도 그 인물이 중심으로 남는다 (2026-11-17 시안)', () => {
+  it('2026-11-19 대표 지시: 선택된 인물을 다시 누르면 선택이 풀려 아무도 선택되지 않는다', () => {
     render(<RelationshipTab graph={graph} failed={false} />);
 
     const node = screen.getByRole('button', { name: '초봉' });
     fireEvent.click(node);
     expect(node).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('region', { name: '관계 설명' })).toBeInTheDocument();
 
     fireEvent.click(node);
+    expect(node).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: '정주사' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByRole('region', { name: '관계 설명' })).toBeNull();
+
+    // 다시 누르면 그 인물이 다시 선택된다
+    fireEvent.click(node);
     expect(node).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('2026-11-19 대표 지시: 처음 중심 인물(기본 선택)을 누르면 그 선택도 풀린다', () => {
+    render(<RelationshipTab graph={graph} failed={false} />);
+    const ego = screen.getByRole('button', { name: '정주사' });
+    expect(ego).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(ego);
+    expect(ego).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByRole('region', { name: '관계 설명' })).toBeNull();
   });
 
   it('다른 인물을 연달아 눌러도 누른 인물이 선택된다', () => {

@@ -32,7 +32,7 @@ describe('Reader — 추리 노트 탭', () => {
     streamCalls = 0;
   });
 
-  it('패널 탭은 추리 노트·타임라인·인물관계도·AI 챗봇 넷이고 리캡 생성은 호출되지 않는다 (결정 31)', async () => {
+  it('패널 탭은 추리 노트·타임라인·인물관계도·아모 넷이고 리캡 생성은 호출되지 않는다 (결정 31)', async () => {
     const user = userEvent.setup();
     renderReader();
     await screen.findByRole('article');
@@ -46,7 +46,7 @@ describe('Reader — 추리 노트 탭', () => {
       '추리 노트',
       '타임라인',
       '인물관계도',
-      'AI 챗봇',
+      '아모',
     ]);
     expect(streamCalls).toBe(0);
   });

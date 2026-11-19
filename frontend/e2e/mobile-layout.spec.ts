@@ -31,8 +31,8 @@ async function selectWords(page: Page) {
     window.getSelection()!.addRange(range);
     document.dispatchEvent(new Event('touchend'));
   });
-  await expect(page.getByRole('button', { name: '아모에게 물어보기' })).toBeVisible();
-  await page.getByRole('button', { name: '아모에게 물어보기' }).evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await expect(page.getByRole('button', { name: '아모에게 묻기' })).toBeVisible();
+  await page.getByRole('button', { name: '아모에게 묻기' }).evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
 }
 
 const STATES: { name: string; open: (page: Page) => Promise<void> }[] = [
@@ -67,7 +67,7 @@ const STATES: { name: string; open: (page: Page) => Promise<void> }[] = [
     name: 'ssabi-chat',
     open: async (page) => {
       await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
-      await page.getByRole('tab', { name: 'AI 챗봇' }).click();
+      await page.getByRole('tab', { name: '아모' }).click();
       await expect(page.getByRole('textbox', { name: '질문' })).toBeVisible();
       await page.waitForTimeout(600);
     },
@@ -76,7 +76,7 @@ const STATES: { name: string; open: (page: Page) => Promise<void> }[] = [
     name: 'ssabi-chat-keyboard',
     open: async (page) => {
       await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
-      await page.getByRole('tab', { name: 'AI 챗봇' }).click();
+      await page.getByRole('tab', { name: '아모' }).click();
       await page.getByRole('textbox', { name: '질문' }).click();
       await showKeyboard(page, 300);
       await page.waitForTimeout(600);

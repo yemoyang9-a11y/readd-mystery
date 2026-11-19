@@ -22,7 +22,7 @@ const TAB_LABELS: Record<SsabiTab, string> = {
   notes: '추리 노트',
   timeline: '타임라인',
   relationship: '인물관계도',
-  chatbot: 'AI 챗봇',
+  chatbot: '아모',
 };
 
 // 결정 31 · 2026-11-18 대표 승인 시안 A안 — 이 순서 그대로

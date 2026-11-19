@@ -50,7 +50,7 @@ describe('Reader 선택 문장 페이지 전환', () => {
     await screen.findByRole('article');
     await act(async () => {});
     selectArticleText();
-    await user.click(await screen.findByRole('button', { name: '아모에게 물어보기' }));
+    await user.click(await screen.findByRole('button', { name: '아모에게 묻기' }));
 
     expect(await screen.findByText('선택한 문장')).toBeInTheDocument();
     expect(document.querySelector('mark')).not.toBeNull();

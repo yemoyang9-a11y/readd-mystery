@@ -73,7 +73,7 @@ export default function QuotePopover({
         onDone();
       }}
     >
-      아모에게 물어보기
+      아모에게 묻기
     </button>,
     document.body
   );

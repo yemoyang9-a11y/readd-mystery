@@ -88,7 +88,7 @@ describe('인물관계도 시안 (2026-11-17 승인) — FR-CHR-001', () => {
     expect(within(friend).getByText('사실')).toBeInTheDocument();
   });
 
-  it('인물을 누르면 그 인물이 중심이 되고, 중심 인물을 다시 눌러도 중심으로 남는다', () => {
+  it('인물을 누르면 그 인물이 중심이 되고, 중심 인물을 다시 누르면 선택이 풀린다 (2026-11-19 대표 지시)', () => {
     render(<RelationshipTab graph={graph} failed={false} />);
     const na = screen.getByRole('button', { name: '나용귀' });
     fireEvent.click(na);
@@ -97,8 +97,12 @@ describe('인물관계도 시안 (2026-11-17 승인) — FR-CHR-001', () => {
     expect(screen.getByText('나용귀와 이어진 사람')).toBeInTheDocument();
 
     fireEvent.click(na);
-    expect(na).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByText('나용귀와 이어진 사람')).toBeInTheDocument();
+    expect(na).toHaveAttribute('aria-pressed', 'false');
+    for (const button of screen.queryAllByRole('button', { pressed: true })) {
+      expect(button).not.toHaveAttribute('data-node-id');
+    }
+    expect(screen.queryByText('나용귀와 이어진 사람')).toBeNull();
+    expect(screen.queryByRole('region', { name: '관계 설명' })).toBeNull();
   });
 
   it('인물 칩에는 이름 첫 글자가 크게, 이름이 아래에 작게 나온다', () => {

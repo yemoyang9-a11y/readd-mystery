@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalLayer } from '../../hooks/useModalLayer';
 import type { NoteDraft, NoteKind, ReadingNote } from '../../types';
@@ -41,6 +41,15 @@ function NoteEditor({
   );
   useModalLayer({ active: true, dialogRef, returnFocusRef, onClose });
 
+  // 2026-11-19 대표 지시 — 창은 document.body로 포털되어 [data-mobile] 밖에 놓인다. 그대로 두면 :root의
+  // 데스크톱 토큰(brief-accent 초록 79 112 82)이 휴대폰 창에 샌다. 창을 연 자리가 휴대폰 화면 안이면
+  // 같은 data-mobile을 창에도 달아 휴대폰 토큰(버건디 #8f1d35 · 연분홍)을 쓰게 한다. 그리기 전에 정한다.
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  const [mobile, setMobile] = useState(false);
+  useLayoutEffect(() => {
+    setMobile(Boolean(anchorRef.current?.closest('[data-mobile]')));
+  }, []);
+
   const [kind, setKind] = useState<NoteKind | null>(initial.kind);
   const [body, setBody] = useState(initial.body);
   const [pageText, setPageText] = useState(String(initial.page_no));
@@ -82,9 +91,10 @@ function NoteEditor({
     setFailed(true);
   }
 
-  return createPortal(
+  const overlay = createPortal(
     <div
       data-testid="note-editor-overlay"
+      data-mobile={mobile ? 'true' : undefined}
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 px-5"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
@@ -235,6 +245,12 @@ function NoteEditor({
       </div>
     </div>,
     document.body
+  );
+  return (
+    <>
+      <span ref={anchorRef} hidden />
+      {overlay}
+    </>
   );
 }
 

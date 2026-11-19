@@ -55,7 +55,7 @@ test.describe('태블릿 세로(PC 화면)', () => {
     await page.goto(`/books/${BOOK_ID}/read`);
     await expect(page.getByRole('article')).toContainText('15쪽.');
     await page.getByRole('button', { name: '싸비 열기' }).click();
-    const tab = page.getByRole('tab', { name: 'AI 챗봇' });
+    const tab = page.getByRole('tab', { name: '아모' });
     await tab.click();
     // 2026-11-18 싸비 4탭 승인 시안(1a53056) — 탭 높이는 PC·휴대폰 모두 44px(min-h-11)로 같다
     expect(Math.round((await tab.boundingBox())!.height)).toBe(44);

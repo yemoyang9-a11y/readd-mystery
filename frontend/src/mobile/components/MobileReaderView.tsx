@@ -203,7 +203,10 @@ export default function MobileReaderView({
         <article data-no-track
           ref={setArticleRef}
           role="article"
-          className="mx-auto w-full whitespace-pre-wrap px-6 font-dashSerif text-brief-ink"
+          className="mx-auto w-full whitespace-pre-wrap px-6 font-dashSerif text-brief-ink [-webkit-touch-callout:none]"
+          // 2026-11-19 대표 지시 — 문장을 고를 때 브라우저 기본 메뉴(복사·찾아보기·번역·웹 검색)를 줄인다.
+          // 길게 누름 메뉴(-webkit-touch-callout)와 contextmenu만 막고, 글자 선택 자체는 그대로 둔다.
+          onContextMenu={(e) => e.preventDefault()}
           style={{
             fontSize: prefs.fontSize,
             lineHeight: prefs.lineHeight,

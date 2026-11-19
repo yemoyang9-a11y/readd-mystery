@@ -26,14 +26,40 @@ describe('타임라인 탭 — 2026-11-18 대표 승인 시안 2차 A안 (장 �
     expect(screen.getByRole('heading', { name: '지금까지, 세 장이에요' })).toBeInTheDocument();
   });
 
-  it('다 읽은 장은 "N장 · p.시작–끝"·제목·핵심 한 줄·사건 수만 보이고, 사건 카드는 접혀 있다', () => {
+  it('다 읽은 장은 "N장 제목" 한 줄·p.시작–끝·핵심 한 줄·사건 수만 보이고, 사건 카드는 접혀 있다', () => {
     render(<TimelineTab timeline={timeline} failed={false} />);
     const first = within(screen.getAllByRole('listitem')[0]);
-    expect(first.getByText('1장 · p.1–10')).toBeInTheDocument();
-    expect(first.getByText('무대에 올려진 살인 사건')).toBeInTheDocument();
+    expect(first.getByText('1장 무대에 올려진 살인 사건')).toBeInTheDocument();
+    expect(first.getByText('p.1–10')).toBeInTheDocument();
     expect(first.getByText('사건 2')).toBeInTheDocument();
     expect(chapterButton(1)).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('button', { name: /좌장 살해/ })).not.toBeInTheDocument();
+  });
+
+  it('2026-11-19 대표 지시: 장 번호와 제목이 한 줄 "1장 탐정극 〈가상범인〉"이고, 쪽 범위는 그 아래 작게 따로 둔다', () => {
+    const real: TimelineResponse = {
+      ...timeline,
+      chapters: [{ ...timeline.chapters[0], title: '탐정극 〈가상범인〉', start_page: 1, end_page: 20 }],
+      events: [],
+    };
+    render(<TimelineTab timeline={real} failed={false} />);
+    const heading = screen.getByText('1장 탐정극 〈가상범인〉');
+    expect(heading.tagName).toBe('B');
+    expect(heading).toHaveClass('text-[15px]');
+    const range = screen.getByText('p.1–20');
+    expect(heading.contains(range)).toBe(false);
+    expect(range).toHaveClass('text-[11px]');
+    expect(heading.compareDocumentPosition(range) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('2026-11-19 대표 지시: 장과 장 사이 간격은 28px(mb-7), 핵심 한 줄은 14.5px로 12.5px보다 크다', () => {
+    render(<TimelineTab timeline={timeline} failed={false} />);
+    const [first, second] = screen.getAllByRole('listitem');
+    expect(first).toHaveClass('mb-7');
+    expect(second).toHaveClass('mb-7');
+    const keyLine = within(chapterButton(1)).getByText('좌장이 살해되고 아내가 붙잡혀요.');
+    expect(keyLine).toHaveClass('text-[14.5px]');
+    expect(keyLine).not.toHaveClass('text-[12.5px]');
   });
 
   it('핵심 한 줄 = 서버가 준 요약의 첫 문장만 — 긴 요약 전체를 늘어놓지 않는다', () => {
@@ -144,7 +170,7 @@ describe('타임라인 탭 — 2026-11-18 대표 승인 시안 2차 A안 (장 �
     const now = screen.getAllByRole('listitem')[2];
     expect(within(now).getByText('지금 읽는 곳 · 3장')).toBeInTheDocument();
     expect(within(now).getByText('다 읽으면 정리돼요')).toBeInTheDocument();
-    expect(within(now).queryByText('7년 만의 재회')).not.toBeInTheDocument();
+    expect(within(now).queryByText(/7년 만의 재회/)).not.toBeInTheDocument();
     expect(within(now).queryByRole('button')).not.toBeInTheDocument();
     expect(now.querySelector('span[aria-hidden="true"]')?.className).toContain('bg-brief-accent');
   });
@@ -164,7 +190,7 @@ describe('타임라인 탭 — 2026-11-18 대표 승인 시안 2차 A안 (장 �
     };
     render(<TimelineTab timeline={allDone} failed={false} />);
     expect(screen.queryByText(/지금 읽는 곳/)).not.toBeInTheDocument();
-    expect(screen.getByText('7년 만의 재회')).toBeInTheDocument();
+    expect(screen.getByText('3장 7년 만의 재회')).toBeInTheDocument();
   });
 
   it('장이 하나도 없으면(진도 없음) 빈 상태 문구만', () => {

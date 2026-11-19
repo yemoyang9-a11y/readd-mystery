@@ -43,7 +43,7 @@ function Chevron({ open }: { open: boolean }) {
  * 이전: 승인 시안 A안 "타임라인 안에 사건을 함께"
  * (`scratchpad/eventpage/event-placement.html`, 결정 31).
  *
- * 세로 시간 축에 다 읽은 장마다 "N장" · 장 제목 · 간략 요약 · "이 장의 사건"(사건 이름 + 쪽)을 둔다.
+ * 세로 시간 축에 다 읽은 장마다 "N장 장 제목"(한 줄, 2026-11-19 대표 지시) · 쪽 범위 · 간략 요약 · "이 장의 사건"(사건 이름 + 쪽)을 둔다.
  * 사건을 누르면 그 자리에서 칸이 아래로 늘어나며 짧은 설명이 나오고, 다시 누르면 접힌다(aria-expanded).
  * 읽는 중인 장은 "지금 읽는 곳 · N장"과 "다 읽으면 정리돼요"만 있다.
  *
@@ -115,7 +115,8 @@ export default function TimelineTab({
           // 결정 31 — 서버가 다 읽은 장에만 실어 준 핵심 한 줄. 없으면 요약 첫 문장 (FR-SPL-003 🚦)
           const keyLine = chapter.key_point ?? firstSentence(chapter.summary);
           return (
-            <li key={chapter.chapter_no} className="relative mb-4">
+            // 2026-11-19 대표 지시 — 장과 장 사이를 확실히 넓게(16px → 28px)
+            <li key={chapter.chapter_no} className="relative mb-7">
               <span
                 aria-hidden="true"
                 className="absolute -left-6 top-1 size-[9px] rounded-full border-[1.5px] border-brief-muted bg-brief-paper"
@@ -126,17 +127,21 @@ export default function TimelineTab({
                 onClick={() => toggle(chapterKey)}
                 className="block w-full rounded-lg text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brief-accent"
               >
-                <span className="block text-[11px] font-semibold leading-none tracking-[0.02em] text-brief-muted">
-                  {chapter.chapter_no}장 · p.{chapter.start_page}–{chapter.end_page}
-                </span>
-                <span className="mb-1 mt-[3px] flex items-center gap-2">
-                  <b className="min-w-0 flex-1 text-[13.5px] font-bold leading-[1.4]">{chapter.title}</b>
+                {/* 2026-11-19 대표 지시 — 장 번호와 제목을 한 줄로 "1장 탐정극 〈가상범인〉", 쪽 범위는 그 아래 작게 */}
+                <span className="flex items-center gap-2">
+                  <b data-chapter-heading className="min-w-0 flex-1 text-[15px] font-bold leading-[1.4]">
+                    {`${chapter.chapter_no}장 ${chapter.title}`}
+                  </b>
                   {events.length > 0 ? (
                     <span className="shrink-0 text-[11px] font-semibold text-brief-accent">사건 {events.length}</span>
                   ) : null}
                   <Chevron open={chapterOpen} />
                 </span>
-                {keyLine ? <span className="block text-[12.5px] leading-relaxed text-brief-ink">{keyLine}</span> : null}
+                <span className="mb-1.5 mt-0.5 block text-[11px] font-semibold leading-none tracking-[0.02em] tabular-nums text-brief-muted">
+                  p.{chapter.start_page}–{chapter.end_page}
+                </span>
+                {/* 2026-11-19 대표 지시 — 핵심 한 줄을 휴대폰에서 읽기 편하게 12.5px → 14.5px */}
+                {keyLine ? <span className="block text-[14.5px] leading-relaxed text-brief-ink">{keyLine}</span> : null}
               </button>
               {chapterOpen && events.length > 0 ? (
                 <div data-chapter-events className="mt-2 flex flex-col gap-1.5">

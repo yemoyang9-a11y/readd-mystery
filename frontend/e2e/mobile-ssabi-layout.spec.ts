@@ -16,10 +16,10 @@ async function openSsabi(page: Page) {
   await expect(page.getByRole('tablist', { name: '싸비' })).toBeVisible();
 }
 
-// 2026-11-18 싸비 4탭(대표 승인 시안 A안) — 추리 노트 · 타임라인 · 인물관계도 · AI 챗봇
+// 2026-11-18 싸비 4탭(대표 승인 시안 A안) — 추리 노트 · 타임라인 · 인물관계도 · 아모
 // 보내기 버튼은 2026-11-18 대표 지시(b210f89)로 입력칸 한 줄 높이(36px)라 44px 점검에서 뺀다
 const SEND_BUTTON = '[aria-label="질문 보내기"]';
-for (const tabName of ['추리 노트', '타임라인', '인물관계도', 'AI 챗봇']) {
+for (const tabName of ['추리 노트', '타임라인', '인물관계도', '아모']) {
   test(`싸비 ${tabName} 탭: 누르는 영역 44px, 글자 넘침 없음`, async ({ page }) => {
     await openSsabi(page);
     await page.getByRole('tab', { name: tabName, exact: true }).click();

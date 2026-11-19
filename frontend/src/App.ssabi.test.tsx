@@ -82,7 +82,7 @@ describe('싸비 데이터 연결 (mock 기준)', () => {
 
   it('챗봇 탭에서 질문하면 답변이 스트리밍으로 들어온다', { timeout: 20000 }, async () => {
     await goToReaderWithSsabi();
-    await userEvent.click(screen.getByRole('tab', { name: 'AI 챗봇' }));
+    await userEvent.click(screen.getByRole('tab', { name: '아모' }));
 
     await userEvent.type(screen.getByLabelText('질문'), '정주사는 어떤 사람인가', { delay: null });
     await userEvent.click(screen.getByRole('button', { name: '질문 보내기' }));
@@ -102,7 +102,7 @@ describe('싸비 데이터 연결 (mock 기준)', () => {
     { timeout: 20000 },
     async () => {
       await goToReaderWithSsabi();
-      await userEvent.click(screen.getByRole('tab', { name: 'AI 챗봇' }));
+      await userEvent.click(screen.getByRole('tab', { name: '아모' }));
 
       await userEvent.type(screen.getByLabelText('질문'), '결말이 어떻게 되나', { delay: null });
       await userEvent.click(screen.getByRole('button', { name: '질문 보내기' }));

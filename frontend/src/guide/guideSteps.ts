@@ -72,8 +72,8 @@ export const GUIDE_STEPS: GuideStep[] = [
   },
   {
     id: 'open-chatbot',
-    text: '궁금한 건 AI 친구 아모에게 물어봐요. AI 챗봇을 눌러요.',
-    target: () => byText('#ssabi-panel [role="tab"]', 'AI 챗봇'),
+    text: '궁금한 건 아모에게 물어봐요. 아모를 눌러요.',
+    target: () => byText('#ssabi-panel [role="tab"]', '아모'),
     place: 'bottom',
   },
   {

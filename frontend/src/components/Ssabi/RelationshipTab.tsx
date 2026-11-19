@@ -17,6 +17,7 @@ import { centralNodeIndex } from './graphLayout';
  * (FR-SPL-002 🚦, 절대 규칙 7번). 중심 인물(ego)이 늘 한 명 있다 — 처음은 연결이 가장 많은 인물(동점이면 먼저
  * 등장한 인물, `centralNodeIndex`)이고, 인물을 누르면 그 인물이 중심이 된다. 중심 인물을 고르는 것은 받은
  * 그래프 안에서의 표시 선택이지 기준점·쪽수 계산이 아니다 (절대 규칙 2·7번).
+ * 2026-11-19 대표 지시 — 선택된 인물을 다시 누르면 선택이 풀리고 아무도 선택되지 않은 상태가 된다(설명 카드도 없다).
  * 범례의 "지난번 이후 새로"는 그 데이터(지난 방문 이후 새 관계)가 계약에 없어 넣지 않는다(CLAUDE.md 6장).
  *
  * 조회 실패는 부분 표시로 넘어가지 않는다 (FR-SPL-005 🚦).
@@ -29,12 +30,10 @@ export default function RelationshipTab({
   failed: boolean;
 }) {
   const [selected, setSelectedState] = useState<string | null>(null);
+  // 2026-11-19 대표 지시 — 선택된 인물을 다시 누르면 선택이 풀려 아무도 선택되지 않은 상태가 된다.
+  const [cleared, setCleared] = useState(false);
   // 선택한 선(graphEdgeKey). 인물을 고르면 풀린다 — 인물 선택과 선 선택은 함께 남지 않는다.
   const [selectedEdgeKey, setSelectedEdgeKey] = useState<string | null>(null);
-  function setSelected(id: string) {
-    setSelectedEdgeKey(null);
-    setSelectedState(id);
-  }
 
   // 고른 인물이 새 응답에 없으면(쪽을 옮겨 데이터가 바뀌면) 기본 중심 인물로 돌아간다.
   const pickedVisible = selected && graph?.nodes.some((n) => n.id === selected) ? selected : null;
@@ -43,7 +42,18 @@ export default function RelationshipTab({
     const index = centralNodeIndex(graph.nodes, graph.edges);
     return index >= 0 ? graph.nodes[index].id : null;
   }, [graph]);
-  const activeSelected = pickedVisible ?? defaultEgo;
+  const activeSelected = cleared ? null : (pickedVisible ?? defaultEgo);
+
+  function pickPerson(id: string) {
+    setSelectedEdgeKey(null);
+    if (id === activeSelected) {
+      setCleared(true);
+      setSelectedState(null);
+      return;
+    }
+    setCleared(false);
+    setSelectedState(id);
+  }
 
   if (failed)
     return (
@@ -62,8 +72,9 @@ export default function RelationshipTab({
         <RelationshipGraph
           graph={graph}
           selectedId={activeSelected}
-          // 인물을 누르면 그 인물이 중심이 된다. 빈 곳을 누르면(null) 선 선택만 풀고 중심은 그대로 둔다.
-          onSelect={(id) => (id ? setSelected(id) : setSelectedEdgeKey(null))}
+          // 인물을 누르면 그 인물이 중심이 되고, 이미 선택된 인물을 다시 누르면 선택이 풀린다(2026-11-19 대표 지시).
+          // 빈 곳을 누르면(null) 선 선택만 풀고 중심은 그대로 둔다.
+          onSelect={(id) => (id ? pickPerson(id) : setSelectedEdgeKey(null))}
           selectedEdgeKey={selectedEdgeKey}
           onSelectEdge={setSelectedEdgeKey}
         />

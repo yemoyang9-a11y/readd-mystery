@@ -15,7 +15,7 @@ async function openChat(page: Page) {
   await page.goto(`/books/${BOOK_ID}/read`);
   await expect(page.getByRole('article')).toContainText('15쪽.');
   await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
-  await page.getByRole('tab', { name: 'AI 챗봇' }).click();
+  await page.getByRole('tab', { name: '아모' }).click();
   const input = page.getByRole('textbox', { name: '질문' });
   await expect(input).toBeVisible();
   await page.getByRole('tabpanel').evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)));

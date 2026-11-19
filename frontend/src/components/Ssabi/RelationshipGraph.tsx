@@ -394,7 +394,8 @@ export default function RelationshipGraph({
   function handleNodeClick(id: string) {
     if (wasDragged()) return;
     onSelectEdge?.(null);
-    // 2026-11-17 시안 — 누른 인물이 중심이 된다. 같은 인물을 다시 눌러도 풀리지 않는다.
+    // 2026-11-17 시안 — 누른 인물이 중심이 된다. 같은 인물을 다시 누르면 선택을 푸는 것은
+    // 부모(RelationshipTab)가 정한다 (2026-11-19 대표 지시).
     onSelect(id);
   }
 

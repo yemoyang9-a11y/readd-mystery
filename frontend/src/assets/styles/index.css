@@ -75,6 +75,15 @@
   }
 
   /*
+   * 2026-11-19 대표 지시 — 휴대폰 화면에서 글자를 드래그로 고를 때 기본 파란 선택 색 대신 RE:ADD 버건디 계열.
+   * brief-accent(휴대폰 143 29 53)를 옅게 깔아 연분홍 바탕이 되고, 글자 색은 그대로 둬 대비를 지킨다.
+   */
+  [data-mobile]::selection,
+  [data-mobile] ::selection {
+    background-color: rgb(var(--brief-accent) / 0.24);
+  }
+
+  /*
    * brief 재설계 화면(브리핑·읽기·싸비)의 스크롤 영역 전용 — 기본 회색 OS 스크롤바가
    * 따뜻한 톤과 부딪혀 "칸이 나뉜 것처럼" 튀어 보인다(2026-08-23 사용자 제보).
    * Tailwind는 ::-webkit-scrollbar 유틸을 기본 제공하지 않아 여기 직접 둔다.
