@@ -1,11 +1,13 @@
 /**
  * 커뮤니티 백엔드 대역 — `VITE_USE_MOCK=true` 일 때만 쓰인다 (2026-11-18).
  *
- * 접근 규칙은 서버와 같다 — 공개 도서면 누구나 읽고 쓴다(대표 결정 2026-11-19 "커뮤니티 관문 없애기").
- * 대역이 막는 것은 서버처럼 없는 도서(404)뿐이다. 접근 시험은 backend/src/modules/community/__tests__ 에 있다.
+ * ⚠️ 여기의 판정은 **서버 커뮤니티 관문의 대역**이다. 실제 관문은 백엔드 커뮤니티 라우터가
+ *    기준점 결정기(getCutoffSnapshot().reached_end — 가장 멀리 펼친 쪽 = 마지막 쪽, 차례 읽기는 따지지 않음.
+ *    대표 결정 2026-11-19 정정)로 하며, 화면 코드는 이 판정을 갖지 않는다.
+ *    게이트 시험은 backend/src/modules/community/__tests__ 에 있다.
  */
 import { AxiosError, type AxiosResponse } from 'axios';
-import { mockCatalogResponse, mockPositionResponse } from './server';
+import { mockCatalogResponse, mockPositionResponse, mockReachedEnd } from './server';
 import type {
   CommunityComment,
   CommunityHubResponse,
@@ -97,9 +99,11 @@ function reject(status: number, data?: unknown): never {
   throw new AxiosError('mock', 'ERR_BAD_REQUEST', undefined, null, { status, data } as AxiosResponse);
 }
 
-/** 서버의 공개 도서 확인 대역 — 없는 도서는 404 (R12) */
+/** 서버 커뮤니티 관문 대역 — 공개 도서 확인(404) 뒤 reached_end 대역만 본다 */
 function gate(bookId: string): void {
-  if (mockPositionResponse(bookId).status !== 200) reject(404);
+  const position = mockPositionResponse(bookId);
+  if (position.status !== 200) reject(404);
+  if (!mockReachedEnd(bookId)) reject(403, { error: 'COMMUNITY_LOCKED' });
 }
 
 function visibleComments(postId: string) {
@@ -212,12 +216,11 @@ export function mockHub(): CommunityHubResponse {
   return {
     books: mockCatalogResponse()
       .books.filter((book) => book.ssabi_ready)
-      .map((book) => ({
-        book_id: book.book_id,
-        title: book.title,
-        author: book.author,
-        cover_url: book.cover_url || null,
-        post_count: posts.filter((p) => p.book_id === book.book_id && !p.deleted).length,
-      })),
+      .map((book) => {
+        const card = { book_id: book.book_id, title: book.title, author: book.author, cover_url: book.cover_url || null };
+        const position = mockPositionResponse(book.book_id);
+        if (position.status !== 200 || !mockReachedEnd(book.book_id)) return { ...card, access: 'locked' as const };
+        return { ...card, access: 'open' as const, post_count: posts.filter((p) => p.book_id === book.book_id && !p.deleted).length };
+      }),
   };
 }

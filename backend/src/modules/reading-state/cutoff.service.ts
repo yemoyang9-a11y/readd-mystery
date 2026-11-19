@@ -18,6 +18,8 @@
  *      cutoff      = 진도 레코드 없음 ? 0 : frontier   (FR-PRG-003 🚦, 2026-11-17 대표 결정 A + C안)
  *      percent     = cutoff / total_pages
  *      is_complete = 진도 레코드 있음 && frontier >= total_pages  (D14, FR-QNA-004 🚦)
+ *      reached_end = 진도 레코드 있음 && max_page >= total_pages  (커뮤니티 입장 전용.
+ *                    스포일러 상한 아님. 대표 결정 2026-11-19 정정 — 차례 읽기는 따지지 않음)
  *      chapter     = max(cutoff, 1)이 속한 장
  *      resume_chapter = current_page(이어 읽기 위치)가 속한 장. 못 찾으면 null
  *      frontier_confirm = max_page > cutoff 이고 max_page > confirm_dismissed_max 일 때만
@@ -124,6 +126,9 @@ export function createCutoffService(deps: CutoffServiceDeps): CutoffService & Re
       );
       // FR-BRF-005 🚦, FR-QNA-004 🚦
       const isComplete = stored !== null && frontier >= totalPages;
+      // 대표 결정 2026-11-19 정정 — 커뮤니티는 끝까지 간 독자만. 가장 멀리 펼친 쪽(저장값)이
+      // 마지막 쪽이면 된다. 차례 읽기는 따지지 않는다. cutoff·is_complete 에는 관여하지 않는다
+      const reachedEnd = stored !== null && stored.max_page >= totalPages;
       // FR-PRG-003 🚦 — 확인 카드. 숫자는 전부 저장값이다
       const frontierConfirm =
         stored !== null && furthestPage > cutoff && furthestPage > stored.confirm_dismissed_max
@@ -141,6 +146,7 @@ export function createCutoffService(deps: CutoffServiceDeps): CutoffService & Re
         frontier_confirm: frontierConfirm,
         percent,
         is_complete: isComplete,
+        reached_end: reachedEnd,
         chapter: {
           chapter_no: chapter.chapter_no,
           title: chapter.title,

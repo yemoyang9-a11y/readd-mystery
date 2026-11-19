@@ -156,10 +156,14 @@ describe('community router', () => {
   let server: Server;
   let baseUrl: string;
   let repo: FakeCommunity;
+  let completed: Set<string>;
+  let snapshotCalls: Array<[string, string]>;
   let adminDeleted: { posts: string[]; comments: string[] };
 
   beforeEach(async () => {
     repo = new FakeCommunity();
+    completed = new Set([`${READER_A}:${PUBLISHED}`, `${READER_B}:${PUBLISHED}`]);
+    snapshotCalls = [];
     adminDeleted = { posts: [], comments: [] };
     const admin: CommunityAdminRepository = {
       listReports: async () => repo.reports.map(({ reporter_id: _reporter, ...r }) => r),
@@ -182,6 +186,12 @@ describe('community router', () => {
         content: {
           findReadiness: async (bookId: string) =>
             bookId === PUBLISHED ? true : bookId === DRAFT ? false : null,
+        },
+        cutoff: {
+          getCutoffSnapshot: async (deviceId: string, bookId: string) => {
+            snapshotCalls.push([deviceId, bookId]);
+            return { reached_end: completed.has(`${deviceId}:${bookId}`) } as any;
+          },
         },
       })
     );
@@ -224,45 +234,66 @@ describe('community router', () => {
     return (await (await call('POST', `${base}/posts`, reader, body)).json()) as any;
   }
 
-  // 대표 결정 2026-11-19 "커뮤니티 관문 없애기" — 11-17 결정 ④(완독 독자만)를 대체한 명세 변경.
-  // 예전 "미완독 403" 시험을 새 규칙 시험으로 바꿨다. 읽은 적 없는 READER_C 로 확인한다.
-  test('대표 결정 2026-11-19: 미완독 독자도 커뮤니티 글을 읽고 쓴다', async () => {
-    const post = await seedPost(READER_A);
-    const list = await call('GET', `${base}/posts`, READER_C);
+  test('COMMUNITY: 끝까지 가지 않은 독자는 게시글 0건 조회·작성 불가(403)', async () => {
+    await seedPost(READER_A);
+    const post = repo.posts[0];
+    const lockedCalls: Array<[string, string, unknown?]> = [
+      ['GET', `${base}/posts`],
+      ['GET', `${base}/posts/${post.post_id}`],
+      ['POST', `${base}/posts`, theory],
+      ['POST', `${base}/posts/${post.post_id}/comments`, { body: '댓글' }],
+      ['DELETE', `${base}/posts/${post.post_id}`],
+      ['POST', `${base}/reports`, { target_type: 'post', target_id: post.post_id, reason: '욕설' }],
+    ];
+    const readsBefore = repo.reads;
+    for (const [method, path, body] of lockedCalls) {
+      const res = await call(method, path, READER_C, body);
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({ error: 'COMMUNITY_LOCKED' });
+    }
+    expect(repo.reads).toBe(readsBefore);
+    expect(repo.posts).toHaveLength(1);
+    expect(repo.comments).toHaveLength(0);
+    expect(repo.reports).toHaveLength(0);
+    expect(repo.posts[0].deleted).toBe(false);
+  });
+
+  test('COMMUNITY: 끝까지 간 독자는 조회·작성 가능', async () => {
+    const created = await call('POST', `${base}/posts`, READER_A, theory);
+    expect(created.status).toBe(201);
+    const list = await call('GET', `${base}/posts`, READER_B);
     expect(list.status).toBe(200);
     const body = (await list.json()) as any;
     expect(body.posts).toHaveLength(1);
     expect(body.posts[0].body).toBe(theory.body);
-    const detail = await call('GET', `${base}/posts/${post.post_id}`, READER_C);
-    expect(detail.status).toBe(200);
-    expect(
-      (await call('POST', `${base}/posts`, READER_C, { kind: 'review', body: '좋았어요' })).status
-    ).toBe(201);
-    expect(
-      (await call('POST', `${base}/posts/${post.post_id}/comments`, READER_C, { body: '댓글' })).status
-    ).toBe(201);
-    expect(repo.posts).toHaveLength(2);
-    expect(repo.comments).toHaveLength(1);
+    expect(snapshotCalls.some(([id]) => id === READER_B)).toBe(true);
   });
 
-  test('R12: 미공개·없는 도서는 404 — 글 0건, 공개 도서는 열린다 (positive 쌍)', async () => {
-    await seedPost(READER_A);
-    const readsBefore = repo.reads;
+  test('COMMUNITY: 끝까지 가지 않은 독자 상세 조회도 403이며 응답에 게시글 정보가 없다', async () => {
+    const post = await seedPost();
+    const res = await call('GET', `${base}/posts/${post.post_id}`, READER_C);
+    expect(res.status).toBe(403);
+    const text = await res.text();
+    expect(text).not.toContain(theory.body);
+    expect(text).not.toContain('comment_count');
+  });
+
+  test('R12: 미공개·없는 도서는 404', async () => {
     for (const bookId of [DRAFT, 'bk-missing']) {
-      const list = await call('GET', `/books/${bookId}/community/posts`, READER_A);
-      expect(list.status).toBe(404);
-      expect(await list.text()).not.toContain(theory.body);
+      expect((await call('GET', `/books/${bookId}/community/posts`, READER_A)).status).toBe(404);
       expect(
         (await call('POST', `/books/${bookId}/community/posts`, READER_A, theory)).status
       ).toBe(404);
     }
-    expect(repo.reads).toBe(readsBefore);
-    expect(repo.posts).toHaveLength(1);
-    expect((await call('GET', `${base}/posts`, READER_A)).status).toBe(200);
   });
 
   test('독자 식별 헤더가 없으면 400', async () => {
     expect((await call('GET', `${base}/posts`, null)).status).toBe(400);
+  });
+
+  test('다른 도서에서 끝까지 간 독자는 이 도서 커뮤니티에 못 들어간다', async () => {
+    completed.add(`${READER_C}:bk-other`);
+    expect((await call('GET', `${base}/posts`, READER_C)).status).toBe(403);
   });
 
   test('본문 검증: 공백 제거 후 1~2000자, kind는 theory|review', async () => {
@@ -375,7 +406,7 @@ describe('community router', () => {
     expect((await call('POST', url, READER_B, { body: '넘침' })).status).toBe(429);
   });
 
-  test('신고: 독자가 사유와 함께 신고하면 저장되고, 없는 대상은 404, 사유 누락은 400', async () => {
+  test('신고: 끝까지 간 독자가 사유와 함께 신고하면 저장되고, 없는 대상은 404, 사유 누락은 400', async () => {
     const post = await seedPost(READER_A);
     const report = (type: string, id: string, reason: string) =>
       call('POST', `${base}/reports`, READER_B, { target_type: type, target_id: id, reason });

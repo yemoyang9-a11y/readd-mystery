@@ -18,7 +18,10 @@ const OTHER_BOOKS = 3;
  * 화면에만 있는 페이지다. 서버의 쪽 수·기준점·진도는 그대로 두고, 이 페이지로 오가는 동안
  * 진도 이벤트를 하나도 보내지 않는다 (절대 규칙 2·8·9, FR-PRG-003 🚦). 표시용 "N+1 / N+1"은
  * 서버가 준 전체 쪽 수에 1을 더한 글자일 뿐 기준점·% 계산이 아니다.
- * 완독 여부를 판별하지 않는다 — 마지막 쪽에서 한 장 더 넘긴 독자 누구에게나 같은 화면이다.
+ * 이 화면은 완독 여부를 판별하지 않는다. 커뮤니티 관문은 서버가 정한다 — 끝까지 간 독자(저장된 가장 먼 쪽 =
+ * 마지막 쪽)만 들어간다 (대표 결정 2026-11-19 정정, 차례 읽기는 따지지 않음). 이 화면에 온 독자는 마지막 쪽을
+ * 펼쳤으므로, 리뷰 남기기·커뮤니티 이동 전에 마지막 쪽 진도 이벤트가 저장되기를 기다린다(flushProgress).
+ * 목차로 건너뛰어 그 이벤트가 아직 가는 중이어도 403으로 막히지 않게 한다.
  *
  * 한 줄 리뷰는 기존 커뮤니티 글쓰기 API에 kind=review 로 올린다. 고치기 API는 없고(삭제만)
  * 지우기만 둔다. 휴대폰은 화면 전체, PC 는 같은 화면을 가운데 단으로 그린다.
@@ -31,6 +34,7 @@ export default function BookEndPage({
   returnFocusRef,
   onBack,
   onCommunity,
+  flushProgress,
 }: {
   bookId: string;
   bookTitle: string;
@@ -40,6 +44,8 @@ export default function BookEndPage({
   /** N쪽으로 돌아간다 — 이전 페이지·닫기·Esc·오른쪽 밀기 */
   onBack: () => void;
   onCommunity: () => void;
+  /** 마지막 쪽 진도 이벤트가 서버에 저장될 때까지 기다린다 (useReadingSession.flushProgress) */
+  flushProgress?: () => Promise<void>;
 }) {
   const titleId = useId();
   const reviewId = useId();
@@ -59,6 +65,19 @@ export default function BookEndPage({
   const [saved, setSaved] = useState<{ postId: string; body: string } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const canSave = draft.trim().length > 0 && !saving;
+  const [leaving, setLeaving] = useState(false);
+
+  /** 진도 저장을 기다린다. 실패해도 막지 않는다 — 막을지는 서버 관문이 정한다 */
+  async function flush() {
+    await flushProgress?.().catch(() => undefined);
+  }
+
+  async function goCommunity() {
+    if (leaving) return;
+    setLeaving(true);
+    await flush();
+    onCommunity();
+  }
 
   async function save() {
     if (!canSave) return;
@@ -66,7 +85,16 @@ export default function BookEndPage({
     setSaving(true);
     setNotice(null);
     try {
-      const post = await createCommunityPost(bookId, 'review', body);
+      await flush();
+      let post;
+      try {
+        post = await createCommunityPost(bookId, 'review', body);
+      } catch (cause) {
+        // 진도 저장보다 글이 먼저 닿았을 수 있다 — 한 번만 다시 기다렸다가 다시 올린다
+        if (classifyCommunityError(cause) !== 'locked') throw cause;
+        await flush();
+        post = await createCommunityPost(bookId, 'review', body);
+      }
       setSaved({ postId: post.post_id, body: post.body });
       setDraft('');
     } catch (cause) {
@@ -231,7 +259,8 @@ export default function BookEndPage({
             ref={primaryRef}
             type="button"
             data-track="end-page-community"
-            onClick={onCommunity}
+            disabled={leaving}
+            onClick={() => void goCommunity()}
             className="mt-5 h-[52px] w-full rounded-full bg-[#8f1d35] text-[16px] font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d0a0b]"
           >
             완독자 커뮤니티로 이동하기
