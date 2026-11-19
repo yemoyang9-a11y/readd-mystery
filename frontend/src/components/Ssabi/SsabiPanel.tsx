@@ -97,7 +97,7 @@ export default function SsabiPanel({
   /** 타임라인(장 요약·사건) — 서버가 K 이하, 다 읽은 장만 걸러 준 것 (FR-SPL-002 🚦, 결정 31) */
   timeline?: TimelineResponse | null;
   timelineFailed?: boolean;
-  /** 목차 기준 전체 페이지 수 — 노트 쪽수 입력의 상한(R3, 목차는 상한 대상 아님). */
+  /** 목차 기준 전체 페이지 수 — 노트 쪽수 입력의 상한, 인물관계도 되감기 트랙 오른쪽 끝(R3, 목차는 상한 대상 아님). */
   totalPages?: number;
   notes: ReadingNote[];
   notesFailed: boolean;
@@ -231,7 +231,7 @@ export default function SsabiPanel({
         ) : null}
         {tab === 'timeline' ? <TimelineTab timeline={timeline} failed={timelineFailed} /> : null}
         {tab === 'relationship' ? (
-          <RelationshipTab graph={graph} failed={graphFailed} />
+          <RelationshipTab graph={graph} failed={graphFailed} totalPages={totalPages} />
         ) : null}
         {tab === 'chatbot' ? (
           <ChatbotTab
