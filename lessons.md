@@ -68,3 +68,15 @@
 `으로 바꾼다.
 - 해결: `open(p, encoding='utf-8', newline='')`로 읽고 써서 원래 줄바꿈을 유지한다. 이미 바뀐 파일은 `sed -i 's/$//'`로 되돌렸다(`git diff` 비어 있음 확인).
 
+
+## 2026-11-20 — 이 컴퓨터(Node 26)에서 vitest 72건 실패, CI(Node 22)에서는 전부 통과
+
+- 증상: `npx vitest run src/components src/guide src/mobile`에서 72건 실패. 오류는 `TypeError: Cannot read properties of undefined (reading 'getItem' / 'clear')`이고 실패 파일은 RequireSession·MobileCommunity·MobileReader 계열(싸비 탭과 무관).
+- 원인: 이 컴퓨터는 Node v26이라 테스트 환경에서 `localStorage`가 없다(추정). 같은 커밋을 GitHub Actions(Node 22)에서 돌리면 Lint·Test·Build가 모두 통과했다(Frontend CI 44678182611, 2026-11-20).
+- 대응: 로컬 vitest 실패가 `localStorage` 오류뿐이고 내가 건드린 파일이 아니면 CI 결과로 판단한다. 싸비 탭 변경은 `src/components/Ssabi`·`src/guide`로 좁혀 돌린다. 단, 그렇게 좁히면 다른 폴더의 테스트(가이드 6단계 대상 선택자 등)를 놓치므로 변경 후에는 `src/guide`도 같이 돌린다.
+
+## 2026-11-20 — ego-browser로 휴대폰 크기 화면 캡처
+
+- 증상: 휴대폰 크기 설정 뒤에 찍은 캡처가 데스크톱 폭(1057px)으로 나왔다.
+- 원인: `Emulation.setDeviceMetricsOverride`는 스크립트 실행(프로세스)마다 다시 걸어야 한다. 이전 실행에서 건 설정은 다음 실행에 남지 않는다.
+- 해결: 매 스크립트 첫머리에 `page.cdp("Emulation.setDeviceMetricsOverride", {width:390, height:844, deviceScaleFactor:2, mobile:true})`를 걸고 `Page.captureScreenshot`으로 찍으면 780x1688로 나온다. 이용 가이드(`/guide`)는 비춘 곳 밖의 클릭을 모두 막으므로, 눌러 보려는 요소에 `data-guide-ui` 속성을 붙이면 통과한다.
