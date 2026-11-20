@@ -383,7 +383,8 @@ const MIGRATIONS = path.join(__dirname, '../../../../migrations');
     pool = new Pool({ connectionString: PG_URL, options: `-c search_path=${schema}` });
     await pool.query(`CREATE TABLE books (book_id TEXT PRIMARY KEY, title TEXT NOT NULL)`);
     await pool.query(`INSERT INTO books VALUES ($1, '가상범인'), ($2, '타원형의 거울')`, [BOOK, OTHER]);
-    for (const file of ['016_community.sql', '022_community_moderation.sql', '024_community_likes.sql']) {
+    await pool.query(`CREATE TABLE users (user_id UUID PRIMARY KEY, reader_id UUID NOT NULL UNIQUE, display_name TEXT)`);
+    for (const file of ['016_community.sql', '022_community_moderation.sql', '024_community_likes.sql', '027_community_replies.sql']) {
       await pool.query(fs.readFileSync(path.join(MIGRATIONS, file), 'utf8'));
     }
     // IF NOT EXISTS — 두 번 적용해도 그대로

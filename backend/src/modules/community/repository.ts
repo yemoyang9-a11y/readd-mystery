@@ -12,8 +12,11 @@ export interface PostRow {
   seq: number;
   post_id: string;
   reader_id: string;
-  kind: PostKind;
+  /** T19 이후 새 댓글은 null. 기존 글의 말머리만 남는다 */
+  kind: PostKind | null;
   body: string;
+  /** users.display_name — 없으면 null */
+  author_name: string | null;
   created_at: string;
   deleted: boolean;
   comment_count: number;
@@ -29,12 +32,18 @@ export interface CommentRow {
   reader_id: string;
   body: string;
   created_at: string;
+  author_name: string | null;
+  /** 답글에 단 답글의 대상. null = 댓글에 바로 단 답글 (T19) */
+  reply_to_comment_id: string | null;
+  reply_to_reader_id: string | null;
+  reply_to_name: string | null;
+  like_count?: number;
+  liked_by_me?: boolean;
 }
 
 export type PostSort = 'new' | 'popular';
 
 export interface ListPostsQuery {
-  kind?: PostKind;
   /** sort='new' 커서 — 이 seq 보다 오래된 글 */
   before?: number;
   /** sort='popular' 커서 — 앞에서 건너뛸 글 수 */
@@ -49,13 +58,18 @@ export interface CommunityRepository {
   listPosts(bookId: string, query: ListPostsQuery): Promise<PostRow[]>;
   /** viewerId — liked_by_me 계산용(커뮤니티 관문을 통과한 독자). 없으면 false */
   getPost(bookId: string, postId: string, viewerId?: string): Promise<PostRow | null>;
-  listComments(bookId: string, postId: string): Promise<CommentRow[]>;
-  createPost(bookId: string, readerId: string, kind: PostKind, body: string): Promise<PostRow>;
+  /** seq 오름차순. viewerId — 답글 liked_by_me 계산용 */
+  listComments(bookId: string, postId: string, viewerId?: string): Promise<CommentRow[]>;
+  createPost(bookId: string, readerId: string, body: string): Promise<PostRow>;
+  /**
+   * 댓글이 보이지 않거나, replyToCommentId 가 같은 댓글 묶음의 보이는 답글이 아니면 null (T19)
+   */
   createComment(
     bookId: string,
     postId: string,
     readerId: string,
-    body: string
+    body: string,
+    replyToCommentId: string | null
   ): Promise<CommentRow | null>;
   deletePost(bookId: string, postId: string, readerId: string): Promise<boolean>;
   deleteComment(bookId: string, commentId: string, readerId: string): Promise<boolean>;
@@ -139,4 +153,12 @@ export interface CommunityEngagementRepository {
   ): Promise<{ like_count: number; liked_by_me: boolean }>;
   /** 허브 카드의 글 수 — 숨김·삭제 글 제외 */
   countVisiblePosts(bookId: string): Promise<number>;
+  /** 답글 좋아요 — 글 공감과 같은 멱등·숨김 규칙 (T19) */
+  likeComment(bookId: string, commentId: string, readerId: string): Promise<boolean>;
+  unlikeComment(bookId: string, commentId: string, readerId: string): Promise<boolean>;
+  commentLikeState(
+    bookId: string,
+    commentId: string,
+    readerId: string
+  ): Promise<{ like_count: number; liked_by_me: boolean }>;
 }
