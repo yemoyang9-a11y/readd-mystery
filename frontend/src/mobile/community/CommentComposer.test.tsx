@@ -34,3 +34,8 @@ test('입력창: 공백만 있으면 게시 버튼이 비활성', async () => {
   await userEvent.type(screen.getByRole('textbox'), '다 읽었어요');
   expect(screen.getByRole('button', { name: '게시' })).toBeEnabled();
 });
+
+test('입력창 왼쪽 동그라미에 내 닉네임 첫 글자가 보인다', () => {
+  render(<CommentComposer replyTarget={null} myName="시험 독자" onCancelReply={vi.fn()} onSubmit={vi.fn()} />);
+  expect(screen.getByText('시')).toBeInTheDocument();
+});

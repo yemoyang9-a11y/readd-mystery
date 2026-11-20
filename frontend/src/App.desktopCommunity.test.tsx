@@ -30,7 +30,8 @@ test('PC 에서 /books/:bookId/community 는 책 이야기방을 그린다 (페�
   renderDesktopAt('/books/takryu/community');
   await act(() => vi.dynamicImportSettled());
   expect(await screen.findByTestId('book-community')).toBeInTheDocument();
-  expect(screen.getByRole('heading', { level: 1, name: '완독자 이야기' })).toBeInTheDocument();
+  // T19 — 머리줄은 "다 읽은 독자 이야기" + 책 제목
+  expect(screen.getByText('다 읽은 독자 이야기')).toBeInTheDocument();
   expect(screen.queryByText('페이지를 찾을 수 없습니다')).toBeNull();
 });
 

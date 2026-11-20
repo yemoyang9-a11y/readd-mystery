@@ -32,6 +32,8 @@ export interface CommunityComment {
 export interface CommunityPostPage {
   posts: CommunityPost[];
   next_cursor: string | null;
+  /** 보이는 댓글 전체 수 — 머리줄 "N개의 댓글" (T19) */
+  total_count?: number;
 }
 
 export interface CommunityPostDetail {

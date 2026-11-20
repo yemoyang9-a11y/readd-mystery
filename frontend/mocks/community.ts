@@ -150,6 +150,7 @@ export function mockListPosts(bookId: string, cursor: string | null, sort: Commu
   return {
     posts: page.map(view),
     next_cursor: rows.length > offset + PAGE_SIZE ? String(offset + PAGE_SIZE) : null,
+    total_count: rows.filter((p) => !p.deleted).length,
   };
 }
 

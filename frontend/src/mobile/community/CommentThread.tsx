@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CommunityComment, CommunityPost, CommunityReportTarget } from '../../types';
 import {
+  classifyCommunityError,
   deleteCommunityComment,
   deleteCommunityPost,
   fetchCommunityPost,
@@ -9,6 +10,7 @@ import {
   reportCommunityTarget,
   unlikeCommunityComment,
   unlikeCommunityPost,
+  type CommunityFailure,
 } from '../../services/communityService';
 import CommentRow from './CommentRow';
 import { DeleteDialog, ReportDialog } from './CommunityConfirmDialogs';
@@ -24,6 +26,7 @@ export default function CommentThread({
   highlightCommentId = null,
   onReply,
   onChanged,
+  onFailure = () => undefined,
 }: {
   bookId: string;
   post: CommunityPost;
@@ -33,6 +36,8 @@ export default function CommentThread({
   highlightCommentId?: string | null;
   onReply: (target: ReplyTarget) => void;
   onChanged: () => void;
+  /** 요청 실패 — 'locked'(커뮤니티 잠금)이면 부모가 잠금 화면으로 바꾼다 (FR-SPL-005 🚦) */
+  onFailure?: (failure: CommunityFailure) => void;
 }) {
   const [head, setHead] = useState(post);
   const [expanded, setExpanded] = useState(false);
@@ -44,10 +49,20 @@ export default function CommentThread({
 
   useEffect(() => setHead(post), [post]);
 
+  async function guarded(run: () => Promise<void>) {
+    try {
+      await run();
+    } catch (cause) {
+      onFailure(classifyCommunityError(cause));
+    }
+  }
+
   async function load() {
-    const detail = await fetchCommunityPost(bookId, post.post_id);
-    setHead(detail.post);
-    setReplies(detail.comments);
+    await guarded(async () => {
+      const detail = await fetchCommunityPost(bookId, post.post_id);
+      setHead(detail.post);
+      setReplies(detail.comments);
+    });
   }
 
   useEffect(() => {
@@ -67,17 +82,24 @@ export default function CommentThread({
   }
 
   async function togglePostLike() {
-    const next = head.liked_by_me
-      ? await unlikeCommunityPost(bookId, head.post_id)
-      : await likeCommunityPost(bookId, head.post_id);
-    setHead((prev) => ({ ...prev, ...next }));
+    await guarded(async () => {
+      const next = head.liked_by_me
+        ? await unlikeCommunityPost(bookId, head.post_id)
+        : await likeCommunityPost(bookId, head.post_id);
+      setHead((prev) => ({ ...prev, ...next }));
+    });
   }
 
   async function toggleReplyLike(item: CommunityComment) {
-    const next = item.liked_by_me
-      ? await unlikeCommunityComment(bookId, item.comment_id)
-      : await likeCommunityComment(bookId, item.comment_id);
-    setReplies((prev) => prev?.map((r) => (r.comment_id === item.comment_id ? { ...r, ...next } : r)) ?? prev);
+    await guarded(async () => {
+      const next = item.liked_by_me
+        ? await unlikeCommunityComment(bookId, item.comment_id)
+        : await likeCommunityComment(bookId, item.comment_id);
+      setReplies(
+        (prev) =>
+          prev?.map((r) => (r.comment_id === item.comment_id ? { ...r, ...next } : r)) ?? prev
+      );
+    });
   }
 
   async function confirmDelete() {
@@ -85,11 +107,13 @@ export default function CommentThread({
     const target = deleting;
     setDeleting(null);
     if (target.type === 'post') {
-      await deleteCommunityPost(bookId, target.id);
-      onChanged();
+      await guarded(async () => {
+        await deleteCommunityPost(bookId, target.id);
+        onChanged();
+      });
       return;
     }
-    await deleteCommunityComment(bookId, target.id);
+    await guarded(() => deleteCommunityComment(bookId, target.id));
     await load();
   }
 
@@ -118,7 +142,9 @@ export default function CommentThread({
         isMine={head.is_mine}
         deleted={head.deleted}
         highlighted={highlightCommentId === head.post_id}
-        onReply={() => onReply({ postId: head.post_id, commentId: null, nickname: head.nickname ?? '' })}
+        onReply={() =>
+          onReply({ postId: head.post_id, commentId: null, nickname: head.nickname ?? '' })
+        }
         onToggleLike={() => void togglePostLike()}
         onDelete={() => setDeleting({ type: 'post', id: head.post_id })}
         onReport={() => setReporting({ type: 'post', id: head.post_id })}
@@ -147,7 +173,13 @@ export default function CommentThread({
                 isPostAuthor={item.is_post_author}
                 replyToNickname={item.reply_to_nickname}
                 highlighted={highlightCommentId === item.comment_id}
-                onReply={() => onReply({ postId: head.post_id, commentId: item.comment_id, nickname: item.nickname })}
+                onReply={() =>
+                  onReply({
+                    postId: head.post_id,
+                    commentId: item.comment_id,
+                    nickname: item.nickname,
+                  })
+                }
                 onToggleLike={() => void toggleReplyLike(item)}
                 onDelete={() => setDeleting({ type: 'comment', id: item.comment_id })}
                 onReport={() => setReporting({ type: 'comment', id: item.comment_id })}
@@ -165,7 +197,11 @@ export default function CommentThread({
         />
       ) : null}
       {reporting ? (
-        <ReportDialog returnFocusRef={menuRef} onClose={() => setReporting(null)} onSubmit={submitReport} />
+        <ReportDialog
+          returnFocusRef={menuRef}
+          onClose={() => setReporting(null)}
+          onSubmit={submitReport}
+        />
       ) : null}
     </li>
   );

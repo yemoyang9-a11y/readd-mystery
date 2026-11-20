@@ -117,3 +117,17 @@ test('답글 달기를 누르면 onReply 가 그 답글 작성자와 commentId �
   await userEvent.click(screen.getAllByRole('button', { name: '답글 달기' })[1]);
   expect(onReply).toHaveBeenLastCalledWith({ postId: 'p1', commentId: 'c1', nickname: '책벌레' });
 });
+
+test('시간은 인스타그램처럼 "3시간"으로 짧게 보인다 ("전" 없음)', () => {
+  render(
+    <CommentThread
+      bookId="takryu"
+      post={{ ...POST, created_at: new Date(Date.now() - 3 * 3600_000 - 60_000).toISOString() }}
+      refreshKey={0}
+      onReply={vi.fn()}
+      onChanged={vi.fn()}
+    />
+  );
+  expect(screen.getByText('3시간')).toBeInTheDocument();
+  expect(screen.queryByText('3시간 전')).not.toBeInTheDocument();
+});

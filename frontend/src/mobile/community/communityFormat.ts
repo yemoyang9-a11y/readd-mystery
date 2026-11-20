@@ -1,10 +1,3 @@
-import type { CommunityKind } from '../../types';
-
-export const KIND_LABEL: Record<CommunityKind, string> = {
-  theory: '범인 추리',
-  review: '감상',
-};
-
 export const REPORT_REASONS = ['욕설·비하', '스팸·광고', '도배', '기타'] as const;
 
 const MINUTE = 60_000;
