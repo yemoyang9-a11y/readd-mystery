@@ -23,7 +23,47 @@ describe('타임라인 탭 — 2026-11-18 대표 승인 시안 2차 A안 (장 �
 
   it('제목은 "지금까지, 세 장이에요" — 받은 장 수를 시안 말투로', () => {
     render(<TimelineTab timeline={timeline} failed={false} />);
-    expect(screen.getByRole('heading', { name: '지금까지, 세 장이에요' })).toBeInTheDocument();
+    expect(screen.getByText('지금까지, 세 장이에요')).toBeInTheDocument();
+  });
+
+  it('모바일 제목은 "지금까지 읽은 N장"(다 읽은 장만 센다, 읽는 중인 장 제외)과 오른쪽 "사건 N"이다', () => {
+    render(<TimelineTab timeline={timeline} failed={false} />);
+    const label = screen.getByText('지금까지 읽은 2장');
+    expect(label).toHaveClass('hidden', 'mobile:inline');
+    expect(screen.getByText('지금까지, 세 장이에요')).toHaveClass('mobile:hidden');
+    const total = screen.getByText('사건 3', { selector: 'small' });
+    expect(total).toHaveClass('hidden', 'mobile:inline');
+    expect(label.parentElement).toBe(total.parentElement);
+  });
+
+  it('모바일 제목에 사건이 하나도 없으면 "사건 N"을 그리지 않는다', () => {
+    render(<TimelineTab timeline={{ ...timeline, events: [] }} failed={false} />);
+    expect(screen.queryByText('사건 0', { selector: 'small' })).not.toBeInTheDocument();
+  });
+
+  it('모바일 시안: 장 제목 17px·쪽 범위 mono 12px가 같은 줄, 요약 16px 500 leading-1.65, 장 사이 32px', () => {
+    render(<TimelineTab timeline={timeline} failed={false} />);
+    const [first] = screen.getAllByRole('listitem');
+    expect(first).toHaveClass('mobile:mb-8');
+    expect(within(first).getByText('1장 무대에 올려진 살인 사건')).toHaveClass('mobile:text-[17px]');
+    expect(within(first).getByText('p.1–10')).toHaveClass('mobile:font-dashMono', 'mobile:text-xs');
+    const summary = within(first).getByText('좌장이 살해되고 아내가 붙잡혀요.');
+    expect(summary).toHaveClass('mobile:text-base', 'mobile:font-medium', 'mobile:leading-[1.65]');
+  });
+
+  it('모바일 시안: 읽는 중인 장은 "지금 읽는 곳 · N장" 점만 — 안내 문장은 모바일에서 숨긴다', () => {
+    render(<TimelineTab timeline={timeline} failed={false} />);
+    const now = screen.getAllByRole('listitem')[2];
+    expect(within(now).getByText('다 읽으면 정리돼요')).toHaveClass('mobile:hidden');
+    expect(within(now).getByText('지금 읽는 곳 · 3장')).toHaveClass('mobile:text-[17px]');
+  });
+
+  it('모바일 시안: 사건 카드는 왼쪽 쪽수(mono·강조색), 오른쪽 문장', async () => {
+    render(<TimelineTab timeline={timeline} failed={false} />);
+    await userEvent.click(chapterButton(1));
+    const page = screen.getByText('p.3');
+    expect(page).toHaveClass('mobile:order-1', 'mobile:font-dashMono', 'mobile:text-xs', 'mobile:text-brief-accent');
+    expect(screen.getByText('좌장 살해')).toHaveClass('mobile:order-2');
   });
 
   it('다 읽은 장은 "N장 제목" 한 줄·p.시작–끝·핵심 한 줄·사건 수만 보이고, 사건 카드는 접혀 있다', () => {
@@ -220,6 +260,7 @@ describe('타임라인 탭 — 2026-11-18 대표 승인 시안 2차 A안 (장 �
       applied_cutoff: 12,
     };
     render(<TimelineTab timeline={many} failed={false} />);
-    expect(screen.getByRole('heading', { name: '지금까지, 12개 장이에요' })).toBeInTheDocument();
+    expect(screen.getByText('지금까지, 12개 장이에요')).toBeInTheDocument();
+    expect(screen.getByText('지금까지 읽은 12장')).toBeInTheDocument();
   });
 });

@@ -18,7 +18,7 @@ export function firstSentence(summary: string | null): string | null {
   return (match ? match[0] : summary).trim();
 }
 
-function Chevron({ open }: { open: boolean }) {
+function Chevron({ open, className = '' }: { open: boolean; className?: string }) {
   return (
     <svg
       width="10"
@@ -30,7 +30,7 @@ function Chevron({ open }: { open: boolean }) {
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
-      className={`shrink-0 text-brief-muted transition-transform ${open ? 'rotate-180' : ''}`}
+      className={`shrink-0 text-brief-muted transition-transform ${open ? 'rotate-180' : ''} ${className}`}
     >
       <path d="M6 9l6 6 6-6" />
     </svg>
@@ -87,22 +87,29 @@ export default function TimelineTab({
 
   return (
     <div className="font-dashSans text-brief-ink">
-      <h3 className="m-0 mb-3 mt-0.5 text-base font-bold leading-snug">
-        지금까지, {chapterCount(timeline.chapters.length)}이에요
+      <h3 className="m-0 mb-3 mt-0.5 text-base font-bold leading-snug mobile:flex mobile:items-baseline mobile:justify-between mobile:gap-2 mobile:text-sm">
+        <span className="mobile:hidden">지금까지, {chapterCount(timeline.chapters.length)}이에요</span>
+        <span className="hidden mobile:inline">{`지금까지 읽은 ${timeline.chapters.filter((chapter) => chapter.completed).length}장`}</span>
+        {timeline.events.length > 0 ? (
+          <small className="hidden font-dashMono text-xs font-normal text-brief-muted mobile:inline">
+            {`사건 ${timeline.events.length}`}
+          </small>
+        ) : null}
       </h3>
-      <ol data-no-track className="m-0 list-none border-l-[1.5px] border-brief-rule py-0 pl-[18px] pr-0">
+      <ol data-no-track className="m-0 list-none border-l-[1.5px] border-brief-rule py-0 pl-[18px] pr-0 mobile:pl-5">
         {timeline.chapters.map((chapter) => {
           if (!chapter.completed) {
             return (
-              <li key={chapter.chapter_no} data-timeline-now className="relative mb-3.5">
+              <li key={chapter.chapter_no} data-timeline-now className="relative mb-3.5 mobile:flex mobile:items-baseline mobile:justify-between mobile:gap-2">
                 <span
                   aria-hidden="true"
-                  className="absolute -left-6 top-1 size-[9px] rounded-full border-[1.5px] border-brief-accent bg-brief-accent"
+                  className="absolute -left-6 top-1 size-[9px] rounded-full border-[1.5px] border-brief-accent bg-brief-accent mobile:-left-[26px] mobile:top-1.5 mobile:size-[11px]"
                 />
-                <span className="text-[10.5px] font-semibold leading-none text-brief-accent">
+                <span className="text-[10.5px] font-semibold leading-none text-brief-accent mobile:text-[17px] mobile:font-bold mobile:text-brief-ink mobile:leading-[1.4]">
                   지금 읽는 곳 · {chapter.chapter_no}장
                 </span>
-                <b className="mb-0.5 mt-[3px] block text-[13.5px] font-bold leading-[1.4]">다 읽으면 정리돼요</b>
+                <small className="hidden shrink-0 font-dashMono text-xs font-normal text-brief-muted mobile:inline">{`p.${chapter.start_page}–`}</small>
+                <b className="mb-0.5 mt-[3px] block text-[13.5px] font-bold leading-[1.4] mobile:hidden">다 읽으면 정리돼요</b>
               </li>
             );
           }
@@ -116,51 +123,57 @@ export default function TimelineTab({
           const keyLine = chapter.key_point ?? firstSentence(chapter.summary);
           return (
             // 2026-11-19 대표 지시 — 장과 장 사이를 확실히 넓게(16px → 28px)
-            <li key={chapter.chapter_no} className="relative mb-7">
+            <li key={chapter.chapter_no} className="relative mb-7 mobile:mb-8">
               <span
                 aria-hidden="true"
-                className="absolute -left-6 top-1 size-[9px] rounded-full border-[1.5px] border-brief-muted bg-brief-paper"
+                className="absolute -left-6 top-1 size-[9px] rounded-full border-[1.5px] border-brief-muted bg-brief-paper mobile:-left-[26px] mobile:top-1.5 mobile:size-[11px]"
               />
               <button
                 type="button"
                 aria-expanded={chapterOpen}
                 onClick={() => toggle(chapterKey)}
-                className="block w-full rounded-lg text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brief-accent"
+                className="block w-full rounded-lg text-left mobile:flex mobile:flex-wrap mobile:items-baseline mobile:gap-x-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brief-accent"
               >
                 {/* 2026-11-19 대표 지시 — 장 번호와 제목을 한 줄로 "1장 탐정극 〈가상범인〉", 쪽 범위는 그 아래 작게 */}
-                <span className="flex items-center gap-2">
-                  <b data-chapter-heading className="min-w-0 flex-1 text-[15px] font-bold leading-[1.4]">
+                <span className="flex items-center gap-2 mobile:contents">
+                  <b data-chapter-heading className="min-w-0 flex-1 text-[15px] font-bold leading-[1.4] mobile:order-1 mobile:text-[17px] mobile:leading-[1.4]">
                     {`${chapter.chapter_no}장 ${chapter.title}`}
                   </b>
                   {events.length > 0 ? (
-                    <span className="shrink-0 text-[11px] font-semibold text-brief-accent">사건 {events.length}</span>
+                    <span className="shrink-0 text-[11px] font-semibold text-brief-accent mobile:order-4 mobile:mt-2 mobile:text-xs">사건 {events.length}</span>
                   ) : null}
-                  <Chevron open={chapterOpen} />
+                  <Chevron open={chapterOpen} className="mobile:order-5 mobile:mt-2 mobile:self-center" />
                 </span>
-                <span className="mb-1.5 mt-0.5 block text-[11px] font-semibold leading-none tracking-[0.02em] tabular-nums text-brief-muted">
+                <span className="mb-1.5 mt-0.5 block text-[11px] font-semibold leading-none tracking-[0.02em] tabular-nums text-brief-muted mobile:order-2 mobile:m-0 mobile:shrink-0 mobile:font-dashMono mobile:text-xs mobile:font-normal mobile:tracking-normal">
                   p.{chapter.start_page}–{chapter.end_page}
                 </span>
                 {/* 2026-11-19 대표 지시 — 핵심 한 줄을 휴대폰에서 읽기 편하게 12.5px → 14.5px */}
-                {keyLine ? <span className="block text-[14.5px] leading-relaxed text-brief-ink">{keyLine}</span> : null}
+                {keyLine ? (
+                  <span className="block text-[14.5px] leading-relaxed text-brief-ink mobile:order-3 mobile:mt-1.5 mobile:basis-full mobile:text-base mobile:font-medium mobile:leading-[1.65]">
+                    {keyLine}
+                  </span>
+                ) : null}
               </button>
               {chapterOpen && events.length > 0 ? (
-                <div data-chapter-events className="mt-2 flex flex-col gap-1.5">
+                <div data-chapter-events className="mt-2 flex flex-col gap-1.5 mobile:mt-3.5">
                   {events.map((event) => {
                     const cardClass =
-                      'block w-full rounded-[10px] border bg-white px-3 py-2.5 text-left text-xs leading-normal shadow-brief-soft-sm';
+                      'block w-full rounded-[10px] border bg-white px-3 py-2.5 text-left text-xs leading-normal shadow-brief-soft-sm mobile:rounded-xl mobile:text-sm mobile:leading-[1.45] mobile:shadow-none';
                     const row = (open: boolean, expandable: boolean) => (
                       <span className="flex items-baseline gap-2">
-                        <span className={`min-w-0 flex-1 ${open ? 'font-semibold text-brief-accent' : ''}`}>
+                        <span className={`min-w-0 flex-1 mobile:order-2 mobile:font-semibold ${open ? 'font-semibold text-brief-accent' : ''}`}>
                           {event.event}
                         </span>
-                        <span className="shrink-0 tabular-nums text-brief-muted">p.{event.occurrence_page}</span>
-                        {expandable ? <Chevron open={open} /> : null}
+                        <span className="shrink-0 tabular-nums text-brief-muted mobile:order-1 mobile:w-11 mobile:font-dashMono mobile:text-xs mobile:text-brief-accent">
+                          p.{event.occurrence_page}
+                        </span>
+                        {expandable ? <Chevron open={open} className="mobile:order-3" /> : null}
                       </span>
                     );
                     // 독자용 설명이 없으면 펼칠 것이 없다 — 지어내지 않고 이름과 쪽만 둔다
                     if (!event.description) {
                       return (
-                        <div key={event.id} className={`${cardClass} border-brief-rule`}>
+                        <div key={event.id} className={`${cardClass} border-brief-rule mobile:border-brief-accent/35`}>
                           {row(false, false)}
                         </div>
                       );
@@ -172,7 +185,7 @@ export default function TimelineTab({
                         type="button"
                         aria-expanded={open}
                         onClick={() => toggle(event.id)}
-                        className={`${cardClass} min-h-11 ${open ? 'border-brief-accent' : 'border-brief-rule'} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brief-accent`}
+                        className={`${cardClass} min-h-11 ${open ? 'border-brief-accent' : 'border-brief-rule mobile:border-brief-accent/35'} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brief-accent`}
                       >
                         {row(open, true)}
                         {open ? (
