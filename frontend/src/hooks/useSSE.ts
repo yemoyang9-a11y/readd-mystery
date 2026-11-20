@@ -76,6 +76,7 @@ export function useSSE(position?: string | number | null) {
           setError(frame.message);
           return;
         }
+        if (frame.type !== 'done') continue;
         // done
         if (typeof frame.applied_cutoff === 'number') {
           setAppliedCutoff(frame.applied_cutoff);

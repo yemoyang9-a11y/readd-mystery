@@ -35,7 +35,12 @@ export type ApiErrorCode =
  * 근거 부재 거절 문구도 delta 로 흘러온다. 프론트는 error 여부만 보고, 텍스트 내용으로
  * 거절인지 판별하지 않는다 (절대 규칙 7번).
  */
-export type SseFrame = SseDeltaFrame | SseDoneFrame | SseErrorFrame;
+export type SseFrame =
+  | SseDeltaFrame
+  | SseDoneFrame
+  | SseErrorFrame
+  | SseEvidenceFrame
+  | SseFollowUpsFrame;
 
 export interface SseDeltaFrame {
   type: 'delta';
@@ -66,6 +71,21 @@ export interface SseErrorFrame {
   message: string;
 }
 
+export interface AmoEvidenceItem {
+  page: number;
+  text: string;
+}
+
+export interface SseEvidenceFrame {
+  type: 'evidence';
+  items: AmoEvidenceItem[];
+}
+
+export interface SseFollowUpsFrame {
+  type: 'follow_ups';
+  questions: string[];
+}
+
 // ============================================================================
 // 챗봇 대화 이력 (2026-08-24 사용자·R2 조율 결정)
 // @see backend/migrations/005_chatbot_conversation_history.sql
@@ -83,6 +103,8 @@ export interface ChatbotConversationSummary {
 export interface ChatbotConversationTurn {
   role: 'user' | 'assistant';
   text: string;
+  evidence?: AmoEvidenceItem[];
+  followUps?: string[];
 }
 
 export interface ChatbotConversationDetail extends ChatbotConversationSummary {

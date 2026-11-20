@@ -89,6 +89,13 @@
 - Windows에서 Claude CLI 작업을 돌릴 때 `spawn claude ENOENT`가 난다. `CLAUDE_CLI_BIN`에 실제 실행 파일(`...\npm\node_modules\@anthropic-ai\claude-code\bin\claude.exe`)을 넘기면 된다. 이 컴퓨터 `backend/.env`의 `OPENAI_API_KEY`는 무효(401)이고 `MOCK_MODE=true`라서, 생성은 `MOCK_MODE=false`와 Claude CLI 경로로 돌렸다.
 - Bash 도구 heredoc 안에 쓴 JS 문자열의 `\s`가 `s`로 바뀌어 정규식이 깨진 적이 있다. 정규식을 파일에 쓸 때는 `String.fromCharCode(92)`로 역슬래시를 만들거나, 문자 클래스(`[ ]`)로 피한다.
 
+## 2026-11-20 — Node 26에서 vitest `localStorage` 오류의 해결책 확인
+
+- 증상: 이 컴퓨터(Node v26)에서 `npx vitest run`이 `TypeError: Cannot read properties of undefined (reading 'getItem' / 'clear')`로 70여 건 실패(RequireSession·MobileCommunity·MobileReader 계열). 앞선 기록에서는 원인을 "추정"으로만 적었다.
+- 원인: Node 26의 실험 기능 웹스토리지가 jsdom의 `localStorage`를 가린다.
+- 검증된 해결: `NODE_OPTIONS=--no-experimental-webstorage`를 붙여 돌리면 `src/components src/guide src/hooks src/services src/mobile src/pages` 131개 파일 1133개 테스트가 전부 통과한다(2026-11-20 확인).
+- ego-browser로 로컬 모바일 읽기 화면(`/books/takryu/read`)을 확인할 때: 대역 모드(`VITE_USE_MOCK=true`)에서 `localStorage`에 `ssabi.auth_token`(아무 값)을 넣으면 로그인 관문을 지난다. 이 화면은 `Page.captureScreenshot`이 계속 시간 초과(원인 미확인)여서 DOM 값으로 확인했다. 대역 챗봇은 인물 이름이 정확히 든 질문("정주사가 누구야")에만 근거·이어 묻기를 낸다("정 주사"는 안 맞는다).
+
 ## 2026-11-20 — 서버 배포가 lint(prettier) 오류로 막힘
 
 - 증상: main 에 올린 뒤 `Deploy Backend to Fly.io`의 "Lint production sources"가 `prettier/prettier` 오류 19건으로 실패해 Fly 배포가 건너뛰어졌다. 화면(Pages)은 먼저 배포돼 몇 분 동안 새 화면이 옛 서버와 맞지 않았다.

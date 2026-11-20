@@ -483,7 +483,10 @@ export function mockCharacterResponse(
  * 리캡·챗봇 스트림 대역 — SSE_SPEC.md 형식 그대로 (delta/done/error).
  * 실제 경로는 fetch 응답을 readSseStream 이 파싱하지만, 대역은 프레임을 바로 내보낸다.
  */
-export async function* mockStreamFrames(text: string): AsyncGenerator<SseFrame> {
+export async function* mockStreamFrames(
+  text: string,
+  beforeDone: SseFrame[] = []
+): AsyncGenerator<SseFrame> {
   const { cutoff } = snapshot();
   // s(dotAll) 플래그 필수 — 기본 `.`은 개행을 안 잡아서 문단 구분(\n\n)이 청크 분할 중에
   // 통째로 사라진다(2026-08-24 확인, RecapTab 문단 분리 검증 중 발견).
@@ -491,6 +494,7 @@ export async function* mockStreamFrames(text: string): AsyncGenerator<SseFrame> 
     await new Promise((resolve) => setTimeout(resolve, 30));
     yield { type: 'delta', text: piece };
   }
+  yield* beforeDone;
   yield { type: 'done', applied_cutoff: cutoff };
 }
 
@@ -519,7 +523,30 @@ export function mockChatAnswer(query: string): string {
   if (!mentioned) {
     return '현재까지 읽은 페이지 기준으로 알 수 없는 내용입니다. 다른 질문 해주세요.';
   }
-  return `${mentioned.name}에 대해 ${cutoff}페이지까지의 내용으로 답하면, 아직 드러난 것은 많지 않습니다. (mock 답변)`;
+  const [first, second] = mockChatPages();
+  return `${mentioned.name}에 대해 ${cutoff}페이지까지의 내용으로 답하면, 아직 드러난 것은 많지 않습니다 (p.${first}). 처음 나온 장면은 p.${second}에 있어요. (mock 답변)`;
+}
+
+function mockChatPages(): [number, number] {
+  const { cutoff } = snapshot();
+  return [Math.max(1, cutoff), Math.max(1, cutoff - 3)];
+}
+
+/** 챗봇 답변 대역의 근거 문장·이어 묻기 프레임 — 실제 서버가 done 앞에 보내는 것과 같은 모양 */
+export function mockChatExtras(query: string): SseFrame[] {
+  const { cutoff } = snapshot();
+  const known = mockCharacters.filter((c) => c.first_appearance_page <= cutoff);
+  const mentioned = known.find((c) => query.includes(c.name));
+  if (!mentioned) return [];
+  const [first, second] = mockChatPages();
+  const pages = first === second ? [first] : [first, second];
+  return [
+    {
+      type: 'evidence',
+      items: pages.map((page) => ({ page, text: `(mock) ${page}쪽 근거 문장입니다.` })),
+    },
+    { type: 'follow_ups', questions: ['이 장면을 조금 더 설명해 줘', '지금까지 나온 단서를 정리해 줘'] },
+  ];
 }
 
 /** 추리 노트 대역 — 화면 확인용 예시 3개(독자가 적은 것처럼). 서버는 독자별로 따로 갖는다 */

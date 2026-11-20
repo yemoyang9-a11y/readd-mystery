@@ -256,6 +256,7 @@ export default function SsabiPanel({
             onQuoteDismissed={onQuoteDismissed}
             mentionNames={chatMentionNames}
             onJumpToPage={onJumpToNote}
+            onSaveClue={(page, text) => onAddNote({ page_no: page, kind: 'clue', body: text })}
           />
         ) : null}
       </div>

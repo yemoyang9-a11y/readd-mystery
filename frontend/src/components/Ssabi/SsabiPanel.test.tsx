@@ -345,4 +345,39 @@ describe('싸비 사이드창', () => {
       expect(screen.queryByRole('list')).toBeNull();
     });
   });
+
+  describe('아모 탭 — 근거 문장을 단서로 저장 (모바일)', () => {
+    const clueTurns: ChatbotConversationTurn[] = [
+      { role: 'user', text: '금붕어 사진이 왜 중요해?' },
+      {
+        role: 'assistant',
+        text: '촬영 시점을 가려내는 단서예요 (p.65).',
+        evidence: [{ page: 65, text: '그 금붕어 그릇에는 두 마리의 금붕어가 떠 있을 것이다.' }],
+      },
+    ];
+
+    it('"단서로 저장"은 추리 노트에 단서(kind clue)로 쪽수와 근거 문장을 넘긴다', async () => {
+      const onAddNote = vi.fn().mockResolvedValue(true);
+      render(
+        <div data-mobile="true">
+          <SsabiPanel
+            {...baseProps}
+            initialTab="chatbot"
+            initialTabEpoch={7}
+            chatTurns={clueTurns}
+            onAddNote={onAddNote}
+          />
+        </div>
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: '단서로 저장' }));
+
+      expect(onAddNote).toHaveBeenCalledWith({
+        page_no: 65,
+        kind: 'clue',
+        body: '그 금붕어 그릇에는 두 마리의 금붕어가 떠 있을 것이다.',
+      });
+      expect(await screen.findByRole('button', { name: '저장됨' })).toBeInTheDocument();
+    });
+  });
 });

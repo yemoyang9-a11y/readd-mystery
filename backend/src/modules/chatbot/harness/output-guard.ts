@@ -72,7 +72,7 @@ const HYPOTHESIS_VERDICT: RegExp[] = [
   /\b(?:that'?s|this\s+is)\s+(?:correct|right|wrong)\b/iu,
 ];
 
-function collectPageNumbers(answer: string): number[] {
+export function collectPageNumbers(answer: string): number[] {
   const numbers: number[] = [];
   for (const pattern of PAGE_PATTERNS) {
     for (const match of answer.matchAll(pattern)) {

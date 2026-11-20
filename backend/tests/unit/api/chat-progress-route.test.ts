@@ -130,4 +130,51 @@ describe('POST /books/:bookId/chat — 동봉 진도', () => {
   );
 });
 
+describe('POST /books/:bookId/chat — 근거 문장·이어 묻기 프레임 (NFR-AI-005 🚦, 대표 승인 2026-11-20)', () => {
+  function frames(res: { write: jest.Mock }): Array<Record<string, unknown>> {
+    return res.write.mock.calls.map(([line]: [string]) => JSON.parse(line.replace(/^data: /, '')));
+  }
+
+  test('evidence 와 follow_ups 는 done 바로 앞에 한 번씩 나간다', async () => {
+    mockState.handleQuery.mockImplementation(async function* (...args: unknown[]) {
+      const deps = args[8] as { extras: Record<string, unknown> };
+      deps.extras.evidence = [{ page: 2, text: '그는 장갑을 벗었다.' }];
+      deps.extras.followUps = ['그 장갑은 누구 거야?', '비는 언제부터 왔어?'];
+      yield '답';
+    });
+    const types = frames(await postChat({ query: '장갑?', page: 2, seq: 5 })).map((f) => f.type);
+    expect(types).toEqual(['delta', 'evidence', 'follow_ups', 'done']);
+  });
+
+  test('evidence 프레임은 items 를, follow_ups 프레임은 questions 를 그대로 싣는다', async () => {
+    mockState.handleQuery.mockImplementation(async function* (...args: unknown[]) {
+      const deps = args[8] as { extras: Record<string, unknown> };
+      deps.extras.evidence = [{ page: 2, text: '그는 장갑을 벗었다.' }];
+      deps.extras.followUps = ['그 장갑은 누구 거야?', '비는 언제부터 왔어?'];
+      yield '답';
+    });
+    const out = frames(await postChat({ query: '장갑?', page: 2, seq: 5 }));
+    expect(out[1]).toEqual({ type: 'evidence', items: [{ page: 2, text: '그는 장갑을 벗었다.' }] });
+    expect(out[2]).toEqual({
+      type: 'follow_ups',
+      questions: ['그 장갑은 누구 거야?', '비는 언제부터 왔어?'],
+    });
+  });
+
+  test('재료가 없으면 두 프레임 모두 보내지 않는다 (negative 쌍)', async () => {
+    const types = frames(await postChat({ query: '장갑?', page: 2, seq: 5 })).map((f) => f.type);
+    expect(types).toEqual(['delta', 'done']);
+  });
+
+  test('질문이 둘이 아니면 follow_ups 를 보내지 않는다', async () => {
+    mockState.handleQuery.mockImplementation(async function* (...args: unknown[]) {
+      const deps = args[8] as { extras: Record<string, unknown> };
+      deps.extras.followUps = ['하나뿐이야?'];
+      yield '답';
+    });
+    const types = frames(await postChat({ query: '장갑?', page: 2, seq: 5 })).map((f) => f.type);
+    expect(types).toEqual(['delta', 'done']);
+  });
+});
+
 export {};

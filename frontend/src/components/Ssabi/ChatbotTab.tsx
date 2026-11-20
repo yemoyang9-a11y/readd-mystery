@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useId,
@@ -15,7 +16,8 @@ import remarkBreaks from 'remark-breaks';
 import type { ChatbotConversationSummary, ChatbotConversationTurn } from '../../types';
 import AmoSherlock from '../common/AmoSherlock';
 import { formatConversationTimestamp } from './formatConversationTime';
-import { rehypeAmoMentions } from './chatMentions';
+import { rehypeAmoMentions, splitMentions } from './chatMentions';
+import { AmoActions, AmoEvidence, AmoFollowUps } from './AmoAnswerExtras';
 
 /**
  * 아모 답변의 인물·쪽 표시 — 2026-11-18 대표 승인 시안(인물 강조색, 쪽은 키캡 ①, 검은 말풍선 후 이동).
@@ -26,7 +28,21 @@ const MentionContext = createContext<{
   openId: string | null;
   setOpenId: (id: string | null) => void;
   onJump?: (page: number) => void;
-}>({ openId: null, setOpenId: () => {} });
+  mobile: boolean;
+  evidencePages: ReadonlySet<number>;
+  selectedPage: number | null;
+  onPick: (page: number) => void;
+}>({
+  openId: null,
+  setOpenId: () => {},
+  mobile: false,
+  evidencePages: new Set(),
+  selectedPage: null,
+  onPick: () => {},
+});
+
+const MOBILE_KEYCAP =
+  "mx-0.5 inline-flex h-[26px] items-center rounded-full px-2 font-dashMono text-[12px] leading-none align-[1px]";
 
 function AmoName({ children }: { children?: React.ReactNode }) {
   return (
@@ -43,7 +59,8 @@ function AmoPage({
   node?: { properties?: Record<string, unknown> };
   children?: React.ReactNode;
 }) {
-  const { openId, setOpenId, onJump } = useContext(MentionContext);
+  const { openId, setOpenId, onJump, mobile, evidencePages, selectedPage, onPick } =
+    useContext(MentionContext);
   const id = useId();
   const page = Number(node?.properties?.dataPage);
   const label =
@@ -52,6 +69,26 @@ function AmoPage({
       : Array.isArray(children)
         ? children.join('')
         : String(children ?? '');
+  if (mobile && Number.isSafeInteger(page) && evidencePages.has(page)) {
+    const on = selectedPage === page;
+    return (
+      <button
+        type="button"
+        aria-label={label}
+        aria-pressed={on}
+        data-amo-page
+        onClick={(e) => {
+          e.stopPropagation();
+          onPick(page);
+        }}
+        className={`${MOBILE_KEYCAP} relative after:absolute after:-inset-x-1 after:-inset-y-[9px] after:content-[''] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brief-accent ${
+          on ? 'bg-brief-accent text-white' : 'bg-[#efebe8] text-brief-ink'
+        }`}
+      >
+        {label}
+      </button>
+    );
+  }
   if (!onJump || !Number.isSafeInteger(page)) return <span>{label}</span>;
   const open = openId === id;
   const go = () => {
@@ -290,12 +327,15 @@ export default function ChatbotTab({
   requireTextToSend = false,
   mentionNames = [],
   onJumpToPage,
+  onSaveClue,
 }: {
   requireTextToSend?: boolean;
   /** 강조할 인물 이름 — 서버가 기준점으로 거른 관계도 응답에서 뽑은 것만 (FR-SPL-002 🚦) */
   mentionNames?: string[];
   /** 쪽 키캡에서 이동 — 이동 직전 쪽을 기억하는 jumpToNote 와 같다. 없으면 쪽은 글자로만 */
   onJumpToPage?: (page: number) => void;
+  /** 근거 문장을 추리 노트에 단서로 저장. 성공하면 true — 실패하면 버튼이 그대로 남는다 */
+  onSaveClue?: (page: number, text: string) => Promise<boolean>;
   /** 구경로 전용(테스트 호환). turns를 쓰는 실제 화면에서는 전달하지 않는다 */
   answer?: string;
   streaming: boolean;
@@ -429,6 +469,31 @@ export default function ChatbotTab({
     }
   }, [hasBubbles, latestBubbleText, streaming, userMessageCount]);
 
+  const [mobile, setMobile] = useState(false);
+  const rootRef = useCallback((node: HTMLDivElement | null) => {
+    setMobile(Boolean(node?.closest('[data-mobile]')));
+  }, []);
+  const [pickedPages, setPickedPages] = useState<Record<number, number>>({});
+  const [savedClues, setSavedClues] = useState<ReadonlySet<string>>(new Set());
+  const savingClues = useRef(new Set<string>());
+  useEffect(() => {
+    if (bubbles.length === 0) setPickedPages({});
+  }, [bubbles.length]);
+  const saveClue = async (page: number, text: string) => {
+    const key = `${page}:${text}`;
+    if (!onSaveClue || savedClues.has(key) || savingClues.current.has(key)) return;
+    savingClues.current.add(key);
+    try {
+      if (await onSaveClue(page, text)) setSavedClues((prev) => new Set(prev).add(key));
+    } finally {
+      savingClues.current.delete(key);
+    }
+  };
+  const askFollowUp = (question: string) => {
+    onAsk(question, attachedQuote ?? undefined);
+    setAsked(question);
+  };
+
   const [openMention, setOpenMention] = useState<string | null>(null);
   useEffect(() => {
     if (openMention === null) return;
@@ -437,7 +502,15 @@ export default function ChatbotTab({
     return () => document.removeEventListener('click', close);
   }, [openMention]);
   const mentionContext = useMemo(
-    () => ({ openId: openMention, setOpenId: setOpenMention, onJump: onJumpToPage }),
+    () => ({
+      openId: openMention,
+      setOpenId: setOpenMention,
+      onJump: onJumpToPage,
+      mobile: false,
+      evidencePages: new Set<number>(),
+      selectedPage: null,
+      onPick: () => {},
+    }),
     [openMention, onJumpToPage]
   );
   const mentionPlugins = useMemo(
@@ -447,7 +520,7 @@ export default function ChatbotTab({
 
   return (
     <MentionContext.Provider value={mentionContext}>
-      <div className="flex h-full flex-col">
+      <div ref={rootRef} className="flex h-full flex-col">
         {hasHistoryFeature ? (
           hasHistoryFeature && historyOpen ? (
             // 이력 화면 헤더 — accent 색 "뒤로" 버튼 하나로 채팅 화면과 시각적으로 다르게
@@ -643,33 +716,72 @@ export default function ChatbotTab({
                   </div>
                 </>
               ) : (
-                bubbles.map((turn, i) =>
-                  turn.role === 'user' ? (
-                    <p
-                      key={i}
-                      className="ml-auto w-fit max-w-[76%] rounded-2xl rounded-br-md border border-brief-rule bg-brief-paper px-[13px] py-[9px] text-xs leading-[1.6] mobile:text-[15px] text-brief-ink"
-                    >
-                      {turn.text}
-                    </p>
-                  ) : (
-                    <div key={i} className="flex items-end gap-2">
-                      <AmoSherlock className="h-11 w-auto shrink-0 translate-y-3" />
-                      <div className="w-fit max-w-[76%] rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] font-amo text-xs leading-[1.65] mobile:text-[15px] text-brief-ink">
-                        {streaming && turn.text === '' && i === bubbles.length - 1 ? (
-                          <TypingDots />
-                        ) : (
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm, remarkBreaks]}
-                            rehypePlugins={mentionPlugins}
-                            components={markdownComponents as Components}
-                          >
-                            {turn.text}
-                          </ReactMarkdown>
-                        )}
+                bubbles.map((turn, i) => {
+                  if (turn.role === 'user')
+                    return (
+                      <p
+                        key={i}
+                        className="ml-auto w-fit max-w-[76%] rounded-2xl rounded-br-md border border-brief-rule bg-brief-paper px-[13px] py-[9px] text-xs leading-[1.6] mobile:text-[15px] text-brief-ink"
+                      >
+                        {turn.text}
+                      </p>
+                    );
+                  const isLast = i === bubbles.length - 1;
+                  const answering = streaming && isLast;
+                  const evidence = mobile && !answering ? (turn.evidence ?? []) : [];
+                  const evidencePages = new Set(evidence.map((item) => item.page));
+                  const picked = pickedPages[i];
+                  const firstPage = splitMentions(turn.text, [])
+                    .map((part) => (part.kind === 'page' ? part.page : null))
+                    .find((page) => page !== null && evidencePages.has(page));
+                  const selectedPage =
+                    picked !== undefined && evidencePages.has(picked) ? picked : (firstPage ?? null);
+                  const selected = evidence.find((item) => item.page === selectedPage);
+                  const turnContext = {
+                    ...mentionContext,
+                    mobile,
+                    evidencePages,
+                    selectedPage,
+                    onPick: (page: number) => setPickedPages((prev) => ({ ...prev, [i]: page })),
+                  };
+                  const followUps = mobile && isLast && !streaming ? (turn.followUps ?? []) : [];
+                  return (
+                    <div key={i}>
+                      <div className="flex items-end gap-2">
+                        <AmoSherlock className="h-11 w-auto shrink-0 translate-y-3" />
+                        <div className="w-fit max-w-[76%] rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] font-amo text-xs leading-[1.65] mobile:text-[15px] text-brief-ink">
+                          {answering && turn.text === '' ? (
+                            <TypingDots />
+                          ) : (
+                            <MentionContext.Provider value={turnContext}>
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm, remarkBreaks]}
+                                rehypePlugins={mentionPlugins}
+                                components={markdownComponents as Components}
+                              >
+                                {turn.text}
+                              </ReactMarkdown>
+                            </MentionContext.Provider>
+                          )}
+                          {selected ? <AmoEvidence item={selected} /> : null}
+                        </div>
                       </div>
+                      {selected && isLast ? (
+                        <AmoActions
+                          page={selected.page}
+                          saved={savedClues.has(`${selected.page}:${selected.text}`)}
+                          onSave={
+                            onSaveClue ? () => void saveClue(selected.page, selected.text) : undefined
+                          }
+                          onJump={onJumpToPage ? () => onJumpToPage(selected.page) : undefined}
+                        />
+                      ) : null}
+                      {followUps.length > 0 ? (
+                        <AmoFollowUps questions={followUps} onPick={askFollowUp} />
+                      ) : null}
                     </div>
-                  )
-                )
+                  );
+                })
               )}
 
               {error ? (
