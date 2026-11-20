@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import type { GraphResponse } from '../../types';
 import Loading from '../common/Loading';
 import RelationshipGraph from './RelationshipGraph';
@@ -36,10 +37,12 @@ import { centralNodeIndex } from './graphLayout';
  * 나누게 두는 쪽을 택함(브라우저의 레이아웃 계산이지 우리 코드의 진도율 계산이 아니다).
  * `totalPages`는 목차(전체 챕터) 기준이라 애초에 상한 대상이 아니다(R3 — 목차는 전체 상시 노출).
  *
- * 브라우저 기본 range 트랙은 높이·여백이 옆 막대와 맞지 않아 `appearance-none`으로 지우고
- * thumb·track을 직접 그린다. 두 막대가 맞닿는 안쪽 모서리는 각지게, 바깥쪽 끝만 둥글게 해서
- * 하나로 이어진 막대처럼 보이게 한다. `<input>`의 기본 inline-block 하강폭 여백 때문에 두
- * 막대가 2px 어긋나던 문제(2026-08-25)는 `block`으로 막는다.
+ * 2026-11-20 대표 지시("동그라미로 시점 되감기가 잘 안 돼", "뒷부분 막대는 비게") — 예전에는 브라우저
+ * range 손잡이가 눈금 **개수**로 균등하게 놓여, 쪽수 비율로 그린 막대와 자리가 어긋났고(p.3 이 10% 자리가
+ * 아니라 17% 자리) 손잡이가 14px 라 손가락으로 잡기 어려웠다. 이제 막대·손잡이를 직접 그린다:
+ * [채운 막대 flexGrow=시점-1][동그라미 22px][빈 막대 flexGrow=현재-시점][못 읽은 구간]. 손가락은 44px 높이
+ * 막대 어디를 눌러도·끌어도 쪽수 자리 기준 가장 가까운 눈금으로 간다(나눗셈 없이 곱셈 비교, 절대 규칙 2번).
+ * 키보드·화면 읽기 프로그램은 보이지 않는 `<input type="range">`(눈금 순번)로 조작한다.
  *
  * 표기는 앱의 쪽수 표기 "p.N"을 따른다(2026-11-18 "p.로 표현"). 눈금이 2개 미만이면 감을
  * 시점이 없으므로 막대를 그리지 않는다. 회색 부연 문구(옛 "별칭을 생략합니다" 안내)는 두지 않는다
@@ -51,6 +54,8 @@ import { centralNodeIndex } from './graphLayout';
  *
  * 조회 실패는 부분 표시로 넘어가지 않는다 (FR-SPL-005 🚦).
  */
+const SCRUB_THUMB = 22;
+
 export default function RelationshipTab({
   graph,
   failed,
@@ -67,6 +72,9 @@ export default function RelationshipTab({
   const [cleared, setCleared] = useState(false);
   // 선택한 선(graphEdgeKey). 인물을 고르면 풀린다 — 인물 선택과 선 선택은 함께 남지 않는다.
   const [selectedEdgeKey, setSelectedEdgeKey] = useState<string | null>(null);
+  const [scrubFocused, setScrubFocused] = useState(false);
+  const readTrackRef = useRef<HTMLDivElement | null>(null);
+  const dragPointerRef = useRef<number | null>(null);
 
   // 되감기 눈금 — 받은 데이터(이미 기준점 이하)에서만 만든다. 마지막 눈금 = 현재 진도 (FR-SPL-002 🚦)
   const milestones = useMemo(() => (graph ? graphMilestones(graph) : []), [graph]);
@@ -89,6 +97,35 @@ export default function RelationshipTab({
     return index >= 0 ? shown.nodes[index].id : null;
   }, [shown]);
   const activeSelected = cleared ? null : (pickedVisible ?? defaultEgo);
+
+  // FR-SPL-002 🚦 — 고를 수 있는 것은 받은 눈금뿐이다. 눌린 자리(x)에 가장 가까운 눈금을 곱셈 비교로 찾는다
+  function pickAt(clientX: number) {
+    const rect = readTrackRef.current?.getBoundingClientRect();
+    if (!rect || milestones.length < 2) return;
+    const usable = Math.max(rect.width - SCRUB_THUMB, 1);
+    const pos = Math.min(Math.max(clientX - rect.left - SCRUB_THUMB / 2, 0), usable);
+    const span = latest - 1;
+    let best = milestones[0];
+    for (const mark of milestones) {
+      if (Math.abs(pos * span - (mark - 1) * usable) < Math.abs(pos * span - (best - 1) * usable))
+        best = mark;
+    }
+    setPicked(best);
+  }
+
+  function startScrub(event: ReactPointerEvent<HTMLDivElement>) {
+    dragPointerRef.current = event.pointerId;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    pickAt(event.clientX);
+  }
+
+  function moveScrub(event: ReactPointerEvent<HTMLDivElement>) {
+    if (dragPointerRef.current === event.pointerId) pickAt(event.clientX);
+  }
+
+  function endScrub(event: ReactPointerEvent<HTMLDivElement>) {
+    if (dragPointerRef.current === event.pointerId) dragPointerRef.current = null;
+  }
 
   function pickPerson(id: string) {
     setSelectedEdgeKey(null);
@@ -131,7 +168,15 @@ export default function RelationshipTab({
         >
           <li className="flex items-center gap-1.5">
             <svg aria-hidden="true" width="22" height="6" viewBox="0 0 22 6">
-              <line x1="1" y1="3" x2="21" y2="3" strokeWidth="2" strokeLinecap="round" className="stroke-brief-accent" />
+              <line
+                x1="1"
+                y1="3"
+                x2="21"
+                y2="3"
+                strokeWidth="2"
+                strokeLinecap="round"
+                className="stroke-brief-accent"
+              />
             </svg>
             <span>사실</span>
           </li>
@@ -160,36 +205,53 @@ export default function RelationshipTab({
             <label htmlFor="graph-scrub" className="text-brief-muted">
               시점 되감기
             </label>
-            <span className="font-bold text-brief-ink">{at === latest ? '현재까지' : `p.${at} 시점`}</span>
+            <span className="font-bold text-brief-ink">
+              {at === latest ? '현재까지' : `p.${at} 시점`}
+            </span>
           </div>
-          <div className="flex items-center">
-            <div style={{ flexGrow: latest || 1, flexBasis: 0 }}>
-              <input
-                id="graph-scrub"
-                type="range"
-                min={0}
-                max={milestones.length - 1}
-                step={1}
-                value={Math.max(0, milestones.indexOf(at))}
-                onChange={(event) => setPicked(milestones[Number(event.target.value)])}
-                className={`block h-3.5 w-full cursor-pointer appearance-none bg-transparent mobile:h-11
-                  [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:bg-brief-accent
-                  [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:border-none [&::-moz-range-track]:bg-brief-accent
-                  ${
-                    unread > 0
-                      ? '[&::-webkit-slider-runnable-track]:rounded-l-full [&::-moz-range-track]:rounded-l-full'
-                      : '[&::-webkit-slider-runnable-track]:rounded-full [&::-moz-range-track]:rounded-full'
-                  }
-                  [&::-webkit-slider-thumb]:-mt-1 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5
-                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full
-                  [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white
-                  [&::-webkit-slider-thumb]:bg-brief-accent [&::-webkit-slider-thumb]:shadow
-                  [&::-webkit-slider-thumb]:cursor-pointer
-                  [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-3.5
-                  [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full
-                  [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white
-                  [&::-moz-range-thumb]:bg-brief-accent [&::-moz-range-thumb]:shadow
-                  [&::-moz-range-thumb]:cursor-pointer`}
+          <input
+            id="graph-scrub"
+            type="range"
+            min={0}
+            max={milestones.length - 1}
+            step={1}
+            value={Math.max(0, milestones.indexOf(at))}
+            onChange={(event) => setPicked(milestones[Number(event.target.value)])}
+            onFocus={() => setScrubFocused(true)}
+            onBlur={() => setScrubFocused(false)}
+            className="sr-only"
+          />
+          <div
+            data-testid="graph-scrub-track"
+            aria-hidden="true"
+            tabIndex={-1}
+            onPointerDown={startScrub}
+            onPointerMove={moveScrub}
+            onPointerUp={endScrub}
+            onPointerCancel={endScrub}
+            className="flex h-11 cursor-pointer touch-none select-none items-center"
+          >
+            <div
+              ref={readTrackRef}
+              data-testid="graph-scrub-read"
+              className="flex items-center"
+              style={{ flexGrow: latest || 1, flexBasis: 0 }}
+            >
+              <div
+                data-testid="graph-scrub-filled"
+                className="h-1.5 rounded-l-full bg-brief-accent"
+                style={{ flexGrow: at - 1, flexBasis: 0 }}
+              />
+              <span
+                data-testid="graph-scrub-thumb"
+                className={`size-[22px] shrink-0 rounded-full border-[3px] border-white bg-brief-accent shadow-md ${
+                  scrubFocused ? 'ring-2 ring-brief-accent ring-offset-2' : ''
+                }`}
+              />
+              <div
+                data-testid="graph-scrub-rest"
+                className={`h-1.5 bg-brief-rule ${unread > 0 ? '' : 'rounded-r-full'}`}
+                style={{ flexGrow: latest - at, flexBasis: 0 }}
               />
             </div>
             {unread > 0 ? (
@@ -207,7 +269,11 @@ export default function RelationshipTab({
           </div>
         </div>
       ) : null}
-      <RelationDetails graph={shown} selectedId={activeSelected} selectedEdgeKey={selectedEdgeKey} />
+      <RelationDetails
+        graph={shown}
+        selectedId={activeSelected}
+        selectedEdgeKey={selectedEdgeKey}
+      />
     </div>
   );
 }

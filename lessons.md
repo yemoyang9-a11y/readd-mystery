@@ -74,3 +74,10 @@
 - 원인: 서버 코드는 `tsc`·jest 만 돌리고 `backend npm run lint`(eslint + prettier 규칙)를 로컬에서 돌리지 않았다.
 - 해결: `cd backend && npx eslint <바꾼 파일> --fix` 후 `npm run lint` 오류 0건 확인, 다시 올려 배포 성공. 배포 전에는 서버도 `npm run lint`를 돌린다. 화면과 서버 변경이 함께 나갈 때는 서버 배포 실패가 곧 운영 불일치라는 점을 기억한다.
 
+## 2026-11-20 — 휴대폰에서 막대를 톡 누르면 옆 글자(label)로 터치가 옮겨 감
+
+- 증상: 인물관계도 시점 되감기 막대를 직접 그리고 React `onPointerDown`을 달았는데, 끌기는 되지만 막대를 톡 누르면 반응이 없었다. 기록해 보니 pointerdown 대상이 막대가 아니라 위의 `<label for="graph-scrub">`였다.
+- 원인: 휴대폰 브라우저의 터치 보정(touch adjustment)은 손가락 근처의 "눌러지는 요소"로 탭을 옮긴다. React 는 이벤트를 루트에서 받으므로 막대 div 자체에는 리스너가 없어 눌러지는 요소로 인식되지 않았고, label 이 이겼다.
+- 해결: 막대에 `tabIndex={-1}`을 줘서 터치 대상으로 인식시켰다. Playwright + CDP `Input.dispatchTouchEvent`로 같은 탭이 막대에 닿아 p.3 으로 가는 것을 확인했다.
+- 참고: 되감기로 관계도 높이가 바뀌면 막대가 위아래로 움직인다. 터치 확인 스크립트는 누를 때마다 막대 위치를 다시 재야 한다.
+

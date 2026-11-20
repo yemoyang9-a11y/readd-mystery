@@ -315,7 +315,68 @@ describe('시점 되감기', () => {
 
   it('되감기 슬라이더는 brief-accent 를 쓴다', () => {
     render(<RelationshipTab graph={rewindGraph} failed={false} />);
-    expect(scrub().className).toContain('bg-brief-accent');
+    expect(screen.getByTestId('graph-scrub-filled').className).toContain('bg-brief-accent');
+  });
+
+  // 2026-11-20 대표 지시 — 동그라미로 되감기가 잘 안 됨(동그라미가 시점 개수로 균등 배치돼 쪽수 막대와 어긋남, 14px로 작음),
+  // 동그라미 뒤 막대는 비운다
+  const readTrack = () => screen.getByTestId('graph-scrub-read');
+  const placeTrack = () =>
+    vi.spyOn(readTrack(), 'getBoundingClientRect').mockReturnValue({ left: 0, width: 222, top: 0, height: 44 } as DOMRect);
+  // 동그라미 22px — 가운데가 움직이는 길이 200px 에 p.1~p.9(8칸) → 한 쪽 25px
+  const xOf = (mark: number) => 11 + (mark - 1) * 25;
+
+  it('동그라미 앞은 채우고 뒤는 비운다 — 폭은 쪽수 정수(flexGrow), % 계산 없음', () => {
+    render(<RelationshipTab graph={rewindGraph} failed={false} totalPages={20} />);
+    rewindTo(2); // p.5
+    const filled = screen.getByTestId('graph-scrub-filled');
+    const rest = screen.getByTestId('graph-scrub-rest');
+    expect(filled.style.flexGrow).toBe('4');
+    expect(rest.style.flexGrow).toBe('4');
+    expect(filled.className).toContain('bg-brief-accent');
+    expect(rest.className).toContain('bg-brief-rule');
+    expect(rest.className).not.toContain('bg-brief-accent');
+    rewindTo(4); // 현재까지
+    expect(screen.getByTestId('graph-scrub-filled').style.flexGrow).toBe('8');
+    expect(screen.getByTestId('graph-scrub-rest').style.flexGrow).toBe('0');
+  });
+
+  it('막대 어디를 눌러도 쪽수 자리 기준 가장 가까운 시점으로 가고, 누른 채 끌면 따라온다', () => {
+    render(<RelationshipTab graph={rewindGraph} failed={false} totalPages={20} />);
+    placeTrack();
+    const track = screen.getByTestId('graph-scrub-track');
+    fireEvent.pointerDown(track, { pointerId: 1, clientX: xOf(5) + 3 });
+    expect(screen.getByText('p.5 시점')).toBeInTheDocument();
+    fireEvent.pointerMove(track, { pointerId: 1, clientX: xOf(8) - 4 });
+    expect(screen.getByText('p.8 시점')).toBeInTheDocument();
+    fireEvent.pointerMove(track, { pointerId: 1, clientX: xOf(2) });
+    expect(screen.getByText('p.1 시점')).toBeInTheDocument();
+    fireEvent.pointerUp(track, { pointerId: 1, clientX: xOf(2) });
+    fireEvent.pointerMove(track, { pointerId: 1, clientX: xOf(9) });
+    expect(screen.getByText('p.1 시점')).toBeInTheDocument();
+  });
+
+  it('읽지 않은 구간을 눌러도 현재 진도까지만 간다 — 받은 것 이상은 없다 (FR-SPL-002 🚦)', () => {
+    const { container } = render(<RelationshipTab graph={rewindGraph} failed={false} totalPages={20} />);
+    placeTrack();
+    rewindTo(0);
+    fireEvent.pointerDown(screen.getByTestId('graph-scrub-track'), { pointerId: 1, clientX: 600 });
+    expect(screen.getByText('현재까지')).toBeInTheDocument();
+    expect(edgeIds(container).sort()).toEqual(['e1', 'e2']);
+  });
+
+  it('손가락 조작 영역은 44px 높이이고 끄는 동안 패널이 스크롤되지 않는다, 동그라미는 22px', () => {
+    render(<RelationshipTab graph={rewindGraph} failed={false} totalPages={20} />);
+    const track = screen.getByTestId('graph-scrub-track');
+    expect(track.className).toContain('h-11');
+    expect(track.className).toContain('touch-none');
+    expect(screen.getByTestId('graph-scrub-thumb').className).toContain('size-[22px]');
+  });
+
+  it('막대는 브라우저가 터치 대상으로 알아보게 한다 — 톡 누름이 옆 "시점 되감기" 글자로 옮겨 가지 않게', () => {
+    render(<RelationshipTab graph={rewindGraph} failed={false} totalPages={20} />);
+    const track = screen.getByTestId('graph-scrub-track');
+    expect(track).toHaveAttribute('tabindex', '-1');
   });
 
   it('고른 인물이 그 시점에 아직 없으면 기본 중심 인물로 돌아가고, 앞으로 감으면 고른 인물이 복원된다', () => {
