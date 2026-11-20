@@ -1,9 +1,16 @@
-import { useMemo, useRef, useState } from 'react';
-import type { PointerEvent as ReactPointerEvent } from 'react';
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react';
 import type { GraphResponse } from '../../types';
 import Loading from '../common/Loading';
 import RelationshipGraph from './RelationshipGraph';
 import RelationDetails from './RelationDetails';
+import RelationshipEgoView, { CenterChips } from './RelationshipEgoView';
 import { graphMilestones, graphUpTo } from './graphFilter';
 import { centralNodeIndex } from './graphLayout';
 
@@ -60,11 +67,13 @@ export default function RelationshipTab({
   graph,
   failed,
   totalPages,
+  onJump,
 }: {
   graph: GraphResponse | null;
   failed: boolean;
   /** 목차 기준 전체 페이지 수(상한 대상 아님, R3). 되감기 트랙 오른쪽 끝 표시에만 쓴다. */
   totalPages?: number;
+  onJump?: (page: number) => void;
 }) {
   const [picked, setPicked] = useState<number | null>(null);
   const [selected, setSelectedState] = useState<string | null>(null);
@@ -72,9 +81,15 @@ export default function RelationshipTab({
   const [cleared, setCleared] = useState(false);
   // 선택한 선(graphEdgeKey). 인물을 고르면 풀린다 — 인물 선택과 선 선택은 함께 남지 않는다.
   const [selectedEdgeKey, setSelectedEdgeKey] = useState<string | null>(null);
+  const [mobile, setMobile] = useState(false);
+  const [pickedCenter, setPickedCenter] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const [scrubFocused, setScrubFocused] = useState(false);
   const readTrackRef = useRef<HTMLDivElement | null>(null);
   const dragPointerRef = useRef<number | null>(null);
+  const anchorRef = useCallback((node: HTMLDivElement | null) => {
+    setMobile(Boolean(node?.closest('[data-mobile]')));
+  }, []);
 
   // 되감기 눈금 — 받은 데이터(이미 기준점 이하)에서만 만든다. 마지막 눈금 = 현재 진도 (FR-SPL-002 🚦)
   const milestones = useMemo(() => (graph ? graphMilestones(graph) : []), [graph]);
@@ -127,6 +142,11 @@ export default function RelationshipTab({
     if (dragPointerRef.current === event.pointerId) dragPointerRef.current = null;
   }
 
+  function pickCenter(id: string) {
+    setPickedCenter(id);
+    setShowAll(false);
+  }
+
   function pickPerson(id: string) {
     setSelectedEdgeKey(null);
     if (id === activeSelected) {
@@ -138,15 +158,94 @@ export default function RelationshipTab({
     setSelectedState(id);
   }
 
+  const wrap = (child: ReactNode) => (
+    <div ref={anchorRef} className="contents">
+      {child}
+    </div>
+  );
+
   if (failed)
-    return (
+    return wrap(
       <p role="alert" className="text-brief-muted">
         관계도를 불러오지 못했습니다
       </p>
     );
-  if (!graph || !shown) return <Loading fullScreen={false} message="인물 관계를 정리하는 중" />;
+  if (!graph || !shown)
+    return wrap(<Loading fullScreen={false} message="인물 관계를 정리하는 중" />);
 
-  return (
+  const scrubber =
+    milestones.length > 1 ? (
+      <div className="space-y-1.5 pt-1">
+        <div className="flex items-center justify-between font-dashSans text-[12px]">
+          <label htmlFor="graph-scrub" className="text-brief-muted">
+            시점 되감기
+          </label>
+          <span className="font-bold text-brief-ink">
+            {at === latest ? '현재까지' : `p.${at} 시점`}
+          </span>
+        </div>
+        <input
+          id="graph-scrub"
+          type="range"
+          min={0}
+          max={milestones.length - 1}
+          step={1}
+          value={Math.max(0, milestones.indexOf(at))}
+          onChange={(event) => setPicked(milestones[Number(event.target.value)])}
+          onFocus={() => setScrubFocused(true)}
+          onBlur={() => setScrubFocused(false)}
+          className="sr-only"
+        />
+        <div
+          data-testid="graph-scrub-track"
+          aria-hidden="true"
+          tabIndex={-1}
+          onPointerDown={startScrub}
+          onPointerMove={moveScrub}
+          onPointerUp={endScrub}
+          onPointerCancel={endScrub}
+          className="flex h-11 cursor-pointer touch-none select-none items-center"
+        >
+          <div
+            ref={readTrackRef}
+            data-testid="graph-scrub-read"
+            className="flex items-center"
+            style={{ flexGrow: latest || 1, flexBasis: 0 }}
+          >
+            <div
+              data-testid="graph-scrub-filled"
+              className="h-1.5 rounded-l-full bg-brief-accent"
+              style={{ flexGrow: at - 1, flexBasis: 0 }}
+            />
+            <span
+              data-testid="graph-scrub-thumb"
+              className={`size-[22px] shrink-0 rounded-full border-[3px] border-white bg-brief-accent shadow-md ${
+                scrubFocused ? 'ring-2 ring-brief-accent ring-offset-2' : ''
+              }`}
+            />
+            <div
+              data-testid="graph-scrub-rest"
+              className={`h-1.5 bg-brief-rule ${unread > 0 ? '' : 'rounded-r-full'}`}
+              style={{ flexGrow: latest - at, flexBasis: 0 }}
+            />
+          </div>
+          {unread > 0 ? (
+            <div
+              aria-hidden="true"
+              data-testid="graph-scrub-unread"
+              className="h-1.5 shrink-0 rounded-r-full bg-brief-rule"
+              style={{ flexGrow: unread, flexBasis: 0 }}
+            />
+          ) : null}
+        </div>
+        <div className="flex justify-between font-dashSans text-[11px] text-brief-muted">
+          <span>p.1</span>
+          <span>p.{bookTotal}</span>
+        </div>
+      </div>
+    ) : null;
+
+  const fullView = (
     <div className="space-y-3">
       <h3 className="m-0 mt-0.5 font-dashSans text-base font-bold leading-snug text-brief-ink">
         지금 누가 누구와 엮여 있을까요
@@ -199,76 +298,7 @@ export default function RelationshipTab({
       </div>
       {/* 시점 되감기 (2026-11-19 대표 지시로 피벗 전 방식 그대로 복원). 받은 자료 안의 표시 필터라
           서버에 다시 묻지 않는다. 막대 폭은 정수 flexGrow — % 계산 없음 (절대 규칙 2번, 위 주석). */}
-      {milestones.length > 1 ? (
-        <div className="space-y-1.5 pt-1">
-          <div className="flex items-center justify-between font-dashSans text-[12px]">
-            <label htmlFor="graph-scrub" className="text-brief-muted">
-              시점 되감기
-            </label>
-            <span className="font-bold text-brief-ink">
-              {at === latest ? '현재까지' : `p.${at} 시점`}
-            </span>
-          </div>
-          <input
-            id="graph-scrub"
-            type="range"
-            min={0}
-            max={milestones.length - 1}
-            step={1}
-            value={Math.max(0, milestones.indexOf(at))}
-            onChange={(event) => setPicked(milestones[Number(event.target.value)])}
-            onFocus={() => setScrubFocused(true)}
-            onBlur={() => setScrubFocused(false)}
-            className="sr-only"
-          />
-          <div
-            data-testid="graph-scrub-track"
-            aria-hidden="true"
-            tabIndex={-1}
-            onPointerDown={startScrub}
-            onPointerMove={moveScrub}
-            onPointerUp={endScrub}
-            onPointerCancel={endScrub}
-            className="flex h-11 cursor-pointer touch-none select-none items-center"
-          >
-            <div
-              ref={readTrackRef}
-              data-testid="graph-scrub-read"
-              className="flex items-center"
-              style={{ flexGrow: latest || 1, flexBasis: 0 }}
-            >
-              <div
-                data-testid="graph-scrub-filled"
-                className="h-1.5 rounded-l-full bg-brief-accent"
-                style={{ flexGrow: at - 1, flexBasis: 0 }}
-              />
-              <span
-                data-testid="graph-scrub-thumb"
-                className={`size-[22px] shrink-0 rounded-full border-[3px] border-white bg-brief-accent shadow-md ${
-                  scrubFocused ? 'ring-2 ring-brief-accent ring-offset-2' : ''
-                }`}
-              />
-              <div
-                data-testid="graph-scrub-rest"
-                className={`h-1.5 bg-brief-rule ${unread > 0 ? '' : 'rounded-r-full'}`}
-                style={{ flexGrow: latest - at, flexBasis: 0 }}
-              />
-            </div>
-            {unread > 0 ? (
-              <div
-                aria-hidden="true"
-                data-testid="graph-scrub-unread"
-                className="h-1.5 shrink-0 rounded-r-full bg-brief-rule"
-                style={{ flexGrow: unread, flexBasis: 0 }}
-              />
-            ) : null}
-          </div>
-          <div className="flex justify-between font-dashSans text-[11px] text-brief-muted">
-            <span>p.1</span>
-            <span>p.{bookTotal}</span>
-          </div>
-        </div>
-      ) : null}
+      {scrubber}
       <RelationDetails
         graph={shown}
         selectedId={activeSelected}
@@ -276,4 +306,40 @@ export default function RelationshipTab({
       />
     </div>
   );
+
+  const centerId =
+    shown.nodes.some((n) => n.id === pickedCenter) && pickedCenter ? pickedCenter : defaultEgo;
+
+  const mobileBody =
+    centerId && !showAll ? (
+      <div className="space-y-3">
+        <CenterChips
+          graph={shown}
+          centerId={centerId}
+          all={false}
+          onPick={pickCenter}
+          onAll={() => setShowAll(true)}
+        />
+        <RelationshipEgoView
+          graph={shown}
+          centerId={centerId}
+          scrubber={scrubber}
+          onPickCenter={pickCenter}
+          onJump={onJump}
+        />
+      </div>
+    ) : (
+      <div className="space-y-3">
+        <CenterChips
+          graph={shown}
+          centerId={centerId}
+          all
+          onPick={pickCenter}
+          onAll={() => setShowAll(true)}
+        />
+        {fullView}
+      </div>
+    );
+
+  return wrap(mobile ? mobileBody : fullView);
 }

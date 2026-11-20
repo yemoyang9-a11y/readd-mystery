@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalLayer } from '../../hooks/useModalLayer';
 import type { NoteDraft, NoteKind, ReadingNote } from '../../types';
-import { canResolve, CheckIcon, NOTE_KIND_LABELS, NOTE_KIND_ORDER, ResolvedMark } from './noteKind';
+import { canResolve, CheckIcon, isOpenThread, NOTE_KIND_LABELS, NOTE_KIND_ORDER, ResolvedMark } from './noteKind';
 
 export { NOTE_KIND_LABELS };
 
@@ -13,6 +13,74 @@ const KIND_CHOICES: { value: NoteKind | null; label: string }[] = [
 ];
 
 const MAX_BODY_LENGTH = 1000;
+
+type NoteGroup = 'open' | 'clue' | 'rest';
+
+const GROUP_TITLES: Record<NoteGroup, string> = {
+  open: '아직 풀지 못한 것',
+  clue: '모은 단서',
+  rest: '그 밖의 노트',
+};
+
+const GROUP_ORDER: NoteGroup[] = ['open', 'clue', 'rest'];
+
+const GROUP_HEADING_ORDER: Record<NoteGroup, string> = {
+  open: 'mobile:order-1',
+  clue: 'mobile:order-3',
+  rest: 'mobile:order-5',
+};
+
+const GROUP_CARD_ORDER: Record<NoteGroup, string> = {
+  open: 'mobile:order-2',
+  clue: 'mobile:order-4',
+  rest: 'mobile:order-6',
+};
+
+function groupOf(note: ReadingNote): NoteGroup {
+  if (isOpenThread(note)) return 'open';
+  return note.kind === 'clue' ? 'clue' : 'rest';
+}
+
+const ADD_BAR: { kind: NoteKind; label: string; icon: JSX.Element }[] = [
+  {
+    kind: 'clue',
+    label: '단서 남기기',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="10.5" cy="10.5" r="6" />
+        <path d="M15 15l5.5 5.5" />
+      </svg>
+    ),
+  },
+  {
+    kind: 'question',
+    label: '궁금한 점 적기',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M9.5 9.5a2.6 2.6 0 015 .8c0 1.7-2.5 2-2.5 3.7M12 17h.01" />
+      </svg>
+    ),
+  },
+  {
+    kind: 'hypothesis',
+    label: '가설 세우기',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z" />
+      </svg>
+    ),
+  },
+];
+
+function ChatIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z" />
+      <path d="M8.5 11h7M8.5 14h4" />
+    </svg>
+  );
+}
 
 /**
  * 메모 창. 고칠 노트(existing)를 열면 그 노트의 풀림 표시·삭제도 여기서 한다 — 승인 시안의 노트 카드에는
@@ -269,6 +337,7 @@ export default function NotesTab({
   onEdit,
   onRemove,
   onJump,
+  onAskAmo,
   quoteDraft = null,
   onQuoteDraftHandled,
 }: {
@@ -280,11 +349,13 @@ export default function NotesTab({
   onEdit: (noteId: string, draft: Partial<NoteDraft>) => Promise<boolean>;
   onRemove: (noteId: string) => Promise<boolean>;
   onJump: (page: number) => void;
+  onAskAmo?: (text: string) => void;
   quoteDraft?: { text: string; token: number } | null;
   onQuoteDraftHandled?: () => void;
 }) {
   const [editing, setEditing] = useState<ReadingNote | 'new' | null>(quoteDraft ? 'new' : null);
   const [prefill, setPrefill] = useState(quoteDraft?.text ?? '');
+  const [newKind, setNewKind] = useState<NoteKind | null>(null);
   const maxPage = totalPages && totalPages > 0 ? totalPages : null;
 
   useEffect(() => {
@@ -292,6 +363,15 @@ export default function NotesTab({
     setPrefill(quoteDraft.text);
     setEditing('new');
   }, [quoteDraft?.token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function openNew(kind: NoteKind | null) {
+    setNewKind(kind);
+    setEditing('new');
+  }
+
+  const counts: Record<NoteGroup, number> = { open: 0, clue: 0, rest: 0 };
+  for (const note of notes) counts[groupOf(note)] += 1;
+  const firstGroup = GROUP_ORDER.find((group) => counts[group] > 0);
 
   return (
     <div className="flex min-h-full flex-col">
@@ -302,72 +382,134 @@ export default function NotesTab({
           </p>
         ) : null}
         {!failed && notes.length === 0 ? (
-          <p className="m-0 py-8 text-center text-[13px] text-brief-muted">아직 적은 게 없어요.</p>
+          <p className="m-0 py-8 text-center text-[13px] text-brief-muted mobile:hidden">아직 적은 게 없어요.</p>
         ) : null}
-        <ul data-no-track className="m-0 flex list-none flex-col gap-2 p-0">
-          {notes.map((note) => (
+        <ul data-no-track className="m-0 flex list-none flex-col gap-2 p-0 mobile:gap-0">
+          {GROUP_ORDER.filter((group) => counts[group] > 0).map((group) => (
             <li
-              key={note.note_id}
-              data-resolved={note.resolved ? 'true' : undefined}
-              className="rounded-xl border border-brief-rule bg-white px-3 py-2.5 font-dashSans"
+              key={`heading-${group}`}
+              role="presentation"
+              data-testid={`note-group-${group}`}
+              className={`hidden font-dashSans mobile:mb-3 mobile:block ${GROUP_HEADING_ORDER[group]} ${
+                group === firstGroup ? '' : 'mobile:mt-5'
+              }`}
             >
-              <div className="flex items-center justify-between gap-2 text-[11px] text-brief-muted">
-                <span className="flex min-w-0 flex-wrap items-center gap-1.5">
-                  <span
-                    data-testid="note-kind-badge"
-                    className={`shrink-0 rounded-md px-1.5 py-1 text-[10.5px] font-semibold leading-none ${
-                      note.kind === null
-                        ? 'border border-brief-rule text-brief-muted'
-                        : 'bg-brief-accent-soft text-brief-accent'
-                    }`}
-                  >
-                    {note.kind === null ? '메모' : NOTE_KIND_LABELS[note.kind]}
-                  </span>
-                  {note.resolved ? <ResolvedMark /> : null}
-                </span>
-                {/* 쪽 — 누르면 그 쪽으로 간다. 보이는 크기는 시안대로 작게, 누르는 자리는 44px */}
-                <button
-                  type="button"
-                  onClick={() => onJump(note.page_no)}
-                  aria-label={`${note.page_no}쪽으로 이동`}
-                  className="-my-3.5 -mr-2 shrink-0 py-3.5 pl-3 pr-2 text-[11px] text-brief-muted hover:text-brief-ink"
-                >
-                  {note.page_no}쪽
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditing(note)}
-                aria-label="노트 수정"
-                className={`mt-1.5 block w-full whitespace-pre-wrap break-words text-left text-[12.5px] leading-relaxed ${
-                  note.resolved ? 'text-brief-muted' : 'text-brief-ink'
-                }`}
-              >
-                {note.body}
-              </button>
+              <h3 className="m-0 flex items-baseline justify-between text-sm font-bold text-brief-ink">
+                {GROUP_TITLES[group]}
+                <small className="font-dashMono text-xs font-normal text-brief-muted">{counts[group]}</small>
+              </h3>
             </li>
           ))}
+          {notes.map((note) => {
+            const group = groupOf(note);
+            const askLabel = canResolve(note.kind) ? '아모와 따져 보기' : '아모에게 물어보기';
+            return (
+              <li
+                key={note.note_id}
+                data-resolved={note.resolved ? 'true' : undefined}
+                className={`rounded-xl border border-brief-rule bg-white px-3 py-2.5 font-dashSans mobile:mb-3 mobile:rounded-[14px] mobile:p-3.5 ${GROUP_CARD_ORDER[group]}`}
+              >
+                <div className="flex items-center justify-between gap-2 text-[11px] text-brief-muted mobile:text-xs">
+                  <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+                    <span
+                      data-testid="note-kind-badge"
+                      className={`shrink-0 rounded-md px-1.5 py-1 text-[10.5px] font-semibold leading-none mobile:px-2 mobile:py-[3px] mobile:text-xs mobile:font-bold ${
+                        note.kind === null
+                          ? 'border border-brief-rule text-brief-muted'
+                          : 'bg-brief-accent-soft text-brief-accent'
+                      }`}
+                    >
+                      {note.kind === null ? '메모' : NOTE_KIND_LABELS[note.kind]}
+                    </span>
+                    {note.resolved ? <ResolvedMark /> : null}
+                  </span>
+                  {/* 쪽 — 누르면 그 쪽으로 간다. 보이는 크기는 시안대로 작게, 누르는 자리는 44px */}
+                  <button
+                    type="button"
+                    onClick={() => onJump(note.page_no)}
+                    aria-label={`${note.page_no}쪽으로 이동`}
+                    className="-my-3.5 -mr-2 shrink-0 py-3.5 pl-3 pr-2 text-[11px] text-brief-muted hover:text-brief-ink mobile:text-xs"
+                  >
+                    {note.page_no}쪽
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditing(note)}
+                  aria-label="노트 수정"
+                  className={`mt-1.5 block w-full whitespace-pre-wrap break-words text-left text-[12.5px] leading-relaxed mobile:mt-2 mobile:text-[15px] mobile:leading-normal ${
+                    note.resolved ? 'text-brief-muted' : 'text-brief-ink'
+                  }`}
+                >
+                  {note.body}
+                </button>
+                {onAskAmo ? (
+                  <div className="mt-3 hidden gap-2 mobile:flex">
+                    <button
+                      type="button"
+                      data-track={askLabel}
+                      onClick={() => onAskAmo(note.body)}
+                      className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 text-[13px] font-semibold ${
+                        canResolve(note.kind)
+                          ? 'border-brief-accent text-brief-accent'
+                          : 'border-brief-rule text-brief-ink'
+                      }`}
+                    >
+                      <ChatIcon />
+                      {askLabel}
+                    </button>
+                    {isOpenThread(note) ? (
+                      <button
+                        type="button"
+                        data-track="풀었어요"
+                        onClick={() => void onEdit(note.note_id, { resolved: true })}
+                        className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-brief-rule px-3 text-[13px] font-semibold text-brief-ink"
+                      >
+                        <CheckIcon />
+                        풀었어요
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       </div>
 
       {/* 시안 — 노트 목록 아래에 고정된 "단서·가설 적기" 한 개 */}
-      <div className="sticky bottom-0 -mx-4 -mb-4 mt-4 bg-brief-paper px-4 pb-4 pt-2">
+      <div className="sticky bottom-0 -mx-4 -mb-4 mt-4 bg-brief-paper px-4 pb-4 pt-2 mobile:border-t mobile:border-brief-rule mobile:pb-5 mobile:pt-3">
         <button
           type="button"
           data-track="단서·가설 적기"
-          onClick={() => setEditing('new')}
+          onClick={() => openNew(null)}
           disabled={currentPage === null}
-          className="h-11 w-full rounded-full border border-brief-ink bg-transparent font-dashSans text-[13px] font-semibold text-brief-ink transition-colors hover:bg-[rgba(31,31,31,0.05)] active:bg-[rgba(31,31,31,0.1)] disabled:opacity-40"
+          className="h-11 w-full rounded-full border border-brief-ink bg-transparent font-dashSans text-[13px] font-semibold text-brief-ink transition-colors hover:bg-[rgba(31,31,31,0.05)] active:bg-[rgba(31,31,31,0.1)] disabled:opacity-40 mobile:hidden"
         >
           단서·가설 적기
         </button>
+        <div className="hidden grid-cols-3 gap-2 mobile:grid">
+          {ADD_BAR.map(({ kind, label, icon }) => (
+            <button
+              key={kind}
+              type="button"
+              data-track={label}
+              onClick={() => openNew(kind)}
+              disabled={currentPage === null}
+              className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl border border-brief-rule bg-white font-dashSans text-[13px] font-semibold text-brief-ink disabled:opacity-40"
+            >
+              <span className="text-brief-accent">{icon}</span>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {editing !== null ? (
         <NoteEditor
           initial={
             editing === 'new'
-              ? { page_no: currentPage ?? 1, kind: null, body: prefill }
+              ? { page_no: currentPage ?? 1, kind: newKind, body: prefill }
               : { page_no: editing.page_no, kind: editing.kind, body: editing.body }
           }
           existing={editing === 'new' ? null : editing}
@@ -382,6 +524,7 @@ export default function NotesTab({
           onClose={() => {
             setEditing(null);
             setPrefill('');
+            setNewKind(null);
             onQuoteDraftHandled?.();
           }}
         />

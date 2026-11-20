@@ -78,6 +78,15 @@ describe('NFR-AI-001: provider and model configuration', () => {
     warn.mockRestore();
   });
 
+  test('2026-11-20: 관계 카드 설명 배치는 Claude 구독(CLI) 모델을 쓰고 경고 없이 통과한다', () => {
+    const config = load({ LLM_PROVIDER: 'openai', OPENAI_MODEL: 'test-openai-model' });
+    const warn = jest.spyOn(console, 'warn').mockImplementation();
+    expect(config.getModelForTask('explain_relation')).not.toBe('test-openai-model');
+    expect(warn).not.toHaveBeenCalled();
+    expect(Object.keys(config.MODEL_CONFIG)).not.toContain('explain_relation');
+    warn.mockRestore();
+  });
+
   test('NFR-OBS-004: 장 핵심 한 줄 작업 이름은 장 요약과 같은 모델을 쓰고 경고 없이 통과한다', () => {
     const config = load({ LLM_PROVIDER: 'openai', OPENAI_MODEL: 'test-openai-model' });
     const warn = jest.spyOn(console, 'warn').mockImplementation();

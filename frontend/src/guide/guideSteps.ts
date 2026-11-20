@@ -74,7 +74,7 @@ export const GUIDE_STEPS: GuideStep[] = [
   {
     id: 'side-notes',
     text: '읽다가 사이드 탭을 열면 네 가지 도구가 있어요. 먼저 추리 노트예요. 적은 단서와 가설이 쪽수와 함께 여기 모여요.',
-    target: () => document.querySelector('#ssabi-panel [role="tabpanel"] li'),
+    target: () => document.querySelector('#ssabi-panel [role="tabpanel"] li:not([role="presentation"])'),
     mode: 'look',
     tab: 'notes',
   },
@@ -89,7 +89,7 @@ export const GUIDE_STEPS: GuideStep[] = [
   {
     id: 'side-relationship',
     text: '인물관계도에는 지금까지 드러난 인물 관계만 보여요. 읽을수록 선이 늘어나요. 윤미라를 눌러 보세요.',
-    target: () => document.querySelector(`#ssabi-panel [data-node-id="${DEMO_FOCUS_CHARACTER}"]`),
+    target: () => document.querySelector(`#ssabi-panel [data-node-id="${DEMO_FOCUS_CHARACTER}"], #ssabi-panel summary[data-character-id="${DEMO_FOCUS_CHARACTER}"]`),
     mode: 'try',
     tab: 'relationship',
     afterTry: tabPanel,

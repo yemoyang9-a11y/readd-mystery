@@ -24,6 +24,7 @@ import * as path from 'path';
 export const CLAUDE_CLI_TASKS: readonly string[] = [
   'generate_relationship',
   'generate_relationship_verifier',
+  'explain_relation',
 ];
 
 export function isClaudeCliTask(task: string): boolean {

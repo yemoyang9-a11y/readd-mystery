@@ -2,7 +2,7 @@ import type { GraphEdge, GraphResponse } from '../../types';
 import { currentGraphEdges, graphEdgeKey, graphPillLabel } from './graphEdges';
 
 /** 받침 있는 이름은 '과', 없으면 '와'. 한글이 아닌 끝 글자는 '와'. 조사는 괄호 앞 이름에 맞추고 `shown` 뒤에 붙인다. */
-function withParticle(name: string, shown: string = name): string {
+export function withParticle(name: string, shown: string = name): string {
   const last = name.charCodeAt(name.length - 1);
   const hasFinal = last >= 0xac00 && last <= 0xd7a3 && (last - 0xac00) % 28 !== 0;
   return `${shown}${hasFinal ? '과' : '와'}`;

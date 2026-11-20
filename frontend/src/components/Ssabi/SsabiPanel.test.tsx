@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SsabiPanel from './SsabiPanel';
-import type { GraphResponse } from '../../types';
+import type { ChatbotConversationTurn, GraphResponse } from '../../types';
 
 const graph: GraphResponse = {
   nodes: [{ id: 'jeong', name: '정주사', first_appearance_page: 1, aliases: ['정 주사'] }],
@@ -202,6 +203,53 @@ describe('싸비 사이드창', () => {
       expect(onJumpToNote).toHaveBeenCalledWith(7);
     });
 
+    it('"아모에게 물어보기"를 누르면 아모 탭이 열리고 "노트 내용 이에 대해 설명해줘."가 입력창을 거치지 않고 바로 전송된다', async () => {
+      const onAsk = vi.fn();
+      render(<SsabiPanel {...baseProps} initialTab="notes" initialTabEpoch={7} notes={[note]} onAsk={onAsk} />);
+
+      await userEvent.click(screen.getByRole('button', { name: '아모에게 물어보기' }));
+
+      expect(screen.getByRole('tab', { name: '아모' })).toHaveAttribute('aria-selected', 'true');
+      expect(onAsk).toHaveBeenCalledTimes(1);
+      expect(onAsk).toHaveBeenCalledWith('장갑이 한 짝 없다 이에 대해 설명해줘.');
+      expect(screen.getByRole('textbox')).toHaveValue('');
+    });
+
+    it('아모가 다른 답을 쓰는 중이면 탭만 옮기고 질문을 겹쳐 보내지 않는다', async () => {
+      const onAsk = vi.fn();
+      render(<SsabiPanel {...baseProps} initialTab="notes" initialTabEpoch={7} notes={[note]} chatStreaming onAsk={onAsk} />);
+
+      await userEvent.click(screen.getByRole('button', { name: '아모에게 물어보기' }));
+
+      expect(screen.getByRole('tab', { name: '아모' })).toHaveAttribute('aria-selected', 'true');
+      expect(onAsk).not.toHaveBeenCalled();
+    });
+
+    it('전체 흐름: 노트에서 "아모에게 물어보기" → 아모 탭에 내 질문이 보이고 → 아모의 답이 이어서 보인다', async () => {
+      function Harness() {
+        const [turns, setTurns] = useState<ChatbotConversationTurn[]>([]);
+        return (
+          <SsabiPanel
+            {...baseProps}
+            initialTab="notes"
+            initialTabEpoch={7}
+            notes={[note]}
+            chatTurns={turns}
+            onAsk={(query) =>
+              setTurns((prev) => [...prev, { role: 'user', text: query }, { role: 'assistant', text: '장갑은 현장에서 사라진 물건이에요.' }])
+            }
+          />
+        );
+      }
+      render(<Harness />);
+
+      await userEvent.click(screen.getByRole('button', { name: '아모에게 물어보기' }));
+
+      expect(screen.getByRole('tab', { name: '아모' })).toHaveAttribute('aria-selected', 'true');
+      expect(await screen.findByText('장갑이 한 짝 없다 이에 대해 설명해줘.')).toBeInTheDocument();
+      expect(await screen.findByText('장갑은 현장에서 사라진 물건이에요.')).toBeInTheDocument();
+    });
+
     it('"단서·가설 적기"는 가운데 메모 창을 열고 쪽수 기본값은 지금 펼친 쪽이다', async () => {
       const onAddNote = vi.fn().mockResolvedValue(true);
       render(<SsabiPanel {...baseProps} initialTab="notes" initialTabEpoch={7} currentPage={12} onAddNote={onAddNote} />);
@@ -265,7 +313,7 @@ describe('싸비 사이드창', () => {
       const user = userEvent.setup();
       render(<SsabiPanel {...baseProps} timeline={timeline} />);
       await user.click(screen.getByRole('tab', { name: '타임라인' }));
-      expect(screen.getByRole('heading', { name: '지금까지, 두 장이에요' })).toBeInTheDocument();
+      expect(screen.getByText('지금까지, 두 장이에요')).toBeInTheDocument();
       expect(screen.getByText('편지가 와요.')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /편지가 도착해요/ })).toBeNull();
       await user.click(screen.getByRole('button', { name: /^1장/ }));

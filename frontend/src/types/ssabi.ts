@@ -32,6 +32,8 @@ export interface RelationshipSemantics {
   summary: string;
   /** 독자용 쉬운 문장(해요체). 검증을 통과한 것만 있다 — 없으면 문장 없이 관계 이름만 보인다. */
   reader_summary?: string;
+  reader_evidence?: string;
+  reader_explanation?: string;
   assertion_status: 'fact' | 'belief' | 'claim' | 'rumor' | 'uncertain' | 'negated';
   attribution?: string;
   temporal_scope: 'ongoing' | 'event';
