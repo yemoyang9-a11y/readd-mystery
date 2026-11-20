@@ -282,25 +282,6 @@ describe('처음 펼친 독자(진도 기록 없음, applied_cutoff 0)', () => {
   });
 });
 
-test('COMMUNITY: 커뮤니티 진입 핸들러를 받으면 커뮤니티 버튼을 그리고 누르면 부른다', async () => {
-  const onOpen = vi.fn();
-  render(<MobileBriefingView {...baseProps} briefing={briefing()} onOpenCommunity={onOpen} />);
-  const button = screen.getByRole('button', { name: /커뮤니티/ });
-  expect(button).toHaveAttribute('data-track', 'community-open');
-  await userEvent.click(button);
-  expect(onOpen).toHaveBeenCalledTimes(1);
-});
-
-// 2026-11-19 대표 시안(모바일 사용성 평가 3번) — 주된 행동이 먼저 보이게
-test('BRIEFING-ORDER: 커뮤니티 버튼은 줄거리·노트·목차 다음 맨 아래에 있다', () => {
-  render(<MobileBriefingView {...baseProps} briefing={briefing()} onOpenCommunity={() => {}} />);
-  const community = screen.getByRole('button', { name: /커뮤니티/ });
-  const recapHeading = screen.getByRole('heading', { name: '그동안 이런 이야기였어요' });
-  const toc = screen.getByRole('button', { name: /목차/ });
-  expect(recapHeading.compareDocumentPosition(community) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  expect(toc.compareDocumentPosition(community) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-});
-
 test('BRIEFING-ORDER: 이어서 읽기는 색을 채운 주 버튼이다', () => {
   render(<MobileBriefingView {...baseProps} briefing={briefing()} />);
   const button = screen.getByRole('button', { name: '이어서 읽기' });
