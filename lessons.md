@@ -80,3 +80,11 @@
 - 증상: 휴대폰 크기 설정 뒤에 찍은 캡처가 데스크톱 폭(1057px)으로 나왔다.
 - 원인: `Emulation.setDeviceMetricsOverride`는 스크립트 실행(프로세스)마다 다시 걸어야 한다. 이전 실행에서 건 설정은 다음 실행에 남지 않는다.
 - 해결: 매 스크립트 첫머리에 `page.cdp("Emulation.setDeviceMetricsOverride", {width:390, height:844, deviceScaleFactor:2, mobile:true})`를 걸고 `Page.captureScreenshot`으로 찍으면 780x1688로 나온다. 이용 가이드(`/guide`)는 비춘 곳 밖의 클릭을 모두 막으므로, 눌러 보려는 요소에 `data-guide-ui` 속성을 붙이면 통과한다.
+
+## 2026-11-20 — 운영 DB 관계 설명 반영 SQL이 `::uuid`에서 실패(전체 롤백), 생성기·Windows 실행 주의
+
+- 증상: `buildExplainSql`이 만든 SQL을 운영 DB에 적용하니 `operator does not exist: text = uuid`로 DO 블록 전체가 실패했다. DO 블록 하나라 전체가 롤백되어 쓰인 행은 0건이었다(조회로 확인).
+- 원인: `relationships.id`가 uuid가 아니라 text인데 생성기가 `id = '...'::uuid`로 비교했다.
+- 해결: 생성기에서 `::uuid`를 뺐다(`relation-explain.ts`). 같은 SQL을 다시 적용해 14건이 들어간 것을 조회로 확인했다(원문 한 줄이 근거 문단의 부분 문자열 14건, 기존 필드 변경 없음). 적용 전에는 SQL을 `BEGIN/COMMIT` 없이 DO 블록만 한 번에 보내는 편이 안전하다(오류 시 연결이 실패한 트랜잭션에 남지 않는다).
+- Windows에서 Claude CLI 작업을 돌릴 때 `spawn claude ENOENT`가 난다. `CLAUDE_CLI_BIN`에 실제 실행 파일(`...\npm\node_modules\@anthropic-ai\claude-code\bin\claude.exe`)을 넘기면 된다. 이 컴퓨터 `backend/.env`의 `OPENAI_API_KEY`는 무효(401)이고 `MOCK_MODE=true`라서, 생성은 `MOCK_MODE=false`와 Claude CLI 경로로 돌렸다.
+- Bash 도구 heredoc 안에 쓴 JS 문자열의 `\s`가 `s`로 바뀌어 정규식이 깨진 적이 있다. 정규식을 파일에 쓸 때는 `String.fromCharCode(92)`로 역슬래시를 만들거나, 문자 클래스(`[ ]`)로 피한다.
