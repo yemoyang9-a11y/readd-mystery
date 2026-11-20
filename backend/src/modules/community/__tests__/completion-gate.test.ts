@@ -47,8 +47,9 @@ function seededCommunity() {
     seq: 1,
     post_id: randomUUID(),
     reader_id: AUTHOR,
-    kind: 'theory',
+    kind: null,
     body: SECRET,
+    author_name: null,
     created_at: new Date().toISOString(),
     deleted: false,
     comment_count: 1,
@@ -59,6 +60,10 @@ function seededCommunity() {
     reader_id: AUTHOR,
     body: SECRET_COMMENT,
     created_at: new Date().toISOString(),
+    author_name: null,
+    reply_to_comment_id: null,
+    reply_to_reader_id: null,
+    reply_to_name: null,
   };
   const touched: string[] = [];
   const mark =

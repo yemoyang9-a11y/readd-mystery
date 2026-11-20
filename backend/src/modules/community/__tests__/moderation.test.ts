@@ -29,7 +29,6 @@ import {
   type CommunityModerationRepository,
   type CommunityRepository,
   type ModerationItem,
-  type PostKind,
   type PostRow,
   type ReportTarget,
 } from '../repository';
@@ -86,6 +85,7 @@ function memoryRepos(): Repos {
     reader_id: p.reader_id,
     kind: p.kind,
     body: p.body,
+    author_name: null,
     created_at: p.created_at,
     deleted: p.deleted,
     comment_count: visibleComments(p.post_id).length,
@@ -96,6 +96,10 @@ function memoryRepos(): Repos {
     reader_id: c.reader_id,
     body: c.body,
     created_at: c.created_at,
+    author_name: null,
+    reply_to_comment_id: null,
+    reply_to_reader_id: null,
+    reply_to_name: null,
   });
   const find = (type: ReportTarget, id: string) =>
     type === 'post' ? posts.find((p) => p.post_id === id) : comments.find((c) => c.comment_id === id);
@@ -105,7 +109,6 @@ function memoryRepos(): Repos {
     async listPosts(bookId, q) {
       return posts
         .filter((p) => p.book_id === bookId && visiblePost(p))
-        .filter((p) => !q.kind || p.kind === q.kind)
         .filter((p) => q.before === undefined || p.seq < q.before)
         .sort((a, b) => b.seq - a.seq)
         .slice(0, q.limit)
@@ -120,13 +123,14 @@ function memoryRepos(): Repos {
         .filter((c) => c.book_id === bookId)
         .map(strip);
     },
-    async createPost(bookId, readerId, kind: PostKind, body) {
+    async createPost(bookId, readerId, body) {
       seq += 1;
       const p: MemPost = {
         seq,
         post_id: randomUUID(),
         reader_id: readerId,
-        kind,
+        kind: null,
+        author_name: null,
         body,
         created_at: iso(tick()),
         deleted: false,
@@ -149,6 +153,10 @@ function memoryRepos(): Repos {
         reader_id: readerId,
         body,
         created_at: iso(tick()),
+        author_name: null,
+        reply_to_comment_id: null,
+        reply_to_reader_id: null,
+        reply_to_name: null,
         book_id: bookId,
         deleted: false,
         hidden_at: null,

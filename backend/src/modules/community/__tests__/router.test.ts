@@ -36,14 +36,30 @@ class FakeCommunity implements CommunityRepository {
 
   private view(p: StoredPost): PostRow {
     const { book_id: _book, ...row } = p;
-    return { ...row, comment_count: this.commentCount(p.post_id) };
+    return { ...this.named(row), comment_count: this.commentCount(p.post_id) };
   }
 
-  async listPosts(bookId: string, q: { kind?: string; before?: number; limit: number }) {
+  /** 가입 닉네임(users.display_name) 대역 — 없는 독자는 이름이 없다 */
+  names = new Map<string, string>();
+
+  private named<T extends { reader_id: string }>(row: T): T & { author_name: string | null } {
+    return { ...row, author_name: this.names.get(row.reader_id) ?? null };
+  }
+
+  private commentView(c: StoredComment): CommentRow {
+    const { book_id: _book, deleted: _deleted, ...row } = c;
+    const target = this.comments.find((x) => x.comment_id === c.reply_to_comment_id);
+    return {
+      ...this.named(row),
+      reply_to_reader_id: target?.reader_id ?? null,
+      reply_to_name: target ? (this.names.get(target.reader_id) ?? null) : null,
+    };
+  }
+
+  async listPosts(bookId: string, q: { before?: number; limit: number }) {
     this.reads += 1;
     return this.posts
       .filter((p) => p.book_id === bookId)
-      .filter((p) => !q.kind || p.kind === q.kind)
       .filter((p) => q.before === undefined || p.seq < q.before)
       .filter((p) => !p.deleted || this.commentCount(p.post_id) > 0)
       .sort((a, b) => b.seq - a.seq)
@@ -61,16 +77,17 @@ class FakeCommunity implements CommunityRepository {
   async listComments(bookId: string, postId: string) {
     return this.comments
       .filter((c) => c.post_id === postId && c.book_id === bookId && !c.deleted)
-      .map(({ book_id: _book, deleted: _deleted, ...c }) => c);
+      .map((c) => this.commentView(c));
   }
 
-  async createPost(bookId: string, readerId: string, kind: any, body: string) {
+  async createPost(bookId: string, readerId: string, body: string) {
     this.seq += 1;
     const post: StoredPost = {
       seq: this.seq,
       post_id: randomUUID(),
       reader_id: readerId,
-      kind,
+      kind: null,
+      author_name: null,
       body,
       created_at: new Date().toISOString(),
       deleted: false,
@@ -81,21 +98,36 @@ class FakeCommunity implements CommunityRepository {
     return this.view(post);
   }
 
-  async createComment(bookId: string, postId: string, readerId: string, body: string) {
+  async createComment(
+    bookId: string,
+    postId: string,
+    readerId: string,
+    body: string,
+    replyToCommentId: string | null
+  ) {
     const p = this.posts.find((x) => x.post_id === postId && x.book_id === bookId && !x.deleted);
     if (!p) return null;
+    if (
+      replyToCommentId !== null &&
+      !this.comments.some((x) => x.comment_id === replyToCommentId && x.post_id === postId && !x.deleted)
+    ) {
+      return null;
+    }
     const c: StoredComment = {
       comment_id: randomUUID(),
       post_id: postId,
       reader_id: readerId,
       body,
       created_at: new Date().toISOString(),
+      author_name: null,
+      reply_to_comment_id: replyToCommentId,
+      reply_to_reader_id: null,
+      reply_to_name: null,
       book_id: bookId,
       deleted: false,
     };
     this.comments.push(c);
-    const { book_id: _book, deleted: _deleted, ...row } = c;
-    return row;
+    return this.commentView(c);
   }
 
   async deletePost(bookId: string, postId: string, readerId: string) {
@@ -228,7 +260,7 @@ describe('community router', () => {
   }
 
   const base = `/books/${PUBLISHED}/community`;
-  const theory = { kind: 'theory', body: '범인은 집사라고 생각해요' };
+  const theory = { body: '범인은 집사라고 생각해요' };
 
   async function seedPost(reader = READER_A, body: object = theory) {
     return (await (await call('POST', `${base}/posts`, reader, body)).json()) as any;
@@ -296,28 +328,105 @@ describe('community router', () => {
     expect((await call('GET', `${base}/posts`, READER_C)).status).toBe(403);
   });
 
-  test('본문 검증: 공백 제거 후 1~2000자, kind는 theory|review', async () => {
-    const post = (kind: string, body: string) => call('POST', `${base}/posts`, READER_A, { kind, body });
-    expect((await post('theory', '   ')).status).toBe(400);
-    expect((await post('theory', 'a'.repeat(2001))).status).toBe(400);
-    expect((await post('rant', '내용')).status).toBe(400);
-    expect((await post('review', 'a'.repeat(2000))).status).toBe(201);
-    const trimmed = await seedPost(READER_A, { kind: 'review', body: '  감상  ' });
+  test('본문 검증: 공백 제거 후 1~2000자', async () => {
+    const post = (body: string) => call('POST', `${base}/posts`, READER_A, { body });
+    expect((await post('   ')).status).toBe(400);
+    expect((await post('a'.repeat(2001))).status).toBe(400);
+    expect((await post('a'.repeat(2000))).status).toBe(201);
+    const trimmed = await seedPost(READER_A, { body: '  감상  ' });
     expect(trimmed.body).toBe('감상');
   });
 
-  test('작성자는 안정적인 익명 닉네임으로 보이고 독자 ID는 노출되지 않는다', async () => {
+  test('말머리 없음: kind 없이 댓글을 쓰고, kind 를 보내도 저장·응답에 남지 않는다', async () => {
+    expect((await call('POST', `${base}/posts`, READER_A, { body: '말머리 없이' })).status).toBe(201);
+    const withKind = await call('POST', `${base}/posts`, READER_A, { kind: 'rant', body: '옛 화면' });
+    expect(withKind.status).toBe(201);
+    expect(await withKind.json()).not.toHaveProperty('kind');
+    expect(repo.posts.map((p) => p.kind)).toEqual([null, null]);
+    const list = (await (await call('GET', `${base}/posts?kind=theory`, READER_B)).json()) as any;
+    expect(list.posts).toHaveLength(2);
+    expect(list.posts[0]).not.toHaveProperty('kind');
+  });
+
+  test('이름: 가입 닉네임이 있으면 그 이름, 없으면 "독자 xxxx" — 독자 ID 는 노출되지 않는다', async () => {
+    repo.names.set(READER_B, '달빛서재');
     await seedPost(READER_A);
-    await seedPost(READER_A, { kind: 'review', body: '두 번째' });
+    await seedPost(READER_A, { body: '두 번째' });
     await seedPost(READER_B);
     const text = await (await call('GET', `${base}/posts`, READER_B)).text();
     const names = JSON.parse(text).posts.map((p: any) => p.nickname);
-    expect(names[0]).toMatch(/^독자 [0-9a-f]{4}$/);
+    expect(names[0]).toBe('달빛서재');
+    expect(names[1]).toMatch(/^독자 [0-9a-f]{4}$/);
     expect(names[1]).toBe(names[2]);
-    expect(names[0]).not.toBe(names[1]);
     expect(text).not.toContain(READER_A);
     expect(text).not.toContain(READER_B);
     expect(text).not.toContain('reader_id');
+  });
+
+  test('답글: 댓글에 단 답글은 reply_to_nickname=댓글쓴이, 답글에 단 답글은 그 답글 작성자, 글쓴이 답글은 is_post_author=true', async () => {
+    repo.names.set(READER_A, '달빛서재');
+    repo.names.set(READER_B, '책벌레');
+    const post = await seedPost(READER_A);
+    const url = `${base}/posts/${post.post_id}/comments`;
+    const first = (await (await call('POST', url, READER_B, { body: '저도요' })).json()) as any;
+    expect(first).toMatchObject({ nickname: '책벌레', reply_to_nickname: '달빛서재', is_post_author: false });
+    const second = await call('POST', url, READER_A, { body: '맞아요', reply_to_comment_id: first.comment_id });
+    expect(second.status).toBe(201);
+    expect(await second.json()).toMatchObject({
+      nickname: '달빛서재',
+      reply_to_nickname: '책벌레',
+      is_post_author: true,
+      like_count: 0,
+      liked_by_me: false,
+    });
+    const detail = (await (await call('GET', `${base}/posts/${post.post_id}`, READER_B)).json()) as any;
+    expect(detail.comments.map((c: any) => [c.reply_to_nickname, c.is_post_author])).toEqual([
+      ['달빛서재', false],
+      ['책벌레', true],
+    ]);
+    expect(JSON.stringify(detail)).not.toContain('reply_to_comment_id');
+  });
+
+  test('답글 대상: 형식이 틀리면 400, 숨김·삭제·다른 댓글의 답글이면 404', async () => {
+    const post = await seedPost(READER_A);
+    const other = await seedPost(READER_A, { body: '다른 댓글' });
+    const url = `${base}/posts/${post.post_id}/comments`;
+    const gone = (await (await call('POST', url, READER_B, { body: '지울 답글' })).json()) as any;
+    await call('DELETE', `${base}/comments/${gone.comment_id}`, READER_B);
+    const foreign = (await (
+      await call('POST', `${base}/posts/${other.post_id}/comments`, READER_B, { body: '저쪽 답글' })
+    ).json()) as any;
+    const before = repo.comments.length;
+    expect((await call('POST', url, READER_B, { body: '답', reply_to_comment_id: 'nope' })).status).toBe(400);
+    for (const target of [gone.comment_id, foreign.comment_id, randomUUID()]) {
+      expect((await call('POST', url, READER_B, { body: '답', reply_to_comment_id: target })).status).toBe(404);
+    }
+    expect(repo.comments.length).toBe(before);
+  });
+
+  test('Review Focus 3: 삭제된 댓글은 답글이 있으면 "삭제된 댓글입니다"로 보이고 새 답글은 404', async () => {
+    const post = await seedPost(READER_A);
+    await call('POST', `${base}/posts/${post.post_id}/comments`, READER_B, { body: '답글' });
+    await call('DELETE', `${base}/posts/${post.post_id}`, READER_A);
+    const detail = (await (await call('GET', `${base}/posts/${post.post_id}`, READER_B)).json()) as any;
+    expect(detail.post).toMatchObject({ deleted: true, body: '삭제된 댓글입니다', nickname: null });
+    expect(detail.comments).toHaveLength(1);
+    expect(
+      (await call('POST', `${base}/posts/${post.post_id}/comments`, READER_B, { body: '또' })).status
+    ).toBe(404);
+  });
+
+  test('FR-QNA-004: 끝까지 가지 않은 독자는 답글 쓰기 403, 저장소 접근 0건 — 끝까지 가면 201 (positive 쌍)', async () => {
+    const post = await seedPost(READER_A);
+    const reply = await seedPost(READER_A, { body: '대상' });
+    const url = `${base}/posts/${post.post_id}/comments`;
+    const readsBefore = repo.reads;
+    const locked = await call('POST', url, READER_C, { body: '답', reply_to_comment_id: reply.post_id });
+    expect(locked.status).toBe(403);
+    expect(repo.reads).toBe(readsBefore);
+    expect(repo.comments).toHaveLength(0);
+    completed.add(`${READER_C}:${PUBLISHED}`);
+    expect((await call('POST', url, READER_C, { body: '답' })).status).toBe(201);
   });
 
   test('is_mine은 본인 글에만 true', async () => {
@@ -328,9 +437,9 @@ describe('community router', () => {
     expect(asB.posts[0].is_mine).toBe(false);
   });
 
-  test('목록은 최신순, 20개씩 커서 페이지네이션, kind 필터', async () => {
+  test('목록은 최신순, 20개씩 커서 페이지네이션', async () => {
     for (let i = 0; i < 25; i += 1) {
-      await repo.createPost(PUBLISHED, READER_A, i % 5 === 0 ? 'review' : 'theory', `글 ${i}`);
+      await repo.createPost(PUBLISHED, READER_A, `글 ${i}`);
     }
     const first = (await (await call('GET', `${base}/posts`, READER_B)).json()) as any;
     expect(first.posts).toHaveLength(20);
@@ -342,9 +451,6 @@ describe('community router', () => {
     expect(second.posts).toHaveLength(5);
     expect(second.posts[0].body).toBe('글 4');
     expect(second.next_cursor).toBeNull();
-    const reviews = (await (await call('GET', `${base}/posts?kind=review`, READER_B)).json()) as any;
-    expect(reviews.posts.map((p: any) => p.kind)).toEqual(Array(5).fill('review'));
-    expect((await call('GET', `${base}/posts?kind=zzz`, READER_B)).status).toBe(400);
     expect((await call('GET', `${base}/posts?cursor=zzz`, READER_B)).status).toBe(400);
   });
 
@@ -374,9 +480,9 @@ describe('community router', () => {
     expect((await call('DELETE', `${base}/posts/${post.post_id}`, READER_A)).status).toBe(204);
   });
 
-  test('삭제된 글은 댓글이 있으면 "삭제된 글입니다"로, 없으면 숨긴다', async () => {
-    const withComment = await seedPost(READER_A, { kind: 'theory', body: '비밀 추리' });
-    const alone = await seedPost(READER_A, { kind: 'theory', body: '혼자 글' });
+  test('삭제된 댓글은 답글이 있으면 "삭제된 댓글입니다"로, 없으면 숨긴다', async () => {
+    const withComment = await seedPost(READER_A, { body: '비밀 추리' });
+    const alone = await seedPost(READER_A, { body: '혼자 글' });
     await call('POST', `${base}/posts/${withComment.post_id}/comments`, READER_B, { body: '댓글' });
     await call('DELETE', `${base}/posts/${withComment.post_id}`, READER_A);
     await call('DELETE', `${base}/posts/${alone.post_id}`, READER_A);
@@ -384,7 +490,7 @@ describe('community router', () => {
     const list = JSON.parse(text);
     expect(list.posts).toHaveLength(1);
     expect(list.posts[0].deleted).toBe(true);
-    expect(list.posts[0].body).toBe('삭제된 글입니다');
+    expect(list.posts[0].body).toBe('삭제된 댓글입니다');
     expect(text).not.toContain('비밀 추리');
     expect((await call('GET', `${base}/posts/${alone.post_id}`, READER_B)).status).toBe(404);
     expect(

@@ -7,7 +7,6 @@ import type {
   CommentRow,
   CommunityEngagementRepository,
   CommunityRepository,
-  PostKind,
   PostRow,
   PostSort,
   ReportTarget,
@@ -19,13 +18,17 @@ const MAX_REASON_LENGTH = 200;
 const PAGE_SIZE = 20;
 const POSTS_PER_HOUR = 10;
 const COMMENTS_PER_HOUR = 30;
-const KINDS: PostKind[] = ['theory', 'review'];
 const TARGETS: ReportTarget[] = ['post', 'comment'];
 const SORTS: PostSort[] = ['new', 'popular'];
-const DELETED_BODY = '삭제된 글입니다';
+const DELETED_BODY = '삭제된 댓글입니다';
 
 function nicknameFor(readerId: string, bookId: string): string {
   return `독자 ${createHash('sha256').update(`${readerId}:${bookId}`).digest('hex').slice(0, 4)}`;
+}
+
+// T19 — 가입 닉네임(users.display_name), 없으면 도서별 익명 이름
+function displayName(name: string | null, readerId: string, bookId: string): string {
+  return name ?? nicknameFor(readerId, bookId);
 }
 
 function encodeCursor(seq: number): string {
@@ -88,9 +91,8 @@ export function createCommunityRouter({
   function publicPost(row: PostRow, readerId: string, bookId: string) {
     return {
       post_id: row.post_id,
-      kind: row.kind,
       body: row.deleted ? DELETED_BODY : row.body,
-      nickname: row.deleted ? null : nicknameFor(row.reader_id, bookId),
+      nickname: row.deleted ? null : displayName(row.author_name, row.reader_id, bookId),
       created_at: row.created_at,
       comment_count: row.comment_count,
       // 삭제된 글은 공감을 받지 않고 개수도 보이지 않는다
@@ -101,13 +103,20 @@ export function createCommunityRouter({
     };
   }
 
-  function publicComment(row: CommentRow, readerId: string, bookId: string) {
+  function publicComment(row: CommentRow, post: PostRow, readerId: string, bookId: string) {
     return {
       comment_id: row.comment_id,
       body: row.body,
-      nickname: nicknameFor(row.reader_id, bookId),
+      nickname: displayName(row.author_name, row.reader_id, bookId),
       created_at: row.created_at,
       is_mine: row.reader_id === readerId,
+      is_post_author: row.reader_id === post.reader_id,
+      reply_to_nickname:
+        row.reply_to_reader_id === null
+          ? displayName(post.author_name, post.reader_id, bookId)
+          : displayName(row.reply_to_name, row.reply_to_reader_id, bookId),
+      like_count: row.like_count ?? 0,
+      liked_by_me: row.liked_by_me === true,
     };
   }
 
@@ -143,13 +152,8 @@ export function createCommunityRouter({
   router.get('/books/:bookId/community/posts', async (req, res, next) => {
     try {
       const { bookId } = req.params;
-      const kind = req.query.kind;
       const cursor = req.query.cursor;
       const sort = (req.query.sort ?? 'new') as PostSort;
-      if (kind !== undefined && !KINDS.includes(kind as PostKind)) {
-        badRequest(res, 'kind must be theory or review');
-        return;
-      }
       if (!SORTS.includes(sort)) {
         badRequest(res, 'sort must be new or popular');
         return;
@@ -174,7 +178,6 @@ export function createCommunityRouter({
       const readerId = await authorize(req, res);
       if (!readerId) return;
       const rows = await community.listPosts(bookId, {
-        kind: kind as PostKind | undefined,
         before,
         offset,
         sort,
@@ -201,10 +204,6 @@ export function createCommunityRouter({
       const { bookId } = req.params;
       const readerId = await authorize(req, res);
       if (!readerId) return;
-      if (!KINDS.includes(req.body?.kind)) {
-        badRequest(res, 'kind must be theory or review');
-        return;
-      }
       const body = trimmedBody(req.body?.body, MAX_POST_LENGTH);
       if (body === null) {
         badRequest(res, `body must be 1-${MAX_POST_LENGTH} characters`);
@@ -214,7 +213,7 @@ export function createCommunityRouter({
         tooMany(res);
         return;
       }
-      const row = await community.createPost(bookId, readerId, req.body.kind, body);
+      const row = await community.createPost(bookId, readerId, body);
       res.status(201).json(publicPost(row, readerId, bookId));
     } catch (error) {
       next(error);
@@ -233,10 +232,10 @@ export function createCommunityRouter({
         notFound(res, 'Post not found');
         return;
       }
-      const comments = await community.listComments(bookId, postId);
+      const comments = await community.listComments(bookId, postId, readerId);
       res.json({
         post: publicPost(row, readerId, bookId),
-        comments: comments.map((c) => publicComment(c, readerId, bookId)),
+        comments: comments.map((c) => publicComment(c, row, readerId, bookId)),
       });
     } catch (error) {
       next(error);
@@ -271,6 +270,11 @@ export function createCommunityRouter({
         badRequest(res, `body must be 1-${MAX_COMMENT_LENGTH} characters`);
         return;
       }
+      const replyTo = req.body?.reply_to_comment_id ?? null;
+      if (replyTo !== null && (typeof replyTo !== 'string' || !UUID_PATTERN.test(replyTo))) {
+        badRequest(res, 'reply_to_comment_id must be a comment id');
+        return;
+      }
       if (!UUID_PATTERN.test(postId)) {
         notFound(res, 'Post not found');
         return;
@@ -279,12 +283,13 @@ export function createCommunityRouter({
         tooMany(res);
         return;
       }
-      const row = await community.createComment(bookId, postId, readerId, body);
-      if (!row) {
+      const row = await community.createComment(bookId, postId, readerId, body, replyTo);
+      const post = row ? await community.getPost(bookId, postId, readerId) : null;
+      if (!row || !post) {
         notFound(res, 'Post not found');
         return;
       }
-      res.status(201).json(publicComment(row, readerId, bookId));
+      res.status(201).json(publicComment(row, post, readerId, bookId));
     } catch (error) {
       next(error);
     }

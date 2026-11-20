@@ -36,10 +36,13 @@ const DRAFT = 'bk-draft';
 const SECRET = '범인은 집사였다';
 
 type Stored = PostRow & { book_id: string; hidden: boolean };
+type StoredReply = { comment_id: string; post_id: string; book_id: string; reader_id: string; body: string; deleted: boolean; hidden: boolean };
 
 class FakeStore implements CommunityRepository, CommunityEngagementRepository {
   posts: Stored[] = [];
   likes = new Set<string>();
+  replies: StoredReply[] = [];
+  replyLikes = new Set<string>();
   touched: string[] = [];
   private seq = 0;
 
@@ -67,7 +70,8 @@ class FakeStore implements CommunityRepository, CommunityEngagementRepository {
       seq: this.seq,
       post_id: randomUUID(),
       reader_id: FINISHER,
-      kind: 'theory',
+      kind: null,
+      author_name: null,
       body,
       created_at: new Date().toISOString(),
       deleted: false,
@@ -83,7 +87,6 @@ class FakeStore implements CommunityRepository, CommunityEngagementRepository {
   async listPosts(bookId: string, q: ListPostsQuery) {
     this.touched.push('listPosts');
     let rows = this.posts.filter((p) => p.book_id === bookId && !p.hidden && !p.deleted);
-    if (q.kind) rows = rows.filter((p) => p.kind === q.kind);
     if (q.sort === 'popular') {
       rows = rows
         .sort((a, b) => this.likeCount(b.post_id) - this.likeCount(a.post_id) || b.seq - a.seq)
@@ -102,12 +105,52 @@ class FakeStore implements CommunityRepository, CommunityEngagementRepository {
     this.touched.push('listComments');
     return [];
   }
-  async createPost(bookId: string, readerId: string, kind: any, body: string) {
+  async createPost(bookId: string, readerId: string, body: string) {
     this.touched.push('createPost');
-    return this.view(this.seed(bookId, body, { reader_id: readerId, kind }));
+    return this.view(this.seed(bookId, body, { reader_id: readerId }));
   }
   async createComment() {
     return null;
+  }
+
+  seedReply(postId: string, opts: Partial<StoredReply> = {}) {
+    const post = this.posts.find((p) => p.post_id === postId)!;
+    const reply: StoredReply = {
+      comment_id: randomUUID(),
+      post_id: postId,
+      book_id: post.book_id,
+      reader_id: FINISHER,
+      body: '답글',
+      deleted: false,
+      hidden: false,
+      ...opts,
+    };
+    this.replies.push(reply);
+    return reply;
+  }
+  private likeableReply(bookId: string, commentId: string) {
+    const r = this.replies.find((x) => x.comment_id === commentId && x.book_id === bookId);
+    const post = r && this.posts.find((p) => p.post_id === r.post_id);
+    return r && post && !r.deleted && !r.hidden && !post.hidden ? r : null;
+  }
+  async likeComment(bookId: string, commentId: string, readerId: string) {
+    this.touched.push('likeComment');
+    if (!this.likeableReply(bookId, commentId)) return false;
+    this.replyLikes.add(`${commentId}:${readerId}`);
+    return true;
+  }
+  async unlikeComment(bookId: string, commentId: string, readerId: string) {
+    this.touched.push('unlikeComment');
+    if (!this.likeableReply(bookId, commentId)) return false;
+    this.replyLikes.delete(`${commentId}:${readerId}`);
+    return true;
+  }
+  async commentLikeState(_bookId: string, commentId: string, readerId: string) {
+    this.touched.push('commentLikeState');
+    return {
+      like_count: [...this.replyLikes].filter((k) => k.startsWith(`${commentId}:`)).length,
+      liked_by_me: this.replyLikes.has(`${commentId}:${readerId}`),
+    };
   }
   async deletePost() {
     return false;
@@ -414,7 +457,7 @@ const MIGRATIONS = path.join(__dirname, '../../../../migrations');
   });
 
   test('공감: 한 독자 한 번, 취소, like_count·liked_by_me 가 목록에 반영된다', async () => {
-    const post = await repo.createPost(BOOK, FINISHER, 'theory', '추리');
+    const post = await repo.createPost(BOOK, FINISHER, '추리');
     expect(await repo.likePost(BOOK, post.post_id, FINISHER)).toBe(true);
     expect(await repo.likePost(BOOK, post.post_id, FINISHER)).toBe(true);
     expect(await repo.likePost(BOOK, post.post_id, FINISHER_2)).toBe(true);
@@ -430,11 +473,11 @@ const MIGRATIONS = path.join(__dirname, '../../../../migrations');
   });
 
   test('숨김·삭제 글: 공감 불가(false), 삭제 글은 목록에서 공감 0, 글 수에서 빠진다', async () => {
-    const hidden = await repo.createPost(BOOK, FINISHER, 'theory', '숨김');
-    const removed = await repo.createPost(BOOK, FINISHER, 'theory', '삭제');
-    const live = await repo.createPost(BOOK, FINISHER, 'theory', '보임');
+    const hidden = await repo.createPost(BOOK, FINISHER, '숨김');
+    const removed = await repo.createPost(BOOK, FINISHER, '삭제');
+    const live = await repo.createPost(BOOK, FINISHER, '보임');
     await repo.likePost(BOOK, removed.post_id, FINISHER_2);
-    await repo.createComment(BOOK, removed.post_id, FINISHER_2, '댓글이 남아 삭제 글이 보인다');
+    await repo.createComment(BOOK, removed.post_id, FINISHER_2, '댓글이 남아 삭제 글이 보인다', null);
     await pool.query(`UPDATE community_posts SET hidden_at = now() WHERE post_id = $1`, [hidden.post_id]);
     await repo.deletePost(BOOK, removed.post_id, FINISHER);
     expect(await repo.likePost(BOOK, hidden.post_id, FINISHER)).toBe(false);
@@ -452,10 +495,10 @@ const MIGRATIONS = path.join(__dirname, '../../../../migrations');
     expect(await repo.countVisiblePosts(OTHER)).toBe(0);
   });
 
-  test('인기순: 공감 많은 순, 같으면 최신순, offset 으로 이어 받기, kind 필터', async () => {
-    const a = await repo.createPost(BOOK, FINISHER, 'theory', 'A');
-    const b = await repo.createPost(BOOK, FINISHER, 'review', 'B');
-    await repo.createPost(BOOK, FINISHER, 'theory', 'C');
+  test('인기순: 공감 많은 순, 같으면 최신순, offset 으로 이어 받기', async () => {
+    const a = await repo.createPost(BOOK, FINISHER, 'A');
+    const b = await repo.createPost(BOOK, FINISHER, 'B');
+    await repo.createPost(BOOK, FINISHER, 'C');
     await repo.likePost(BOOK, a.post_id, FINISHER);
     await repo.likePost(BOOK, a.post_id, FINISHER_2);
     await repo.likePost(BOOK, b.post_id, FINISHER);
@@ -463,7 +506,5 @@ const MIGRATIONS = path.join(__dirname, '../../../../migrations');
     expect(all.map((r) => r.body)).toEqual(['A', 'B', 'C']);
     const next = await repo.listPosts(BOOK, { sort: 'popular', offset: 1, limit: 1 });
     expect(next.map((r) => r.body)).toEqual(['B']);
-    const theories = await repo.listPosts(BOOK, { sort: 'popular', kind: 'theory', limit: 10 });
-    expect(theories.map((r) => r.body)).toEqual(['A', 'C']);
   });
 });
