@@ -80,3 +80,86 @@ describe('useChatConversation — conversationId 문자열 정규화', () => {
     expect(result.current.conversationId).toBeNull();
   });
 });
+
+describe('useChatConversation — evidence·follow_ups 프레임을 그 답변 턴에 붙인다', () => {
+  it('done 앞의 evidence·follow_ups 프레임이 마지막 아모 답변에 붙고 글자는 그대로다', async () => {
+    askChatbotMock.mockReturnValueOnce(
+      frames(
+        { type: 'delta', text: '금붕어는 단서예요 (p.65).' },
+        { type: 'evidence', items: [{ page: 65, text: '금붕어 그릇에는 두 마리가 떠 있다.' }] },
+        { type: 'follow_ups', questions: ['거울은 무슨 뜻이야?', '알리바이를 정리해 줘'] },
+        { type: 'done', applied_cutoff: 66, conversation_id: '3' }
+      )
+    );
+    const { result } = renderHook(() => useChatConversation('takryu'));
+
+    await act(async () => {
+      await result.current.ask('금붕어 사진이 왜 중요해?', 66, 1);
+    });
+
+    expect(result.current.turns).toEqual([
+      { role: 'user', text: '금붕어 사진이 왜 중요해?' },
+      {
+        role: 'assistant',
+        text: '금붕어는 단서예요 (p.65).',
+        evidence: [{ page: 65, text: '금붕어 그릇에는 두 마리가 떠 있다.' }],
+        followUps: ['거울은 무슨 뜻이야?', '알리바이를 정리해 줘'],
+      },
+    ]);
+    expect(result.current.conversationId).toBe(3);
+  });
+
+  it('두 프레임이 없어도 답변은 그대로 — 근거·후속 질문 필드가 생기지 않는다', async () => {
+    askChatbotMock.mockReturnValueOnce(
+      frames({ type: 'delta', text: '답' }, { type: 'done', applied_cutoff: 4 })
+    );
+    const { result } = renderHook(() => useChatConversation('takryu'));
+
+    await act(async () => {
+      await result.current.ask('질문', 5, 1);
+    });
+
+    expect(result.current.turns[1]).toEqual({ role: 'assistant', text: '답' });
+  });
+
+  it('새 질문을 보내면 이전 답변의 후속 질문은 이전 턴에 남고 새 턴에는 없다', async () => {
+    askChatbotMock
+      .mockReturnValueOnce(
+        frames(
+          { type: 'delta', text: '첫 답' },
+          { type: 'follow_ups', questions: ['다음은?'] },
+          { type: 'done' }
+        )
+      )
+      .mockReturnValueOnce(frames({ type: 'delta', text: '둘째 답' }, { type: 'done' }));
+    const { result } = renderHook(() => useChatConversation('takryu'));
+
+    await act(async () => {
+      await result.current.ask('하나', 5, 1);
+    });
+    await act(async () => {
+      await result.current.ask('둘', 5, 2);
+    });
+
+    expect(result.current.turns[1].followUps).toEqual(['다음은?']);
+    expect(result.current.turns[3]).toEqual({ role: 'assistant', text: '둘째 답' });
+  });
+
+  it('error 가 오면 근거·후속 질문이 붙은 조각도 남기지 않는다 (FR-SPL-005)', async () => {
+    askChatbotMock.mockReturnValueOnce(
+      frames(
+        { type: 'delta', text: '조각' },
+        { type: 'evidence', items: [{ page: 3, text: '문장' }] },
+        { type: 'error', message: '실패' }
+      )
+    );
+    const { result } = renderHook(() => useChatConversation('takryu'));
+
+    await act(async () => {
+      await result.current.ask('질문', 5, 1);
+    });
+
+    expect(result.current.turns).toEqual([{ role: 'user', text: '질문' }]);
+    expect(result.current.error).toBe('실패');
+  });
+});

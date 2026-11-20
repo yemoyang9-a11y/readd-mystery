@@ -28,8 +28,8 @@ export async function* askChatbot(
   fromPage?: number | null
 ): AsyncGenerator<SseFrame> {
   if (USE_MOCK) {
-    const { mockStreamFrames, mockChatAnswer } = await import('../../mocks/server');
-    yield* mockStreamFrames(mockChatAnswer(query));
+    const { mockStreamFrames, mockChatAnswer, mockChatExtras } = await import('../../mocks/server');
+    yield* mockStreamFrames(mockChatAnswer(query), mockChatExtras(query));
     return;
   }
 

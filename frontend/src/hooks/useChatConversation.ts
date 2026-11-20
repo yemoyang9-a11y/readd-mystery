@@ -94,7 +94,21 @@ export function useChatConversation(
               const next = [...prev];
               const last = next[next.length - 1];
               if (last?.role === 'assistant')
-                next[next.length - 1] = { role: 'assistant', text: last.text + frame.text };
+                next[next.length - 1] = { ...last, text: last.text + frame.text };
+              return next;
+            });
+            continue;
+          }
+          if (frame.type === 'evidence' || frame.type === 'follow_ups') {
+            setTurns((prev) => {
+              if (token !== generation.current) return prev;
+              const next = [...prev];
+              const last = next[next.length - 1];
+              if (last?.role !== 'assistant') return prev;
+              next[next.length - 1] =
+                frame.type === 'evidence'
+                  ? { ...last, evidence: frame.items }
+                  : { ...last, followUps: frame.questions };
               return next;
             });
             continue;

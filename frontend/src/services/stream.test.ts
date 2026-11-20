@@ -71,3 +71,23 @@ describe('SSE 스트림 수신', () => {
     ]);
   });
 });
+
+describe('SSE 스트림 수신 — evidence·follow_ups 프레임', () => {
+  it('done 앞의 두 프레임을 버리지 않고 순서대로 흘려준다', async () => {
+    const frames = await collect(
+      streamOf(
+        'data: {"type":"delta","text":"답 p.65"}\n\n',
+        'data: {"type":"evidence","items":[{"page":65,"text":"문장"}]}\n\n',
+        'data: {"type":"follow_ups","questions":["하나","둘"]}\n\n',
+        'data: {"type":"done","applied_cutoff":66}\n\n'
+      )
+    );
+
+    expect(frames).toEqual([
+      { type: 'delta', text: '답 p.65' },
+      { type: 'evidence', items: [{ page: 65, text: '문장' }] },
+      { type: 'follow_ups', questions: ['하나', '둘'] },
+      { type: 'done', applied_cutoff: 66 },
+    ]);
+  });
+});
