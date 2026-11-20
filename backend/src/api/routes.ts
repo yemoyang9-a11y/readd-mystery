@@ -8,7 +8,7 @@
 
 import express, { Request, Response } from 'express';
 import { checkRateLimit } from '../modules/llm-gateway/rate-limiter';
-import { handleQuery as handleChatbotQuery } from '../modules/chatbot/service';
+import { handleQuery as handleChatbotQuery, type ChatExtras } from '../modules/chatbot/service';
 import { createChatTiming } from '../modules/chatbot/timing';
 import {
   resolveConversation,
@@ -165,6 +165,8 @@ router.get('/diag/sse', (_req: Request, res: Response) => {
  *
  * SSE 프레임 형식 (R4 요청 - delta/done/error 통일):
  * - delta: data: {"type":"delta","text":"chunk"}\n\n
+ * - evidence:   data: {"type":"evidence","items":[{"page":65,"text":"..."}]}\n\n (done 앞, 0~1회)
+ * - follow_ups: data: {"type":"follow_ups","questions":["...","..."]}\n\n (done 앞, 0~1회)
  * - done:  data: {"type":"done"}\n\n
  * - error: data: {"type":"error","message":"..."}\n\n
  *
@@ -307,6 +309,7 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
     // 챗봇 처리 (스트리밍)
     try {
       const quoteText = typeof quote === 'string' && quote.trim() ? quote : undefined;
+      const extras: ChatExtras = {};
       for await (const chunk of handleChatbotQuery(
         bookId,
         query,
@@ -316,11 +319,21 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
         quoteText,
         currentPageText,
         isComplete,
-        { notesReader: chatNotesReader, timing }
+        { notesReader: chatNotesReader, timing, extras }
       )) {
         // SSE 프레임 통일 (R4 요청 - delta/done/error)
         // 부분 근거에 맞춘 답변도 생성되는 대로 일반 delta로 전달한다.
         res.write(`data: ${JSON.stringify({ type: 'delta', text: chunk })}\n\n`);
+      }
+
+      // NFR-AI-005 🚦: 서비스가 K 이하 근거와 출력 검사를 거쳐 채운 것만 내보낸다. 없으면 보내지 않는다
+      if (extras.evidence && extras.evidence.length > 0) {
+        res.write(`data: ${JSON.stringify({ type: 'evidence', items: extras.evidence })}\n\n`);
+      }
+      if (extras.followUps && extras.followUps.length === 2) {
+        res.write(
+          `data: ${JSON.stringify({ type: 'follow_ups', questions: extras.followUps })}\n\n`
+        );
       }
 
       // 스트림 정상 종료 (applied_cutoff 포함 - R4 요청, NFR-OBS-003 🚦)

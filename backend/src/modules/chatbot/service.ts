@@ -28,13 +28,30 @@ import {
   type StyleFinding,
 } from './harness/amo-style';
 import { chatTimingStore, createChatTiming, type ChatTiming } from './timing';
+import {
+  createFollowUpMarkerFilter,
+  followUpGuidance,
+  isPlainFollowUp,
+  parseFollowUpQuestions,
+} from './harness/follow-ups';
+import { pickEvidenceLines, type EvidenceItem } from './harness/evidence-lines';
 
 const MOCK_MODE = process.env.MOCK_MODE === 'true';
 
 export { CHATBOT_TASK };
 
+/**
+ * NFR-AI-005 🚦: 답변 글(delta)과 따로 나가는 재료. 라우트가 넘긴 객체를 서비스가 채운다.
+ * 없으면 해당 프레임을 보내지 않는다.
+ */
+export interface ChatExtras {
+  evidence?: EvidenceItem[];
+  followUps?: string[];
+}
+
 export interface ChatbotDeps {
   notesReader?: NotesReader;
+  extras?: ChatExtras;
   /**
    * 대표 결정 2026-11-19 (E): 단계별 시간 측정기. 라우트가 넘기면 라우트 단계(기준점 스냅샷 등)와
    * 이어서 재고, 'done' 프레임의 timings_ms로 그대로 쓴다. 없으면 여기서 만든다
@@ -390,6 +407,7 @@ async function* runQuery(
     fullPrompt += policy.guidance;
     if (policy.readerNotes) fullPrompt += policy.readerNotes.scope(K);
     fullPrompt += amoTurnGuidance(styleContext);
+    fullPrompt += followUpGuidance();
     fullPrompt += `\n\n# 사용자 질문\n\n${query}`;
     fullPrompt = fullPrompt.replace(/^\n+/, '');
     timing.add('prompt', timing.now() - promptStart - notesMs);
@@ -545,8 +563,18 @@ async function* runQuery(
       held = sentence;
       return out;
     };
+    // NFR-AI-005 🚦 (절대 규칙 11): 표식 뒤 글은 delta로 나가지 않는다. 문장 단위 출력 검사는 표식 앞 글만 본다
+    const markerFilter = createFollowUpMarkerFilter();
+    const visibleChunks = async function* (): AsyncGenerator<string> {
+      for await (const raw of generateChunks(fullPrompt)) {
+        const visible = markerFilter.push(raw);
+        if (visible) yield visible;
+      }
+      const flushed = markerFilter.finish();
+      if (flushed) yield flushed;
+    };
     let pending = '';
-    stream: for await (const chunk of generateChunks(fullPrompt)) {
+    stream: for await (const chunk of visibleChunks()) {
       const { sentences, rest } = split(pending + chunk);
       pending = rest;
       for (const raw of sentences) {
@@ -575,6 +603,19 @@ async function* runQuery(
     } else {
       if (!responseText.trim()) throw new Error('CHATBOT_EMPTY_RESPONSE');
       attemptViolations.push(releasedViolations);
+    }
+    if (deps.extras && !fixedAnswer) {
+      // FR-SPL-002 🚦: 근거 문장은 K 이하로 조립한 근거 조각에서 코드가 고른다(LLM이 만들지 않는다)
+      const evidence = pickEvidenceLines({ answer: responseText, cutoff: K, pages: allowedPages });
+      if (evidence.length > 0) deps.extras.evidence = evidence;
+      // NFR-AI-005, FR-QNA-004 🚦 (절대 규칙 11): 질문마다 형식·판정 검사와 같은 출력 검사를 모두 통과해야 나간다
+      const questions = markerFilter.found() ? parseFollowUpQuestions(markerFilter.tail()) : [];
+      if (
+        questions.length > 0 &&
+        questions.every((question) => isPlainFollowUp(question) && guardText(question).length === 0)
+      ) {
+        deps.extras.followUps = questions;
+      }
     }
     // 이미 나간 글은 되돌릴 수 없으므로 형식 검사는 기록만 한다. 되묻기 여러 개(multi_question)도
     // 2026-11-19부터 재생성하지 않고 기록만 한다 (STYLE_REGENERATE)
