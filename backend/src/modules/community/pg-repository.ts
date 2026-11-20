@@ -67,6 +67,7 @@ function commentSelect(viewerParam: string | null): string {
     FROM community_comments c
     LEFT JOIN users u ON u.reader_id = c.reader_id
     LEFT JOIN community_comments r ON r.comment_id = c.reply_to_comment_id
+         AND r.deleted_at IS NULL AND r.hidden_at IS NULL
     LEFT JOIN users ru ON ru.reader_id = r.reader_id`;
 }
 

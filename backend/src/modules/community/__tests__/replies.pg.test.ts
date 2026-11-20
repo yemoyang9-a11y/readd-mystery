@@ -80,6 +80,22 @@ const C = '33333333-3333-4333-8333-333333333333';
     expect(list[0]).toMatchObject({ reply_to_comment_id: null, reply_to_reader_id: null, reply_to_name: null });
   });
 
+  test('답글 대상이 나중에 숨김·삭제되면 대상 id 는 남고 작성자·이름은 null', async () => {
+    await pool.query(`INSERT INTO users (user_id, reader_id, display_name) VALUES ($1, $2, '책벌레')`, [randomUUID(), B]);
+    const post = await repo.createPost(BOOK, A, '댓글');
+    const hidden = await repo.createComment(BOOK, post.post_id, B, '숨길 답글', null);
+    const removed = await repo.createComment(BOOK, post.post_id, B, '지울 답글', null);
+    await repo.createComment(BOOK, post.post_id, C, '숨김 대상에 답', hidden!.comment_id);
+    await repo.createComment(BOOK, post.post_id, C, '삭제 대상에 답', removed!.comment_id);
+    await pool.query(`UPDATE community_comments SET hidden_at = now() WHERE comment_id = $1`, [hidden!.comment_id]);
+    await repo.deleteComment(BOOK, removed!.comment_id, B);
+    const list = await repo.listComments(BOOK, post.post_id);
+    expect(list.map((c) => [c.body, c.reply_to_comment_id !== null, c.reply_to_reader_id, c.reply_to_name])).toEqual([
+      ['숨김 대상에 답', true, null, null],
+      ['삭제 대상에 답', true, null, null],
+    ]);
+  });
+
   test('Review Focus 1: 숨김·삭제·다른 댓글의 답글을 대상으로 하면 null, 저장 0건', async () => {
     const post = await repo.createPost(BOOK, A, '댓글');
     const other = await repo.createPost(BOOK, A, '다른 댓글');

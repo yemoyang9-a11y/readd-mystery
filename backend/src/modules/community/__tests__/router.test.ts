@@ -48,7 +48,7 @@ class FakeCommunity implements CommunityRepository {
 
   private commentView(c: StoredComment): CommentRow {
     const { book_id: _book, deleted: _deleted, ...row } = c;
-    const target = this.comments.find((x) => x.comment_id === c.reply_to_comment_id);
+    const target = this.comments.find((x) => x.comment_id === c.reply_to_comment_id && !x.deleted);
     return {
       ...this.named(row),
       reply_to_reader_id: target?.reader_id ?? null,
@@ -385,6 +385,34 @@ describe('community router', () => {
       ['책벌레', true],
     ]);
     expect(JSON.stringify(detail)).not.toContain('reply_to_comment_id');
+  });
+
+  test('삭제된 댓글의 답글에는 지운 사람의 이름(@대상)·글쓴이 표시가 나오지 않는다', async () => {
+    repo.names.set(READER_A, '달빛서재');
+    const post = await seedPost(READER_A);
+    const url = `${base}/posts/${post.post_id}/comments`;
+    await call('POST', url, READER_B, { body: '답글' });
+    await call('POST', url, READER_A, { body: '글쓴이 답글' });
+    await call('DELETE', `${base}/posts/${post.post_id}`, READER_A);
+    const text = await (await call('GET', `${base}/posts/${post.post_id}`, READER_B)).text();
+    const detail = JSON.parse(text);
+    expect(detail.comments.map((c: any) => [c.reply_to_nickname, c.is_post_author])).toEqual([
+      [null, false],
+      [null, false],
+    ]);
+    expect(detail.comments[1].nickname).toBe('달빛서재');
+  });
+
+  test('지운 답글을 대상으로 했던 답글에는 지운 사람의 이름(@대상)이 나오지 않는다', async () => {
+    repo.names.set(READER_B, '책벌레');
+    const post = await seedPost(READER_A);
+    const url = `${base}/posts/${post.post_id}/comments`;
+    const target = (await (await call('POST', url, READER_B, { body: '지울 답글' })).json()) as any;
+    await call('POST', url, READER_A, { body: '그 답글에 답', reply_to_comment_id: target.comment_id });
+    await call('DELETE', `${base}/comments/${target.comment_id}`, READER_B);
+    const text = await (await call('GET', `${base}/posts/${post.post_id}`, READER_A)).text();
+    expect(JSON.parse(text).comments).toEqual([expect.objectContaining({ reply_to_nickname: null })]);
+    expect(text).not.toContain('책벌레');
   });
 
   test('답글 대상: 형식이 틀리면 400, 숨김·삭제·다른 댓글의 답글이면 404', async () => {
