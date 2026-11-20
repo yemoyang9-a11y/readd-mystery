@@ -86,7 +86,6 @@ class FakeCommunity implements CommunityRepository {
       seq: this.seq,
       post_id: randomUUID(),
       reader_id: readerId,
-      kind: null,
       author_name: null,
       body,
       created_at: new Date().toISOString(),
@@ -260,9 +259,9 @@ describe('community router', () => {
   }
 
   const base = `/books/${PUBLISHED}/community`;
-  const theory = { body: '범인은 집사라고 생각해요' };
+  const sample = { body: '범인은 집사라고 생각해요' };
 
-  async function seedPost(reader = READER_A, body: object = theory) {
+  async function seedPost(reader = READER_A, body: object = sample) {
     return (await (await call('POST', `${base}/posts`, reader, body)).json()) as any;
   }
 
@@ -272,7 +271,7 @@ describe('community router', () => {
     const lockedCalls: Array<[string, string, unknown?]> = [
       ['GET', `${base}/posts`],
       ['GET', `${base}/posts/${post.post_id}`],
-      ['POST', `${base}/posts`, theory],
+      ['POST', `${base}/posts`, sample],
       ['POST', `${base}/posts/${post.post_id}/comments`, { body: '댓글' }],
       ['DELETE', `${base}/posts/${post.post_id}`],
       ['POST', `${base}/reports`, { target_type: 'post', target_id: post.post_id, reason: '욕설' }],
@@ -291,13 +290,13 @@ describe('community router', () => {
   });
 
   test('COMMUNITY: 끝까지 간 독자는 조회·작성 가능', async () => {
-    const created = await call('POST', `${base}/posts`, READER_A, theory);
+    const created = await call('POST', `${base}/posts`, READER_A, sample);
     expect(created.status).toBe(201);
     const list = await call('GET', `${base}/posts`, READER_B);
     expect(list.status).toBe(200);
     const body = (await list.json()) as any;
     expect(body.posts).toHaveLength(1);
-    expect(body.posts[0].body).toBe(theory.body);
+    expect(body.posts[0].body).toBe(sample.body);
     expect(snapshotCalls.some(([id]) => id === READER_B)).toBe(true);
   });
 
@@ -306,7 +305,7 @@ describe('community router', () => {
     const res = await call('GET', `${base}/posts/${post.post_id}`, READER_C);
     expect(res.status).toBe(403);
     const text = await res.text();
-    expect(text).not.toContain(theory.body);
+    expect(text).not.toContain(sample.body);
     expect(text).not.toContain('comment_count');
   });
 
@@ -314,7 +313,7 @@ describe('community router', () => {
     for (const bookId of [DRAFT, 'bk-missing']) {
       expect((await call('GET', `/books/${bookId}/community/posts`, READER_A)).status).toBe(404);
       expect(
-        (await call('POST', `/books/${bookId}/community/posts`, READER_A, theory)).status
+        (await call('POST', `/books/${bookId}/community/posts`, READER_A, sample)).status
       ).toBe(404);
     }
   });
@@ -335,17 +334,6 @@ describe('community router', () => {
     expect((await post('a'.repeat(2000))).status).toBe(201);
     const trimmed = await seedPost(READER_A, { body: '  감상  ' });
     expect(trimmed.body).toBe('감상');
-  });
-
-  test('말머리 없음: kind 없이 댓글을 쓰고, kind 를 보내도 저장·응답에 남지 않는다', async () => {
-    expect((await call('POST', `${base}/posts`, READER_A, { body: '말머리 없이' })).status).toBe(201);
-    const withKind = await call('POST', `${base}/posts`, READER_A, { kind: 'rant', body: '옛 화면' });
-    expect(withKind.status).toBe(201);
-    expect(await withKind.json()).not.toHaveProperty('kind');
-    expect(repo.posts.map((p) => p.kind)).toEqual([null, null]);
-    const list = (await (await call('GET', `${base}/posts?kind=theory`, READER_B)).json()) as any;
-    expect(list.posts).toHaveLength(2);
-    expect(list.posts[0]).not.toHaveProperty('kind');
   });
 
   test('이름: 가입 닉네임이 있으면 그 이름, 없으면 "독자 xxxx" — 독자 ID 는 노출되지 않는다', async () => {
@@ -541,10 +529,10 @@ describe('community router', () => {
 
   test('시간당 글 10개·댓글 30개를 넘기면 429', async () => {
     for (let i = 0; i < 10; i += 1) {
-      expect((await call('POST', `${base}/posts`, READER_A, theory)).status).toBe(201);
+      expect((await call('POST', `${base}/posts`, READER_A, sample)).status).toBe(201);
     }
-    expect((await call('POST', `${base}/posts`, READER_A, theory)).status).toBe(429);
-    expect((await call('POST', `${base}/posts`, READER_B, theory)).status).toBe(201);
+    expect((await call('POST', `${base}/posts`, READER_A, sample)).status).toBe(429);
+    expect((await call('POST', `${base}/posts`, READER_B, sample)).status).toBe(201);
     const post = repo.posts[0];
     const url = `${base}/posts/${post.post_id}/comments`;
     for (let i = 0; i < 30; i += 1) {

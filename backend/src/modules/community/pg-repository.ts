@@ -34,7 +34,7 @@ function postSelect(viewerParam: string | null): string {
           WHERE l.post_id = p.post_id AND l.reader_id = ${viewerParam}::uuid))`
     : 'false';
   return `
-  SELECT p.seq::int AS seq, p.post_id, p.reader_id, p.kind, p.body, p.created_at,
+  SELECT p.seq::int AS seq, p.post_id, p.reader_id, p.body, p.created_at,
          u.display_name AS author_name,
          (p.deleted_at IS NOT NULL) AS deleted,
          (SELECT count(*)::int FROM community_comments c
@@ -90,7 +90,6 @@ function toPost(row: any): PostRow {
     seq: row.seq,
     post_id: row.post_id,
     reader_id: row.reader_id,
-    kind: row.kind,
     body: row.body,
     author_name: row.author_name ?? null,
     created_at: new Date(row.created_at).toISOString(),

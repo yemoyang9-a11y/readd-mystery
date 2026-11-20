@@ -44,10 +44,8 @@ const C = '33333333-3333-4333-8333-333333333333';
     await pool.end();
   });
 
-  test('migration 027: kind 없이 댓글 저장, 두 번 적용해도 그대로, community_comment_likes RLS·PK (comment_id, reader_id)', async () => {
+  test('migration 027: 두 번 적용해도 그대로, community_comment_likes RLS·PK (comment_id, reader_id)', async () => {
     await apply('027_community_replies.sql');
-    const post = await repo.createPost(BOOK, A, '말머리 없는 댓글');
-    expect(post.kind).toBeNull();
     const rls = await pool.query(
       `SELECT relrowsecurity FROM pg_class WHERE relname = 'community_comment_likes' AND relnamespace = $1::regnamespace`,
       [schema]
@@ -155,13 +153,24 @@ const C = '33333333-3333-4333-8333-333333333333';
     expect(await repo.createComment(BOOK, post.post_id, C, '새 답글', null)).toBeNull();
   });
 
-  test('기존 데이터: kind=theory|review 글은 그대로 읽히고 kind 필드만 남는다', async () => {
+  test('migration 028: 말머리 칸이 없어지고 기존 글은 그대로 읽힌다, 두 번 적용해도 그대로', async () => {
     await pool.query(
       `INSERT INTO community_posts (post_id, book_id, reader_id, kind, body) VALUES ($1, $2, $3, 'theory', '옛 추리 글')`,
       [randomUUID(), BOOK, A]
     );
+    await apply('028_drop_community_kind.sql');
+    await apply('028_drop_community_kind.sql');
+    const column = await pool.query(
+      `SELECT count(*)::int AS n FROM information_schema.columns
+        WHERE table_schema = $1 AND table_name = 'community_posts' AND column_name = 'kind'`,
+      [schema]
+    );
+    expect(column.rows[0].n).toBe(0);
     const list = await repo.listPosts(BOOK, { limit: 10 });
     expect(list).toHaveLength(1);
-    expect(list[0]).toMatchObject({ kind: 'theory', body: '옛 추리 글', author_name: null });
+    expect(list[0]).toMatchObject({ body: '옛 추리 글', author_name: null });
+    expect(list[0]).not.toHaveProperty('kind');
+    const created = await repo.createPost(BOOK, B, '새 댓글');
+    expect(created).not.toHaveProperty('kind');
   });
 });

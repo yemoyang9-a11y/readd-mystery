@@ -70,7 +70,6 @@ class FakeStore implements CommunityRepository, CommunityEngagementRepository {
       seq: this.seq,
       post_id: randomUUID(),
       reader_id: FINISHER,
-      kind: null,
       author_name: null,
       body,
       created_at: new Date().toISOString(),
@@ -476,7 +475,7 @@ const MIGRATIONS = path.join(__dirname, '../../../../migrations');
     await pool.query(`CREATE TABLE books (book_id TEXT PRIMARY KEY, title TEXT NOT NULL)`);
     await pool.query(`INSERT INTO books VALUES ($1, '가상범인'), ($2, '타원형의 거울')`, [BOOK, OTHER]);
     await pool.query(`CREATE TABLE users (user_id UUID PRIMARY KEY, reader_id UUID NOT NULL UNIQUE, display_name TEXT)`);
-    for (const file of ['016_community.sql', '022_community_moderation.sql', '024_community_likes.sql', '027_community_replies.sql']) {
+    for (const file of ['016_community.sql', '022_community_moderation.sql', '024_community_likes.sql', '027_community_replies.sql', '028_drop_community_kind.sql']) {
       await pool.query(fs.readFileSync(path.join(MIGRATIONS, file), 'utf8'));
     }
     // IF NOT EXISTS — 두 번 적용해도 그대로

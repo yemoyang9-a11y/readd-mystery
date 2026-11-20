@@ -5,15 +5,12 @@
  */
 export const AUTO_HIDE_REPORT_THRESHOLD = 3;
 
-export type PostKind = 'theory' | 'review';
 export type ReportTarget = 'post' | 'comment';
 
 export interface PostRow {
   seq: number;
   post_id: string;
   reader_id: string;
-  /** T19 이후 새 댓글은 null. 기존 글의 말머리만 남는다 */
-  kind: PostKind | null;
   body: string;
   /** users.display_name — 없으면 null */
   author_name: string | null;
