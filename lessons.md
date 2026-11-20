@@ -68,3 +68,9 @@
 `으로 바꾼다.
 - 해결: `open(p, encoding='utf-8', newline='')`로 읽고 써서 원래 줄바꿈을 유지한다. 이미 바뀐 파일은 `sed -i 's/$//'`로 되돌렸다(`git diff` 비어 있음 확인).
 
+## 2026-11-20 — 서버 배포가 lint(prettier) 오류로 막힘
+
+- 증상: main 에 올린 뒤 `Deploy Backend to Fly.io`의 "Lint production sources"가 `prettier/prettier` 오류 19건으로 실패해 Fly 배포가 건너뛰어졌다. 화면(Pages)은 먼저 배포돼 몇 분 동안 새 화면이 옛 서버와 맞지 않았다.
+- 원인: 서버 코드는 `tsc`·jest 만 돌리고 `backend npm run lint`(eslint + prettier 규칙)를 로컬에서 돌리지 않았다.
+- 해결: `cd backend && npx eslint <바꾼 파일> --fix` 후 `npm run lint` 오류 0건 확인, 다시 올려 배포 성공. 배포 전에는 서버도 `npm run lint`를 돌린다. 화면과 서버 변경이 함께 나갈 때는 서버 배포 실패가 곧 운영 불일치라는 점을 기억한다.
+
