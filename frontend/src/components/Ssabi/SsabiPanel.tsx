@@ -159,6 +159,11 @@ export default function SsabiPanel({
     if (pendingQuote) setLastTab('chatbot');
   }, [pendingQuote?.token]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const askAmoAboutNote = (body: string) => {
+    setLastTab('chatbot');
+    if (!chatStreaming) onAsk(`${body} 이에 대해 설명해줘.`);
+  };
+
   useEffect(() => {
     if (pendingNoteQuote) setLastTab('notes');
   }, [pendingNoteQuote?.token]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -225,13 +230,14 @@ export default function SsabiPanel({
             onEdit={onEditNote}
             onRemove={onRemoveNote}
             onJump={onJumpToNote}
+            onAskAmo={askAmoAboutNote}
             quoteDraft={pendingNoteQuote}
             onQuoteDraftHandled={onNoteQuoteHandled}
           />
         ) : null}
         {tab === 'timeline' ? <TimelineTab timeline={timeline} failed={timelineFailed} /> : null}
         {tab === 'relationship' ? (
-          <RelationshipTab graph={graph} failed={graphFailed} totalPages={totalPages} />
+          <RelationshipTab graph={graph} failed={graphFailed} totalPages={totalPages} onJump={onJumpToNote} />
         ) : null}
         {tab === 'chatbot' ? (
           <ChatbotTab

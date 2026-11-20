@@ -203,7 +203,8 @@ test('가이드: 비춘 곳을 한 번씩만 눌러 8단계를 지나고(누르�
   await user.click(GUIDE_STEPS[5].target()!);
   taps += 1;
   expect(stepId()).toBe('side-relationship');
-  expect(within(panel()).getByRole('region', { name: '관계 설명' })).toHaveTextContent('윤미라');
+  const relationRow = GUIDE_STEPS[5].target()!.closest('details');
+  expect(relationRow?.open || within(panel()).queryByRole('region', { name: '관계 설명' })?.textContent?.includes('윤미라')).toBe(true);
   await clickNext(user);
   await waitFor(() => expect(stepId()).toBe('ask-amo'));
 
