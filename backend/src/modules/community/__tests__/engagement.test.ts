@@ -286,6 +286,44 @@ describe('커뮤니티 공감·인기순·허브', () => {
     expect(asB.posts[0]).toMatchObject({ like_count: 1, liked_by_me: true });
   });
 
+  test('FR-QNA-004: 끝까지 가지 않은 독자는 답글 좋아요·취소 403, 저장소 접근 0건 — 끝까지 가면 된다 (positive 쌍)', async () => {
+    const reply = store.seedReply(store.seed(BOOK, SECRET).post_id);
+    for (const method of ['POST', 'DELETE']) {
+      const res = await call(method, `${base}/comments/${reply.comment_id}/like`, NON_FINISHER);
+      expect(res.status).toBe(403);
+      expect(await res.text()).not.toContain('like_count');
+    }
+    expect(store.touched).toEqual([]);
+    completed.add(`${NON_FINISHER}:${BOOK}`);
+    const ok = await call('POST', `${base}/comments/${reply.comment_id}/like`, NON_FINISHER);
+    expect(ok.status).toBe(200);
+    expect(await ok.json()).toEqual({ like_count: 1, liked_by_me: true });
+  });
+
+  test('답글 좋아요: 누르면 like_count 1·liked_by_me true, 취소하면 0·false, 다른 도서·숨김·없는 답글은 404', async () => {
+    const post = store.seed(BOOK, SECRET);
+    const reply = store.seedReply(post.post_id);
+    const url = `${base}/comments/${reply.comment_id}/like`;
+    expect(await (await call('POST', url, FINISHER)).json()).toEqual({ like_count: 1, liked_by_me: true });
+    expect(await (await call('POST', url, FINISHER)).json()).toEqual({ like_count: 1, liked_by_me: true });
+    const off = await call('DELETE', url, FINISHER);
+    expect(off.status).toBe(200);
+    expect(await off.json()).toEqual({ like_count: 0, liked_by_me: false });
+    const hidden = store.seedReply(post.post_id, { hidden: true });
+    const otherBook = store.seedReply(store.seed(OTHER, '다른 책').post_id);
+    for (const id of [hidden.comment_id, otherBook.comment_id, randomUUID(), 'not-a-uuid']) {
+      expect((await call('POST', `${base}/comments/${id}/like`, FINISHER)).status).toBe(404);
+    }
+  });
+
+  test('Review Focus 3: 삭제된 댓글 아래 남은 답글도 좋아요가 된다', async () => {
+    const post = store.seed(BOOK, SECRET, { deleted: true });
+    const reply = store.seedReply(post.post_id);
+    const res = await call('POST', `${base}/comments/${reply.comment_id}/like`, FINISHER);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ like_count: 1, liked_by_me: true });
+  });
+
   test('글 상세도 목록과 같은 공감 상태 — 누른 독자는 true, 안 누른 독자는 false (2026-11-18 E2E #72)', async () => {
     const post = store.seed(BOOK, SECRET);
     await call('POST', `${base}/posts/${post.post_id}/like`, FINISHER);

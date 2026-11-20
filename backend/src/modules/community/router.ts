@@ -31,6 +31,15 @@ function displayName(name: string | null, readerId: string, bookId: string): str
   return name ?? nicknameFor(readerId, bookId);
 }
 
+function replyToNickname(row: CommentRow, post: PostRow, bookId: string): string | null {
+  if (row.reply_to_comment_id === null) {
+    return post.deleted ? null : displayName(post.author_name, post.reader_id, bookId);
+  }
+  return row.reply_to_reader_id === null
+    ? null
+    : displayName(row.reply_to_name, row.reply_to_reader_id, bookId);
+}
+
 function encodeCursor(seq: number): string {
   return Buffer.from(String(seq)).toString('base64url');
 }
@@ -110,11 +119,9 @@ export function createCommunityRouter({
       nickname: displayName(row.author_name, row.reader_id, bookId),
       created_at: row.created_at,
       is_mine: row.reader_id === readerId,
-      is_post_author: row.reader_id === post.reader_id,
-      reply_to_nickname:
-        row.reply_to_reader_id === null
-          ? displayName(post.author_name, post.reader_id, bookId)
-          : displayName(row.reply_to_name, row.reply_to_reader_id, bookId),
+      // 지운 댓글·지우거나 숨긴 답글의 작성자는 @대상·글쓴이 표시로도 드러내지 않는다
+      is_post_author: !post.deleted && row.reader_id === post.reader_id,
+      reply_to_nickname: replyToNickname(row, post, bookId),
       like_count: row.like_count ?? 0,
       liked_by_me: row.liked_by_me === true,
     };
@@ -360,6 +367,26 @@ export function createCommunityRouter({
             return;
           }
           res.json(await engagement.likeState(bookId, postId, readerId));
+        } catch (error) {
+          next(error);
+        }
+      });
+      // T19 답글 좋아요 — FR-QNA-004 🚦 관문(authorize)을 지난 독자만
+      router[method]('/books/:bookId/community/comments/:commentId/like', async (req, res, next) => {
+        try {
+          const { bookId, commentId } = req.params;
+          const readerId = await authorize(req, res);
+          if (!readerId) return;
+          const done = UUID_PATTERN.test(commentId)
+            ? method === 'post'
+              ? await engagement.likeComment(bookId, commentId, readerId)
+              : await engagement.unlikeComment(bookId, commentId, readerId)
+            : false;
+          if (!done) {
+            notFound(res, 'Comment not found');
+            return;
+          }
+          res.json(await engagement.commentLikeState(bookId, commentId, readerId));
         } catch (error) {
           next(error);
         }
