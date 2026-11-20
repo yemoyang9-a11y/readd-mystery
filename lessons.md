@@ -88,3 +88,17 @@
 - 해결: 생성기에서 `::uuid`를 뺐다(`relation-explain.ts`). 같은 SQL을 다시 적용해 14건이 들어간 것을 조회로 확인했다(원문 한 줄이 근거 문단의 부분 문자열 14건, 기존 필드 변경 없음). 적용 전에는 SQL을 `BEGIN/COMMIT` 없이 DO 블록만 한 번에 보내는 편이 안전하다(오류 시 연결이 실패한 트랜잭션에 남지 않는다).
 - Windows에서 Claude CLI 작업을 돌릴 때 `spawn claude ENOENT`가 난다. `CLAUDE_CLI_BIN`에 실제 실행 파일(`...\npm\node_modules\@anthropic-ai\claude-code\bin\claude.exe`)을 넘기면 된다. 이 컴퓨터 `backend/.env`의 `OPENAI_API_KEY`는 무효(401)이고 `MOCK_MODE=true`라서, 생성은 `MOCK_MODE=false`와 Claude CLI 경로로 돌렸다.
 - Bash 도구 heredoc 안에 쓴 JS 문자열의 `\s`가 `s`로 바뀌어 정규식이 깨진 적이 있다. 정규식을 파일에 쓸 때는 `String.fromCharCode(92)`로 역슬래시를 만들거나, 문자 클래스(`[ ]`)로 피한다.
+
+## 2026-11-20 — 서버 배포가 lint(prettier) 오류로 막힘
+
+- 증상: main 에 올린 뒤 `Deploy Backend to Fly.io`의 "Lint production sources"가 `prettier/prettier` 오류 19건으로 실패해 Fly 배포가 건너뛰어졌다. 화면(Pages)은 먼저 배포돼 몇 분 동안 새 화면이 옛 서버와 맞지 않았다.
+- 원인: 서버 코드는 `tsc`·jest 만 돌리고 `backend npm run lint`(eslint + prettier 규칙)를 로컬에서 돌리지 않았다.
+- 해결: `cd backend && npx eslint <바꾼 파일> --fix` 후 `npm run lint` 오류 0건 확인, 다시 올려 배포 성공. 배포 전에는 서버도 `npm run lint`를 돌린다. 화면과 서버 변경이 함께 나갈 때는 서버 배포 실패가 곧 운영 불일치라는 점을 기억한다.
+
+## 2026-11-20 — 휴대폰에서 막대를 톡 누르면 옆 글자(label)로 터치가 옮겨 감
+
+- 증상: 인물관계도 시점 되감기 막대를 직접 그리고 React `onPointerDown`을 달았는데, 끌기는 되지만 막대를 톡 누르면 반응이 없었다. 기록해 보니 pointerdown 대상이 막대가 아니라 위의 `<label for="graph-scrub">`였다.
+- 원인: 휴대폰 브라우저의 터치 보정(touch adjustment)은 손가락 근처의 "눌러지는 요소"로 탭을 옮긴다. React 는 이벤트를 루트에서 받으므로 막대 div 자체에는 리스너가 없어 눌러지는 요소로 인식되지 않았고, label 이 이겼다.
+- 해결: 막대에 `tabIndex={-1}`을 줘서 터치 대상으로 인식시켰다. Playwright + CDP `Input.dispatchTouchEvent`로 같은 탭이 막대에 닿아 p.3 으로 가는 것을 확인했다.
+- 참고: 되감기로 관계도 높이가 바뀌면 막대가 위아래로 움직인다. 터치 확인 스크립트는 누를 때마다 막대 위치를 다시 재야 한다.
+

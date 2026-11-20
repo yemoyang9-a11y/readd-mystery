@@ -1,5 +1,4 @@
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import MobileBriefing from './MobileBriefing';
 import type { BriefingSessionState } from '../../hooks/useBriefingSession';
@@ -57,17 +56,14 @@ function renderBriefing() {
   );
 }
 
-// 대표 결정 2026-11-19 "커뮤니티 관문 없애기" — 완독 여부와 관계없이 커뮤니티 버튼을 보인다 (positive 쌍)
-describe.each([false, true])('COMMUNITY: 완독 여부(is_complete=%s)와 관계없이', (isComplete) => {
-  test('브리핑 화면에 커뮤니티 버튼이 보이고 누르면 그 책 커뮤니티로 간다', async () => {
+// 대표 지시 2026-11-20 — 브리핑 화면에는 어떤 경우에도 커뮤니티 버튼을 두지 않는다
+describe.each([false, true])('BRIEFING: 완독 여부(is_complete=%s)와 관계없이', (isComplete) => {
+  test('브리핑 화면에 커뮤니티 버튼이 없고 이어서 읽기는 있다', async () => {
     positionMock.current = position(isComplete);
     renderBriefing();
 
-    const button = await screen.findByRole('button', { name: /커뮤니티/ });
-    expect(button).toHaveAttribute('data-track', 'community-open');
-    expect(button.textContent).not.toMatch(/싸비|AI/);
-
-    await userEvent.click(button);
-    expect(await screen.findByText('이 책 커뮤니티')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: '이어서 읽기' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /커뮤니티/ })).not.toBeInTheDocument();
+    expect(screen.queryByText('다른 독자들과 이야기하기')).not.toBeInTheDocument();
   });
 });

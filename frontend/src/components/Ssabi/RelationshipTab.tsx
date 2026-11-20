@@ -1,4 +1,11 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react';
 import type { GraphResponse } from '../../types';
 import Loading from '../common/Loading';
 import RelationshipGraph from './RelationshipGraph';
@@ -37,10 +44,6 @@ import { centralNodeIndex } from './graphLayout';
  * 나누게 두는 쪽을 택함(브라우저의 레이아웃 계산이지 우리 코드의 진도율 계산이 아니다).
  * `totalPages`는 목차(전체 챕터) 기준이라 애초에 상한 대상이 아니다(R3 — 목차는 전체 상시 노출).
  *
- * 브라우저 기본 range 트랙은 높이·여백이 옆 막대와 맞지 않아 `appearance-none`으로 지우고
- * thumb·track을 직접 그린다. 두 막대가 맞닿는 안쪽 모서리는 각지게, 바깥쪽 끝만 둥글게 해서
- * 하나로 이어진 막대처럼 보이게 한다. `<input>`의 기본 inline-block 하강폭 여백 때문에 두
- * 막대가 2px 어긋나던 문제(2026-08-25)는 `block`으로 막는다.
  *
  * 표기는 앱의 쪽수 표기 "p.N"을 따른다(2026-11-18 "p.로 표현"). 눈금이 2개 미만이면 감을
  * 시점이 없으므로 막대를 그리지 않는다. 회색 부연 문구(옛 "별칭을 생략합니다" 안내)는 두지 않는다
@@ -52,6 +55,8 @@ import { centralNodeIndex } from './graphLayout';
  *
  * 조회 실패는 부분 표시로 넘어가지 않는다 (FR-SPL-005 🚦).
  */
+const SCRUB_THUMB = 22;
+
 export default function RelationshipTab({
   graph,
   failed,
@@ -73,6 +78,9 @@ export default function RelationshipTab({
   const [mobile, setMobile] = useState(false);
   const [pickedCenter, setPickedCenter] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [scrubFocused, setScrubFocused] = useState(false);
+  const readTrackRef = useRef<HTMLDivElement | null>(null);
+  const dragPointerRef = useRef<number | null>(null);
   const anchorRef = useCallback((node: HTMLDivElement | null) => {
     setMobile(Boolean(node?.closest('[data-mobile]')));
   }, []);
@@ -98,6 +106,40 @@ export default function RelationshipTab({
     return index >= 0 ? shown.nodes[index].id : null;
   }, [shown]);
   const activeSelected = cleared ? null : (pickedVisible ?? defaultEgo);
+
+  // FR-SPL-002 🚦
+  function pickAt(clientX: number) {
+    const rect = readTrackRef.current?.getBoundingClientRect();
+    if (!rect || milestones.length < 2) return;
+    const usable = Math.max(rect.width - SCRUB_THUMB, 1);
+    const pos = Math.min(Math.max(clientX - rect.left - SCRUB_THUMB / 2, 0), usable);
+    const first = milestones[0];
+    const span = latest - first;
+    let best = first;
+    for (const mark of milestones) {
+      if (
+        Math.abs(pos * span - (mark - first) * usable) <
+        Math.abs(pos * span - (best - first) * usable)
+      )
+        best = mark;
+    }
+    setPicked(best);
+  }
+
+  function startScrub(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!event.isPrimary || event.button !== 0) return;
+    dragPointerRef.current = event.pointerId;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    pickAt(event.clientX);
+  }
+
+  function moveScrub(event: ReactPointerEvent<HTMLDivElement>) {
+    if (dragPointerRef.current === event.pointerId) pickAt(event.clientX);
+  }
+
+  function endScrub(event: ReactPointerEvent<HTMLDivElement>) {
+    if (dragPointerRef.current === event.pointerId) dragPointerRef.current = null;
+  }
 
   function pickCenter(id: string) {
     setPickedCenter(id);
@@ -141,34 +183,50 @@ export default function RelationshipTab({
             {at === latest ? '현재까지' : `p.${at} 시점`}
           </span>
         </div>
-        <div className="flex items-center">
-          <div style={{ flexGrow: latest || 1, flexBasis: 0 }}>
-            <input
-              id="graph-scrub"
-              type="range"
-              min={0}
-              max={milestones.length - 1}
-              step={1}
-              value={Math.max(0, milestones.indexOf(at))}
-              onChange={(event) => setPicked(milestones[Number(event.target.value)])}
-              className={`block h-3.5 w-full cursor-pointer appearance-none bg-transparent mobile:h-11
-                  [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:bg-brief-accent
-                  [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:border-none [&::-moz-range-track]:bg-brief-accent
-                  ${
-                    unread > 0
-                      ? '[&::-webkit-slider-runnable-track]:rounded-l-full [&::-moz-range-track]:rounded-l-full'
-                      : '[&::-webkit-slider-runnable-track]:rounded-full [&::-moz-range-track]:rounded-full'
-                  }
-                  [&::-webkit-slider-thumb]:-mt-1 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5
-                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full
-                  [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white
-                  [&::-webkit-slider-thumb]:bg-brief-accent [&::-webkit-slider-thumb]:shadow
-                  [&::-webkit-slider-thumb]:cursor-pointer
-                  [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-3.5
-                  [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full
-                  [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white
-                  [&::-moz-range-thumb]:bg-brief-accent [&::-moz-range-thumb]:shadow
-                  [&::-moz-range-thumb]:cursor-pointer`}
+        <input
+          id="graph-scrub"
+          type="range"
+          min={0}
+          max={milestones.length - 1}
+          step={1}
+          value={Math.max(0, milestones.indexOf(at))}
+          onChange={(event) => setPicked(milestones[Number(event.target.value)])}
+          onFocus={() => setScrubFocused(true)}
+          onBlur={() => setScrubFocused(false)}
+          aria-valuetext={at === latest ? '현재까지' : `p.${at} 시점`}
+          className="sr-only"
+        />
+        <div
+          data-testid="graph-scrub-track"
+          tabIndex={-1}
+          onPointerDown={startScrub}
+          onPointerMove={moveScrub}
+          onPointerUp={endScrub}
+          onPointerCancel={endScrub}
+          onLostPointerCapture={endScrub}
+          className="flex h-11 cursor-pointer touch-none select-none items-center"
+        >
+          <div
+            ref={readTrackRef}
+            data-testid="graph-scrub-read"
+            className="flex items-center"
+            style={{ flexGrow: latest || 1, flexBasis: 0, minWidth: '120px' }}
+          >
+            <div
+              data-testid="graph-scrub-filled"
+              className="h-1.5 rounded-l-full bg-brief-accent"
+              style={{ flexGrow: at - milestones[0], flexBasis: 0 }}
+            />
+            <span
+              data-testid="graph-scrub-thumb"
+              className={`size-[22px] shrink-0 rounded-full border-[3px] border-white bg-brief-accent shadow-md ${
+                scrubFocused ? 'ring-2 ring-brief-accent ring-offset-2' : ''
+              }`}
+            />
+            <div
+              data-testid="graph-scrub-rest"
+              className={`h-1.5 bg-brief-rule ${unread > 0 ? '' : 'rounded-r-full'}`}
+              style={{ flexGrow: latest - at, flexBasis: 0 }}
             />
           </div>
           {unread > 0 ? (

@@ -52,7 +52,6 @@ export default function MobileBriefingView({
   recapStreaming,
   characterNames,
   notes = [],
-  onOpenCommunity,
   lastReadAt = null,
   introduction = null,
   background = null,
@@ -73,7 +72,6 @@ export default function MobileBriefingView({
   recapStreaming: boolean;
   characterNames: string[];
   notes?: ReadingNote[];
-  onOpenCommunity?: () => void;
   /** 서버의 마지막 읽은 시각(GET /briefing last_read_at). 없으면 경과 안내를 그리지 않는다 */
   lastReadAt?: string | null;
   /** 서버가 준 작품 소개(GET /info introduction, 상한 예외 R5). 없으면 그 칸을 그리지 않는다 */
@@ -333,18 +331,6 @@ export default function MobileBriefingView({
             </ul>
           </div>
         </div>
-        {/* 2026-11-19 대표 시안(모바일 사용성 평가 3번) — 커뮤니티는 줄거리·노트·목차 다음 맨 아래로. 주된 행동은 이어서 읽기다 */}
-        {onOpenCommunity ? (
-          <button
-            type="button"
-            data-track="community-open"
-            onClick={onOpenCommunity}
-            className="mt-7 flex min-h-12 w-full items-center justify-between rounded-brief-panel border border-[#c4475f] bg-[#1e1618] px-5 text-left text-[15px] font-bold text-[#e58a9b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c4475f]"
-          >
-            <span>커뮤니티</span>
-            <span className="text-[13px] font-normal text-[#a89e9a]">다른 독자들과 이야기하기</span>
-          </button>
-        ) : null}
       </main>
 
       <div
