@@ -286,6 +286,17 @@ describe('커뮤니티 공감·인기순·허브', () => {
     expect(asB.posts[0]).toMatchObject({ like_count: 1, liked_by_me: true });
   });
 
+  test('목록에 보이는 댓글 전체 수(total_count)가 함께 온다 — 20개씩 받아도 전체 수, 숨김·삭제 제외', async () => {
+    for (let i = 0; i < 23; i += 1) store.seed(BOOK, `댓글 ${i}`);
+    store.seed(BOOK, '숨김', { hidden: true });
+    store.seed(BOOK, '삭제', { deleted: true });
+    for (const sort of ['new', 'popular']) {
+      const page = (await (await call('GET', `${base}/posts?sort=${sort}`, FINISHER)).json()) as any;
+      expect(page.posts).toHaveLength(20);
+      expect(page.total_count).toBe(23);
+    }
+  });
+
   test('FR-QNA-004: 끝까지 가지 않은 독자는 답글 좋아요·취소 403, 저장소 접근 0건 — 끝까지 가면 된다 (positive 쌍)', async () => {
     const reply = store.seedReply(store.seed(BOOK, SECRET).post_id);
     for (const method of ['POST', 'DELETE']) {

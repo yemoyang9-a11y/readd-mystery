@@ -195,6 +195,8 @@ export function createCommunityRouter({
       const hasMore = rows.length > PAGE_SIZE;
       res.json({
         posts: page.map((row) => publicPost(row, readerId, bookId)),
+        // T19 — 머리줄 "N개의 댓글". 관문을 지난 뒤에만 센다 (절대 규칙 7)
+        ...(engagement ? { total_count: await engagement.countVisiblePosts(bookId) } : {}),
         next_cursor: !hasMore
           ? null
           : sort === 'popular'
