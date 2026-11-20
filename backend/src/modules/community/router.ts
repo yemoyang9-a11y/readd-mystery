@@ -28,7 +28,7 @@ function nicknameFor(readerId: string, bookId: string): string {
 
 // T19 — 가입 닉네임(users.display_name), 없으면 도서별 익명 이름
 function displayName(name: string | null, readerId: string, bookId: string): string {
-  return name ?? nicknameFor(readerId, bookId);
+  return name?.trim() || nicknameFor(readerId, bookId);
 }
 
 function replyToNickname(row: CommentRow, post: PostRow, bookId: string): string | null {

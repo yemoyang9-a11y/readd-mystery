@@ -363,6 +363,19 @@ describe('community router', () => {
     expect(text).not.toContain('reader_id');
   });
 
+  test('Final: 가입 닉네임이 빈 칸·공백뿐이면 "독자 xxxx" — 이름·@대상이 비지 않는다', async () => {
+    repo.names.set(READER_A, '');
+    repo.names.set(READER_B, '   ');
+    const post = await seedPost(READER_A);
+    const reply = (await (
+      await call('POST', `${base}/posts/${post.post_id}/comments`, READER_B, { body: '답' })
+    ).json()) as any;
+    expect(reply.nickname).toMatch(/^독자 [0-9a-f]{4}$/);
+    expect(reply.reply_to_nickname).toMatch(/^독자 [0-9a-f]{4}$/);
+    const list = (await (await call('GET', `${base}/posts`, READER_B)).json()) as any;
+    expect(list.posts[0].nickname).toMatch(/^독자 [0-9a-f]{4}$/);
+  });
+
   test('답글: 댓글에 단 답글은 reply_to_nickname=댓글쓴이, 답글에 단 답글은 그 답글 작성자, 글쓴이 답글은 is_post_author=true', async () => {
     repo.names.set(READER_A, '달빛서재');
     repo.names.set(READER_B, '책벌레');
