@@ -23,6 +23,7 @@ export interface CutoffSnapshot {
   /**
    * 기준점 (진도 레코드가 없으면 0, 있으면 차례로 읽었다고 확인된 마지막 쪽) - FR-PRG-003 🚦
    * (2026-11-17 대표 결정 — 가장 멀리 펼친 쪽(max_page)에서 바뀜)
+   * 완독한 책(is_complete)은 지금 펼친 쪽이다 (2026-11-20 대표 결정 — 다시 읽을 때도 처음 읽는 것처럼)
    */
   cutoff: number;
 
@@ -35,7 +36,7 @@ export interface CutoffSnapshot {
    */
   frontier_confirm: { current_page: number | null; furthest_page: number } | null;
 
-  /** 진도 퍼센트 (기준점 / total_pages) */
+  /** 진도 퍼센트 (차례로 읽은 쪽 / total_pages). 다시 읽는 동안에도 완독이면 100이다 */
   percent: number;
 
   /**
@@ -46,6 +47,12 @@ export interface CutoffSnapshot {
    * 작품 전체의 정보 부재를 증명하지 않는다(2026-10-21 정책).
    */
   is_complete: boolean;
+
+  /**
+   * 기준점이 마지막 쪽에 닿았는가 (cutoff >= total_pages). 완독한 독자가 다시 읽으며 앞쪽에 있으면 거짓이다.
+   * 챗봇의 완독 안내(COMPLETION_STANCE)는 이 값이 참일 때만 붙인다 (FR-QNA-004 🚦, 2026-11-20).
+   */
+  cutoff_at_end: boolean;
 
   /**
    * 끝까지 갔는가 — 진도 레코드가 있고 가장 멀리 펼친 쪽(저장값 max_page)이 마지막 쪽 이상.

@@ -277,7 +277,7 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
         readingState.cutoffService.getCutoffSnapshot(deviceId, bookId)
       );
       K = snapshot.cutoff;
-      isComplete = snapshot.is_complete;
+      isComplete = snapshot.is_complete && snapshot.cutoff_at_end;
 
       // 첫 페이지 예외(K=0)에서는 페이지 1 본문을 별도 섹션으로 우회 주입하지 않는다.
       if (pageIsIncludedInCutoff(snapshot.current_page, K)) {

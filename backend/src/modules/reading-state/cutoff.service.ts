@@ -91,7 +91,6 @@ export function createCutoffService(deps: CutoffServiceDeps): CutoffService & Re
       const furthestPage = stored?.max_page ?? FIRST_ENTRY_PAGE;
       // FR-PRG-003 🚦 — 1쪽부터 끊김 없이 읽었다고 인정된 마지막 쪽
       const frontier = contiguousFrontier(stored?.read_pages ?? []);
-      const chapterPage = Math.max(frontier, FIRST_ENTRY_PAGE);
 
       const totalPages = await books.findTotalPages(bookId);
       if (totalPages === null || totalPages <= 0) {
@@ -99,6 +98,13 @@ export function createCutoffService(deps: CutoffServiceDeps): CutoffService & Re
           `[cutoff] 도서의 total_pages를 확인할 수 없어 스냅샷을 만들지 않는다: bookId=${bookId}`
         );
       }
+
+      // FR-BRF-005 🚦, FR-QNA-004 🚦
+      const isComplete = stored !== null && frontier >= totalPages;
+      // FR-PRG-003 🚦 — 완독한 책은 다시 읽어도 처음 읽는 것처럼 지금 펼친 쪽까지만 (2026-11-20 대표 결정)
+      const frontierCutoff = stored === null ? 0 : frontier;
+      const cutoff = isComplete ? currentPage : frontierCutoff;
+      const chapterPage = Math.max(cutoff, FIRST_ENTRY_PAGE);
 
       const chapter = await books.findChapterContaining(bookId, chapterPage);
       if (chapter === null) {
@@ -118,22 +124,21 @@ export function createCutoffService(deps: CutoffServiceDeps): CutoffService & Re
           : await books.findChapterContaining(bookId, currentPage);
 
       // ── 파생 계산: 이 블록이 시스템 전체의 유일한 계산 지점이다 ──────────────
-      // FR-PRG-003 🚦
-      const cutoff = stored === null ? 0 : frontier;
       const percent = round(
-        (cutoff / totalPages) * 100, // FR-BRF-005 🚦
+        (frontier / totalPages) * 100, // FR-BRF-005 🚦
         PERCENT_DECIMALS
       );
-      // FR-BRF-005 🚦, FR-QNA-004 🚦
-      const isComplete = stored !== null && frontier >= totalPages;
+      // FR-QNA-004 🚦
+      const cutoffAtEnd = stored !== null && cutoff >= totalPages;
       // 대표 결정 2026-11-19 정정 — 커뮤니티는 끝까지 간 독자만. 가장 멀리 펼친 쪽(저장값)이
       // 마지막 쪽이면 된다. 차례 읽기는 따지지 않는다. cutoff·is_complete 에는 관여하지 않는다
       const reachedEnd = stored !== null && stored.max_page >= totalPages;
       // FR-PRG-003 🚦 — 확인 카드. 숫자는 전부 저장값이다
       const frontierConfirm =
-        stored !== null && furthestPage > cutoff && furthestPage > stored.confirm_dismissed_max
+        stored !== null && furthestPage > frontier && furthestPage > stored.confirm_dismissed_max
           ? {
-              current_page: currentPage > cutoff && currentPage < furthestPage ? currentPage : null,
+              current_page:
+                currentPage > frontier && currentPage < furthestPage ? currentPage : null,
               furthest_page: furthestPage,
             }
           : null;
@@ -146,6 +151,7 @@ export function createCutoffService(deps: CutoffServiceDeps): CutoffService & Re
         frontier_confirm: frontierConfirm,
         percent,
         is_complete: isComplete,
+        cutoff_at_end: cutoffAtEnd,
         reached_end: reachedEnd,
         chapter: {
           chapter_no: chapter.chapter_no,
