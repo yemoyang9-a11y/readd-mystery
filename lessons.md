@@ -47,3 +47,24 @@
 - 증상: 홈 입체 책 시안에서 책을 넘기는 동안 책등·종이 두께가 사라졌다가 전환이 끝나면 다시 생겼다. 옆 책은 늘 납작했다.
 - 원인: `transform-style: preserve-3d`인 책 요소 자체에 `filter: brightness()`와 `opacity`를 걸었다. 이 둘(`none`/1이 아닐 때)은 3D 자식을 평면으로 눌러 버린다. 가운데 책은 전환이 끝나 `filter: none`이 된 뒤에야 입체로 돌아왔다.
 - 해결: 어둡게 하기·숨기기를 책 요소에서 빼고, 면(`.f`) 하나하나에 `filter: brightness(var(--b))`, `opacity: var(--o)`로 걸었다. `@property`로 `--b`·`--o`를 등록해 전환되게 했다. `document.getAnimations()`로 전환 중간(120ms)에 멈춰 찍어 보니, 고치기 전에는 책등이 없고 고친 뒤에는 책등과 두께가 보였다.
+
+## 2026-11-20 — 이 컴퓨터(Node 26)에서 화면 시험이 localStorage 오류로 대량 실패
+
+- 증상: `npm test`(vitest)에서 `sessionCheck`·`authService`·관리자 화면 시험 등이 `TypeError: Cannot read properties of undefined (reading 'clear')`로 실패. 기준 커밋에서도 똑같이 실패했다.
+- 원인: Node 26은 전역 `localStorage`(Web Storage)를 기본으로 켜서 jsdom 의 `localStorage`를 가린다. 저장 파일 경로가 없어 동작하지 않는 객체가 된다. 프로젝트 기준은 Node 20 이상이라 20·22에서는 드러나지 않는다.
+- 해결: `NODE_OPTIONS=--no-experimental-webstorage npm test`로 실행하면 전부 통과했다(1237개). Node 20/22 LTS를 쓰면 옵션이 필요 없다.
+
+## 2026-11-20 — 서버 시험 chatbot·llm-gateway 149건이 이 컴퓨터에서만 실패
+
+- 증상: `backend npm test`에서 chatbot·llm-gateway 20개 묶음 149건 실패(예: 답이 "현재까지 읽은 페이지 기준으로 알 수 없는 내용입니다…"로 나옴).
+- 확인: 같은 `.env`로 기준 커밋(4a50b0f)을 별도 worktree에서 돌려도 같은 20개 묶음·같은 149건이 실패했다. 내 변경과 무관한 이 컴퓨터 환경 문제다(원인은 아직 확인 안 함 — `.env`의 MOCK_MODE·LLM 설정이 의심됨).
+- 대응: 회귀 판단은 기준 커밋 전체 결과와 실패 묶음 목록을 `diff`로 비교해서 한다.
+
+## 2026-11-20 — Python 으로 파일을 다시 쓰면 줄바꿈이 CRLF 로 바뀜
+
+- 증상: `open(p,'w')`로 다시 쓴 TS 파일이 CRLF 가 되어 `git` 이 "CRLF will be replaced by LF" 경고를 냈다.
+- 원인: Windows Python 텍스트 모드는 쓸 때 `
+`을 `
+`으로 바꾼다.
+- 해결: `open(p, encoding='utf-8', newline='')`로 읽고 써서 원래 줄바꿈을 유지한다. 이미 바뀐 파일은 `sed -i 's/$//'`로 되돌렸다(`git diff` 비어 있음 확인).
+

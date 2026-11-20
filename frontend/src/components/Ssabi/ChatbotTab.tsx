@@ -100,19 +100,20 @@ function AmoPage({
  * 바꿨다 — remark-breaks로 단일 개행도 줄바꿈으로 살린다(마크다운 기본은 빈 줄이 있어야
  * 문단이 나뉜다 — 그대로 두면 이전엔 보이던 줄바꿈이 사라진다). 요소별 스타일은 말풍선
  * 크기(text-xs)에 맞춰 여기서 좁혀 잡는다 — 기본 h1~h6는 채팅창엔 너무 크다.
+ * 휴대폰은 말풍선이 15px이라 머리글도 한 단계 키운다 (2026-11-19 대표 시안, 모바일 평가 8번).
  */
 const markdownComponents = {
   'amo-name': AmoName,
   'amo-page': AmoPage,
   p: ({ children }: { children?: React.ReactNode }) => <p className="mb-2 last:mb-0">{children}</p>,
   h1: ({ children }: { children?: React.ReactNode }) => (
-    <strong className="mb-1 mt-2 block text-[13px] font-bold first:mt-0">{children}</strong>
+    <strong className="mb-1 mt-2 block text-[13px] font-bold first:mt-0 mobile:text-[16px]">{children}</strong>
   ),
   h2: ({ children }: { children?: React.ReactNode }) => (
-    <strong className="mb-1 mt-2 block text-[13px] font-bold first:mt-0">{children}</strong>
+    <strong className="mb-1 mt-2 block text-[13px] font-bold first:mt-0 mobile:text-[16px]">{children}</strong>
   ),
   h3: ({ children }: { children?: React.ReactNode }) => (
-    <strong className="mb-1 mt-2 block text-xs font-bold first:mt-0">{children}</strong>
+    <strong className="mb-1 mt-2 block text-xs font-bold first:mt-0 mobile:text-[15px]">{children}</strong>
   ),
   ul: ({ children }: { children?: React.ReactNode }) => (
     <ul className="mb-2 list-disc pl-4 last:mb-0">{children}</ul>
@@ -124,7 +125,7 @@ const markdownComponents = {
   strong: ({ children }: { children?: React.ReactNode }) => <b className="font-bold">{children}</b>,
   em: ({ children }: { children?: React.ReactNode }) => <em className="italic">{children}</em>,
   code: ({ children }: { children?: React.ReactNode }) => (
-    <code className="rounded bg-brief-paper px-1 py-0.5 font-dashMono text-[11px]">{children}</code>
+    <code className="rounded bg-brief-paper px-1 py-0.5 font-dashMono text-[11px] mobile:text-[13px]">{children}</code>
   ),
   a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
     <a
@@ -607,7 +608,7 @@ export default function ChatbotTab({
                     <p className="mb-1 font-dashSans text-[11px] font-bold text-brief-accent">
                       선택한 문장
                     </p>
-                    <p className="whitespace-pre-wrap font-serif text-xs leading-[1.6] text-brief-ink">
+                    <p className="whitespace-pre-wrap font-serif text-xs leading-[1.6] mobile:text-[15px] text-brief-ink">
                       “{pinnedQuote}”
                     </p>
                   </div>
@@ -636,7 +637,7 @@ export default function ChatbotTab({
                 <>
                   <div className="flex items-end gap-2">
                     <AmoSherlock className="h-11 w-auto shrink-0 translate-y-3" />
-                    <p className="w-fit max-w-[76%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] font-amo text-xs leading-[1.65] text-brief-ink">
+                    <p className="w-fit max-w-[76%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] font-amo text-xs leading-[1.65] mobile:text-[15px] text-brief-ink">
                       {DEFAULT_GREETING}
                     </p>
                   </div>
@@ -646,14 +647,14 @@ export default function ChatbotTab({
                   turn.role === 'user' ? (
                     <p
                       key={i}
-                      className="ml-auto w-fit max-w-[76%] rounded-2xl rounded-br-md border border-brief-rule bg-brief-paper px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink"
+                      className="ml-auto w-fit max-w-[76%] rounded-2xl rounded-br-md border border-brief-rule bg-brief-paper px-[13px] py-[9px] text-xs leading-[1.6] mobile:text-[15px] text-brief-ink"
                     >
                       {turn.text}
                     </p>
                   ) : (
                     <div key={i} className="flex items-end gap-2">
                       <AmoSherlock className="h-11 w-auto shrink-0 translate-y-3" />
-                      <div className="w-fit max-w-[76%] rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] font-amo text-xs leading-[1.65] text-brief-ink">
+                      <div className="w-fit max-w-[76%] rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] font-amo text-xs leading-[1.65] mobile:text-[15px] text-brief-ink">
                         {streaming && turn.text === '' && i === bubbles.length - 1 ? (
                           <TypingDots />
                         ) : (

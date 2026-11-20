@@ -4,7 +4,6 @@ import { USE_MOCK } from '../utils/constants';
 import type {
   CommunityComment,
   CommunityHubResponse,
-  CommunityKind,
   CommunityLikeState,
   CommunityPost,
   CommunityPostDetail,
@@ -31,14 +30,12 @@ const mock = () => import('../../mocks/community');
 // COMMUNITY
 export async function fetchCommunityPosts(
   bookId: string,
-  kind: CommunityKind | null,
   cursor: string | null,
-  /** 'popular' 일 때만 보낸다. 생략하면 서버 기본값(최신순) */
-  sort?: CommunitySort
+  /** 'popular' 일 때만 보낸다. 서버 기본값은 최신순 */
+  sort: CommunitySort
 ): Promise<CommunityPostPage> {
-  if (USE_MOCK) return (await mock()).mockListPosts(bookId, kind, cursor, sort ?? 'new');
+  if (USE_MOCK) return (await mock()).mockListPosts(bookId, cursor, sort);
   const params: Record<string, string> = {};
-  if (kind) params.kind = kind;
   if (cursor) params.cursor = cursor;
   if (sort === 'popular') params.sort = sort;
   const { data } = await api.get<CommunityPostPage>(`${base(bookId)}/posts`, { params });
@@ -51,13 +48,9 @@ export async function fetchCommunityPost(bookId: string, postId: string): Promis
   return data;
 }
 
-export async function createCommunityPost(
-  bookId: string,
-  kind: CommunityKind,
-  body: string
-): Promise<CommunityPost> {
-  if (USE_MOCK) return (await mock()).mockCreatePost(bookId, kind, body);
-  const { data } = await api.post<CommunityPost>(`${base(bookId)}/posts`, { kind, body });
+export async function createCommunityPost(bookId: string, body: string): Promise<CommunityPost> {
+  if (USE_MOCK) return (await mock()).mockCreatePost(bookId, body);
+  const { data } = await api.post<CommunityPost>(`${base(bookId)}/posts`, { body });
   return data;
 }
 
@@ -66,13 +59,18 @@ export async function deleteCommunityPost(bookId: string, postId: string): Promi
   await api.delete(`${base(bookId)}/posts/${postId}`);
 }
 
+/** 답글 쓰기. replyToCommentId — 답글에 단 답글일 때 그 답글 (T19) */
 export async function createCommunityComment(
   bookId: string,
   postId: string,
-  body: string
+  body: string,
+  replyToCommentId?: string
 ): Promise<CommunityComment> {
-  if (USE_MOCK) return (await mock()).mockCreateComment(bookId, postId, body);
-  const { data } = await api.post<CommunityComment>(`${base(bookId)}/posts/${postId}/comments`, { body });
+  if (USE_MOCK) return (await mock()).mockCreateComment(bookId, postId, body, replyToCommentId);
+  const { data } = await api.post<CommunityComment>(
+    `${base(bookId)}/posts/${postId}/comments`,
+    replyToCommentId ? { body, reply_to_comment_id: replyToCommentId } : { body }
+  );
   return data;
 }
 
@@ -101,6 +99,19 @@ export async function likeCommunityPost(bookId: string, postId: string): Promise
 export async function unlikeCommunityPost(bookId: string, postId: string): Promise<CommunityLikeState> {
   if (USE_MOCK) return (await mock()).mockSetLike(bookId, postId, false);
   const { data } = await api.delete<CommunityLikeState>(`${base(bookId)}/posts/${postId}/like`);
+  return data;
+}
+
+/** 답글 좋아요 — 커뮤니티 관문 뒤. 숨김·삭제 답글이면 404 (T19) */
+export async function likeCommunityComment(bookId: string, commentId: string): Promise<CommunityLikeState> {
+  if (USE_MOCK) return (await mock()).mockSetCommentLike(bookId, commentId, true);
+  const { data } = await api.post<CommunityLikeState>(`${base(bookId)}/comments/${commentId}/like`);
+  return data;
+}
+
+export async function unlikeCommunityComment(bookId: string, commentId: string): Promise<CommunityLikeState> {
+  if (USE_MOCK) return (await mock()).mockSetCommentLike(bookId, commentId, false);
+  const { data } = await api.delete<CommunityLikeState>(`${base(bookId)}/comments/${commentId}/like`);
   return data;
 }
 

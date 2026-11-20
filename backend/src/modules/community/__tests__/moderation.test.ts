@@ -29,7 +29,6 @@ import {
   type CommunityModerationRepository,
   type CommunityRepository,
   type ModerationItem,
-  type PostKind,
   type PostRow,
   type ReportTarget,
 } from '../repository';
@@ -84,8 +83,8 @@ function memoryRepos(): Repos {
     seq: p.seq,
     post_id: p.post_id,
     reader_id: p.reader_id,
-    kind: p.kind,
     body: p.body,
+    author_name: null,
     created_at: p.created_at,
     deleted: p.deleted,
     comment_count: visibleComments(p.post_id).length,
@@ -96,6 +95,10 @@ function memoryRepos(): Repos {
     reader_id: c.reader_id,
     body: c.body,
     created_at: c.created_at,
+    author_name: null,
+    reply_to_comment_id: null,
+    reply_to_reader_id: null,
+    reply_to_name: null,
   });
   const find = (type: ReportTarget, id: string) =>
     type === 'post' ? posts.find((p) => p.post_id === id) : comments.find((c) => c.comment_id === id);
@@ -105,7 +108,6 @@ function memoryRepos(): Repos {
     async listPosts(bookId, q) {
       return posts
         .filter((p) => p.book_id === bookId && visiblePost(p))
-        .filter((p) => !q.kind || p.kind === q.kind)
         .filter((p) => q.before === undefined || p.seq < q.before)
         .sort((a, b) => b.seq - a.seq)
         .slice(0, q.limit)
@@ -120,13 +122,13 @@ function memoryRepos(): Repos {
         .filter((c) => c.book_id === bookId)
         .map(strip);
     },
-    async createPost(bookId, readerId, kind: PostKind, body) {
+    async createPost(bookId, readerId, body) {
       seq += 1;
       const p: MemPost = {
         seq,
         post_id: randomUUID(),
         reader_id: readerId,
-        kind,
+        author_name: null,
         body,
         created_at: iso(tick()),
         deleted: false,
@@ -149,6 +151,10 @@ function memoryRepos(): Repos {
         reader_id: readerId,
         body,
         created_at: iso(tick()),
+        author_name: null,
+        reply_to_comment_id: null,
+        reply_to_reader_id: null,
+        reply_to_name: null,
         book_id: bookId,
         deleted: false,
         hidden_at: null,
@@ -294,6 +300,10 @@ async function pgRepos(): Promise<{ repos: Repos; close: () => Promise<void> }> 
   await pool.query(m022); // IF NOT EXISTS — 두 번 적용해도 그대로
   // 2026-11-18 공감 — 글 조회가 공감 수를 함께 읽는다
   await pool.query(fs.readFileSync(path.join(MIGRATIONS, '024_community_likes.sql'), 'utf8'));
+  // T19 — 이름(users.display_name)·답글 대상·답글 좋아요
+  await pool.query(`CREATE TABLE users (user_id UUID PRIMARY KEY, reader_id UUID NOT NULL UNIQUE, display_name TEXT)`);
+  await pool.query(fs.readFileSync(path.join(MIGRATIONS, '027_community_replies.sql'), 'utf8'));
+  await pool.query(fs.readFileSync(path.join(MIGRATIONS, '028_drop_community_kind.sql'), 'utf8'));
   const db = { query: (sql: string, params?: unknown[]) => pool.query(sql, params) };
   return {
     repos: {
@@ -379,7 +389,7 @@ function moderationSuite(
     }
     async function seed() {
       const post = (await (
-        await call('POST', `${base}/posts`, author, { kind: 'theory', body: POST_BODY })
+        await call('POST', `${base}/posts`, author, { body: POST_BODY })
       ).json()) as any;
       const comment = (await (
         await call('POST', `${base}/posts/${post.post_id}/comments`, author, { body: COMMENT_BODY })
@@ -389,11 +399,11 @@ function moderationSuite(
     /** 독자 한 명이 보는 모든 화면(목록 두 종류 + 상세)의 응답을 합친다. */
     async function readerView(reader: string, postId: string) {
       const all = await call('GET', `${base}/posts`, reader);
-      const theory = await call('GET', `${base}/posts?kind=theory`, reader);
+      const popular = await call('GET', `${base}/posts?sort=popular`, reader);
       const detail = await call('GET', `${base}/posts/${postId}`, reader);
       return {
         list: ((await all.json()) as any).posts as any[],
-        theory: ((await theory.json()) as any).posts as any[],
+        popular: ((await popular.json()) as any).posts as any[],
         detailStatus: detail.status,
         detail: (await detail.json().catch(() => null)) as any,
       };
@@ -410,7 +420,7 @@ function moderationSuite(
       for (const reader of [viewer, author]) {
         const v = await readerView(reader, postId);
         expect(v.list.map((p) => p.post_id)).toEqual([postId]);
-        expect(v.theory.map((p) => p.post_id)).toEqual([postId]);
+        expect(v.popular.map((p) => p.post_id)).toEqual([postId]);
         expect(v.detailStatus).toBe(200);
         expect(v.detail.post.body).toBe(POST_BODY);
       }
@@ -422,7 +432,7 @@ function moderationSuite(
       for (const reader of [viewer, author]) {
         const v = await readerView(reader, postId);
         expect(v.list).toHaveLength(0);
-        expect(v.theory).toHaveLength(0);
+        expect(v.popular).toHaveLength(0);
         expect(v.detailStatus).toBe(404);
         const text = JSON.stringify(v);
         expect(text).not.toContain(POST_BODY);

@@ -27,7 +27,7 @@ function HubCard({ book }: { book: CommunityHubBook }) {
       state={open ? undefined : { fromHome: true }}
       data-track={open ? 'hub-community-open' : 'hub-community-locked'}
       data-testid={`hub-book-${book.book_id}`}
-      aria-label={open ? `${book.title} 이야기방, 글 ${book.post_count}개` : `${book.title}, 끝까지 읽으면 열려요`}
+      aria-label={open ? `${book.title} 이야기방, 댓글 ${book.post_count}개` : `${book.title}, 끝까지 읽으면 열려요`}
       className={`relative flex items-center gap-3.5 overflow-hidden rounded-dash-card border p-3 pr-4 transition-colors active:bg-dash-ink/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b] ${
         open ? 'border-dash-line bg-dash-card' : 'border-dashed border-[#4a3237] bg-transparent'
       }`}
@@ -52,7 +52,7 @@ function HubCard({ book }: { book: CommunityHubBook }) {
       </span>
       {open ? (
         <span className="flex shrink-0 items-center gap-1 text-[14px] font-bold text-[#e58a9b]">
-          글 {book.post_count}
+          댓글 {book.post_count}
           <span aria-hidden="true" className="text-[18px] font-semibold">
             ›
           </span>

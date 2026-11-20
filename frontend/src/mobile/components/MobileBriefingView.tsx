@@ -154,17 +154,6 @@ export default function MobileBriefingView({
           </div>
         </div>
 
-        {onOpenCommunity ? (
-          <button
-            type="button"
-            data-track="community-open"
-            onClick={onOpenCommunity}
-            className="mt-6 flex min-h-12 w-full items-center justify-between rounded-brief-panel border border-[#c4475f] bg-[#1e1618] px-5 text-left text-[15px] font-bold text-[#e58a9b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c4475f]"
-          >
-            <span>커뮤니티</span>
-            <span className="text-[13px] font-normal text-[#a89e9a]">다른 독자들과 이야기하기</span>
-          </button>
-        ) : null}
 
         {firstVisit ? (
           <>
@@ -344,6 +333,18 @@ export default function MobileBriefingView({
             </ul>
           </div>
         </div>
+        {/* 2026-11-19 대표 시안(모바일 사용성 평가 3번) — 커뮤니티는 줄거리·노트·목차 다음 맨 아래로. 주된 행동은 이어서 읽기다 */}
+        {onOpenCommunity ? (
+          <button
+            type="button"
+            data-track="community-open"
+            onClick={onOpenCommunity}
+            className="mt-7 flex min-h-12 w-full items-center justify-between rounded-brief-panel border border-[#c4475f] bg-[#1e1618] px-5 text-left text-[15px] font-bold text-[#e58a9b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c4475f]"
+          >
+            <span>커뮤니티</span>
+            <span className="text-[13px] font-normal text-[#a89e9a]">다른 독자들과 이야기하기</span>
+          </button>
+        ) : null}
       </main>
 
       <div
@@ -351,11 +352,12 @@ export default function MobileBriefingView({
         className="fixed inset-x-0 bottom-0 z-10 border-t border-brief-line bg-brief-paper px-5 pt-3"
         style={{ paddingBottom: 'max(12px, var(--safe-bottom))' }}
       >
+        {/* 2026-11-19 대표 시안 — 화면에서 색을 채운 버튼은 이것 하나 */}
         <button
           type="button"
           data-track="마저 읽기"
           onClick={onContinue}
-          className="h-12 w-full rounded-full border border-brief-ink bg-transparent text-[15px] font-bold text-brief-ink transition-colors hover:bg-[rgba(31,31,31,0.05)] active:bg-[rgba(31,31,31,0.1)]"
+          className="h-12 w-full rounded-full bg-brief-accent text-[15px] font-bold text-brief-on-accent transition-opacity hover:opacity-90 active:opacity-80"
         >
           {firstVisit ? '읽기 시작' : '이어서 읽기'}
         </button>

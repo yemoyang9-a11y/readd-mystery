@@ -28,14 +28,14 @@ describe('커뮤니티 대역 — 끝까지 간 독자만 (대표 결정 2026-11
   test('마지막 쪽 전(21/30)에는 글 목록 403·허브 글 수 0건 — 목차로 마지막 쪽에 건너뛰면 열린다 (positive 쌍)', async () => {
     const { server, community, book } = await freshMocks();
     expect(server.mockReachedEnd(book)).toBe(false);
-    expect(statusOf(() => community.mockListPosts(book, null, null, 'new'))).toBe(403);
+    expect(statusOf(() => community.mockListPosts(book, null, 'new'))).toBe(403);
     const lockedCard = community.mockHub().books.find((b) => b.book_id === book);
     expect(lockedCard).toMatchObject({ access: 'locked' });
     expect(lockedCard).not.toHaveProperty('post_count');
 
     server.mockRecordProgress(book, 30, { fromPage: 21 }); // 차례 넘김이 아닌 건너뛰기
     expect(server.mockReachedEnd(book)).toBe(true);
-    expect(statusOf(() => community.mockListPosts(book, null, null, 'new'))).toBeNull();
+    expect(statusOf(() => community.mockListPosts(book, null, 'new'))).toBeNull();
     expect(community.mockHub().books.find((b) => b.book_id === book)).toMatchObject({ access: 'open' });
   });
 
@@ -43,6 +43,6 @@ describe('커뮤니티 대역 — 끝까지 간 독자만 (대표 결정 2026-11
     const { server, community, book } = await freshMocks();
     server.mockRecordProgress(book, 30);
     server.mockRecordProgress(book, 3);
-    expect(statusOf(() => community.mockListPosts(book, null, null, 'new'))).toBeNull();
+    expect(statusOf(() => community.mockListPosts(book, null, 'new'))).toBeNull();
   });
 });

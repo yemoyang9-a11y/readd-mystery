@@ -46,7 +46,6 @@ function lockedError() {
 
 const REVIEW = {
   post_id: 'p-1',
-  kind: 'review' as const,
   body: '좋았어요',
   nickname: '독자 ab12',
   created_at: new Date().toISOString(),
@@ -165,10 +164,9 @@ describe('책 끝 페이지(N+1) — 대표 결정 2026-11-19', () => {
     expect(screen.queryByText('끝까지 읽었어요')).toBeNull();
   });
 
-  test('한 줄 리뷰는 이 책의 커뮤니티 글(kind=review)로 올라가고, 올린 뒤 "내 한 줄 리뷰"로 보인다', async () => {
+  test('한 줄 리뷰는 이 책의 커뮤니티 댓글(말머리 없음, T19)로 올라가고, 올린 뒤 "내 한 줄 리뷰"로 보인다', async () => {
     createPostMock.mockResolvedValue({
       post_id: 'p-1',
-      kind: 'review',
       body: '마지막 반전이 오래 남아요',
       nickname: '독자 ab12',
       created_at: new Date().toISOString(),
@@ -187,7 +185,7 @@ describe('책 끝 페이지(N+1) — 대표 결정 2026-11-19', () => {
     await userEvent.click(save);
 
     expect(createPostMock).toHaveBeenCalledTimes(1);
-    expect(createPostMock).toHaveBeenCalledWith(BOOK, 'review', '마지막 반전이 오래 남아요');
+    expect(createPostMock).toHaveBeenCalledWith(BOOK, '마지막 반전이 오래 남아요');
     expect(await within(endPage).findByRole('heading', { name: '내 한 줄 리뷰' })).toBeInTheDocument();
     expect(within(endPage).getByText('마지막 반전이 오래 남아요')).toBeInTheDocument();
     // 고치기 API가 없으므로 고치기는 없고 지우기만 있다

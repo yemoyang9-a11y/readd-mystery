@@ -34,16 +34,48 @@ function postSelect(viewerParam: string | null): string {
           WHERE l.post_id = p.post_id AND l.reader_id = ${viewerParam}::uuid))`
     : 'false';
   return `
-  SELECT p.seq::int AS seq, p.post_id, p.reader_id, p.kind, p.body, p.created_at,
+  SELECT p.seq::int AS seq, p.post_id, p.reader_id, p.body, p.created_at,
+         u.display_name AS author_name,
          (p.deleted_at IS NOT NULL) AS deleted,
          (SELECT count(*)::int FROM community_comments c
            WHERE c.post_id = p.post_id AND ${COMMENT_VISIBLE}) AS comment_count,
          ${LIKE_COUNT} AS like_count,
          ${liked} AS liked_by_me
-    FROM community_posts p`;
+    FROM community_posts p
+    LEFT JOIN users u ON u.reader_id = p.reader_id`;
 }
 
 const POST_SELECT = postSelect(null);
+
+// 답글 좋아요 수 — 숨김·삭제 답글은 0 (T19, migration 027)
+const COMMENT_LIKE_COUNT = `(CASE WHEN c.deleted_at IS NULL AND c.hidden_at IS NULL
+   THEN (SELECT count(*)::int FROM community_comment_likes l WHERE l.comment_id = c.comment_id)
+   ELSE 0 END)`;
+
+function commentSelect(viewerParam: string | null): string {
+  const liked = viewerParam
+    ? `(c.deleted_at IS NULL AND c.hidden_at IS NULL AND EXISTS (
+         SELECT 1 FROM community_comment_likes l
+          WHERE l.comment_id = c.comment_id AND l.reader_id = ${viewerParam}::uuid))`
+    : 'false';
+  return `
+  SELECT c.comment_id, c.post_id, c.reader_id, c.body, c.created_at,
+         u.display_name AS author_name,
+         c.reply_to_comment_id, r.reader_id AS reply_to_reader_id, ru.display_name AS reply_to_name,
+         ${COMMENT_LIKE_COUNT} AS like_count,
+         ${liked} AS liked_by_me
+    FROM community_comments c
+    LEFT JOIN users u ON u.reader_id = c.reader_id
+    LEFT JOIN community_comments r ON r.comment_id = c.reply_to_comment_id
+         AND r.deleted_at IS NULL AND r.hidden_at IS NULL
+    LEFT JOIN users ru ON ru.reader_id = r.reader_id`;
+}
+
+// 좋아요를 받을 수 있는 답글 — 보이는 답글이고 그 댓글이 신고로 숨겨지지 않았다(삭제된 댓글 아래 답글은 된다)
+const VISIBLE_REPLY = `SELECT c.comment_id FROM community_comments c
+  JOIN community_posts p ON p.post_id = c.post_id
+ WHERE c.comment_id = $1 AND c.book_id = $2
+   AND c.deleted_at IS NULL AND c.hidden_at IS NULL AND p.hidden_at IS NULL`;
 
 const VISIBLE = `(p.hidden_at IS NULL AND (p.deleted_at IS NULL OR EXISTS (
   SELECT 1 FROM community_comments c WHERE c.post_id = p.post_id AND ${COMMENT_VISIBLE})))`;
@@ -58,8 +90,8 @@ function toPost(row: any): PostRow {
     seq: row.seq,
     post_id: row.post_id,
     reader_id: row.reader_id,
-    kind: row.kind,
     body: row.body,
+    author_name: row.author_name ?? null,
     created_at: new Date(row.created_at).toISOString(),
     deleted: row.deleted,
     comment_count: row.comment_count,
@@ -75,6 +107,12 @@ function toComment(row: any): CommentRow {
     reader_id: row.reader_id,
     body: row.body,
     created_at: new Date(row.created_at).toISOString(),
+    author_name: row.author_name ?? null,
+    reply_to_comment_id: row.reply_to_comment_id ?? null,
+    reply_to_reader_id: row.reply_to_reader_id ?? null,
+    reply_to_name: row.reply_to_name ?? null,
+    like_count: row.like_count ?? 0,
+    liked_by_me: row.liked_by_me === true,
   };
 }
 
@@ -82,27 +120,25 @@ export function createPgCommunityRepository(
   db: QueryClient
 ): CommunityRepository & CommunityEngagementRepository {
   return {
-    async listPosts(bookId, { kind, before, offset, sort, viewerId, limit }) {
+    async listPosts(bookId, { before, offset, sort, viewerId, limit }) {
       if (sort === 'popular') {
         // 인기순 — 공감 많은 순, 같으면 최신순. 공감을 못 받는 삭제 글(댓글이 남은 것)은 뒤로 간다
         const { rows } = await db.query(
-          `${postSelect('$5')}
+          `${postSelect('$4')}
             WHERE p.book_id = $1 AND ${VISIBLE}
-              AND ($2::text IS NULL OR p.kind = $2)
             ORDER BY like_count DESC, p.seq DESC
-            OFFSET $3 LIMIT $4`,
-          [bookId, kind ?? null, offset ?? 0, limit, viewerId ?? null]
+            OFFSET $2 LIMIT $3`,
+          [bookId, offset ?? 0, limit, viewerId ?? null]
         );
         return rows.map(toPost);
       }
       const { rows } = await db.query(
-        `${postSelect('$5')}
+        `${postSelect('$4')}
           WHERE p.book_id = $1 AND ${VISIBLE}
-            AND ($2::text IS NULL OR p.kind = $2)
-            AND ($3::bigint IS NULL OR p.seq < $3)
+            AND ($2::bigint IS NULL OR p.seq < $2)
           ORDER BY p.seq DESC
-          LIMIT $4`,
-        [bookId, kind ?? null, before ?? null, limit, viewerId ?? null]
+          LIMIT $3`,
+        [bookId, before ?? null, limit, viewerId ?? null]
       );
       return rows.map(toPost);
     },
@@ -175,38 +211,84 @@ export function createPgCommunityRepository(
       return rows.length === 0 ? null : toPost(rows[0]);
     },
 
-    async listComments(bookId, postId) {
+    async listComments(bookId, postId, viewerId) {
       const { rows } = await db.query(
-        `SELECT comment_id, post_id, reader_id, body, created_at
-           FROM community_comments c
+        `${commentSelect('$3')}
           WHERE c.book_id = $1 AND c.post_id = $2 AND ${COMMENT_VISIBLE}
           ORDER BY c.seq`,
-        [bookId, postId]
+        [bookId, postId, viewerId ?? null]
       );
       return rows.map(toComment);
     },
 
-    async createPost(bookId, readerId, kind, body) {
+    async createPost(bookId, readerId, body) {
       const postId = randomUUID();
       await db.query(
-        `INSERT INTO community_posts (post_id, book_id, reader_id, kind, body)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [postId, bookId, readerId, kind, body]
+        `INSERT INTO community_posts (post_id, book_id, reader_id, body)
+         VALUES ($1, $2, $3, $4)`,
+        [postId, bookId, readerId, body]
       );
       const { rows } = await db.query(`${POST_SELECT} WHERE p.post_id = $1`, [postId]);
       return toPost(rows[0]);
     },
 
-    async createComment(bookId, postId, readerId, body) {
+    async createComment(bookId, postId, readerId, body, replyToCommentId) {
       const { rows } = await db.query(
-        `INSERT INTO community_comments (comment_id, post_id, book_id, reader_id, body)
-         SELECT $1, p.post_id, p.book_id, $4, $5
+        `INSERT INTO community_comments (comment_id, post_id, book_id, reader_id, body, reply_to_comment_id)
+         SELECT $1, p.post_id, p.book_id, $4, $5, $6::uuid
            FROM community_posts p
           WHERE p.post_id = $2 AND p.book_id = $3 AND p.deleted_at IS NULL AND p.hidden_at IS NULL
-         RETURNING comment_id, post_id, reader_id, body, created_at`,
-        [randomUUID(), postId, bookId, readerId, body]
+            AND ($6::uuid IS NULL OR EXISTS (
+              SELECT 1 FROM community_comments r
+               WHERE r.comment_id = $6::uuid AND r.post_id = p.post_id
+                 AND r.deleted_at IS NULL AND r.hidden_at IS NULL))
+         RETURNING comment_id`,
+        [randomUUID(), postId, bookId, readerId, body, replyToCommentId]
       );
-      return rows.length === 0 ? null : toComment(rows[0]);
+      if (rows.length === 0) return null;
+      const created = await db.query(`${commentSelect('$2')} WHERE c.comment_id = $1`, [
+        rows[0].comment_id,
+        readerId,
+      ]);
+      return toComment(created.rows[0]);
+    },
+
+    async likeComment(bookId, commentId, readerId) {
+      const { rows } = await db.query(
+        `WITH target AS (${VISIBLE_REPLY}), ins AS (
+           INSERT INTO community_comment_likes (comment_id, reader_id)
+           SELECT comment_id, $3 FROM target
+           ON CONFLICT (comment_id, reader_id) DO NOTHING
+         )
+         SELECT comment_id FROM target`,
+        [commentId, bookId, readerId]
+      );
+      return rows.length > 0;
+    },
+
+    async unlikeComment(bookId, commentId, readerId) {
+      const { rows } = await db.query(
+        `WITH target AS (${VISIBLE_REPLY}), del AS (
+           DELETE FROM community_comment_likes l
+            USING target t WHERE l.comment_id = t.comment_id AND l.reader_id = $3
+         )
+         SELECT comment_id FROM target`,
+        [commentId, bookId, readerId]
+      );
+      return rows.length > 0;
+    },
+
+    async commentLikeState(bookId, commentId, readerId) {
+      const { rows } = await db.query(
+        `SELECT ${COMMENT_LIKE_COUNT} AS like_count,
+                EXISTS (SELECT 1 FROM community_comment_likes l
+                         WHERE l.comment_id = c.comment_id AND l.reader_id = $3::uuid) AS liked_by_me
+           FROM community_comments c WHERE c.comment_id = $1 AND c.book_id = $2`,
+        [commentId, bookId, readerId]
+      );
+      return rows.length === 0
+        ? { like_count: 0, liked_by_me: false }
+        : { like_count: rows[0].like_count, liked_by_me: rows[0].liked_by_me };
     },
 
     async deletePost(bookId, postId, readerId) {

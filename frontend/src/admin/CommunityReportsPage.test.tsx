@@ -117,14 +117,14 @@ describe('커뮤니티 신고 관리 화면 — 대표 결정 2026-11-17', () =>
     expect(rows).toHaveLength(2);
     // 1행: 숨긴 글 — 본문은 발췌로 줄인다
     expect(rows[0]).toHaveTextContent('가상범인');
-    expect(rows[0]).toHaveTextContent('글');
+    expect(rows[0]).toHaveTextContent('댓글');
     expect(rows[0]).toHaveTextContent('3명');
     expect(rows[0]).toHaveTextContent('스포일러');
     expect(rows[0]).toHaveTextContent('광고');
     expect(rows[0]).toHaveTextContent('숨김');
     expect(rows[0].textContent!.length).toBeLessThan(HIDDEN_POST.body!.length);
-    // 2행: 보이는 댓글
-    expect(rows[1]).toHaveTextContent('댓글');
+    // 2행: 보이는 답글 (T19 — 글=댓글, 댓글=답글)
+    expect(rows[1]).toHaveTextContent('답글');
     expect(rows[1]).toHaveTextContent('1명');
     expect(rows[1]).toHaveTextContent('표시');
   });

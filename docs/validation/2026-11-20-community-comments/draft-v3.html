@@ -1,0 +1,236 @@
+<title>커뮤니티 댓글 시안</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&family=Noto+Serif+KR:wght@600;700;900&display=swap">
+<style>
+/* 설명 페이지(뷰어 테마 따라감) + RE:ADD 밤 화면 색으로 고정한 휴대폰. 배치는 인스타그램 댓글, 옷은 RE:ADD */
+:root {
+  --bg: #f6f3f2; --surface: #ffffff; --fg: #1d1517; --muted: #5b4c50; --line: #e4dadc;
+  --accent: #8f1d34; --accent-soft: #f3e3e7;
+  --serif: "Noto Serif KR", "Nanum Myeongjo", serif;
+  --sans: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --n-bg: #0d0a0b; --n-card: #1e1618; --n-line: #35292c; --n-fg: #ece6e0; --n-sub: #b5aaa6;
+  --n-wine: #8f1d35; --n-red: #c4475f; --n-pink: #e58a9b; --n-deep: #160f11;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121011; --surface: #1c1719; --fg: #f1eaec; --muted: #bfb0b4; --line: #33292c;
+  --accent: #e8899c; --accent-soft: #3a2228; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #121011; --surface: #1c1719; --fg: #f1eaec; --muted: #bfb0b4; --line: #33292c;
+  --accent: #e8899c; --accent-soft: #3a2228; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 16px; line-height: 1.7; word-break: keep-all; overflow-wrap: break-word; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 40px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 44px; }
+header { display: grid; gap: 14px; }
+h1 { font-family: var(--serif); font-size: 30px; line-height: 1.3; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--serif); font-size: 22px; line-height: 1.4; margin: 0; }
+p { margin: 0; max-width: 64ch; }
+.chip { display: inline-block; padding: 2px 12px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 14px; }
+.box { display: grid; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; max-width: 72ch; }
+.box ul { margin: 0; padding-left: 20px; }
+.box b.h { color: var(--accent); }
+section { display: grid; gap: 18px; padding-top: 28px; border-top: 1px solid var(--line); }
+.row { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+.col { display: grid; gap: 10px; width: 360px; max-width: 100%; }
+.col > b { font-size: 15px; color: var(--accent); }
+.col > b.now { color: var(--muted); }
+.col > p { font-size: 15px; line-height: 1.6; }
+.shot { width: 100%; border-radius: 26px; border: 1px solid var(--line); display: block; }
+
+/* 휴대폰 — RE:ADD 밤 화면 */
+.phone { width: 100%; height: 740px; background: radial-gradient(120% 60% at 50% -10%, #2a1418 0%, var(--n-bg) 55%); color: var(--n-fg); border-radius: 26px; border: 1px solid #2b2124; overflow: hidden; display: flex; flex-direction: column; font-family: var(--sans); font-size: 15px; line-height: 1.5; position: relative; }
+.ph-head { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; padding: 14px 14px 0; }
+.back { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--n-line); background: var(--n-card); display: grid; place-items: center; font-size: 20px; line-height: 1; }
+.ph-head .ttl { text-align: center; display: grid; line-height: 1.25; }
+.ph-head .ttl small { font-size: 12px; font-weight: 700; color: var(--n-pink); letter-spacing: 0.04em; }
+.ph-head .ttl b { font-family: var(--serif); font-size: 19px; font-weight: 900; }
+.count { display: flex; align-items: flex-end; justify-content: space-between; padding: 18px 16px 12px; }
+.count .num { font-family: var(--serif); font-weight: 900; font-size: 30px; line-height: 1; }
+.count .num span { font-family: var(--sans); font-size: 15px; font-weight: 700; color: var(--n-sub); margin-left: 6px; }
+.seg { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--n-deep); border: 1px solid var(--n-line); }
+.seg button { font: inherit; font-size: 14px; font-weight: 800; border: 0; background: none; color: var(--n-sub); padding: 6px 13px; border-radius: 999px; cursor: pointer; min-height: 32px; }
+.seg button[aria-pressed="true"] { background: var(--n-wine); color: #fff; }
+.seg button:focus-visible { outline: 2px solid var(--n-pink); outline-offset: 1px; }
+.rule { height: 1px; margin: 0 16px; background: linear-gradient(90deg, var(--n-red), var(--n-line) 40%, var(--n-line)); }
+.list { flex: 1; overflow: hidden; padding: 4px 0 0; }
+.c { display: grid; grid-template-columns: 38px minmax(0, 1fr) 30px; gap: 12px; padding: 14px 14px 4px 16px; align-items: start; }
+.c.reply { grid-template-columns: 30px minmax(0, 1fr) 30px; padding-left: 66px; gap: 10px; padding-top: 10px; }
+.c.hl { background: linear-gradient(90deg, rgba(143,29,53,0.28), rgba(143,29,53,0.06)); box-shadow: inset 2px 0 0 var(--n-red); }
+.av { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-family: var(--serif); font-weight: 900; font-size: 15px; color: #fff; background: var(--tone, #5a2a33); box-shadow: 0 0 0 2px var(--n-bg), 0 0 0 3px var(--ring, #4a3237); }
+.reply .av { width: 30px; height: 30px; font-size: 12px; }
+.av.t1 { --tone: #8f1d35; --ring: #e58a9b; }
+.av.t2 { --tone: #4b3a2a; --ring: #b58a5c; }
+.av.t3 { --tone: #2f3446; --ring: #6c7591; }
+.av.t4 { --tone: #3c2b3d; --ring: #8f6c92; }
+.av.t5 { --tone: #3a3127; --ring: #8c7a5c; }
+.txt { margin: 0; color: var(--n-fg); }
+.txt b { font-weight: 800; margin-right: 5px; }
+.txt .op { display: inline-block; font-size: 11px; font-weight: 800; color: var(--n-pink); border: 1px solid var(--n-red); border-radius: 999px; padding: 0 7px; line-height: 1.6; margin-right: 5px; vertical-align: 1px; }
+.txt .at { color: var(--n-pink); font-weight: 700; }
+.meta { display: flex; gap: 14px; margin-top: 6px; font-size: 13px; color: var(--n-sub); }
+.meta span:not(:first-child) { font-weight: 700; }
+.heart { padding-top: 6px; display: grid; justify-items: center; gap: 1px; font-size: 11px; font-weight: 700; color: var(--n-sub); }
+.heart svg { width: 17px; height: 17px; fill: none; stroke: var(--n-sub); stroke-width: 1.8; }
+.heart.on { color: var(--n-pink); }
+.heart.on svg { fill: var(--n-pink); stroke: var(--n-pink); }
+.more { display: flex; align-items: center; gap: 12px; padding: 10px 14px 6px 66px; font-size: 13px; font-weight: 800; color: var(--n-sub); }
+.more::before { content: ""; width: 26px; border-top: 1px solid var(--n-red); }
+.input { border-top: 1px solid var(--n-line); background: rgba(13,10,11,0.92); display: grid; }
+.replying { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: var(--n-card); font-size: 14px; color: var(--n-sub); }
+.replying b { color: var(--n-fg); }
+.field { display: flex; align-items: center; gap: 10px; padding: 10px 14px 16px; }
+.field .av { width: 32px; height: 32px; font-size: 12px; }
+.field div { flex: 1; min-height: 44px; display: flex; align-items: center; justify-content: space-between; border-radius: 22px; border: 1px solid var(--n-line); background: var(--n-card); padding: 0 6px 0 16px; color: var(--n-sub); gap: 8px; }
+.field div.typed { color: var(--n-fg); border-color: var(--n-red); }
+.field div .at { color: var(--n-pink); font-weight: 700; }
+.post { flex: none; height: 34px; padding: 0 14px; border-radius: 17px; display: grid; place-items: center; font-size: 14px; font-weight: 800; background: var(--n-wine); color: #fff; }
+.empty { flex: 1; display: grid; place-content: center; text-align: center; gap: 8px; padding: 0 28px; }
+.empty b { font-family: var(--serif); font-size: 22px; font-weight: 900; line-height: 1.4; }
+.empty span { font-size: 15px; color: var(--n-sub); }
+.empty i { font-style: normal; font-family: var(--serif); font-size: 44px; color: var(--n-red); line-height: 1; }
+@media (max-width: 760px) { .col { width: 100%; } h1 { font-size: 25px; } }
+@media (prefers-reduced-motion: no-preference) { .seg button { transition: background-color .18s, color .18s; } }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="hrt" viewBox="0 0 24 24"><path d="M16.8 3.5c-2 0-3.6 1.1-4.8 2.8-1.2-1.7-2.8-2.8-4.8-2.8C4.3 3.5 2 5.9 2 9c0 5.4 7.4 10.4 10 11.9 2.6-1.5 10-6.5 10-11.9 0-3.1-2.3-5.5-5.2-5.5z"/></symbol></svg>
+
+<div class="wrap">
+  <header>
+    <div><span class="chip">커뮤니티 다시 만들기 · 시안 3</span></div>
+    <h1>인스타그램 배치에 RE:ADD 옷을 입힌 댓글 화면</h1>
+    <p>배치는 시안 2(인스타그램)와 같습니다. 닉네임 뒤에 내용이 이어지고, 아래에 시간·좋아요·답글 달기, 오른쪽에 하트가 있고, 답글은 "답글 N개 모두 보기"로 펼칩니다. 색과 글꼴은 RE:ADD 밤 화면을 따랐습니다. 밤 서재 같은 검붉은 바탕, 제목과 숫자는 명조, 강조는 버건디입니다. 위쪽에 최신순·인기순 버튼을 넣었고, 첫 번째 화면에서는 실제로 눌러서 순서가 바뀌는 것을 볼 수 있습니다.</p>
+  </header>
+
+  <section>
+    <h2>1. 처음 들어왔을 때 · 최신순 / 인기순</h2>
+    <div class="row">
+      <div class="col">
+        <b>바꾼 뒤 (최신순·인기순 눌러 보세요)</b>
+        <div class="phone" aria-label="댓글 목록 시안">
+          <div class="ph-head"><span class="back">‹</span><div class="ttl"><small>다 읽은 독자 이야기</small><b>탁류</b></div><span></span></div>
+          <div class="count"><div class="num">24<span>개의 댓글</span></div>
+            <div class="seg" role="group" aria-label="댓글 순서"><button type="button" id="s-new" aria-pressed="true">최신순</button><button type="button" id="s-hot" aria-pressed="false">인기순</button></div>
+          </div>
+          <div class="rule"></div>
+          <div class="list" id="l-new">
+            <div class="c"><div class="av t3">밤</div><div><p class="txt"><b>밤샘독서</b>마지막 장 읽고 첫 장을 다시 펼쳤어요</p><div class="meta"><span>12분</span><span>답글 달기</span></div></div><div class="heart"><svg><use href="#hrt"/></svg></div></div>
+            <div class="c"><div class="av t1">달</div><div><p class="txt"><b>달빛서재</b>초봉이 군산을 떠나는 장면에서 한참 멈춰 있었어요. 강물 묘사가 인물들 처지랑 겹쳐 보여요</p><div class="meta"><span>3시간</span><span>좋아요 18개</span><span>답글 달기</span></div></div><div class="heart on"><svg><use href="#hrt"/></svg></div></div>
+            <div class="more">답글 4개 모두 보기</div>
+            <div class="c"><div class="av t2">추</div><div><p class="txt"><b>추리하는고양이</b>태수가 처음 나올 때부터 수상했는데 결국 그렇게 될 줄은 몰랐네요</p><div class="meta"><span>5시간</span><span>좋아요 9개</span><span>답글 달기</span></div></div><div class="heart"><svg><use href="#hrt"/></svg></div></div>
+            <div class="more">답글 1개 모두 보기</div>
+            <div class="c"><div class="av t4">정</div><div><p class="txt"><b>정독파</b>1930년대 소설인데도 문장이 술술 읽혀서 놀랐어요</p><div class="meta"><span>어제</span><span>좋아요 4개</span><span>답글 달기</span></div></div><div class="heart"><svg><use href="#hrt"/></svg></div></div>
+          </div>
+          <div class="list" id="l-hot" hidden>
+            <div class="c"><div class="av t1">달</div><div><p class="txt"><b>달빛서재</b>초봉이 군산을 떠나는 장면에서 한참 멈춰 있었어요. 강물 묘사가 인물들 처지랑 겹쳐 보여요</p><div class="meta"><span>3시간</span><span>좋아요 18개</span><span>답글 달기</span></div></div><div class="heart on"><svg><use href="#hrt"/></svg></div></div>
+            <div class="more">답글 4개 모두 보기</div>
+            <div class="c"><div class="av t2">추</div><div><p class="txt"><b>추리하는고양이</b>태수가 처음 나올 때부터 수상했는데 결국 그렇게 될 줄은 몰랐네요</p><div class="meta"><span>5시간</span><span>좋아요 9개</span><span>답글 달기</span></div></div><div class="heart"><svg><use href="#hrt"/></svg></div></div>
+            <div class="more">답글 1개 모두 보기</div>
+            <div class="c"><div class="av t4">정</div><div><p class="txt"><b>정독파</b>1930년대 소설인데도 문장이 술술 읽혀서 놀랐어요</p><div class="meta"><span>어제</span><span>좋아요 4개</span><span>답글 달기</span></div></div><div class="heart"><svg><use href="#hrt"/></svg></div></div>
+            <div class="c"><div class="av t5">미</div><div><p class="txt"><b>미두장단골</b>정 주사 가족 이야기가 오래 남을 것 같아요</p><div class="meta"><span>어제</span><span>좋아요 2개</span><span>답글 달기</span></div></div><div class="heart"><svg><use href="#hrt"/></svg></div></div>
+          </div>
+          <div class="input"><div class="field"><span class="av t3">나</span><div>댓글 달기...</div></div></div>
+        </div>
+        <p>숫자 "24"와 책 제목은 명조로 크게, 고른 순서 버튼은 버건디로 채웁니다. 프로필은 닉네임 첫 글자를 명조로 넣은 동그라미입니다.</p>
+      </div>
+      <div class="col">
+        <b class="now">지금</b>
+        <img class="shot" src="img/now.png" alt="지금 책 이야기방. 말머리 탭, 큰 카드, 아래 긴 글쓰기 버튼">
+        <p>말머리 탭, 큰 카드, 영어 장식 글씨, 화면 아래를 덮는 글쓰기 막대.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. 답글을 펼쳤을 때, 답글을 쓸 때</h2>
+    <div class="row">
+      <div class="col">
+        <b>"답글 4개 모두 보기"를 누른 뒤</b>
+        <div class="phone" role="img" aria-label="답글을 펼친 화면">
+          <div class="ph-head"><span class="back">‹</span><div class="ttl"><small>다 읽은 독자 이야기</small><b>탁류</b></div><span></span></div>
+          <div class="count"><div class="num">24<span>개의 댓글</span></div><div class="seg"><button type="button" tabindex="-1">최신순</button><button type="button" tabindex="-1" aria-pressed="true">인기순</button></div></div>
+          <div class="rule"></div>
+          <div class="list">
+            <div class="c"><div class="av t1">달</div><div><p class="txt"><b>달빛서재</b>초봉이 군산을 떠나는 장면에서 한참 멈춰 있었어요. 강물 묘사가 인물들 처지랑 겹쳐 보여요</p><div class="meta"><span>3시간</span><span>좋아요 18개</span><span>답글 달기</span></div></div><div class="heart on"><svg><use href="#hrt"/></svg></div></div>
+            <div class="more">답글 모두 숨기기</div>
+            <div class="c reply"><div class="av t5">책</div><div><p class="txt"><b>책벌레</b><span class="at">@달빛서재</span> 저도요. 첫 장 강 묘사부터 다시 읽고 싶어졌어요</p><div class="meta"><span>2시간</span><span>좋아요 3개</span><span>답글 달기</span></div></div><div class="heart"><svg><use href="#hrt"/></svg></div></div>
+            <div class="c reply"><div class="av t3">밤</div><div><p class="txt"><b>밤샘독서</b><span class="at">@책벌레</span> 마지막 장이랑 첫 장이 이어지는 느낌이죠?</p><div class="meta"><span>1시간</span><span>좋아요 1개</span><span>답글 달기</span></div></div><div class="heart"><svg><use href="#hrt"/></svg></div></div>
+            <div class="c reply"><div class="av t1">달</div><div><p class="txt"><b>달빛서재</b><span class="op">글쓴이</span><span class="at">@밤샘독서</span> 네, 그래서 더 오래 남는 것 같아요</p><div class="meta"><span>48분</span><span>답글 달기</span></div></div><div class="heart"><svg><use href="#hrt"/></svg></div></div>
+            <div class="c reply"><div class="av t4">정</div><div><p class="txt"><b>정독파</b><span class="at">@달빛서재</span> 군산 부두 장면 저도 기억나요</p><div class="meta"><span>8분</span><span>답글 달기</span></div></div><div class="heart"><svg><use href="#hrt"/></svg></div></div>
+          </div>
+          <div class="input"><div class="field"><span class="av t3">나</span><div>댓글 달기...</div></div></div>
+        </div>
+        <p>답글은 한 칸 들여쓰기, 모두 '@닉네임'으로 시작하고 @닉네임은 밝은 버건디. 처음 댓글 쓴 사람의 답글에는 버건디 테두리 '글쓴이' 표시.</p>
+      </div>
+      <div class="col">
+        <b>'밤샘독서'의 답글에서 "답글 달기"를 누른 뒤</b>
+        <div class="phone" role="img" aria-label="답글을 쓰는 중인 화면">
+          <div class="ph-head"><span class="back">‹</span><div class="ttl"><small>다 읽은 독자 이야기</small><b>탁류</b></div><span></span></div>
+          <div class="count"><div class="num">24<span>개의 댓글</span></div><div class="seg"><button type="button" tabindex="-1">최신순</button><button type="button" tabindex="-1" aria-pressed="true">인기순</button></div></div>
+          <div class="rule"></div>
+          <div class="list">
+            <div class="c"><div class="av t1">달</div><div><p class="txt"><b>달빛서재</b>초봉이 군산을 떠나는 장면에서 한참 멈춰 있었어요. 강물 묘사가 인물들 처지랑 겹쳐 보여요</p><div class="meta"><span>3시간</span><span>좋아요 18개</span><span>답글 달기</span></div></div><div class="heart on"><svg><use href="#hrt"/></svg></div></div>
+            <div class="more">답글 모두 숨기기</div>
+            <div class="c reply"><div class="av t5">책</div><div><p class="txt"><b>책벌레</b><span class="at">@달빛서재</span> 저도요. 첫 장 강 묘사부터 다시 읽고 싶어졌어요</p><div class="meta"><span>2시간</span><span>좋아요 3개</span><span>답글 달기</span></div></div><div class="heart"><svg><use href="#hrt"/></svg></div></div>
+            <div class="c reply hl"><div class="av t3">밤</div><div><p class="txt"><b>밤샘독서</b><span class="at">@책벌레</span> 마지막 장이랑 첫 장이 이어지는 느낌이죠?</p><div class="meta"><span>1시간</span><span>좋아요 1개</span><span style="color:var(--n-pink)">답글 달기</span></div></div><div class="heart"><svg><use href="#hrt"/></svg></div></div>
+          </div>
+          <div class="input">
+            <div class="replying"><span><b>밤샘독서</b>님에게 답글 남기는 중</span><span>✕</span></div>
+            <div class="field"><span class="av t3">나</span><div class="typed"><span><span class="at">@밤샘독서</span> 저는 반대로 읽었어요</span><span class="post">게시</span></div></div>
+          </div>
+        </div>
+        <p>답할 답글에 버건디 띠가 생기고, 입력창 위에 누구에게 답하는지 한 줄. ✕를 누르면 새 댓글로 바뀝니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>3. 댓글이 하나도 없을 때</h2>
+    <div class="row">
+      <div class="col">
+        <div class="phone" style="height:540px" role="img" aria-label="댓글이 없는 빈 화면">
+          <div class="ph-head"><span class="back">‹</span><div class="ttl"><small>다 읽은 독자 이야기</small><b>탁류</b></div><span></span></div>
+          <div class="count"><div class="num">0<span>개의 댓글</span></div><div class="seg"><button type="button" tabindex="-1" aria-pressed="true">최신순</button><button type="button" tabindex="-1">인기순</button></div></div>
+          <div class="rule"></div>
+          <div class="empty"><i>“</i><b>아직 아무도<br>이야기를 꺼내지 않았어요</b><span>다 읽은 소감을 처음으로 남겨 주세요.</span></div>
+          <div class="input"><div class="field"><span class="av t3">나</span><div>댓글 달기...</div></div></div>
+        </div>
+      </div>
+      <div class="col">
+        <p>명조 큰따옴표와 두 줄 문장, 아래 입력창 하나뿐입니다. 버튼은 따로 두지 않습니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>여쭤볼 것과 알려 드릴 것</h2>
+    <div class="box">
+      <b class="h">정해 주실 것</b>
+      <ul>
+        <li><b>처음 열 때 순서</b>: 최신순과 인기순 중 어느 쪽이 먼저 눌려 있을까요? 시안 첫 화면은 최신순입니다.</li>
+        <li><b>시간·좋아요 줄</b>: 인스타그램처럼 본문보다 옅은 색의 작은 줄로 두었습니다(13px). 회색 작은 글씨 금지 규칙의 예외로 이대로 둘까요?</li>
+      </ul>
+    </div>
+    <div class="box">
+      <b class="h">바뀌면서 생기는 일</b>
+      <ul>
+        <li>지금까지 올라온 글은 댓글로, 그 글에 달린 댓글은 답글로 그대로 옮겨집니다. '범인 추리·감상' 표시만 사라집니다.</li>
+        <li>답글에도 좋아요가 생깁니다. 인기순은 좋아요 많은 댓글부터 보여 줍니다.</li>
+        <li>답글이 달린 댓글을 지우면 "삭제된 댓글입니다"로 남기고 답글은 그대로 둡니다.</li>
+        <li>저장 구조를 조금 바꿔야 해서(말머리 필수 빼기, 누구에게 단 답글인지 저장, 답글 좋아요), 운영 DB를 바꾸기 전에 따로 여쭙겠습니다.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  var bNew = document.getElementById('s-new'), bHot = document.getElementById('s-hot');
+  var lNew = document.getElementById('l-new'), lHot = document.getElementById('l-hot');
+  function set(hot) {
+    lNew.hidden = hot; lHot.hidden = !hot;
+    bNew.setAttribute('aria-pressed', String(!hot));
+    bHot.setAttribute('aria-pressed', String(hot));
+  }
+  bNew.addEventListener('click', function () { set(false); });
+  bHot.addEventListener('click', function () { set(true); });
+})();
+</script>

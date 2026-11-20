@@ -23,7 +23,7 @@ const OTHER_BOOKS = 3;
  * 펼쳤으므로, 리뷰 남기기·커뮤니티 이동 전에 마지막 쪽 진도 이벤트가 저장되기를 기다린다(flushProgress).
  * 목차로 건너뛰어 그 이벤트가 아직 가는 중이어도 403으로 막히지 않게 한다.
  *
- * 한 줄 리뷰는 기존 커뮤니티 글쓰기 API에 kind=review 로 올린다. 고치기 API는 없고(삭제만)
+ * 한 줄 리뷰는 커뮤니티 댓글 쓰기 API로 올린다(T19 — 말머리 없음). 고치기 API는 없고(삭제만)
  * 지우기만 둔다. 휴대폰은 화면 전체, PC 는 같은 화면을 가운데 단으로 그린다.
  */
 // COMMUNITY FR-PRG-003 🚦
@@ -88,12 +88,12 @@ export default function BookEndPage({
       await flush();
       let post;
       try {
-        post = await createCommunityPost(bookId, 'review', body);
+        post = await createCommunityPost(bookId, body);
       } catch (cause) {
         // 진도 저장보다 글이 먼저 닿았을 수 있다 — 한 번만 다시 기다렸다가 다시 올린다
         if (classifyCommunityError(cause) !== 'locked') throw cause;
         await flush();
-        post = await createCommunityPost(bookId, 'review', body);
+        post = await createCommunityPost(bookId, body);
       }
       setSaved({ postId: post.post_id, body: post.body });
       setDraft('');

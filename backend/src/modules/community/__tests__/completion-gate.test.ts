@@ -47,8 +47,8 @@ function seededCommunity() {
     seq: 1,
     post_id: randomUUID(),
     reader_id: AUTHOR,
-    kind: 'theory',
     body: SECRET,
+    author_name: null,
     created_at: new Date().toISOString(),
     deleted: false,
     comment_count: 1,
@@ -59,6 +59,10 @@ function seededCommunity() {
     reader_id: AUTHOR,
     body: SECRET_COMMENT,
     created_at: new Date().toISOString(),
+    author_name: null,
+    reply_to_comment_id: null,
+    reply_to_reader_id: null,
+    reply_to_name: null,
   };
   const touched: string[] = [];
   const mark =
@@ -177,10 +181,9 @@ describe('완독자 커뮤니티 — 끝까지 간 독자만 (대표 결정 2026
     const base = `/books/${bookId}/community`;
     return [
       ['GET', `${base}/posts`],
-      ['GET', `${base}/posts?kind=theory`],
       ['GET', `${base}/posts?sort=popular`],
       ['GET', `${base}/posts/${post.post_id}`],
-      ['POST', `${base}/posts`, { kind: 'review', body: '재미있었어요' }],
+      ['POST', `${base}/posts`, { body: '재미있었어요' }],
       ['POST', `${base}/posts/${post.post_id}/comments`, { body: '저도요' }],
       ['POST', `${base}/posts/${post.post_id}/like`],
       ['DELETE', `${base}/posts/${post.post_id}/like`],
@@ -337,7 +340,7 @@ describe('완독자 커뮤니티 — 끝까지 간 독자만 (대표 결정 2026
     const attempts: Array<[string, string, unknown?]> = [
       ['GET', `${base}/posts?${query}`],
       ['GET', `${base}/posts/${community.post.post_id}?${query}`],
-      ['POST', `${base}/posts?${query}`, { kind: 'review', body: '재미있었어요', ...claims }],
+      ['POST', `${base}/posts?${query}`, { body: '재미있었어요', ...claims }],
       ['POST', `${base}/posts/${community.post.post_id}/comments?${query}`, { body: '저도요', ...claims }],
     ];
     for (const [method, path, body] of attempts) {

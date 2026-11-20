@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RE:ADD 모바일 전후 비교</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=DM+Mono:wght@400;500&display=swap">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+  :root {
+    --d-paper: #0d0a0b; --d-card: #1e1618; --d-line: #35292c; --d-ink: #ece6e0; --d-muted: #a89e9a;
+    --d-accent: #e58a9b; --d-accent-soft: #2d161d;
+    --l-paper: #fbfaf9; --l-ink: #1a1415; --l-muted: #5f5653; --l-line: #ddd8d5; --l-accent: #8f1d35; --l-accent-soft: #f3e3e7;
+    --crimson: #8f1d35;
+    --sans: Pretendard, system-ui, sans-serif; --serif: "Noto Serif KR", serif; --mono: "DM Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html { background: #141012; }
+  body { margin: 0; font-family: var(--sans); color: var(--d-ink); background: #141012; -webkit-font-smoothing: antialiased; }
+  .page { max-width: 1040px; margin: 0 auto; padding: 48px 20px 96px; }
+  .page > header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 10px; }
+  .page > header p { color: var(--d-muted); margin: 0; line-height: 1.7; max-width: 62ch; word-break: keep-all; }
+
+  .pair { margin-top: 72px; padding-top: 40px; border-top: 1px solid var(--d-line); }
+  .pair h2 { font-size: 21px; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 8px; word-break: keep-all; }
+  .pair h2 span { font-family: var(--mono); font-size: 14px; color: var(--d-accent); margin-right: 10px; font-weight: 500; }
+  .pair .problem { color: var(--d-muted); margin: 0 0 28px; line-height: 1.7; max-width: 64ch; word-break: keep-all; }
+  .frames { display: grid; grid-template-columns: repeat(2, 390px); gap: 40px; justify-content: start; }
+  @media (max-width: 880px) { .frames { grid-template-columns: 390px; } }
+  @media (max-width: 430px) { .frames { grid-template-columns: 1fr; } .phone, .panel { transform-origin: top left; } }
+  figure { margin: 0; }
+  figcaption { font-size: 13px; color: var(--d-muted); margin-bottom: 10px; display: flex; gap: 8px; align-items: center; }
+  figcaption b { color: var(--d-ink); font-weight: 600; font-size: 14px; }
+  figcaption .tag { font-family: var(--mono); font-size: 11px; padding: 2px 7px; border-radius: 6px; border: 1px solid var(--d-line); }
+  figcaption .tag.after { border-color: var(--d-accent); color: var(--d-accent); }
+  .phone { width: 390px; height: 844px; border-radius: 28px; overflow: hidden; position: relative; outline: 1px solid var(--d-line); background: var(--d-paper); }
+  .panel { width: 390px; border-radius: 20px; overflow: hidden; position: relative; outline: 1px solid var(--d-line); }
+  .phone > img, .panel > img { display: block; width: 390px; }
+  .crop { width: 390px; background-size: 390px auto; background-repeat: no-repeat; }
+  .changes { margin: 28px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; max-width: 820px; }
+  .changes li { line-height: 1.65; color: var(--d-ink); padding-left: 18px; position: relative; word-break: keep-all; }
+  .changes li::before { content: ""; position: absolute; left: 0; top: 11px; width: 8px; height: 1px; background: var(--d-accent); }
+  .changes code { font-family: var(--mono); font-size: 12px; color: var(--d-muted); }
+  .mark { background: rgba(229, 138, 155, .22); outline: 1px dashed var(--d-accent); outline-offset: 2px; border-radius: 3px; }
+
+  /* 1. 읽기 화면 */
+  .reader { background: var(--l-paper); color: var(--l-ink); height: 100%; position: relative; }
+  .reader .top { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; border-bottom: 1px solid var(--l-line); }
+  .circle { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--l-line); display: grid; place-items: center; font-size: 15px; font-weight: 700; color: var(--l-ink); background: var(--l-paper); }
+  .reader .body { padding: 34px 38px 0; font-family: var(--serif); font-size: 18px; line-height: 2; word-break: keep-all; overflow-wrap: anywhere; height: 732px; overflow: hidden; }
+  .reader .body p { margin: 0; }
+  .reader .bottom { position: absolute; left: 0; right: 0; bottom: 0; height: 56px; border-top: 1px solid var(--l-line); background: var(--l-paper); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; font-size: 14px; color: var(--l-muted); }
+  .reader .bottom .num { font-family: var(--mono); color: var(--l-ink); font-size: 15px; }
+  .reader .bottom .num b { font-weight: 500; }
+  .handle { position: absolute; top: 452px; width: 30px; height: 92px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-size: 12px; font-weight: 700; line-height: 1.25; }
+  .handle i { font-size: 16px; margin-bottom: 5px; }
+  .handle.left { left: 0; border-radius: 0 14px 14px 0; background: #efebe8; color: var(--l-muted); border: 1px solid var(--l-line); border-left: 0; }
+  .handle.right { right: 0; border-radius: 14px 0 0 14px; background: var(--crimson); color: #fff; box-shadow: 0 6px 18px rgba(143, 29, 53, .28); }
+  .hit { position: absolute; top: 446px; width: 44px; height: 104px; outline: 1px dashed rgba(143, 29, 53, .45); }
+  .coach { position: absolute; right: 42px; top: 400px; width: 218px; background: var(--l-ink); color: #f6f1ee; border-radius: 14px; padding: 14px 14px 12px; font-family: var(--sans); font-size: 14px; line-height: 1.55; word-break: keep-all; box-shadow: 0 10px 30px rgba(26, 20, 21, .25); }
+  .coach::after { content: ""; position: absolute; right: -6px; top: 92px; width: 12px; height: 12px; background: var(--l-ink); transform: rotate(45deg); }
+  .coach .row { display: flex; justify-content: flex-end; margin-top: 8px; }
+  .coach button { font: 600 13px var(--sans); color: #fff; background: transparent; border: 1px solid rgba(255,255,255,.35); border-radius: 999px; padding: 0 14px; height: 32px; }
+
+  /* 2·3. 브리핑 */
+  .brief { background: var(--d-paper); height: 100%; position: relative; color: var(--d-ink); }
+  .brief .top { height: 64px; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid var(--d-line); }
+  .brief .top .circle { background: transparent; border-color: var(--d-line); color: var(--d-ink); }
+  .brief .head { display: grid; grid-template-columns: 84px 1fr; gap: 18px; padding: 24px 20px 0; }
+  .brief .cover { width: 84px; height: 118px; border-radius: 10px; background-image: url(05-after-login.png); background-size: 390px auto; background-position: -20px -108px; }
+  .brief .eyebrow { font-size: 13px; color: var(--d-muted); margin: 2px 0 6px; }
+  .brief h3 { font-family: var(--serif); font-size: 22px; line-height: 1.35; font-weight: 600; margin: 0 0 8px; word-break: keep-all; letter-spacing: -0.03em; }
+  .brief .meta { font-size: 13px; color: var(--d-muted); }
+  .progress { margin: 22px 20px 0; padding: 16px; border-radius: 14px; background: var(--d-card); }
+  .progress .row { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; }
+  .progress .row b { font-weight: 600; }
+  .progress .row .pg { font-family: var(--mono); color: var(--d-accent); font-size: 14px; }
+  .progress .bar { margin-top: 12px; height: 4px; border-radius: 4px; background: var(--d-line); overflow: hidden; }
+  .progress .bar i { display: block; height: 100%; width: 97%; background: var(--d-accent); }
+  .section-title { font-family: var(--serif); font-size: 18px; font-weight: 600; letter-spacing: -0.02em; margin: 26px 20px 12px; }
+  .recap { margin: 0 20px; background: var(--d-card); border-radius: 16px; padding: 20px 20px 18px; font-family: var(--serif); font-size: 15px; line-height: 1.85; word-break: keep-all; overflow-wrap: anywhere; position: relative; }
+  .recap p { margin: 0 0 12px; }
+  .recap b { font-weight: 700; color: #fff; }
+  .recap .q { font-family: var(--serif); color: var(--d-accent); opacity: .45; font-size: 40px; line-height: 1; display: block; margin-bottom: 8px; }
+  .recap.fade { max-height: 268px; overflow: hidden; }
+  .recap.fade::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 64px; background: linear-gradient(transparent, var(--d-card)); }
+  .cta-bar { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 20px 20px; background: linear-gradient(rgba(13,10,11,0), var(--d-paper) 30%); }
+  .cta { height: 52px; border-radius: 999px; background: var(--crimson); color: #fff; font: 700 16px var(--sans); display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .cta small { font-weight: 500; font-size: 13px; opacity: .8; font-family: var(--mono); }
+  .moved { position: absolute; left: 20px; right: 20px; bottom: 96px; border: 1px dashed var(--d-line); border-radius: 12px; padding: 10px 14px; font-size: 13px; color: var(--d-muted); display: flex; justify-content: space-between; background: var(--d-paper); }
+
+  /* 4. 관계 목록 */
+  .rel { background: var(--l-paper); color: var(--l-ink); padding: 20px 18px 22px; }
+  .rel h4 { font-size: 17px; font-weight: 700; margin: 0 0 4px; word-break: keep-all; }
+  .rel .sub { font-size: 13px; color: var(--l-muted); margin: 0 0 14px; }
+  .person { background: #fff; border: 1px solid var(--l-line); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
+  .person .name { font-weight: 700; font-size: 16px; display: flex; justify-content: space-between; align-items: center; }
+  .person .count { font-family: var(--mono); font-size: 12px; color: var(--l-muted); font-weight: 400; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+  .chip.fact { background: var(--l-accent-soft); color: var(--l-accent); }
+  .chip.claim { background: transparent; color: var(--l-accent); border: 1px dashed rgba(143, 29, 53, .55); }
+  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--l-muted); margin: 2px 0 14px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i.f { width: 18px; height: 12px; border-radius: 4px; background: var(--l-accent-soft); display: inline-block; }
+  .legend i.c { width: 18px; height: 12px; border-radius: 4px; border: 1px dashed rgba(143, 29, 53, .55); display: inline-block; }
+
+  /* 5. 로그인 */
+  .login { height: 100%; background: radial-gradient(120% 60% at 50% 0%, #2a1217 0%, var(--d-paper) 55%); padding: 0 20px; position: relative; }
+  .login .x { height: 60px; display: flex; align-items: center; font-size: 22px; color: var(--d-ink); }
+  .login .eb { font-family: var(--mono); font-size: 12px; letter-spacing: .18em; color: var(--d-accent); margin-top: 14px; display: flex; align-items: center; gap: 10px; }
+  .login .eb::before { content: ""; width: 20px; height: 1px; background: var(--d-accent); }
+  .login h3 { font-family: var(--sans); font-weight: 800; font-size: 34px; letter-spacing: -0.02em; margin: 10px 0 10px; }
+  .login .why { color: var(--d-muted); font-size: 15px; line-height: 1.6; margin: 0 0 26px; word-break: keep-all; }
+  .sso { height: 52px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; font: 600 15px var(--sans); margin-bottom: 10px; position: relative; }
+  .sso img { width: 20px; height: 20px; position: absolute; left: 18px; }
+  .sso.kakao { background: #fee500; color: rgba(0, 0, 0, .85); }
+  .sso.google { background: #fff; color: #1f1f1f; }
+  .or { display: flex; align-items: center; gap: 12px; color: var(--d-muted); font-size: 13px; margin: 20px 0 16px; }
+  .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--d-line); }
+  .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+  .field .in { height: 48px; border-radius: 12px; border: 1px solid var(--d-line); background: #0a0809; display: flex; align-items: center; padding: 0 14px; color: #7f7472; font-size: 15px; justify-content: space-between; margin-bottom: 14px; }
+  .field .in em { font-style: normal; color: var(--d-accent); font-size: 14px; font-weight: 600; }
+  .login .submit { height: 50px; border-radius: 999px; background: var(--crimson); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-top: 4px; }
+  .login .links { display: flex; justify-content: space-between; margin-top: 16px; font-size: 14px; color: var(--d-muted); }
+  .login .links b { color: var(--d-ink); font-weight: 600; }
+
+  .disclose { margin-top: 80px; padding: 22px 22px 8px; border: 1px solid var(--d-line); border-radius: 16px; background: #19131500; }
+  .disclose h2 { font-size: 17px; margin: 0 0 12px; }
+  .disclose ul { margin: 0 0 14px; padding-left: 18px; line-height: 1.75; color: var(--d-muted); word-break: keep-all; }
+</style>
+</head>
+<body>
+<main class="page">
+  <header>
+    <h1>RE:ADD 모바일 전후 비교</h1>
+    <p>왼쪽은 2026-11-19 운영 화면(390×844)을 그대로 캡처한 것이고, 오른쪽은 같은 화면을 고쳐 다시 그린 시안입니다. 색·글꼴·버튼 모양은 지금 코드의 값을 그대로 썼고, 바꾼 부분만 다릅니다.</p>
+  </header>
+
+  <section class="pair">
+    <h2><span>01</span>읽기 화면에서 추리 도구를 바로 찾게</h2>
+    <p class="problem">양옆 손잡이가 같은 모양의 작은 세로 막대라서, 오른쪽에 추리 노트·인물관계도·아모가 있다는 걸 알기 어렵습니다.</p>
+    <div class="frames">
+      <figure>
+        <figcaption><span class="tag">지금</span><b>읽기 66쪽</b></figcaption>
+        <div class="phone"><img src="08-reader.png" alt="현재 읽기 화면. 양옆 가운데에 작은 세로 막대 손잡이가 있다."></div>
+      </figure>
+      <figure>
+        <figcaption><span class="tag after">바꾼 뒤</span><b>손잡이에 이름과 아이콘, 첫 방문 안내</b></figcaption>
+        <div class="phone">
+          <div class="reader">
+            <div class="top"><div class="circle"><i class="ph ph-caret-left"></i></div><div class="circle">가</div></div>
+            <div class="body">
+              <p>“그러나──어떻게 되었다는 말씀입니까?”</p>
+              <p>“그러나 네가 사진을 찍고 있는 모양을 본 사람이 하나 있다는 말이다.”</p>
+              <p>“누구입니까?”</p>
+              <p>“너 자신이다!”</p>
+              <p>“나 자신?”</p>
+              <p>“그렇다! 너 자신이 보고 있었다. 모르겠으면 렌즈를 가까이 대고 자세히 보라. 너의 악마와 같은 얼굴이 담벽에 걸린 거울 속에 박혀 있을 것이다!”</p>
+              <p>“뭐, 뭐요?”</p>
+              <p>하고 부르짖으며 나용귀는 의자에서 벌떡 일어났다가 다시 앉으면서 손에 들었던 렌즈를 또 한 번 눈에 대었다. 놀란 것은 다만 나용귀뿐만 아니라, 임경부와 유불란도 일시에 일어서며 테이블을 둘러쌌다.</p>
+            </div>
+            <div class="handle left"><i class="ph ph-list-bullets"></i><span>목</span><span>차</span></div>
+            <div class="handle right"><i class="ph ph-magnifying-glass"></i><span>추</span><span>리</span></div>
+            <div class="coach">추리 노트, 인물관계도, 아모는 오른쪽 <b>추리</b> 손잡이에서 열어요.<div class="row"><button>알겠어요</button></div></div>
+            <div class="bottom"><span>이전 페이지</span><span class="num"><b>66</b> / 68</span><span>다음 페이지</span></div>
+          </div>
+        </div>
+      </figure>
+    </div>
+    <ul class="changes">
+      <li>오른쪽 손잡이는 버건디 바탕에 아이콘과 "추리" 글자를 넣어, 이 서비스의 핵심 기능 입구로 보이게 했습니다. 왼쪽 목차 손잡이는 회색으로 두어 둘의 무게를 나눴습니다. <code>nav-label-icon</code></li>
+      <li>보이는 손잡이는 폭 30px이지만 실제로 누르는 영역은 44×104px입니다(점선은 설명용). 위치는 지금처럼 엄지가 닿는 세로 가운데보다 약간 아래입니다. <code>touch-target-size</code></li>
+      <li>책을 처음 열 때 한 번만 안내 말풍선을 띄우고, "알겠어요"를 누르면 다시 나오지 않습니다. <code>swipe-clarity</code></li>
+      <li>손잡이가 본문 글자를 덮지 않도록 본문 좌우 여백을 24px에서 38px로 늘렸습니다. 이렇게 하면 한 줄 글자 수가 약 2자 줄어듭니다.</li>
+    </ul>
+  </section>
+
+  <section class="pair">
+    <h2><span>02</span>단어가 줄 끝에서 쪼개지지 않게</h2>
+    <p class="problem">한국어 기본 줄바꿈(<code>word-break: normal</code>)이라서 "나용/귀", "연극/이었고"처럼 단어 중간에서 줄이 넘어갑니다. 인물 이름이 갈라지면 추리하며 읽는 흐름이 끊깁니다.</p>
+    <div class="frames">
+      <figure>
+        <figcaption><span class="tag">지금</span><b>브리핑 요약 카드</b></figcaption>
+        <div class="panel"><div class="crop" style="background-image:url(06-briefing-scrolled.png);height:430px;background-position:0 0"></div></div>
+      </figure>
+      <figure>
+        <figcaption><span class="tag after">바꾼 뒤</span><b>단어 단위 줄바꿈</b></figcaption>
+        <div class="panel" style="background:var(--d-paper);padding:16px 0 20px">
+          <div class="recap">
+            <p><b>유불란</b>은 몽란을 죽였다고 진술하지만, <b>임경부</b>는 그의 말을 믿지 않고 계획살인으로 몰아간다. <b>임경부</b>가 몽란의 마음이 <b>나용귀</b>에게 옮겨갔다며 질투를 동기로 들자, <b>유불란</b>은 부정하며 <b>나용귀</b>를 범인이라 지목한다.</p>
+            <p><b>백검사</b>는 <b>나용귀</b>가 <b>박영민</b>을 죽였으며, 연극에서 실제 범행 수법을 드러냈다고 밝힌다. <b>나용귀</b>의 자백은 몽란의 마음을 얻으려는 연극이었고, 알리바이 사진은 살해 뒤 조작한 것이었다.</p>
+            <p>사진 속 금붕어와 거울에 비친 <b>나용귀</b>가 조작을 드러내고, 전화로 운전수 <b>박병국</b>의 체포와 <span class="mark"><b>나용귀</b>의</span> 복수단 연루가 전해진다.</p>
+          </div>
+        </div>
+      </figure>
+    </div>
+    <ul class="changes">
+      <li>본문 계열(읽기 본문, 브리핑 요약, 타임라인, 아모 말풍선)에 <code>word-break: keep-all</code>을 줍니다. 아주 긴 영문·주소가 화면 밖으로 넘치지 않게 <code>overflow-wrap: anywhere</code>도 함께 씁니다.</li>
+      <li>시각 디자인은 그대로이고 CSS 두 줄 차이입니다. 오른쪽 끝이 지금보다 들쭉날쭉해지는 대신 단어가 온전히 읽힙니다. 표시한 부분이 왼쪽에서 "나용 / 귀의"로 잘렸던 곳입니다.</li>
+    </ul>
+  </section>
+
+  <section class="pair">
+    <h2><span>03</span>브리핑에서 "이어서 읽기"가 먼저 보이게</h2>
+    <p class="problem">빨간 테두리 커뮤니티 카드가 줄거리 요약보다 위에서 가장 눈에 띄고, 정작 주된 행동인 "이어서 읽기"는 테두리만 있는 버튼입니다. 몇 쪽까지 읽었는지도 화면에 없습니다.</p>
+    <div class="frames">
+      <figure>
+        <figcaption><span class="tag">지금</span><b>브리핑 첫 화면</b></figcaption>
+        <div class="phone"><img src="05-after-login.png" alt="현재 브리핑 화면. 커뮤니티 카드가 요약보다 위에 있고 이어서 읽기 버튼은 테두리만 있다."></div>
+      </figure>
+      <figure>
+        <figcaption><span class="tag after">바꾼 뒤</span><b>진도 표시, 채운 주 버튼, 커뮤니티는 아래로</b></figcaption>
+        <div class="phone">
+          <div class="brief">
+            <div class="top"><div class="circle"><i class="ph ph-caret-left"></i></div></div>
+            <div class="head">
+              <div class="cover" role="img" aria-label="가상범인 표지"></div>
+              <div>
+                <p class="eyebrow">오늘 읽으셨네요</p>
+                <h3>다시 오셨네요.<br>여기서부터 기억을 맞춰볼게요.</h3>
+                <p class="meta">가상범인 · 김내성</p>
+              </div>
+            </div>
+            <div class="progress">
+              <div class="row"><b>5장 의외의 결말</b><span class="pg">66 / 68쪽</span></div>
+              <div class="bar"><i></i></div>
+            </div>
+            <p class="section-title">그동안 이런 이야기였어요</p>
+            <div class="recap fade">
+              <span class="q">“</span>
+              <p><b>유불란</b>은 몽란을 죽였다고 진술하지만, <b>임경부</b>는 그의 말을 믿지 않고 계획살인으로 몰아간다. <b>임경부</b>가 몽란의 마음이 <b>나용귀</b>에게 옮겨갔다며 질투를 동기로 들자, <b>유불란</b>은 부정하며 <b>나용귀</b>를 범인이라 지목한다.</p>
+              <p><b>백검사</b>는 <b>나용귀</b>가 <b>박영민</b>을 죽였으며, 연극에서 실제 범행 수법을 드러냈다고 밝힌다.</p>
+            </div>
+            <div class="moved"><span>아래로: 내 추리 노트 → 목차 → 커뮤니티</span><i class="ph ph-arrow-down"></i></div>
+            <div class="cta-bar"><div class="cta">이어서 읽기 <small>66쪽부터</small></div></div>
+          </div>
+        </div>
+      </figure>
+    </div>
+    <ul class="changes">
+      <li>머리 바로 아래에 지금 장과 쪽수(5장 의외의 결말, 66 / 68쪽)를 둡니다. 브리핑의 목적인 "어디까지 읽었는지 되찾기"가 첫눈에 보입니다. 값은 지금도 화면에 있는 목차 강조·쪽수 입력칸에서 쓰는 것과 같습니다.</li>
+      <li>"이어서 읽기"를 로그인 버튼과 같은 버건디로 채우고 "66쪽부터"를 붙였습니다. 화면에서 채운 버튼은 이것 하나입니다. <code>visual-hierarchy</code></li>
+      <li>커뮤니티 카드는 요약 위에서 빼서 추리 노트와 목차 다음 맨 아래로 옮깁니다. 점선 상자는 옮긴 순서를 보여 주는 설명용이고 실제 화면에는 없습니다.</li>
+    </ul>
+  </section>
+
+  <section class="pair">
+    <h2><span>04</span>관계 목록을 사람별로 묶기</h2>
+    <p class="problem">이몽란을 누르면 유불란이 "사랑(의심·주장) / 연인(사실) / 사랑(의심·주장)"으로 세 줄, 박영민도 세 줄 나옵니다. 머리글 별칭도 반복되고, 관계 이름도 "윗사람이다"처럼 서술형이 섞입니다.</p>
+    <div class="frames">
+      <figure>
+        <figcaption><span class="tag">지금</span><b>인물관계도 아래 목록 (첫 화면만)</b></figcaption>
+        <div class="panel"><div class="crop" style="background-image:url(12-graph-node.png);height:228px;background-position:0 -616px"></div></div>
+        <p style="font-size:13px;color:var(--d-muted);line-height:1.6;margin:10px 0 0;word-break:keep-all">아래로 이어지는 줄(화면 밖, 실측 텍스트): 유불란 연인 사실 · 박영민 윗사람이다 사실 · 박영민 욕망 사실 · 임경부 미움 사실 · 유불란 사랑 의심·주장. 모두 8줄.</p>
+      </figure>
+      <figure>
+        <figcaption><span class="tag after">바꾼 뒤</span><b>4명, 사람마다 한 칸</b></figcaption>
+        <div class="panel">
+          <div class="rel">
+            <h4>이몽란(좌장의 부인)과 이어진 사람</h4>
+            <p class="sub">4명 · 관계 8개</p>
+            <div class="legend"><span><i class="f"></i>사실</span><span><i class="c"></i>의심·주장</span></div>
+            <div class="person"><div class="name">유불란 <span class="count">3</span></div><div class="chips"><span class="chip fact">연인</span><span class="chip claim">사랑</span></div></div>
+            <div class="person"><div class="name">박영민 <span class="count">3</span></div><div class="chips"><span class="chip fact">부부</span><span class="chip fact">윗사람</span><span class="chip fact">욕망</span></div></div>
+            <div class="person"><div class="name">나용귀 <span class="count">1</span></div><div class="chips"><span class="chip claim">사랑</span></div></div>
+            <div class="person"><div class="name">임경부 <span class="count">1</span></div><div class="chips"><span class="chip fact">미움</span></div></div>
+          </div>
+        </div>
+      </figure>
+    </div>
+    <ul class="changes">
+      <li>같은 사람과의 관계는 한 칸에 모으고, 관계는 칩으로 나열합니다. 사실은 채운 칩, 의심·주장은 점선 칩으로 구분합니다. 관계도 선 모양(실선/점선)과 같은 규칙입니다.</li>
+      <li>완전히 같은 관계(유불란 "사랑, 의심·주장" 두 줄)는 칩 하나로 합칩니다. 오른쪽 숫자는 원래 관계 개수(유불란 3)를 남겨 정보가 사라지지 않게 했습니다.</li>
+      <li>머리글 별칭은 대표 하나만 씁니다("부인·좌장의 부인" → "좌장의 부인"). 관계 이름은 명사형으로 맞춥니다("윗사람이다" → "윗사람"). 이 두 가지는 화면보다 관계 데이터 정리로 고치는 게 맞을 수 있습니다.</li>
+    </ul>
+  </section>
+
+  <section class="pair">
+    <h2><span>05</span>로그인 이유를 말하고, 간편 로그인을 먼저</h2>
+    <p class="problem">"작품 보기"를 누르면 설명 없이 로그인 화면이 뜹니다. 구글·카카오 버튼이 같은 회색 테두리라 구분되지 않고, 비밀번호 찾기도 없습니다.</p>
+    <div class="frames">
+      <figure>
+        <figcaption><span class="tag">지금</span><b>로그인</b></figcaption>
+        <div class="phone"><img src="04-after-open.png" alt="현재 로그인 화면. 이메일 폼이 먼저 있고 구글·카카오 버튼은 같은 회색 테두리다."></div>
+      </figure>
+      <figure>
+        <figcaption><span class="tag after">바꾼 뒤</span><b>한 줄 설명, 브랜드 버튼, 비밀번호 찾기</b></figcaption>
+        <div class="phone">
+          <div class="login">
+            <div class="x"><i class="ph ph-x"></i></div>
+            <div class="eb">CASE FILE · READER</div>
+            <h3>RE:ADD</h3>
+            <p class="why">로그인하면 읽던 쪽과 추리 노트를 어느 기기에서든 이어서 볼 수 있어요.</p>
+            <div class="sso kakao"><img src="https://cdn.simpleicons.org/kakaotalk/191919" alt="">카카오로 계속하기</div>
+            <div class="sso google"><img src="https://cdn.simpleicons.org/google" alt="">구글로 계속하기</div>
+            <div class="or">또는 이메일로</div>
+            <div class="field"><label>이메일</label><div class="in">name@example.com</div></div>
+            <div class="field"><label>비밀번호</label><div class="in"><span></span><em>보기</em></div></div>
+            <div class="submit">로그인</div>
+            <div class="links"><span>비밀번호를 잊었어요</span><b>회원가입</b></div>
+          </div>
+        </div>
+      </figure>
+    </div>
+    <ul class="changes">
+      <li>제목 아래에 왜 로그인하는지 한 줄을 넣었습니다. "작품 보기"에서 넘어온 사람이 영문을 몰라 닫지 않게 하려는 것입니다.</li>
+      <li>대부분 쓰는 간편 로그인을 위로 올리고, 카카오는 노란 바탕, 구글은 흰 바탕에 각 로고를 넣어 한눈에 구분되게 했습니다. 실제 적용 때는 각 회사의 버튼 가이드를 따라야 합니다.</li>
+      <li>"비밀번호를 잊었어요"를 추가하고, 로그인/회원가입 탭은 아래 링크 하나로 줄였습니다. <code>accessible-authentication</code></li>
+    </ul>
+  </section>
+
+  <section class="disclose">
+    <h2>시안에서 실제와 다른 점</h2>
+    <ul>
+      <li>"지금" 이미지는 ego lite(Chromium)에서 iPhone 크기로 흉내 내 찍은 운영 화면입니다. 실제 iPhone Safari와는 글꼴 렌더링이 조금 다를 수 있습니다.</li>
+      <li>"바꾼 뒤"는 HTML로 다시 그린 그림이고, 아직 코드에는 반영하지 않았습니다. 브리핑 표지는 실제 캡처에서 잘라 쓴 것입니다.</li>
+      <li>본문·요약·관계 문구는 캡처한 운영 화면의 실제 텍스트입니다. 안내 말풍선, 로그인 설명, "66쪽부터", "4명 · 관계 8개", "비밀번호를 잊었어요"는 제가 제안하는 문구입니다.</li>
+      <li>01의 점선 사각형(누르는 영역), 03의 점선 상자(옮긴 순서), 02의 강조 표시는 설명용이고 실제 화면에는 넣지 않습니다.</li>
+      <li>카카오·구글 로고는 Simple Icons의 단색·기본 로고입니다. 공식 로그인 버튼 이미지가 아닙니다.</li>
+      <li>비밀번호 찾기 기능은 지금 백엔드에 있는지 확인하지 않았습니다. 없다면 별도 개발이 필요합니다.</li>
+      <li>로그인 화면의 글꼴은 이 작업 공간에서 해당 코드를 찾지 못해 Pretendard로 그렸습니다. "RE:ADD" 글자 굵기처럼 바꾸지 않은 부분이 실제와 조금 달라 보일 수 있습니다.</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>
