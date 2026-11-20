@@ -3,7 +3,7 @@ import type { ModerationItem } from './adminApi';
 import { useAdmin } from './AdminLayout';
 
 const EXCERPT_LENGTH = 80;
-const TYPE_LABEL: Record<ModerationItem['target_type'], string> = { post: '글', comment: '댓글' };
+const TYPE_LABEL: Record<ModerationItem['target_type'], string> = { post: '댓글', comment: '답글' };
 
 function excerpt(body: string | null): string {
   if (!body) return '';

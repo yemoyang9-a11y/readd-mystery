@@ -1,11 +1,8 @@
-export type CommunityKind = 'theory' | 'review';
-
 /** 목록 정렬 — 최신순(기본) · 인기순(공감 많은 순) (2026-11-18 대표 지시) */
 export type CommunitySort = 'new' | 'popular';
 
 export interface CommunityPost {
   post_id: string;
-  kind: CommunityKind;
   body: string;
   nickname: string | null;
   created_at: string;
@@ -17,12 +14,19 @@ export interface CommunityPost {
   deleted: boolean;
 }
 
+/** 답글 (T19 — 서버 community_comments 한 줄) */
 export interface CommunityComment {
   comment_id: string;
   body: string;
   nickname: string;
   created_at: string;
   is_mine: boolean;
+  /** 이 답글을 쓴 사람이 댓글을 처음 쓴 사람인지 */
+  is_post_author: boolean;
+  /** 본문 앞에 붙는 @대상. 대상이 지워지거나 숨겨졌으면 null */
+  reply_to_nickname: string | null;
+  like_count: number;
+  liked_by_me: boolean;
 }
 
 export interface CommunityPostPage {
