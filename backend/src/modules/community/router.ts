@@ -374,25 +374,28 @@ export function createCommunityRouter({
         }
       });
       // T19 답글 좋아요 — FR-QNA-004 🚦 관문(authorize)을 지난 독자만
-      router[method]('/books/:bookId/community/comments/:commentId/like', async (req, res, next) => {
-        try {
-          const { bookId, commentId } = req.params;
-          const readerId = await authorize(req, res);
-          if (!readerId) return;
-          const done = UUID_PATTERN.test(commentId)
-            ? method === 'post'
-              ? await engagement.likeComment(bookId, commentId, readerId)
-              : await engagement.unlikeComment(bookId, commentId, readerId)
-            : false;
-          if (!done) {
-            notFound(res, 'Comment not found');
-            return;
+      router[method](
+        '/books/:bookId/community/comments/:commentId/like',
+        async (req, res, next) => {
+          try {
+            const { bookId, commentId } = req.params;
+            const readerId = await authorize(req, res);
+            if (!readerId) return;
+            const done = UUID_PATTERN.test(commentId)
+              ? method === 'post'
+                ? await engagement.likeComment(bookId, commentId, readerId)
+                : await engagement.unlikeComment(bookId, commentId, readerId)
+              : false;
+            if (!done) {
+              notFound(res, 'Comment not found');
+              return;
+            }
+            res.json(await engagement.commentLikeState(bookId, commentId, readerId));
+          } catch (error) {
+            next(error);
           }
-          res.json(await engagement.commentLikeState(bookId, commentId, readerId));
-        } catch (error) {
-          next(error);
         }
-      });
+      );
     }
   }
 
