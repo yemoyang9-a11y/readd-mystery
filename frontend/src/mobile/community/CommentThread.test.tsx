@@ -131,3 +131,13 @@ test('시간은 인스타그램처럼 "3시간"으로 짧게 보인다 ("전" �
   expect(screen.getByText('3시간')).toBeInTheDocument();
   expect(screen.queryByText('3시간 전')).not.toBeInTheDocument();
 });
+
+test('Final: 삭제된 댓글 아래 답글에는 "답글 달기"가 없다 — 서버가 받지 않는다', async () => {
+  const deleted = { ...POST, deleted: true, nickname: null, body: '삭제된 댓글입니다' };
+  mocked.fetchCommunityPost.mockResolvedValue({ post: deleted, comments: [reply({ reply_to_nickname: null })] });
+  render(<CommentThread bookId="takryu" post={deleted} refreshKey={0} onReply={vi.fn()} onChanged={vi.fn()} />);
+  await userEvent.click(screen.getByRole('button', { name: '답글 2개 모두 보기' }));
+  await screen.findByText('저도요');
+  expect(screen.queryByRole('button', { name: '답글 달기' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '좋아요' })).toBeInTheDocument();
+});

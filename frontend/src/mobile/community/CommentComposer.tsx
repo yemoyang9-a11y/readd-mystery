@@ -14,13 +14,15 @@ function stripMention(text: string, target: ReplyTarget | null): string {
 export default function CommentComposer({
   replyTarget,
   myName = null,
+  error = null,
   onCancelReply,
   onSubmit,
 }: {
   replyTarget: ReplyTarget | null;
   myName?: string | null;
+  error?: string | null;
   onCancelReply: () => void;
-  onSubmit: (body: string) => Promise<void>;
+  onSubmit: (body: string) => Promise<boolean>;
 }) {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
@@ -44,8 +46,7 @@ export default function CommentComposer({
     if (!body || sending) return;
     setSending(true);
     try {
-      await onSubmit(body);
-      setText('');
+      if (await onSubmit(body)) setText('');
     } finally {
       setSending(false);
     }
@@ -53,6 +54,11 @@ export default function CommentComposer({
 
   return (
     <div className="grid border-t border-[#35292c] bg-[#0d0a0b]/95">
+      {error ? (
+        <p role="alert" className="m-0 px-4 pt-2 text-[14px] text-[#e58a9b]">
+          {error}
+        </p>
+      ) : null}
       {replyTarget ? (
         <div className="flex items-center justify-between bg-[#1e1618] px-4 py-2 text-[14px] text-[#b5aaa6]">
           <span>

@@ -57,7 +57,8 @@ export interface CommentRowProps {
   highlighted?: boolean;
   deleted?: boolean;
   menuRef?: Ref<HTMLButtonElement>;
-  onReply: () => void;
+  /** 없으면 "답글 달기"를 그리지 않는다 — 삭제된 댓글 묶음은 서버가 답글을 받지 않는다 */
+  onReply?: () => void;
   onToggleLike: () => void;
   onDelete: () => void;
   onReport: () => void;
@@ -112,13 +113,15 @@ export default function CommentRow({
           <div className="mt-1 flex flex-wrap items-center gap-x-3.5 text-[13px] text-[#b5aaa6]">
             <span>{relativeTime(createdAt).replace(/ 전$/, '')}</span>
             {likeCount > 0 ? <span className="font-bold">좋아요 {likeCount}개</span> : null}
-            <button
-              type="button"
-              onClick={onReply}
-              className="min-h-8 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b]"
-            >
-              답글 달기
-            </button>
+            {onReply ? (
+              <button
+                type="button"
+                onClick={onReply}
+                className="min-h-8 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b]"
+              >
+                답글 달기
+              </button>
+            ) : null}
             <button
               ref={menuRef}
               type="button"

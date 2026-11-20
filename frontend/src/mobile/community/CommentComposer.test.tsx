@@ -18,7 +18,7 @@ test('입력창: 답글 중이면 "밤샘독서님에게 답글 남기는 중" �
 });
 
 test('입력창: 게시하면 @머리말을 뺀 본문으로 onSubmit, 끝나면 비워진다 (Review Focus 4)', async () => {
-  const onSubmit = vi.fn().mockResolvedValue(undefined);
+  const onSubmit = vi.fn().mockResolvedValue(true);
   render(<CommentComposer replyTarget={TARGET} onCancelReply={vi.fn()} onSubmit={onSubmit} />);
   await userEvent.type(screen.getByRole('textbox'), '저는 반대로 읽었어요');
   await userEvent.click(screen.getByRole('button', { name: '게시' }));

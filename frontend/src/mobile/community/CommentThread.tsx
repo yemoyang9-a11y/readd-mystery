@@ -173,12 +173,15 @@ export default function CommentThread({
                 isPostAuthor={item.is_post_author}
                 replyToNickname={item.reply_to_nickname}
                 highlighted={highlightCommentId === item.comment_id}
-                onReply={() =>
-                  onReply({
-                    postId: head.post_id,
-                    commentId: item.comment_id,
-                    nickname: item.nickname,
-                  })
+                onReply={
+                  head.deleted
+                    ? undefined
+                    : () =>
+                        onReply({
+                          postId: head.post_id,
+                          commentId: item.comment_id,
+                          nickname: item.nickname,
+                        })
                 }
                 onToggleLike={() => void toggleReplyLike(item)}
                 onDelete={() => setDeleting({ type: 'comment', id: item.comment_id })}

@@ -64,10 +64,9 @@ export function CommunityScreen({
   const { displayName } = useAuth();
   const viewport = useVisualViewport();
   // NFR-USE
-  const keyboardInset = Math.max(
-    0,
-    Math.round(window.innerHeight - viewport.height - viewport.offsetTop)
-  );
+  const keyboardInset = viewport.keyboardOpen
+    ? Math.max(0, Math.round(window.innerHeight - viewport.height - viewport.offsetTop))
+    : 0;
   const title = books.find((book) => book.book_id === bookId)?.title ?? '';
   const [status, setStatus] = useState<Status>('loading');
   const [sort, setSort] = useState<CommunitySort>('new');
@@ -77,7 +76,10 @@ export function CommunityScreen({
   const [loadingMore, setLoadingMore] = useState(false);
   const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
   const [refreshKeys, setRefreshKeys] = useState<Record<string, number>>({});
+  const [composerError, setComposerError] = useState<string | null>(null);
+  const [dockHeight, setDockHeight] = useState<number | null>(null);
   const requestRef = useRef(0);
+  const dockRef = useRef<HTMLDivElement | null>(null);
 
   const handleFailure = useCallback((failure: CommunityFailure) => {
     if (failure === 'locked') setStatus('locked');
@@ -86,6 +88,8 @@ export function CommunityScreen({
   const loadFirstPage = useCallback(() => {
     const request = (requestRef.current += 1);
     setStatus('loading');
+    setReplyTarget(null);
+    setComposerError(null);
     fetchCommunityPosts(bookId, null, sort)
       .then((page) => {
         if (request !== requestRef.current) return;
@@ -102,12 +106,29 @@ export function CommunityScreen({
 
   useEffect(loadFirstPage, [loadFirstPage]);
 
+  const ready = status === 'ready';
+
+  useEffect(() => {
+    const dock = dockRef.current;
+    if (!ready || desktop || !dock || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() =>
+      setDockHeight(Math.ceil(dock.getBoundingClientRect().height))
+    );
+    observer.observe(dock);
+    return () => observer.disconnect();
+  }, [ready, desktop]);
+
   async function loadMore() {
     if (!nextCursor || loadingMore) return;
+    const request = requestRef.current;
     setLoadingMore(true);
     try {
       const page = await fetchCommunityPosts(bookId, nextCursor, sort);
-      setPosts((prev) => [...prev, ...page.posts]);
+      if (request !== requestRef.current) return;
+      setPosts((prev) => {
+        const seen = new Set(prev.map((item) => item.post_id));
+        return [...prev, ...page.posts.filter((item) => !seen.has(item.post_id))];
+      });
       setNextCursor(page.next_cursor);
     } catch (cause) {
       handleFailure(classifyCommunityError(cause));
@@ -116,25 +137,44 @@ export function CommunityScreen({
     }
   }
 
-  async function submit(body: string) {
+  function refreshThread(postId: string) {
+    setRefreshKeys((prev) => ({ ...prev, [postId]: (prev[postId] ?? 0) + 1 }));
+  }
+
+  async function submit(body: string): Promise<boolean> {
+    const target = replyTarget;
+    setComposerError(null);
     try {
-      if (!replyTarget) {
+      if (!target) {
         const created = await createCommunityPost(bookId, body);
         setPosts((prev) => [created, ...prev]);
         setTotalCount((prev) => (prev === null ? null : prev + 1));
-        return;
+        return true;
       }
-      const target = replyTarget;
       await createCommunityComment(bookId, target.postId, body, target.commentId ?? undefined);
       setReplyTarget(null);
-      setRefreshKeys((prev) => ({ ...prev, [target.postId]: (prev[target.postId] ?? 0) + 1 }));
+      refreshThread(target.postId);
+      return true;
     } catch (cause) {
-      handleFailure(classifyCommunityError(cause));
-      throw cause;
+      const failure = classifyCommunityError(cause);
+      if (failure === 'locked') {
+        handleFailure(failure);
+      } else if (failure === 'not_found' && target) {
+        setReplyTarget(null);
+        refreshThread(target.postId);
+        setComposerError('답글을 달 댓글이 지워졌어요.');
+      } else if (failure === 'rate_limited') {
+        setComposerError(
+          target
+            ? '답글은 1시간에 30개까지 남길 수 있어요.'
+            : '댓글은 1시간에 10개까지 남길 수 있어요. 잠시 후 다시 시도해 주세요.'
+        );
+      } else {
+        setComposerError('올리지 못했어요. 잠시 후 다시 시도해 주세요.');
+      }
+      return false;
     }
   }
-
-  const ready = status === 'ready';
 
   return (
     <div
@@ -147,7 +187,11 @@ export function CommunityScreen({
           ? undefined
           : {
               paddingTop: 'var(--safe-top)',
-              paddingBottom: ready ? 'calc(84px + max(12px, var(--safe-bottom)))' : undefined,
+              paddingBottom: !ready
+                ? undefined
+                : dockHeight !== null
+                  ? `${dockHeight + 16}px`
+                  : 'calc(84px + max(12px, var(--safe-bottom)))',
             }
       }
     >
@@ -300,6 +344,7 @@ export function CommunityScreen({
 
       {ready ? (
         <div
+          ref={dockRef}
           data-testid="comment-composer-dock"
           className={desktop ? 'sticky bottom-0 z-10 mt-4' : 'fixed inset-x-0 z-10'}
           style={
@@ -314,6 +359,7 @@ export function CommunityScreen({
           <CommentComposer
             replyTarget={replyTarget}
             myName={displayName}
+            error={composerError}
             onCancelReply={() => setReplyTarget(null)}
             onSubmit={submit}
           />

@@ -180,3 +180,93 @@ test('Review Focus 5: 휴대폰 자판이 올라오면 입력창이 자판 위�
   expect(bar.style.bottom).toBe('300px');
   Object.defineProperty(window, 'visualViewport', { configurable: true, value: undefined });
 });
+
+function failure(status: number) {
+  return new AxiosError('fail', 'ERR_BAD_REQUEST', undefined, null, { status, data: {} } as AxiosResponse);
+}
+
+test('Final: 댓글 게시가 429 로 실패하면 안내가 나오고 쓴 글은 입력칸에 남는다', async () => {
+  mocked.fetchCommunityPosts.mockResolvedValue({ posts: [post()], next_cursor: null });
+  mocked.createCommunityPost.mockRejectedValue(failure(429));
+  renderScreen();
+  await screen.findByText('초봉이 군산을 떠나는 장면에서 한참 멈춰 있었어요');
+  await userEvent.type(screen.getByRole('textbox'), '또 씀');
+  await userEvent.click(screen.getByRole('button', { name: '게시' }));
+  expect(await screen.findByText('댓글은 1시간에 10개까지 남길 수 있어요. 잠시 후 다시 시도해 주세요.')).toBeInTheDocument();
+  expect(screen.getByRole('textbox')).toHaveValue('또 씀');
+});
+
+test('Final: 답글 대상이 사라져 404 면 안내가 나오고 "답글 남기는 중"이 풀린다', async () => {
+  mocked.fetchCommunityPosts.mockResolvedValue({ posts: [post()], next_cursor: null });
+  mocked.createCommunityComment.mockRejectedValue(failure(404));
+  mocked.fetchCommunityPost.mockResolvedValue({ post: post({ comment_count: 0 }), comments: [] });
+  renderScreen();
+  await screen.findByText('초봉이 군산을 떠나는 장면에서 한참 멈춰 있었어요');
+  await userEvent.click(screen.getByRole('button', { name: '답글 달기' }));
+  await userEvent.type(screen.getByRole('textbox'), '답');
+  await userEvent.click(screen.getByRole('button', { name: '게시' }));
+  expect(await screen.findByText('답글을 달 댓글이 지워졌어요.')).toBeInTheDocument();
+  expect(screen.queryByText(/답글 남기는 중/)).not.toBeInTheDocument();
+});
+
+test('Final: 정렬을 바꾸면 "답글 남기는 중"이 풀리고 입력창이 "댓글 달기..."로 돌아간다', async () => {
+  mocked.fetchCommunityPosts.mockResolvedValue({ posts: [post()], next_cursor: null });
+  renderScreen();
+  await screen.findByText('초봉이 군산을 떠나는 장면에서 한참 멈춰 있었어요');
+  await userEvent.click(screen.getByRole('button', { name: '답글 달기' }));
+  expect(screen.getByRole('textbox')).toHaveValue('@달빛서재 ');
+  await userEvent.click(screen.getByRole('button', { name: '인기순' }));
+  await screen.findByText('초봉이 군산을 떠나는 장면에서 한참 멈춰 있었어요');
+  expect(screen.queryByText(/답글 남기는 중/)).not.toBeInTheDocument();
+  expect(screen.getByRole('textbox')).toHaveValue('');
+});
+
+test('Final: 목록 끝 여백은 입력창 실제 높이를 따른다 — 입력창이 높아져도 마지막 댓글이 가려지지 않는다', async () => {
+  const observers: Array<(entries: unknown[]) => void> = [];
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      constructor(cb: (entries: unknown[]) => void) {
+        observers.push(cb);
+      }
+      observe() {}
+      disconnect() {}
+    }
+  );
+  mocked.fetchCommunityPosts.mockResolvedValue({ posts: [post()], next_cursor: null });
+  renderScreen();
+  await screen.findByText('초봉이 군산을 떠나는 장면에서 한참 멈춰 있었어요');
+  const dock = screen.getByTestId('comment-composer-dock');
+  vi.spyOn(dock, 'getBoundingClientRect').mockReturnValue({ height: 200 } as DOMRect);
+  await act(async () => observers.forEach((cb) => cb([])));
+  expect(screen.getByTestId('mobile-community').style.paddingBottom).toBe('216px');
+  vi.unstubAllGlobals();
+});
+
+test('Final: 화면을 확대만 하면(자판 없음) 입력창이 뜨지 않는다', async () => {
+  const viewport = Object.assign(new EventTarget(), { height: window.innerHeight / 1.5, offsetTop: 0, scale: 1.5 });
+  Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport });
+  mocked.fetchCommunityPosts.mockResolvedValue({ posts: [post()], next_cursor: null });
+  renderScreen();
+  await screen.findByText('초봉이 군산을 떠나는 장면에서 한참 멈춰 있었어요');
+  expect(screen.getByTestId('comment-composer-dock').style.bottom).toBe('0px');
+  Object.defineProperty(window, 'visualViewport', { configurable: true, value: undefined });
+});
+
+test('Final: 인기순에서 새 댓글을 쓴 뒤 "더 보기"가 같은 댓글을 다시 줘도 한 번만 보인다', async () => {
+  mocked.fetchCommunityPosts
+    .mockResolvedValueOnce({ posts: [post()], next_cursor: null })
+    .mockResolvedValueOnce({ posts: [post()], next_cursor: 'o' })
+    .mockResolvedValueOnce({ posts: [post()], next_cursor: null });
+  mocked.createCommunityPost.mockResolvedValue(post({ post_id: 'p9', body: '새 댓글', comment_count: 0 }));
+  renderScreen();
+  await screen.findByText('초봉이 군산을 떠나는 장면에서 한참 멈춰 있었어요');
+  await userEvent.click(screen.getByRole('button', { name: '인기순' }));
+  await screen.findByRole('button', { name: '더 보기' });
+  await userEvent.type(screen.getByRole('textbox'), '새 댓글');
+  await userEvent.click(screen.getByRole('button', { name: '게시' }));
+  await screen.findByText('새 댓글');
+  await userEvent.click(screen.getByRole('button', { name: '더 보기' }));
+  await screen.findByText('새 댓글');
+  expect(screen.getAllByText('초봉이 군산을 떠나는 장면에서 한참 멈춰 있었어요')).toHaveLength(1);
+});
