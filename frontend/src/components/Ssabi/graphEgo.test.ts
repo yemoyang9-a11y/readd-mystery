@@ -42,6 +42,8 @@ const graph: GraphResponse = {
       relation_key: 'romance',
       assertion_status: 'fact',
       evidence: { source_page: 21, quote: '첫사랑', start_char: 0, end_char: 3 },
+      reader_evidence: '첫사랑',
+      reader_explanation: '두 사람은 서로 아끼는 사이예요.',
     }),
     edge('c', 'yu', 'lee', '사랑한다', 30, {
       relation_key: 'loves',
@@ -85,17 +87,20 @@ describe('인물관계도 중심 인물 보기 — FR-CHR-001', () => {
     expect(fact).toMatchObject({
       filled: true,
       source: '본문에서 확인',
-      quote: '첫사랑',
+      evidence: '첫사랑',
+      explanation: '두 사람은 서로 아끼는 사이예요.',
       label: '연인',
       page: 21,
     });
-    expect(claim).toMatchObject({ filled: false, source: '이몽란의 말' });
+    expect(claim).toMatchObject({ filled: false, source: '이몽란의 말', evidence: null });
     expect(belief).toMatchObject({
       filled: false,
       source: '임경부의 생각',
-      quote: '몽란을 끝없이 사랑하는 유불란',
+      evidence: null,
+      explanation: null,
       page: 46,
     });
+    expect(belief).not.toHaveProperty('quote');
   });
 
   it('의미 정보가 없는 기존 관계는 채운 칩이고 출처·쪽수·근거가 없다', () => {
@@ -113,7 +118,11 @@ describe('인물관계도 중심 인물 보기 — FR-CHR-001', () => {
       ],
     };
     const na = egoView(legacy, 'yu')!.neighbors[0];
-    expect(na.relations[0]).toMatchObject({ filled: true, source: null, page: null, quote: null });
+    expect(na.relations[0]).toMatchObject({ filled: true, source: null,
+      page: null,
+      evidence: null,
+      explanation: null,
+    });
   });
 
   it('없는 인물을 중심으로 하면 null', () => {

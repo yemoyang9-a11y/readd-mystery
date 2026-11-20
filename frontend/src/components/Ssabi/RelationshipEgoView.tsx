@@ -138,13 +138,27 @@ function RelationItem({
         {relation.source}
         {relation.page !== null ? <PageKeycap page={relation.page} onJump={onJump} /> : null}
       </div>
-      {relation.quote ? (
-        <q
-          style={{ quotes: '"“" "”"' }}
-          className="font-dashSans text-[13px] leading-relaxed text-brief-ink [word-break:keep-all]"
-        >
-          {relation.quote}
-        </q>
+      {relation.evidence ? (
+        <div className="grid grid-cols-[2.5rem_1fr] items-baseline gap-2">
+          <span className="font-dashSans text-xs font-bold text-brief-accent">원문</span>
+          <q
+            style={{ quotes: '"“" "”"' }}
+            className="line-clamp-2 font-dashSans text-sm leading-relaxed text-brief-ink [word-break:keep-all]"
+          >
+            {relation.evidence}
+          </q>
+        </div>
+      ) : null}
+      {relation.explanation ? (
+        <div className="grid grid-cols-[2.5rem_1fr] items-baseline gap-2">
+          <span className="font-dashSans text-xs font-bold text-brief-accent">설명</span>
+          <p
+            data-relation-explanation
+            className="font-dashSans text-sm leading-relaxed text-brief-ink [word-break:keep-all]"
+          >
+            {relation.explanation}
+          </p>
+        </div>
       ) : null}
     </div>
   );

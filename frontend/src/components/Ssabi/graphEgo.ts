@@ -11,7 +11,8 @@ export interface EgoRelation {
   filled: boolean;
   source: string | null;
   page: number | null;
-  quote: string | null;
+  evidence: string | null;
+  explanation: string | null;
 }
 
 export interface EgoNeighbor {
@@ -51,7 +52,8 @@ function relationOf(edge: GraphEdge): EgoRelation {
     filled: !s || s.assertion_status === 'fact',
     source: sourceOf(edge),
     page: s ? s.evidence.source_page : null,
-    quote: s ? s.evidence.quote : null,
+    evidence: s?.reader_evidence || null,
+    explanation: s?.reader_explanation || null,
   };
 }
 

@@ -32,6 +32,8 @@ const graph: GraphResponse = {
       relation_key: 'romance',
       assertion_status: 'fact',
       evidence: { source_page: 21, quote: '첫사랑, 잘 때면 반드시', start_char: 0, end_char: 10 },
+      reader_evidence: '첫사랑',
+      reader_explanation: '두 사람은 서로 아끼는 사이예요.',
     }),
     edge('b', 'lee', 'yu', '사랑', 46, {
       relation_key: 'loves',
@@ -43,6 +45,7 @@ const graph: GraphResponse = {
         start_char: 0,
         end_char: 10,
       },
+      reader_explanation: '임경부는 유불란이 몽란을 사랑한다고 생각해요.',
     }),
     edge('d', 'yu', 'na', '의심', 18, {
       relation_key: 'suspicion',
@@ -123,10 +126,43 @@ describe('인물관계도 모바일 — 중심 인물 1명 + 직접 이어진 �
     const lee = container.querySelectorAll('details')[0] as HTMLElement;
     expect(within(lee).getByText('본문에서 확인')).toBeInTheDocument();
     expect(within(lee).getByText('임경부의 생각')).toBeInTheDocument();
-    expect(within(lee).getByText('첫사랑, 잘 때면 반드시')).toBeInTheDocument();
-    expect(within(lee).getByText('몽란을 끝없이 사랑하는 유불란')).toBeInTheDocument();
     expect(within(lee).getByRole('button', { name: 'p.21 쪽으로 이동' })).toBeInTheDocument();
     expect(within(lee).getByRole('button', { name: 'p.46 쪽으로 이동' })).toBeInTheDocument();
+  });
+
+  it('reader_evidence가 있으면 원문 한 줄과 설명이 나오고 근거 문단 전체는 나오지 않는다', () => {
+    const { container } = renderMobile();
+    const lee = container.querySelectorAll('details')[0] as HTMLElement;
+    const quote = within(lee).getByText('첫사랑');
+    expect(quote.tagName).toBe('Q');
+    expect(within(lee).getByText('두 사람은 서로 아끼는 사이예요.')).toBeInTheDocument();
+    expect(lee.textContent).not.toContain('첫사랑, 잘 때면 반드시');
+  });
+
+  it('reader_evidence가 없으면 긴 원문(evidence.quote)은 DOM에 없고, 설명만 있으면 설명만 나온다', () => {
+    const { container } = renderMobile();
+    const lee = container.querySelectorAll('details')[0] as HTMLElement;
+    expect(lee.textContent).not.toContain('몽란을 끝없이 사랑하는 유불란');
+    expect(within(lee).getByText('임경부는 유불란이 몽란을 사랑한다고 생각해요.')).toBeInTheDocument();
+    expect(lee.querySelectorAll('q')).toHaveLength(1);
+  });
+
+  it('reader_explanation이 없으면 설명 줄을 그리지 않는다', () => {
+    const { container } = renderMobile();
+    const na = container.querySelectorAll('details')[1] as HTMLElement;
+    expect(na.querySelectorAll('q')).toHaveLength(0);
+    expect(na.querySelectorAll('[data-relation-explanation]')).toHaveLength(0);
+    expect(na.textContent).not.toContain('그가 좌장을 죽인 범인이라면');
+  });
+
+  it('원문 한 줄 앞에는 "원문", 설명 앞에는 "설명" 이름표가 있고, 없는 줄에는 이름표도 없다', () => {
+    const { container } = renderMobile();
+    const lee = container.querySelectorAll('details')[0] as HTMLElement;
+    expect(within(lee).getAllByText('원문')).toHaveLength(1);
+    expect(within(lee).getAllByText('설명')).toHaveLength(2);
+    const na = container.querySelectorAll('details')[1] as HTMLElement;
+    expect(within(na).queryByText('원문')).toBeNull();
+    expect(within(na).queryByText('설명')).toBeNull();
   });
 
   it('쪽수 키캡을 누르면 그 쪽으로 이동한다(onJump)', () => {

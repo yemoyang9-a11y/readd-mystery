@@ -126,7 +126,8 @@ function semantics(
   relation_key: string,
   summary: string,
   source_page: number,
-  quote: string
+  quote: string,
+  reader_explanation: string
 ): RelationshipSemantics {
   return {
     version: 2,
@@ -135,6 +136,8 @@ function semantics(
     relation_key,
     summary,
     reader_summary: summary,
+    reader_evidence: quote,
+    reader_explanation,
     assertion_status: 'fact',
     temporal_scope: 'ongoing',
     state: 'active',
@@ -149,7 +152,7 @@ const DEMO_EDGES: GraphEdge[] = [
     target: 'taeho',
     label: '오랜 친구',
     established_page: 1,
-    semantics: semantics('social', 'friend', '서진과 태호는 오래된 친구예요. 태호의 생일을 앞두고 서진이 별장에 왔어요.', 1, '오랜 친구 윤태호가 두 팔을 벌렸다.'),
+    semantics: semantics('social', 'friend', '서진과 태호는 오래된 친구예요. 태호의 생일을 앞두고 서진이 별장에 왔어요.', 1, '오랜 친구 윤태호가 두 팔을 벌렸다.', '서진과 태호는 오래 알고 지낸 친구예요.'),
   },
   {
     id: 'demo-e2',
@@ -157,7 +160,7 @@ const DEMO_EDGES: GraphEdge[] = [
     target: 'mira',
     label: '아버지와 딸',
     established_page: 2,
-    semantics: semantics('family', 'parent', '미라는 태호의 딸이에요. 태호는 회중시계를 미라에게 물려주겠다고 했어요.', 2, '윤태호의 딸 윤미라'),
+    semantics: semantics('family', 'parent', '미라는 태호의 딸이에요. 태호는 회중시계를 미라에게 물려주겠다고 했어요.', 2, '윤태호의 딸 윤미라', '미라는 태호의 딸이에요.'),
   },
   {
     id: 'demo-e3',
@@ -165,7 +168,7 @@ const DEMO_EDGES: GraphEdge[] = [
     target: 'butler',
     label: '주인과 집사',
     established_page: 2,
-    semantics: semantics('social', 'employer', '박정수는 삼십 년째 태호의 집을 돌봐 온 집사예요.', 2, '삼십 년째 이 집을 돌봐 온 집사 박정수'),
+    semantics: semantics('social', 'employer', '박정수는 삼십 년째 태호의 집을 돌봐 온 집사예요.', 2, '삼십 년째 이 집을 돌봐 온 집사 박정수', '정수는 태호의 집을 오래 돌본 집사예요.'),
   },
 ];
 
