@@ -342,6 +342,8 @@ export interface RelationshipSemantics {
   relation_key: string;
   summary: string;
   reader_summary?: string;
+  reader_evidence?: string;
+  reader_explanation?: string;
   assertion_status: 'fact' | 'belief' | 'claim' | 'rumor' | 'uncertain' | 'negated';
   attribution?: string;
   temporal_scope: 'ongoing' | 'event';
