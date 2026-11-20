@@ -6,7 +6,6 @@ import MobileErrorState from '../components/MobileErrorState';
 import { useBackToHome } from '../useBackToHome';
 
 // FR-BRF-001 FR-SPL-005 🚦
-// 대표 지시 2026-11-20 — 브리핑 화면에는 커뮤니티 버튼을 두지 않는다
 export default function MobileBriefing() {
   const { bookId = '' } = useParams();
   const session = useBriefingSession(bookId);

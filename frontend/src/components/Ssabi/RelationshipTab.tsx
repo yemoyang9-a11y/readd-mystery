@@ -44,12 +44,6 @@ import { centralNodeIndex } from './graphLayout';
  * 나누게 두는 쪽을 택함(브라우저의 레이아웃 계산이지 우리 코드의 진도율 계산이 아니다).
  * `totalPages`는 목차(전체 챕터) 기준이라 애초에 상한 대상이 아니다(R3 — 목차는 전체 상시 노출).
  *
- * 2026-11-20 대표 지시("동그라미로 시점 되감기가 잘 안 돼", "뒷부분 막대는 비게") — 예전에는 브라우저
- * range 손잡이가 눈금 **개수**로 균등하게 놓여, 쪽수 비율로 그린 막대와 자리가 어긋났고(p.3 이 10% 자리가
- * 아니라 17% 자리) 손잡이가 14px 라 손가락으로 잡기 어려웠다. 이제 막대·손잡이를 직접 그린다:
- * [채운 막대 flexGrow=시점-1][동그라미 22px][빈 막대 flexGrow=현재-시점][못 읽은 구간]. 손가락은 44px 높이
- * 막대 어디를 눌러도·끌어도 쪽수 자리 기준 가장 가까운 눈금으로 간다(나눗셈 없이 곱셈 비교, 절대 규칙 2번).
- * 키보드·화면 읽기 프로그램은 보이지 않는 `<input type="range">`(눈금 순번)로 조작한다.
  *
  * 표기는 앱의 쪽수 표기 "p.N"을 따른다(2026-11-18 "p.로 표현"). 눈금이 2개 미만이면 감을
  * 시점이 없으므로 막대를 그리지 않는다. 회색 부연 문구(옛 "별칭을 생략합니다" 안내)는 두지 않는다
@@ -113,22 +107,27 @@ export default function RelationshipTab({
   }, [shown]);
   const activeSelected = cleared ? null : (pickedVisible ?? defaultEgo);
 
-  // FR-SPL-002 🚦 — 고를 수 있는 것은 받은 눈금뿐이다. 눌린 자리(x)에 가장 가까운 눈금을 곱셈 비교로 찾는다
+  // FR-SPL-002 🚦
   function pickAt(clientX: number) {
     const rect = readTrackRef.current?.getBoundingClientRect();
     if (!rect || milestones.length < 2) return;
     const usable = Math.max(rect.width - SCRUB_THUMB, 1);
     const pos = Math.min(Math.max(clientX - rect.left - SCRUB_THUMB / 2, 0), usable);
-    const span = latest - 1;
-    let best = milestones[0];
+    const first = milestones[0];
+    const span = latest - first;
+    let best = first;
     for (const mark of milestones) {
-      if (Math.abs(pos * span - (mark - 1) * usable) < Math.abs(pos * span - (best - 1) * usable))
+      if (
+        Math.abs(pos * span - (mark - first) * usable) <
+        Math.abs(pos * span - (best - first) * usable)
+      )
         best = mark;
     }
     setPicked(best);
   }
 
   function startScrub(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!event.isPrimary || event.button !== 0) return;
     dragPointerRef.current = event.pointerId;
     event.currentTarget.setPointerCapture?.(event.pointerId);
     pickAt(event.clientX);
@@ -194,28 +193,29 @@ export default function RelationshipTab({
           onChange={(event) => setPicked(milestones[Number(event.target.value)])}
           onFocus={() => setScrubFocused(true)}
           onBlur={() => setScrubFocused(false)}
+          aria-valuetext={at === latest ? '현재까지' : `p.${at} 시점`}
           className="sr-only"
         />
         <div
           data-testid="graph-scrub-track"
-          aria-hidden="true"
           tabIndex={-1}
           onPointerDown={startScrub}
           onPointerMove={moveScrub}
           onPointerUp={endScrub}
           onPointerCancel={endScrub}
+          onLostPointerCapture={endScrub}
           className="flex h-11 cursor-pointer touch-none select-none items-center"
         >
           <div
             ref={readTrackRef}
             data-testid="graph-scrub-read"
             className="flex items-center"
-            style={{ flexGrow: latest || 1, flexBasis: 0 }}
+            style={{ flexGrow: latest || 1, flexBasis: 0, minWidth: '120px' }}
           >
             <div
               data-testid="graph-scrub-filled"
               className="h-1.5 rounded-l-full bg-brief-accent"
-              style={{ flexGrow: at - 1, flexBasis: 0 }}
+              style={{ flexGrow: at - milestones[0], flexBasis: 0 }}
             />
             <span
               data-testid="graph-scrub-thumb"
