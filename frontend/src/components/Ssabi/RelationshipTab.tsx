@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import type { GraphResponse } from '../../types';
 import Loading from '../common/Loading';
 import RelationshipGraph from './RelationshipGraph';
 import RelationDetails from './RelationDetails';
+import RelationshipEgoView, { CenterChips } from './RelationshipEgoView';
 import { graphMilestones, graphUpTo } from './graphFilter';
 import { centralNodeIndex } from './graphLayout';
 
@@ -55,11 +56,13 @@ export default function RelationshipTab({
   graph,
   failed,
   totalPages,
+  onJump,
 }: {
   graph: GraphResponse | null;
   failed: boolean;
   /** 목차 기준 전체 페이지 수(상한 대상 아님, R3). 되감기 트랙 오른쪽 끝 표시에만 쓴다. */
   totalPages?: number;
+  onJump?: (page: number) => void;
 }) {
   const [picked, setPicked] = useState<number | null>(null);
   const [selected, setSelectedState] = useState<string | null>(null);
@@ -67,6 +70,12 @@ export default function RelationshipTab({
   const [cleared, setCleared] = useState(false);
   // 선택한 선(graphEdgeKey). 인물을 고르면 풀린다 — 인물 선택과 선 선택은 함께 남지 않는다.
   const [selectedEdgeKey, setSelectedEdgeKey] = useState<string | null>(null);
+  const [mobile, setMobile] = useState(false);
+  const [pickedCenter, setPickedCenter] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
+  const anchorRef = useCallback((node: HTMLDivElement | null) => {
+    setMobile(Boolean(node?.closest('[data-mobile]')));
+  }, []);
 
   // 되감기 눈금 — 받은 데이터(이미 기준점 이하)에서만 만든다. 마지막 눈금 = 현재 진도 (FR-SPL-002 🚦)
   const milestones = useMemo(() => (graph ? graphMilestones(graph) : []), [graph]);
@@ -90,6 +99,11 @@ export default function RelationshipTab({
   }, [shown]);
   const activeSelected = cleared ? null : (pickedVisible ?? defaultEgo);
 
+  function pickCenter(id: string) {
+    setPickedCenter(id);
+    setShowAll(false);
+  }
+
   function pickPerson(id: string) {
     setSelectedEdgeKey(null);
     if (id === activeSelected) {
@@ -101,15 +115,79 @@ export default function RelationshipTab({
     setSelectedState(id);
   }
 
+  const wrap = (child: ReactNode) => (
+    <div ref={anchorRef} className="contents">
+      {child}
+    </div>
+  );
+
   if (failed)
-    return (
+    return wrap(
       <p role="alert" className="text-brief-muted">
         관계도를 불러오지 못했습니다
       </p>
     );
-  if (!graph || !shown) return <Loading fullScreen={false} message="인물 관계를 정리하는 중" />;
+  if (!graph || !shown)
+    return wrap(<Loading fullScreen={false} message="인물 관계를 정리하는 중" />);
 
-  return (
+  const scrubber =
+    milestones.length > 1 ? (
+      <div className="space-y-1.5 pt-1">
+        <div className="flex items-center justify-between font-dashSans text-[12px]">
+          <label htmlFor="graph-scrub" className="text-brief-muted">
+            시점 되감기
+          </label>
+          <span className="font-bold text-brief-ink">
+            {at === latest ? '현재까지' : `p.${at} 시점`}
+          </span>
+        </div>
+        <div className="flex items-center">
+          <div style={{ flexGrow: latest || 1, flexBasis: 0 }}>
+            <input
+              id="graph-scrub"
+              type="range"
+              min={0}
+              max={milestones.length - 1}
+              step={1}
+              value={Math.max(0, milestones.indexOf(at))}
+              onChange={(event) => setPicked(milestones[Number(event.target.value)])}
+              className={`block h-3.5 w-full cursor-pointer appearance-none bg-transparent mobile:h-11
+                  [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:bg-brief-accent
+                  [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:border-none [&::-moz-range-track]:bg-brief-accent
+                  ${
+                    unread > 0
+                      ? '[&::-webkit-slider-runnable-track]:rounded-l-full [&::-moz-range-track]:rounded-l-full'
+                      : '[&::-webkit-slider-runnable-track]:rounded-full [&::-moz-range-track]:rounded-full'
+                  }
+                  [&::-webkit-slider-thumb]:-mt-1 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5
+                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full
+                  [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white
+                  [&::-webkit-slider-thumb]:bg-brief-accent [&::-webkit-slider-thumb]:shadow
+                  [&::-webkit-slider-thumb]:cursor-pointer
+                  [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-3.5
+                  [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full
+                  [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white
+                  [&::-moz-range-thumb]:bg-brief-accent [&::-moz-range-thumb]:shadow
+                  [&::-moz-range-thumb]:cursor-pointer`}
+            />
+          </div>
+          {unread > 0 ? (
+            <div
+              aria-hidden="true"
+              data-testid="graph-scrub-unread"
+              className="h-1.5 shrink-0 rounded-r-full bg-brief-rule"
+              style={{ flexGrow: unread, flexBasis: 0 }}
+            />
+          ) : null}
+        </div>
+        <div className="flex justify-between font-dashSans text-[11px] text-brief-muted">
+          <span>p.1</span>
+          <span>p.{bookTotal}</span>
+        </div>
+      </div>
+    ) : null;
+
+  const fullView = (
     <div className="space-y-3">
       <h3 className="m-0 mt-0.5 font-dashSans text-base font-bold leading-snug text-brief-ink">
         지금 누가 누구와 엮여 있을까요
@@ -131,7 +209,15 @@ export default function RelationshipTab({
         >
           <li className="flex items-center gap-1.5">
             <svg aria-hidden="true" width="22" height="6" viewBox="0 0 22 6">
-              <line x1="1" y1="3" x2="21" y2="3" strokeWidth="2" strokeLinecap="round" className="stroke-brief-accent" />
+              <line
+                x1="1"
+                y1="3"
+                x2="21"
+                y2="3"
+                strokeWidth="2"
+                strokeLinecap="round"
+                className="stroke-brief-accent"
+              />
             </svg>
             <span>사실</span>
           </li>
@@ -154,60 +240,48 @@ export default function RelationshipTab({
       </div>
       {/* 시점 되감기 (2026-11-19 대표 지시로 피벗 전 방식 그대로 복원). 받은 자료 안의 표시 필터라
           서버에 다시 묻지 않는다. 막대 폭은 정수 flexGrow — % 계산 없음 (절대 규칙 2번, 위 주석). */}
-      {milestones.length > 1 ? (
-        <div className="space-y-1.5 pt-1">
-          <div className="flex items-center justify-between font-dashSans text-[12px]">
-            <label htmlFor="graph-scrub" className="text-brief-muted">
-              시점 되감기
-            </label>
-            <span className="font-bold text-brief-ink">{at === latest ? '현재까지' : `p.${at} 시점`}</span>
-          </div>
-          <div className="flex items-center">
-            <div style={{ flexGrow: latest || 1, flexBasis: 0 }}>
-              <input
-                id="graph-scrub"
-                type="range"
-                min={0}
-                max={milestones.length - 1}
-                step={1}
-                value={Math.max(0, milestones.indexOf(at))}
-                onChange={(event) => setPicked(milestones[Number(event.target.value)])}
-                className={`block h-3.5 w-full cursor-pointer appearance-none bg-transparent mobile:h-11
-                  [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:bg-brief-accent
-                  [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:border-none [&::-moz-range-track]:bg-brief-accent
-                  ${
-                    unread > 0
-                      ? '[&::-webkit-slider-runnable-track]:rounded-l-full [&::-moz-range-track]:rounded-l-full'
-                      : '[&::-webkit-slider-runnable-track]:rounded-full [&::-moz-range-track]:rounded-full'
-                  }
-                  [&::-webkit-slider-thumb]:-mt-1 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5
-                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full
-                  [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white
-                  [&::-webkit-slider-thumb]:bg-brief-accent [&::-webkit-slider-thumb]:shadow
-                  [&::-webkit-slider-thumb]:cursor-pointer
-                  [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-3.5
-                  [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full
-                  [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white
-                  [&::-moz-range-thumb]:bg-brief-accent [&::-moz-range-thumb]:shadow
-                  [&::-moz-range-thumb]:cursor-pointer`}
-              />
-            </div>
-            {unread > 0 ? (
-              <div
-                aria-hidden="true"
-                data-testid="graph-scrub-unread"
-                className="h-1.5 shrink-0 rounded-r-full bg-brief-rule"
-                style={{ flexGrow: unread, flexBasis: 0 }}
-              />
-            ) : null}
-          </div>
-          <div className="flex justify-between font-dashSans text-[11px] text-brief-muted">
-            <span>p.1</span>
-            <span>p.{bookTotal}</span>
-          </div>
-        </div>
-      ) : null}
-      <RelationDetails graph={shown} selectedId={activeSelected} selectedEdgeKey={selectedEdgeKey} />
+      {scrubber}
+      <RelationDetails
+        graph={shown}
+        selectedId={activeSelected}
+        selectedEdgeKey={selectedEdgeKey}
+      />
     </div>
   );
+
+  const centerId =
+    shown.nodes.some((n) => n.id === pickedCenter) && pickedCenter ? pickedCenter : defaultEgo;
+
+  const mobileBody =
+    centerId && !showAll ? (
+      <div className="space-y-3">
+        <CenterChips
+          graph={shown}
+          centerId={centerId}
+          all={false}
+          onPick={pickCenter}
+          onAll={() => setShowAll(true)}
+        />
+        <RelationshipEgoView
+          graph={shown}
+          centerId={centerId}
+          scrubber={scrubber}
+          onPickCenter={pickCenter}
+          onJump={onJump}
+        />
+      </div>
+    ) : (
+      <div className="space-y-3">
+        <CenterChips
+          graph={shown}
+          centerId={centerId}
+          all
+          onPick={pickCenter}
+          onAll={() => setShowAll(true)}
+        />
+        {fullView}
+      </div>
+    );
+
+  return wrap(mobile ? mobileBody : fullView);
 }
