@@ -7,6 +7,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
+import { appendMetricsFile } from './metrics-file';
 import OpenAI from 'openai';
 import { createOpenAIProvider, OpenAIUsage } from './openai-provider';
 import {
@@ -106,11 +107,17 @@ async function callClaudeCli(task: string, prompt: string, options: LLMCallOptio
     });
     logMetrics({
       task,
+      attempt: options.attempt ?? 1,
       provider: 'claude-cli',
       modelId: usage?.modelId ?? CLAUDE_CLI_CONFIG.model,
       inputTokens:
         (usage?.inputTokens ?? 0) + (usage?.cacheReadTokens ?? 0) + (usage?.cacheWriteTokens ?? 0),
       outputTokens: usage?.outputTokens ?? 0,
+      // NFR-OBS-004 (측정 2026-11-23): inputTokens는 캐시 포함 합계. 단가 환산용으로 나눠서도 남긴다
+      uncachedInputTokens: usage?.inputTokens,
+      cacheReadTokens: usage?.cacheReadTokens,
+      cacheWriteTokens: usage?.cacheWriteTokens,
+      cliDurationMs: usage?.cliDurationMs,
       durationMs: Date.now() - startTime,
       attempts: usage?.attempts,
       ...(usage?.listCostUsd !== undefined ? { list_cost_usd: usage.listCostUsd } : {}),
@@ -119,6 +126,7 @@ async function callClaudeCli(task: string, prompt: string, options: LLMCallOptio
   } catch (error) {
     logMetrics({
       task,
+      attempt: options.attempt ?? 1,
       provider: 'claude-cli',
       modelId: CLAUDE_CLI_CONFIG.model,
       durationMs: Date.now() - startTime,
@@ -145,6 +153,11 @@ export interface LLMCallOptions {
    * Provider-specific reasoning effort; omitted values use DEFAULT_EFFORT.
    */
   effort?: string;
+  /**
+   * NFR-OBS-004 (측정, 2026-11-23): 호출부 재시도 루프의 몇 번째 시도인지(1 = 첫 호출). 지표에만 쓰고
+   * 요청에는 싣지 않는다. 재시도·재생성 비용을 1회 통과 비용과 나눠 세기 위해서다.
+   */
+  attempt?: number;
 }
 
 /**
@@ -247,7 +260,8 @@ export async function call(
       const result = await openaiProvider.call(modelId, prompt, {
         ...options,
         effort: options.effort ?? DEFAULT_EFFORT,
-        onUsage: (usage) => logMetrics({ task, ...usage, durationMs: Date.now() - startTime }),
+        onUsage: (usage) =>
+          logMetrics({ task, attempt: options.attempt ?? 1, ...usage, durationMs: Date.now() - startTime }),
       });
       return result.text;
     }
@@ -265,9 +279,11 @@ export async function call(
     // 토큰 계측 (NFR-OBS-004)
     logMetrics({
       task,
+      attempt: options.attempt ?? 1,
       modelId,
       inputTokens: response.usage.input_tokens,
       outputTokens: response.usage.output_tokens,
+      ...anthropicUsageDetail(response.usage, response.stop_reason),
       durationMs: Date.now() - startTime,
     });
 
@@ -321,7 +337,7 @@ export async function* stream(
         ...options,
         effort: options.effort ?? DEFAULT_EFFORT,
         onUsage: (usage) =>
-          logMetrics({ task, ...usage, durationMs: Date.now() - startTime, streaming: true }),
+          logMetrics({ task, attempt: options.attempt ?? 1, ...usage, durationMs: Date.now() - startTime, streaming: true }),
       });
     }
     const messageStream = client!.messages.stream(
@@ -352,9 +368,11 @@ export async function* stream(
     // 스트리밍 완료 후 메트릭 기록 (NFR-OBS-004)
     logMetrics({
       task,
+      attempt: options.attempt ?? 1,
       modelId,
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
+      ...anthropicUsageDetail(finalMessage.usage, finalMessage.stop_reason),
       durationMs: Date.now() - startTime,
       streaming: true,
     });
@@ -378,6 +396,8 @@ interface LLMMetrics extends Partial<OpenAIUsage> {
   /** 기본은 LLM_PROVIDER. 관계 추출은 'claude-cli' */
   provider?: string;
   attempts?: number;
+  /** 호출부 재시도 루프의 시도 번호(1 = 첫 호출). attempts는 CLI 내부 재시도 횟수 */
+  attempt?: number;
   list_cost_usd?: number;
   failed?: boolean;
   modelId: string;
@@ -385,18 +405,42 @@ interface LLMMetrics extends Partial<OpenAIUsage> {
   outputTokens?: number;
   durationMs: number;
   streaming?: boolean;
+  /** Anthropic API — 입력 토큰(input_tokens)과 따로 청구되는 캐시 쓰기·읽기 토큰 */
+  cacheWriteTokens?: number;
+  cacheReadTokens?: number;
+  /** Claude CLI — 캐시를 뺀 입력 토큰 */
+  uncachedInputTokens?: number;
+  /** 출력 토큰 중 thinking 토큰(출력 단가로 청구, outputTokens에 이미 포함) */
+  thinkingTokens?: number;
+  stopReason?: string | null;
+  cliDurationMs?: number;
+}
+
+/**
+ * NFR-OBS-004 (AI 원가 측정, 2026-11-23): 캐시·thinking 토큰과 종료 이유. 캐시 토큰은
+ * input_tokens에 들어 있지 않고 단가가 달라 따로 남긴다. thinking은 output_tokens에 포함된다.
+ */
+function anthropicUsageDetail(
+  usage: Anthropic.Usage,
+  stopReason: string | null
+): Pick<LLMMetrics, 'cacheWriteTokens' | 'cacheReadTokens' | 'thinkingTokens' | 'stopReason'> {
+  return {
+    cacheWriteTokens: usage.cache_creation_input_tokens ?? 0,
+    cacheReadTokens: usage.cache_read_input_tokens ?? 0,
+    thinkingTokens: usage.output_tokens_details?.thinking_tokens ?? 0,
+    stopReason,
+  };
 }
 
 function logMetrics(metrics: LLMMetrics): void {
   // NFR-OBS-004: keep terminal usage together in line-oriented production logs.
-  console.log(
-    '[LLM Metrics]',
-    JSON.stringify({
-      timestamp: new Date().toISOString(),
-      provider: LLM_PROVIDER,
-      ...metrics,
-    })
-  );
+  const line = JSON.stringify({
+    timestamp: new Date().toISOString(),
+    provider: LLM_PROVIDER,
+    ...metrics,
+  });
+  console.log('[LLM Metrics]', line);
+  appendMetricsFile('[LLM Metrics]', line);
 }
 
 /**

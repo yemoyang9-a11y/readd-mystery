@@ -65,6 +65,8 @@ const METRIC_TASK_ALIASES: Record<string, keyof typeof MODEL_CONFIG> = {
   generate_summary_grounding: 'generate_summary',
   // 결정 31 — 타임라인 장 핵심 한 줄 (batch/pipeline/chapter-key-point.ts)
   generate_chapter_key_point: 'generate_summary',
+  // 관계 설명문 — EXPLAIN_RELATION_VIA_API=true 일 때만 여기로 온다(claude-cli-provider.ts, 측정 2026-11-23)
+  explain_relation: 'generate_summary',
 };
 
 export function getModelForTask(task: string): string {

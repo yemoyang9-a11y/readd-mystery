@@ -40,6 +40,7 @@ async function askGateway(prompt: string, task: typeof KEY_POINT_TASK): Promise<
   for (let attempt = 1; ; attempt++) {
     const raw = await call(task, attempt === 1 ? prompt : prompt + JSON_RETRY_REMINDER, {
       maxTokens: MAX_TOKENS,
+      attempt, // NFR-OBS-004 (측정)
     });
     try {
       return parseJsonResponse<unknown>(raw);

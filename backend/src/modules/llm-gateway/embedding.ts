@@ -18,6 +18,7 @@
  */
 
 import { withRetry } from './retry';
+import { appendMetricsFile } from './metrics-file';
 
 /**
  * 벡터 차원 — DB 스키마(`vector(1024)`)·HNSW 인덱스와 반드시 일치해야 한다.
@@ -169,18 +170,17 @@ async function callCohereEmbed(texts: string[], inputType: string): Promise<numb
   // NFR-OBS-004: 게이트웨이 [LLM Metrics]와 같은 한 줄 JSON — 적재(search_document)와
   // 질의(search_query)를 inputType으로 구분한다. durationMs는 재시도 대기를 포함하고
   // 토큰 한도 대기(waitMs)는 뺀 값이다. 응답에 사용량이 없으면 billedInputTokens는 null.
-  console.log(
-    '[Embed Metrics]',
-    JSON.stringify({
-      timestamp: new Date().toISOString(),
-      model: EMBEDDING_MODEL,
-      inputType,
-      count: texts.length,
-      billedInputTokens: billedInputTokens ?? null,
-      durationMs: Date.now() - startedAt,
-      waitMs,
-    })
-  );
+  const metricsLine = JSON.stringify({
+    timestamp: new Date().toISOString(),
+    model: EMBEDDING_MODEL,
+    inputType,
+    count: texts.length,
+    billedInputTokens: billedInputTokens ?? null,
+    durationMs: Date.now() - startedAt,
+    waitMs,
+  });
+  console.log('[Embed Metrics]', metricsLine);
+  appendMetricsFile('[Embed Metrics]', metricsLine);
 
   const embeddings = body.embeddings?.float;
   if (!Array.isArray(embeddings) || embeddings.length !== texts.length) {

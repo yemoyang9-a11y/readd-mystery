@@ -120,6 +120,7 @@ async function callJson<T>(
   for (let attempt = 1; ; attempt++) {
     const raw = await call(task, attempt === 1 ? prompt : prompt + JSON_RETRY_REMINDER, {
       maxTokens: GENERATE_MAX_TOKENS,
+      attempt, // NFR-OBS-004 (측정)
     });
     try {
       return parseJsonResponse<T>(raw);

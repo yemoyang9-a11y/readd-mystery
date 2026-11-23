@@ -27,7 +27,14 @@ export const CLAUDE_CLI_TASKS: readonly string[] = [
   'explain_relation',
 ];
 
+/**
+ * AI 원가 측정(2026-11-23, measure/ai-cost 브랜치): 관계 설명문은 측정 때 API 제공자로 보낸다는 사용자 지시.
+ * EXPLAIN_RELATION_VIA_API=true 일 때만 바뀌고 기본값은 그대로 Claude 구독이다. 관계 판정·반대 검토는
+ * 이 스위치와 무관하게 항상 Claude 구독이다(FR-CHR-001 🚦, 2026-11-18 대표 지시).
+ */
 export function isClaudeCliTask(task: string): boolean {
+  if (task === 'explain_relation' && process.env.EXPLAIN_RELATION_VIA_API?.trim() === 'true')
+    return false;
   return CLAUDE_CLI_TASKS.includes(task);
 }
 

@@ -51,7 +51,7 @@ const JSON_RETRIES = 2;
 export type GatewayCall = (
   task: string,
   prompt: string,
-  options?: { maxTokens?: number; system?: string }
+  options?: { maxTokens?: number; system?: string; attempt?: number }
 ) => Promise<string>;
 
 /** 실행 통계 — 보고서용(구독 호출 횟수·시간) */
@@ -121,7 +121,7 @@ export function cachedLabeler(
           attempt === 1
             ? prompt
             : `${prompt}\n\n직전 응답은 JSON이 아니었다. JSON 객체 하나만 출력하라.`,
-          { maxTokens: MAX_TOKENS, system: RELATIONSHIP_SYSTEM_PROMPT }
+          { maxTokens: MAX_TOKENS, system: RELATIONSHIP_SYSTEM_PROMPT, attempt } // NFR-OBS-004 (측정)
         )
       );
       try {
@@ -157,6 +157,7 @@ export function cachedVerifier(filePrefix: string, call: GatewayCall, stats?: Ca
         call(RELATIONSHIP_VERIFIER_TASK, prompt, {
           maxTokens: MAX_TOKENS,
           system: RELATIONSHIP_SYSTEM_PROMPT,
+          attempt, // NFR-OBS-004 (측정)
         })
       );
       try {

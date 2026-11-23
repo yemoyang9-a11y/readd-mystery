@@ -80,3 +80,6 @@ frontend/.impeccable/
 evaluation/chatbot-harness/answer-key.local.json
 evaluation/chatbot-harness/results/
 backend/data/uploads/
+
+# AI 원가 측정 결과(토큰·금액·로그) — 커밋하지 않는다 (2026-11-23)
+measurements/

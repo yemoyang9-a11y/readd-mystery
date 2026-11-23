@@ -49,7 +49,7 @@ export function validateReaderText(input: ReaderTextInput, out: string): boolean
 async function rewriteBatch(batch: ReaderTextInput[]): Promise<{ key: string; text: string }[]> {
   const prompt = buildReaderTextPrompt(batch);
   for (let attempt = 1; ; attempt++) {
-    const raw = await call('rewrite_reader_text', prompt, { maxTokens: MAX_TOKENS });
+    const raw = await call('rewrite_reader_text', prompt, { maxTokens: MAX_TOKENS, attempt }); // NFR-OBS-004 (측정)
     try {
       const parsed = parseJsonResponse<{ items?: { key: string; text: string }[] }>(raw);
       return Array.isArray(parsed.items) ? parsed.items : [];

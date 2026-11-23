@@ -227,7 +227,7 @@ async function explainBatch(
 ): Promise<{ key: string; explanation: string }[]> {
   const prompt = buildExplainPrompt(batch);
   for (let attempt = 1; ; attempt++) {
-    const raw = await call(EXPLAIN_TASK, prompt, { maxTokens: MAX_TOKENS });
+    const raw = await call(EXPLAIN_TASK, prompt, { maxTokens: MAX_TOKENS, attempt }); // NFR-OBS-004 (측정)
     try {
       const parsed = parseJsonResponse<{ items?: { key: string; explanation: string }[] }>(raw);
       return Array.isArray(parsed.items) ? parsed.items : [];
