@@ -76,6 +76,9 @@ frontend/.impeccable/
 # Claude Code 로컬 작업 공간 (git worktree 체크아웃 사본 등)
 .claude/*
 !.claude/settings.json
+!.claude/rules/
+.claude/rules/*
+!.claude/rules/pstack-models.md
 
 evaluation/chatbot-harness/answer-key.local.json
 evaluation/chatbot-harness/results/
