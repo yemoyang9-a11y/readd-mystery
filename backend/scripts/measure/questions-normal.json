@@ -1,0 +1,182 @@
+[
+  {
+    "id": "N01",
+    "book": "gasangbeomin",
+    "cutoff": 15,
+    "question": "해왕좌가 어떤 곳이고, 박영민은 거기서 어떤 사람이야?"
+  },
+  {
+    "id": "N02",
+    "book": "gasangbeomin",
+    "cutoff": 15,
+    "question": "연극 『가상범인』 제3막 배역표에 나오는 사람들이 누구누구인지 정리해 줘."
+  },
+  {
+    "id": "N03",
+    "book": "gasangbeomin",
+    "cutoff": 15,
+    "question": "박영민이 죽던 날 밤에 2층에서 어떤 대화가 오갔어?"
+  },
+  {
+    "id": "N04",
+    "book": "gasangbeomin",
+    "cutoff": 15,
+    "question": "경찰이 현장을 조사하고 나서 총알 두 방이 각각 어떻게 됐다고 했어?"
+  },
+  {
+    "id": "N05",
+    "book": "gasangbeomin",
+    "cutoff": 15,
+    "question": "유불란은 어떤 사람이고, 왜 이 연극을 직접 썼어?"
+  },
+  {
+    "id": "N06",
+    "book": "gasangbeomin",
+    "cutoff": 40,
+    "question": "임경부와 백검사는 어떤 사람들이고 사건에서 무슨 역할을 해?"
+  },
+  {
+    "id": "N07",
+    "book": "gasangbeomin",
+    "cutoff": 40,
+    "question": "이몽란은 어떤 사연을 가진 사람이고, 유불란과는 어떤 사이야?"
+  },
+  {
+    "id": "N08",
+    "book": "gasangbeomin",
+    "cutoff": 40,
+    "question": "유불란이 읽은 에도가와 란포의 『황금가면』은 어떤 이야기야?"
+  },
+  {
+    "id": "N09",
+    "book": "gasangbeomin",
+    "cutoff": 40,
+    "question": "유불란이 비밀 회합에 몰래 들어갔을 때 어떤 일이 있었는지 알려줘."
+  },
+  {
+    "id": "N10",
+    "book": "gasangbeomin",
+    "cutoff": 40,
+    "question": "지금까지 읽은 부분을 간단히 다시 정리해 줘."
+  },
+  {
+    "id": "N11",
+    "book": "gasangbeomin",
+    "cutoff": 68,
+    "question": "복향단은 어떤 단체야?"
+  },
+  {
+    "id": "N12",
+    "book": "gasangbeomin",
+    "cutoff": 68,
+    "question": "백검사가 나용귀를 추궁할 때 꺼낸 사진이 어떤 사진인지 설명해 줘."
+  },
+  {
+    "id": "N13",
+    "book": "gasangbeomin",
+    "cutoff": 68,
+    "question": "임경부가 11월 23일 오후 9시 34분을 두고 나용귀의 알리바이를 따져 보는 대목을 쉽게 설명해 줘."
+  },
+  {
+    "id": "N14",
+    "book": "gasangbeomin",
+    "cutoff": 68,
+    "question": "임경부와 백검사가 산속 방에서 발견한 것들이 뭐였는지 알려줘."
+  },
+  {
+    "id": "N15",
+    "book": "gasangbeomin",
+    "cutoff": 68,
+    "question": "처음부터 지금까지 읽은 내용을 장면 순서대로 정리해 줘."
+  },
+  {
+    "id": "N16",
+    "book": "main",
+    "cutoff": 60,
+    "question": "공작부인은 누구야? 본명이랑 어떤 사람인지 알려줘."
+  },
+  {
+    "id": "N17",
+    "book": "main",
+    "cutoff": 60,
+    "question": "가장무도회 날 밤에 공작부인에게 어떤 일이 있었는지 순서대로 말해 줘."
+  },
+  {
+    "id": "N18",
+    "book": "main",
+    "cutoff": 60,
+    "question": "빨간 봉투는 어떤 장면에서 나왔고, 누가 누구에게 건넸어?"
+  },
+  {
+    "id": "N19",
+    "book": "main",
+    "cutoff": 60,
+    "question": "백영호는 어떤 사람이고 공작부인과는 어떤 관계야?"
+  },
+  {
+    "id": "N20",
+    "book": "main",
+    "cutoff": 60,
+    "question": "해월은 누구야? 공작부인과 무슨 사연이 있어?"
+  },
+  {
+    "id": "N21",
+    "book": "main",
+    "cutoff": 160,
+    "question": "유불란 탐정은 어떻게 사건에 관여하게 됐어?"
+  },
+  {
+    "id": "N22",
+    "book": "main",
+    "cutoff": 160,
+    "question": "오상억 변호사는 어떤 인물이야? 어린 시절은 어땠어?"
+  },
+  {
+    "id": "N23",
+    "book": "main",
+    "cutoff": 160,
+    "question": "황세민 교장은 이야기에서 어떤 역할을 하고, 어떤 점이 수상해?"
+  },
+  {
+    "id": "N24",
+    "book": "main",
+    "cutoff": 160,
+    "question": "백남수의 수첩에 적혀 있던 부부암의 비밀 장면에서 무슨 일이 있었는지 알려줘."
+  },
+  {
+    "id": "N25",
+    "book": "main",
+    "cutoff": 160,
+    "question": "백영호가 죽던 날 밤의 일을 순서대로 정리해 줘."
+  },
+  {
+    "id": "N26",
+    "book": "main",
+    "cutoff": 304,
+    "question": "처음부터 지금까지 읽은 내용을 장 순서대로 정리해 줘."
+  },
+  {
+    "id": "N27",
+    "book": "main",
+    "cutoff": 304,
+    "question": "황치인이라는 인물은 누구고, 어느 장면에서 나와?"
+  },
+  {
+    "id": "N28",
+    "book": "main",
+    "cutoff": 304,
+    "question": "정란과 문학수는 어떤 관계로 나오고, 사건 속에서 어떤 일을 겪어?"
+  },
+  {
+    "id": "N29",
+    "book": "main",
+    "cutoff": 304,
+    "question": "이 책에서 임경부는 수사 과정에서 어떤 역할을 해?"
+  },
+  {
+    "id": "N30",
+    "book": "main",
+    "cutoff": 304,
+    "question": "책에서 마인이라는 말은 어떤 뜻으로 쓰여?"
+  }
+]
