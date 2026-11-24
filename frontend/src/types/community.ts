@@ -1,3 +1,5 @@
+import type { ReviewCard } from './review';
+
 /** 목록 정렬 — 최신순(기본) · 인기순(공감 많은 순) (2026-11-18 대표 지시) */
 export type CommunitySort = 'new' | 'popular';
 
@@ -12,6 +14,8 @@ export interface CommunityPost {
   liked_by_me: boolean;
   is_mine: boolean;
   deleted: boolean;
+  /** 공유한 추리 결과지(대표 결정 2026-11-24). 일반 글·지운 글은 null 이거나 없다 */
+  review_card?: ReviewCard | null;
 }
 
 /** 답글 (T19 — 서버 community_comments 한 줄) */

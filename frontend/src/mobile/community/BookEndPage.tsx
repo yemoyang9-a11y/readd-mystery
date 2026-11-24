@@ -34,6 +34,7 @@ export default function BookEndPage({
   returnFocusRef,
   onBack,
   onCommunity,
+  onReview,
   flushProgress,
 }: {
   bookId: string;
@@ -44,6 +45,8 @@ export default function BookEndPage({
   /** N쪽으로 돌아간다 — 이전 페이지·닫기·Esc·오른쪽 밀기 */
   onBack: () => void;
   onCommunity: () => void;
+  /** 내 추리 채점 화면으로 (대표 결정 2026-11-24). 없으면 버튼을 그리지 않는다 */
+  onReview?: () => void;
   /** 마지막 쪽 진도 이벤트가 서버에 저장될 때까지 기다린다 (useReadingSession.flushProgress) */
   flushProgress?: () => Promise<void>;
 }) {
@@ -70,6 +73,14 @@ export default function BookEndPage({
   /** 진도 저장을 기다린다. 실패해도 막지 않는다 — 막을지는 서버 관문이 정한다 */
   async function flush() {
     await flushProgress?.().catch(() => undefined);
+  }
+
+  // 채점 관문도 서버가 저장된 가장 먼 쪽으로 정한다 — 마지막 쪽 진도가 저장되기를 기다린다
+  async function goReview() {
+    if (leaving || !onReview) return;
+    setLeaving(true);
+    await flush();
+    onReview();
   }
 
   async function goCommunity() {
@@ -254,6 +265,18 @@ export default function BookEndPage({
               </p>
             ) : null}
           </section>
+
+          {onReview ? (
+            <button
+              type="button"
+              data-track="end-page-review"
+              disabled={leaving}
+              onClick={() => void goReview()}
+              className="mt-5 h-[52px] w-full rounded-full border border-[#c4475f] text-[16px] font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d0a0b]"
+            >
+              내 추리 채점하기
+            </button>
+          ) : null}
 
           <button
             ref={primaryRef}

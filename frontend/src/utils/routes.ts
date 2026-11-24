@@ -5,6 +5,8 @@ export const BOOK_ROUTES = {
   briefing: '/books/:bookId/briefing',
   reader: '/books/:bookId/read',
   community: '/books/:bookId/community',
+  /** 추리 채점 — 완독 뒤 내 추리 돌아보기 (대표 결정 2026-11-24) */
+  review: '/books/:bookId/review',
 } as const;
 
 export const APP_ROUTES = {
@@ -20,6 +22,10 @@ export const APP_ROUTES = {
 
 export function briefingPath(bookId: string): string {
   return BOOK_ROUTES.briefing.replace(':bookId', bookId);
+}
+
+export function reviewPath(bookId: string): string {
+  return BOOK_ROUTES.review.replace(':bookId', bookId);
 }
 
 export function bookPath(bookId: string): string {

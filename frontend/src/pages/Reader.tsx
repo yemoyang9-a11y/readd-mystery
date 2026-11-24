@@ -92,6 +92,8 @@ function ReadingSession() {
     setEndPageOpen(true);
   }, []);
   const openCommunity = () => navigate(BOOK_ROUTES.community.replace(':bookId', bookId));
+  // 대표 결정 2026-11-24 — 책 끝 화면에서 내 추리 채점으로
+  const openReview = () => navigate(BOOK_ROUTES.review.replace(':bookId', bookId));
   const [prefsOpen, setPrefsOpen] = useState(false);
   const prefsButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -297,6 +299,7 @@ function ReadingSession() {
           returnFocusRef={endPageReturnRef}
           onBack={() => setEndPageOpen(false)}
           onCommunity={openCommunity}
+          onReview={openReview}
           flushProgress={flushProgress}
         />
       ) : null}

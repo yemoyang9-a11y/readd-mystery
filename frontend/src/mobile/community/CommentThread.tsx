@@ -13,6 +13,7 @@ import {
   type CommunityFailure,
 } from '../../services/communityService';
 import CommentRow from './CommentRow';
+import ReviewCardView from '../review/ReviewCardView';
 import { DeleteDialog, ReportDialog } from './CommunityConfirmDialogs';
 
 export type ReplyTarget = { postId: string; commentId: string | null; nickname: string };
@@ -135,7 +136,9 @@ export default function CommentThread({
       <CommentRow
         variant="comment"
         nickname={head.nickname}
-        body={head.body}
+        // 결과지 글은 카드의 한마디를 본문으로 쓴다. 한마디가 없으면 본문 칸은 비운다
+        body={head.review_card && !head.deleted ? (head.review_card.message ?? '') : head.body}
+        attachment={head.review_card ? <ReviewCardView card={head.review_card} /> : null}
         createdAt={head.created_at}
         likeCount={head.like_count}
         likedByMe={head.liked_by_me}

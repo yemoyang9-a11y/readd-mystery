@@ -16,6 +16,7 @@ import type {
   CommunityPostDetail,
   CommunityPostPage,
   CommunitySort,
+  ReviewCard,
 } from '../src/types';
 
 const PAGE_SIZE = 20;
@@ -31,6 +32,7 @@ interface StoredPost {
   created_at: string;
   deleted: boolean;
   likes: Set<string>;
+  review_card?: ReviewCard | null;
 }
 
 interface StoredComment {
@@ -98,6 +100,18 @@ function seedComment(
   seedComment(moon, '달빛서재', '네, 그래서 더 오래 남는 것 같아요', 48, night);
   seedComment(moon, '정독파', '군산 부두 장면 저도 기억나요', 8);
   seed('takryu', '밤샘독서', '마지막 장 읽고 첫 장을 다시 펼쳤어요', 12, []);
+  seed('takryu', '추리하는고양이', '범인은 맞혔는데 동기는 완전히 빗나갔어요', 6, ['a', 'b']).review_card = {
+    version: 1,
+    title: '조수',
+    counts: { hypothesis: { hit: 1, partial: 1, miss: 1, total: 3 }, clue: { key: 1, related: 1, unrelated: 0, total: 2 } },
+    early_pages: 120,
+    timing_verified: true,
+    message: '범인은 맞혔는데 동기는 완전히 빗나갔어요',
+    notes: [
+      { kind: 'hypothesis', page_no: 84, body: '태수가 은행 돈에 손을 댄 것 같다', verdict: 'hit', explanation: '태수의 횡령이 뒤에서 드러나요.', evidence_page: 204 },
+      { kind: 'hypothesis', page_no: 130, body: '초봉이는 끝까지 군산에 남을 것이다', verdict: 'miss', explanation: '초봉이는 서울로 떠나요.', evidence_page: 170 },
+    ],
+  };
 }
 
 function reject(status: number, data?: unknown): never {
@@ -126,6 +140,7 @@ function view(post: StoredPost): CommunityPost {
     liked_by_me: !post.deleted && post.likes.has(ME),
     is_mine: !post.deleted && post.author === ME,
     deleted: post.deleted,
+    review_card: post.deleted ? null : (post.review_card ?? null),
   };
 }
 
@@ -181,6 +196,21 @@ function replyView(post: StoredPost, c: StoredComment): CommunityComment {
 export function mockCreatePost(bookId: string, body: string): CommunityPost {
   gate(bookId);
   return view(seed(bookId, ME, body, 0, []));
+}
+
+/** 결과지 공유 대역 — 독자·책당 보이는 결과지 하나 (서버 마이그레이션 030 색인 흉내) */
+export function mockCreateReviewPost(bookId: string, message: string | null, card: ReviewCard): CommunityPost {
+  gate(bookId);
+  if (posts.some((p) => p.book_id === bookId && p.author === ME && p.review_card && !p.deleted)) {
+    reject(409, { error: 'ALREADY_SHARED' });
+  }
+  const post = seed(bookId, ME, message ?? '내 추리 결과지를 공유했어요', 0, []);
+  post.review_card = card;
+  return view(post);
+}
+
+export function mockMyReviewPostId(bookId: string): string | null {
+  return posts.find((p) => p.book_id === bookId && p.author === ME && p.review_card && !p.deleted)?.post_id ?? null;
 }
 
 export function mockDeletePost(bookId: string, postId: string): void {

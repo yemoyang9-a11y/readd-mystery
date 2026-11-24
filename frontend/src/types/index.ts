@@ -8,6 +8,7 @@ export * from './progress';
 export * from './ssabi';
 export * from './notes';
 export * from './community';
+export * from './review';
 
 /** 공통 에러 응답 (API_CONTRACT.md '에러 응답'). 코드는 전부 대문자 상수 (R2 확인, 8/20) */
 export interface ApiError {

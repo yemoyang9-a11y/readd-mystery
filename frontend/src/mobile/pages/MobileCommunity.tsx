@@ -278,6 +278,20 @@ export function CommunityScreen({
             </div>
           </div>
           <div className="mx-4 h-px bg-[linear-gradient(90deg,#c4475f,#35292c_40%,#35292c)]" />
+          {ready ? (
+            <div className="px-4 pt-3">
+              {/* 대표 결정 2026-11-24 — 내 추리 채점·결과지 공유로. 관문은 채점 화면이 서버에 다시 묻는다 */}
+              <button
+                type="button"
+                data-track="community-review"
+                onClick={() => navigate(BOOK_ROUTES.review.replace(':bookId', bookId))}
+                className="flex min-h-11 w-full items-center justify-between rounded-[12px] border border-[#35292c] bg-[#1e1618] px-4 text-[15px] font-bold text-[#ece6e0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b]"
+              >
+                <span>내 추리 채점하고 결과지 공유하기</span>
+                <span aria-hidden="true" className="text-[17px] text-[#e58a9b]">›</span>
+              </button>
+            </div>
+          ) : null}
 
           {status === 'loading' ? (
             <p role="status" className="m-0 px-5 py-12 text-center text-[14px] text-[#b5aaa6]">

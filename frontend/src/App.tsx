@@ -87,6 +87,11 @@ export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
                 path: BOOK_ROUTES.community,
                 lazy: async () => ({ Component: (await import('./pages/BookCommunity')).default }),
               },
+              // 대표 결정 2026-11-24 — 내 추리 채점. 관문은 서버가 정한다 (FR-QNA-004 🚦)
+              {
+                path: BOOK_ROUTES.review,
+                lazy: async () => ({ Component: (await import('./pages/BookNoteReview')).default }),
+              },
             ],
           },
         ]),
@@ -105,7 +110,10 @@ export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
       lazy: () => fadedPage(isMobile ? import('./mobile/pages/MobileReader') : import('./pages/Reader')),
     },
     ...(isMobile
-      ? [{ path: BOOK_ROUTES.community, lazy: () => fadedPage(import('./mobile/pages/MobileCommunity')) }]
+      ? [
+          { path: BOOK_ROUTES.community, lazy: () => fadedPage(import('./mobile/pages/MobileCommunity')) },
+          { path: BOOK_ROUTES.review, lazy: () => fadedPage(import('./mobile/pages/MobileNoteReview')) },
+        ]
       : []),
     { path: LOGIN_PATH, element: <Login /> },
     // 대표 지시 2026-11-18 — 카카오·구글 첫 로그인 뒤 약관 동의 (research-2026-11-18-signup-fields.md 4장)

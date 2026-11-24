@@ -1,4 +1,4 @@
-import type { Ref } from 'react';
+import type { ReactNode, Ref } from 'react';
 import { relativeTime } from './communityFormat';
 
 const AVATAR_TONES = [
@@ -57,6 +57,8 @@ export interface CommentRowProps {
   highlighted?: boolean;
   deleted?: boolean;
   menuRef?: Ref<HTMLButtonElement>;
+  /** 본문 아래에 붙는 것 — 공유한 추리 결과지 카드 (대표 결정 2026-11-24) */
+  attachment?: ReactNode;
   /** 없으면 "답글 달기"를 그리지 않는다 — 삭제된 댓글 묶음은 서버가 답글을 받지 않는다 */
   onReply?: () => void;
   onToggleLike: () => void;
@@ -77,6 +79,7 @@ export default function CommentRow({
   highlighted = false,
   deleted = false,
   menuRef,
+  attachment = null,
   onReply,
   onToggleLike,
   onDelete,
@@ -109,6 +112,7 @@ export default function CommentRow({
           {replyToNickname ? ' ' : null}
           {body}
         </p>
+        {deleted ? null : attachment}
         {deleted ? null : (
           <div className="mt-1 flex flex-wrap items-center gap-x-3.5 text-[13px] text-[#b5aaa6]">
             <span>{relativeTime(createdAt).replace(/ 전$/, '')}</span>
