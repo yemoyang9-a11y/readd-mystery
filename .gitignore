@@ -79,6 +79,11 @@ frontend/.impeccable/
 !.claude/rules/
 .claude/rules/*
 !.claude/rules/pstack-models.md
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/design-taste-frontend/
+!.claude/skills/redesign-existing-projects/
+!.claude/skills/ui-ux-pro-max-ux/
 
 evaluation/chatbot-harness/answer-key.local.json
 evaluation/chatbot-harness/results/
