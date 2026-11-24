@@ -171,3 +171,61 @@ describe('2026-11-18: 관계 추출은 Claude 구독(CLI)으로만 — OpenAI AP
     expect(JSON.parse(metric![1])).toMatchObject({ provider: 'claude-cli', failed: true });
   });
 });
+
+/**
+ * 2026-11-24 대표 지시 — API 제공자는 챗봇·리캡만 부른다. 등록(사전 생성) 작업은 전부 Claude 구독(CLI).
+ * 새 작업 이름이 생겨도 API로 새지 않게, API 작업은 허용 목록(chatbot·recap)으로만 정한다.
+ */
+const REGISTRATION_TASKS = [
+  'generate_summary',
+  'generate_character',
+  'generate_term',
+  'generate_background',
+  'generate_event',
+  'generate_event_scene_boundary',
+  'generate_summary_grounding',
+  'generate_chapter_key_point',
+  'rewrite_reader_text',
+  'generate_relationship',
+  'generate_relationship_verifier',
+  'explain_relation',
+];
+
+describe('2026-11-24: API 호출은 챗봇·리캡만 — 등록 작업은 전부 Claude 구독(CLI)', () => {
+  test.each(REGISTRATION_TASKS)('%s 는 CLI로 가고 API를 부르지 않는다', async (task) => {
+    const gateway = loadGateway({ CLAUDE_CLI_BIN: fakeBin, OPENAI_API_KEY: 'test-key' });
+    const OpenAI = gateway.OpenAI;
+    await gateway.call(task, '등록 프롬프트');
+    expect(calls()).toHaveLength(1);
+    const created = OpenAI.mock.results.at(-1)!.value.responses.create as jest.Mock;
+    expect(created).not.toHaveBeenCalled();
+    const metric = log.mock.calls.find(([tag]) => tag === '[LLM Metrics]');
+    expect(JSON.parse(metric![1])).toMatchObject({ task, provider: 'claude-cli' });
+  });
+
+  test('목록에 없는 작업 이름도 API로 가지 않는다 — CLI로 보내고 경고를 남긴다', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation();
+    const gateway = loadGateway({ CLAUDE_CLI_BIN: fakeBin, OPENAI_API_KEY: 'test-key' });
+    const OpenAI = gateway.OpenAI;
+    await gateway.call('generate_something_new', 'p');
+    expect(calls()).toHaveLength(1);
+    const created = OpenAI.mock.results.at(-1)!.value.responses.create as jest.Mock;
+    expect(created).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('generate_something_new'));
+  });
+
+  test.each(['chatbot', 'recap'])('positive 쌍 — %s 는 API 제공자로 가고 CLI를 부르지 않는다', async (task) => {
+    const gateway = loadGateway({ CLAUDE_CLI_BIN: fakeBin, OPENAI_API_KEY: 'test-key' });
+    expect(await gateway.call(task, '질문')).toBe('api answer');
+    expect(calls()).toHaveLength(0);
+  });
+
+  test('API 키가 없어도 등록 작업은 CLI로 돈다 — 챗봇은 키 부재로 멈춘다(다른 제공자로 넘어가지 않음)', async () => {
+    const gateway = loadGateway({ CLAUDE_CLI_BIN: fakeBin, OPENAI_API_KEY: undefined, MOCK_MODE: 'false' });
+    await expect(gateway.call('generate_summary', 'p')).resolves.toContain('relations');
+    await expect(gateway.call('chatbot', '질문')).rejects.toThrow(
+      'Missing required environment variable: OPENAI_API_KEY'
+    );
+    expect(calls()).toHaveLength(1);
+  });
+});

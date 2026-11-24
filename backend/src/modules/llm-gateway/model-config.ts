@@ -38,45 +38,18 @@ if (LLM_PROVIDER === 'openai' && !VALID_OPENAI_EFFORTS.includes(DEFAULT_EFFORT))
 export const EFFORT_ENABLED = DEFAULT_EFFORT !== '';
 
 /**
- * NFR-AI-001: API 제공자(LLM_PROVIDER)로 가는 작업 → 모델. 관계 추출(generate_relationship*)은 여기 없다 —
- * 2026-11-18 대표 지시로 OpenAI 경로를 지우고 Claude 구독(CLAUDE_CLI_TASKS)으로만 간다.
+ * NFR-AI-001, R9: API 제공자(LLM_PROVIDER)로 가는 작업 → 모델. 챗봇·리캡 둘뿐이다.
+ * 2026-11-24 대표 지시로 책 등록(사전 생성) 작업은 전부 Claude 구독(claude-cli-provider.ts LLM_API_TASKS)으로 간다.
  */
 export const MODEL_CONFIG = {
   chatbot: DEFAULT_MODEL,
   recap: DEFAULT_MODEL,
-  generate_summary: DEFAULT_MODEL,
-  generate_character: DEFAULT_MODEL,
-  generate_background: DEFAULT_MODEL,
-  generate_term: DEFAULT_MODEL,
-  generate_event: DEFAULT_MODEL,
-  rewrite_reader_text: DEFAULT_MODEL,
 } as const;
 
-/**
- * NFR-OBS-004: 지표에서만 따로 세는 작업 이름 → 모델을 빌려 쓰는 작업.
- *
- * MODEL_CONFIG 에 키를 더하지 않는 이유 — 배치 장 캐시의 계약 문자열이 MODEL_CONFIG 를 통째로
- * 담는다(run-generate-full.ts). 키가 늘면 이미 생성·검수한 결과가 전부 "낡은 캐시"가 되어
- * 다시 생성해야 한다. 모델은 같으므로 이름만 나눈다.
- */
-const METRIC_TASK_ALIASES: Record<string, keyof typeof MODEL_CONFIG> = {
-  generate_event_scene_boundary: 'generate_event',
-  // FR-DAT-003 — 장 요약 문장별 근거 확인 (batch/pipeline/summary-grounding.ts)
-  generate_summary_grounding: 'generate_summary',
-  // 결정 31 — 타임라인 장 핵심 한 줄 (batch/pipeline/chapter-key-point.ts)
-  generate_chapter_key_point: 'generate_summary',
-  // 관계 설명문 — EXPLAIN_RELATION_VIA_API=true 일 때만 여기로 온다(claude-cli-provider.ts, 측정 2026-11-23)
-  explain_relation: 'generate_summary',
-};
-
 export function getModelForTask(task: string): string {
+  // API 작업(챗봇·리캡)이 아니면 전부 Claude 구독 모델 — 알 수 없는 이름은 isClaudeCliTask가 경고한다
   if (isClaudeCliTask(task)) return CLAUDE_CLI_CONFIG.model;
-  const model = MODEL_CONFIG[(METRIC_TASK_ALIASES[task] ?? task) as keyof typeof MODEL_CONFIG];
-  if (!model) {
-    console.warn(`Unknown task: ${task}, falling back to default model`);
-    return DEFAULT_MODEL;
-  }
-  return model;
+  return MODEL_CONFIG[task as keyof typeof MODEL_CONFIG];
 }
 
 /** NFR-AI-002: log the configured provider/model and validate only its credentials. */

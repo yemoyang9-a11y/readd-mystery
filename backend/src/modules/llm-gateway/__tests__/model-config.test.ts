@@ -39,83 +39,45 @@ describe('NFR-AI-001: provider and model configuration', () => {
     expect(config.EFFORT_ENABLED).toBe(true);
   });
 
-  test('all runtime and batch tasks use the configured model without a query-dependent fallback', () => {
+  test('2026-11-24: API 모델 설정에는 챗봇·리캡만 있고 둘 다 선택한 모델을 쓴다', () => {
     const config = load({ LLM_PROVIDER: 'openai', OPENAI_MODEL: 'test-openai-model' });
-    expect(Object.keys(config.MODEL_CONFIG)).toEqual([
-      'chatbot',
-      'recap',
-      'generate_summary',
-      'generate_character',
-      'generate_background',
-      'generate_term',
-      'generate_event',
-      'rewrite_reader_text',
-    ]);
+    expect(Object.keys(config.MODEL_CONFIG)).toEqual(['chatbot', 'recap']);
     expect(new Set(Object.values(config.MODEL_CONFIG))).toEqual(new Set(['test-openai-model']));
   });
 
-  test('NFR-OBS-004: 장면 경계 작업 이름은 사건 추출과 같은 모델을 쓰고 경고 없이 통과한다', () => {
-    const config = load({ LLM_PROVIDER: 'openai', OPENAI_MODEL: 'test-openai-model' });
-    const warn = jest.spyOn(console, 'warn').mockImplementation();
-    expect(config.getModelForTask('generate_event_scene_boundary')).toBe(
-      config.MODEL_CONFIG.generate_event
-    );
-    expect(warn).not.toHaveBeenCalled();
-    // 장 캐시 계약이 MODEL_CONFIG 를 통째로 담으므로 키를 늘리지 않는다 (기존 생성 결과 재사용)
-    expect(Object.keys(config.MODEL_CONFIG)).not.toContain('generate_event_scene_boundary');
-    warn.mockRestore();
-  });
-
-  test('NFR-OBS-004: 장 요약 근거 확인 작업 이름은 장 요약과 같은 모델을 쓰고 경고 없이 통과한다', () => {
-    const config = load({ LLM_PROVIDER: 'openai', OPENAI_MODEL: 'test-openai-model' });
-    const warn = jest.spyOn(console, 'warn').mockImplementation();
-    expect(config.getModelForTask('generate_summary_grounding')).toBe(
-      config.MODEL_CONFIG.generate_summary
-    );
-    expect(warn).not.toHaveBeenCalled();
-    // 장 캐시 계약이 MODEL_CONFIG 를 통째로 담으므로 키를 늘리지 않는다 (기존 생성 결과 재사용)
-    expect(Object.keys(config.MODEL_CONFIG)).not.toContain('generate_summary_grounding');
-    warn.mockRestore();
-  });
-
-  test('2026-11-20: 관계 카드 설명 배치는 Claude 구독(CLI) 모델을 쓰고 경고 없이 통과한다', () => {
-    const config = load({ LLM_PROVIDER: 'openai', OPENAI_MODEL: 'test-openai-model' });
-    const warn = jest.spyOn(console, 'warn').mockImplementation();
-    expect(config.getModelForTask('explain_relation')).not.toBe('test-openai-model');
-    expect(warn).not.toHaveBeenCalled();
-    expect(Object.keys(config.MODEL_CONFIG)).not.toContain('explain_relation');
-    warn.mockRestore();
-  });
-
-  test('NFR-OBS-004: 장 핵심 한 줄 작업 이름은 장 요약과 같은 모델을 쓰고 경고 없이 통과한다', () => {
-    const config = load({ LLM_PROVIDER: 'openai', OPENAI_MODEL: 'test-openai-model' });
-    const warn = jest.spyOn(console, 'warn').mockImplementation();
-    expect(config.getModelForTask('generate_chapter_key_point')).toBe(
-      config.MODEL_CONFIG.generate_summary
-    );
-    expect(warn).not.toHaveBeenCalled();
-    expect(Object.keys(config.MODEL_CONFIG)).not.toContain('generate_chapter_key_point');
-    warn.mockRestore();
-  });
-
-  test('2026-11-18: 관계 추출 작업은 API 모델 설정에 없고 Claude 구독(CLI) 모델을 쓴다', () => {
+  test.each([
+    'generate_summary',
+    'generate_character',
+    'generate_term',
+    'generate_background',
+    'generate_event',
+    'generate_event_scene_boundary',
+    'generate_summary_grounding',
+    'generate_chapter_key_point',
+    'rewrite_reader_text',
+    'generate_relationship',
+    'generate_relationship_verifier',
+    'explain_relation',
+  ])('2026-11-24: 등록 작업 %s 는 Claude 구독(CLI) 모델을 쓰고 경고 없이 통과한다', (task) => {
     const config = load({
       LLM_PROVIDER: 'openai',
       OPENAI_MODEL: 'test-openai-model',
       CLAUDE_CLI_MODEL: 'test-claude-model',
     });
     const warn = jest.spyOn(console, 'warn').mockImplementation();
-    expect(Object.keys(config.MODEL_CONFIG)).not.toContain('generate_relationship');
-    expect(config.getModelForTask('generate_relationship')).toBe('test-claude-model');
-    expect(config.getModelForTask('generate_relationship_verifier')).toBe('test-claude-model');
-    expect(config.getModelForTask('generate_relationship')).not.toBe('test-openai-model');
+    expect(config.getModelForTask(task)).toBe('test-claude-model');
+    expect(Object.keys(config.MODEL_CONFIG)).not.toContain(task);
     expect(warn).not.toHaveBeenCalled();
   });
 
-  test('unknown task warns and uses the same selected provider model', () => {
-    const config = load({ LLM_PROVIDER: 'openai', OPENAI_MODEL: 'test-openai-model' });
+  test('unknown task warns and goes to the Claude subscription model, never the API model', () => {
+    const config = load({
+      LLM_PROVIDER: 'openai',
+      OPENAI_MODEL: 'test-openai-model',
+      CLAUDE_CLI_MODEL: 'test-claude-model',
+    });
     const warn = jest.spyOn(console, 'warn').mockImplementation();
-    expect(config.getModelForTask('unknown-task')).toBe('test-openai-model');
+    expect(config.getModelForTask('unknown-task')).toBe('test-claude-model');
     expect(warn).toHaveBeenCalledTimes(1);
   });
 

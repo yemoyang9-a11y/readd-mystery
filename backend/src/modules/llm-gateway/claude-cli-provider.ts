@@ -16,26 +16,44 @@ import * as os from 'os';
 import * as path from 'path';
 
 /**
- * 2026-11-18 대표 지시 — 관계 추출은 API 키가 아니라 Claude 구독 플랜(Claude Code CLI)으로 돌린다.
- * 이 작업 이름은 API 제공자(OpenAI·Anthropic API)로 절대 가지 않는다(gateway.ts). 실패해도 다른 제공자로 넘어가지 않는다.
- *  - generate_relationship: 근거 창 관계 질문지(batch/pipeline/relationship-labeling.ts)
- *  - generate_relationship_verifier: 반대 검토자(batch/pipeline/relationship-verification.ts)
+ * 2026-11-24 대표 지시 — API 제공자(OpenAI·Anthropic API)는 챗봇·리캡만 부른다(R9의 런타임 호출 2종).
+ * 그 밖의 모든 작업, 곧 책 등록(사전 생성) 단계는 Claude 구독 플랜(Claude Code CLI)으로만 간다.
+ * (2026-11-18 결정은 관계 추출만 구독이었다. 2026-11-24에 등록 단계 전체로 넓혔다)
+ *
+ * 허용 목록 방식이다: API로 갈 수 있는 작업 이름은 LLM_API_TASKS 둘뿐이고, 나머지는 이름과 상관없이 CLI로 간다.
+ * 새 작업 이름이 생겨도 API로 새지 않는다. 실패해도 다른 제공자로 넘어가지 않는다(gateway.ts).
+ * CLI에는 스트리밍 경로가 없으므로 챗봇·리캡(스트리밍)은 이 목록에서 빼면 안 된다.
+ */
+export const LLM_API_TASKS: readonly string[] = ['chatbot', 'recap'];
+
+/**
+ * Claude 구독(CLI)으로 가는 알려진 등록 작업. 라우팅은 LLM_API_TASKS로만 정하고, 이 목록은 경고용이다 —
+ * 여기에도 LLM_API_TASKS에도 없는 이름은 오타일 수 있어 경고를 남기고 CLI로 보낸다(API로 보내지 않는다).
+ *  - 장 생성: 요약·인물·용어·배경·사건(장면 나누기 포함)·요약 근거 (batch/pipeline/run-generate-full.ts)
+ *  - 독자용 문장 다시 쓰기 (reader-text.ts), 장 핵심 한 문장 (run-generate-key-points.ts)
+ *  - 관계 판정·반대 검토 (relationship-structural-calls.ts), 관계 설명문 (relation-explain.ts)
  */
 export const CLAUDE_CLI_TASKS: readonly string[] = [
+  'generate_summary',
+  'generate_character',
+  'generate_term',
+  'generate_background',
+  'generate_event',
+  'generate_event_scene_boundary',
+  'generate_summary_grounding',
+  'generate_chapter_key_point',
+  'rewrite_reader_text',
   'generate_relationship',
   'generate_relationship_verifier',
   'explain_relation',
 ];
 
-/**
- * AI 원가 측정(2026-11-23, measure/ai-cost 브랜치): 관계 설명문은 측정 때 API 제공자로 보낸다는 사용자 지시.
- * EXPLAIN_RELATION_VIA_API=true 일 때만 바뀌고 기본값은 그대로 Claude 구독이다. 관계 판정·반대 검토는
- * 이 스위치와 무관하게 항상 Claude 구독이다(FR-CHR-001 🚦, 2026-11-18 대표 지시).
- */
 export function isClaudeCliTask(task: string): boolean {
-  if (task === 'explain_relation' && process.env.EXPLAIN_RELATION_VIA_API?.trim() === 'true')
-    return false;
-  return CLAUDE_CLI_TASKS.includes(task);
+  if (LLM_API_TASKS.includes(task)) return false;
+  if (!CLAUDE_CLI_TASKS.includes(task)) {
+    console.warn(`[LLM Gateway] 알 수 없는 작업 "${task}" — API로 보내지 않고 Claude 구독(CLI)으로 보낸다`);
+  }
+  return true;
 }
 
 function positiveInt(value: string | undefined, fallback: number): number {

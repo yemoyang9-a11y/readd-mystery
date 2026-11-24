@@ -29,7 +29,7 @@
 | 수익 모델 | 구독형. 월 9,900원, 첫 달 무료. 출판사 정산 50%는 협의 전 제안값 | 29, 30, 35 |
 | 출시 방식 | 무료 시연 없이 유료 출시. 수요는 유료 전환율·유지율로 확인 | 30 |
 | 화면 기준 | 휴대폰 우선 (태블릿 가로 기준에서 2026-11-06 전환) | 모바일 설계 |
-| 기술 | Cloudflare Pages + Fly.io + Supabase(PostgreSQL + pgvector) + OpenAI Responses API(`gpt-6-luna`, low, 코드 기본값) + Cohere embed-v4 | — |
+| 기술 | Cloudflare Pages + Fly.io + Supabase(PostgreSQL + pgvector) + OpenAI Responses API(`gpt-6-luna`, low, 코드 기본값 — 챗봇·리캡만) + Claude 구독 CLI(책 등록 단계 전부, 2026-11-24, `measure/ai-cost` 브랜치) + Cohere embed-v4 | 동기화 대기 2026-11-24 |
 | 데모·검증 작품 | 김내성 「가상범인」 → 「타원형의 거울」 → 「마인」 (저작권 만료). 「탁류」는 기술 검증용 | 파이프라인 설계 3장 |
 | 사업 일정 | 모두의 창업 1R 사업계획서 마감 2026-12-01 13시. 로드맵은 라운드 기준으로 짜지 않는다 | — |
 

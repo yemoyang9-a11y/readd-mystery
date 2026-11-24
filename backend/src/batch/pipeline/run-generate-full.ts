@@ -20,7 +20,7 @@ dotenv.config();
 import * as fs from 'fs';
 import * as path from 'path';
 import { call } from '../../modules/llm-gateway/gateway';
-import { LLM_PROVIDER, MODEL_CONFIG, DEFAULT_EFFORT } from '../../modules/llm-gateway/model-config';
+import { CLAUDE_CLI_CONFIG } from '../../modules/llm-gateway/claude-cli-provider';
 import { splitBook } from './split';
 import {
   buildSummaryPrompt,
@@ -131,15 +131,23 @@ async function callJson<T>(
   }
 }
 
+/**
+ * 장 캐시 계약에 넣는 생성기 — 2026-11-24 대표 지시로 등록 단계는 전부 Claude 구독(CLI)으로 간다.
+ * 예전 캐시(API 모델로 만든 것)는 계약이 달라 낡은 캐시로 멈춘다. 다른 모델 결과가 섞이지 않게 하는 것이 목적이다.
+ */
+const GENERATOR = {
+  provider: 'claude-cli',
+  model: CLAUDE_CLI_CONFIG.model,
+  effort: CLAUDE_CLI_CONFIG.effort ?? '',
+};
+
 /** 인자 없는 기본값(takryu) — 장 캐시를 읽는 export 함수의 기본 디렉터리 */
 const DEFAULT_OUT_DIR = parseBookArgs([]).fullDir;
 const EXTRACTION_CONTRACT = JSON.stringify({
   characterPrompt: buildCharacterPrompt.toString(),
   // 관계는 장 캐시에 없다 — 구조 방식 + Claude 구독(STRUCTURAL_CONTRACT, 2026-11-18)
   relationshipMethod: 'structural-claude-cli',
-  provider: LLM_PROVIDER,
-  models: MODEL_CONFIG,
-  effort: DEFAULT_EFFORT,
+  generator: GENERATOR,
 });
 
 // FR-CHR-001 🚦
@@ -159,9 +167,7 @@ const EVENT_EXTRACTION_CONTRACT = JSON.stringify({
   version: EVENT_EXTRACTION_VERSION,
   sceneBoundaryPrompt: buildSceneBoundaryPrompt.toString(),
   sceneEventPrompt: buildSceneEventPrompt.toString(),
-  provider: LLM_PROVIDER,
-  models: MODEL_CONFIG,
-  effort: DEFAULT_EFFORT,
+  generator: GENERATOR,
 });
 
 // FR-DAT-003 — 장 요약 근거 확인 계약. 장 캐시·사건 캐시와 따로 봉인해, 이 규칙이 바뀌어도
@@ -169,9 +175,7 @@ const EVENT_EXTRACTION_CONTRACT = JSON.stringify({
 const SUMMARY_GROUNDING_CONTRACT = JSON.stringify({
   version: SUMMARY_GROUNDING_VERSION,
   prompt: buildSummaryGroundingPrompt.toString(),
-  provider: LLM_PROVIDER,
-  models: MODEL_CONFIG,
-  effort: DEFAULT_EFFORT,
+  generator: GENERATOR,
 });
 
 /**

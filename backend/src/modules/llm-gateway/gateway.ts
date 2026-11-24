@@ -2,8 +2,8 @@
  * NFR-AI-001 / 4.3: all model requests pass through this gateway.
  * The call/stream contract is shared by chatbot, recap and batch generation.
  * LLM_PROVIDER selects one API provider; an API failure never switches credentials/models.
- * 관계 추출 작업(CLAUDE_CLI_TASKS)은 API 제공자가 아니라 Claude 구독(Claude Code CLI)으로만 간다 —
- * 2026-11-18 대표 지시. CLI가 실패해도 API로 넘어가지 않는다.
+ * API 제공자로 가는 작업은 챗봇·리캡(LLM_API_TASKS) 둘뿐이다. 책 등록(사전 생성) 작업은 전부 Claude 구독
+ * (Claude Code CLI)으로만 간다 — 2026-11-24 대표 지시(그 전 2026-11-18에는 관계 추출만). CLI가 실패해도 API로 넘어가지 않는다.
  */
 
 import Anthropic from '@anthropic-ai/sdk';

@@ -58,17 +58,24 @@ function fakeRunner(results: (CliRunResult | Error)[]) {
 const noSleep = async () => undefined;
 
 describe('Claude CLI 제공자 — 구독 실행(키 없음)', () => {
-  test('관계 추출 작업 이름만 CLI로 간다', () => {
-    expect(isClaudeCliTask('generate_relationship')).toBe(true);
-    expect(isClaudeCliTask('generate_relationship_verifier')).toBe(true);
+  test('2026-11-24: 챗봇·리캡만 API, 그 밖의 작업 이름은 전부 CLI로 간다', () => {
     for (const task of [
-      'chatbot',
-      'recap',
+      'generate_relationship',
+      'generate_relationship_verifier',
+      'explain_relation',
       'generate_summary',
       'generate_character',
+      'generate_term',
+      'generate_background',
       'generate_event',
+      'generate_event_scene_boundary',
+      'generate_summary_grounding',
+      'generate_chapter_key_point',
+      'rewrite_reader_text',
+      'unknown-task',
     ])
-      expect(isClaudeCliTask(task)).toBe(false);
+      expect(isClaudeCliTask(task)).toBe(true);
+    for (const task of ['chatbot', 'recap']) expect(isClaudeCliTask(task)).toBe(false);
   });
 
   test('-p --output-format json, 도구·MCP·세션 저장 없음, 모델·시스템 프롬프트 지정, 프롬프트는 stdin', async () => {
