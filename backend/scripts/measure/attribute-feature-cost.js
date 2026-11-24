@@ -9,7 +9,7 @@
  *
  * 사용
  *   node scripts/measure/attribute-feature-cost.js --jsonl <a.jsonl> [--jsonl <b.jsonl> ...] \
- *     --metrics <metrics.log> [--server-log <server.log>] [--json out.json] [--csv out.csv] [--slack-ms 300]
+ *     --metrics <metrics.log> [--server-log <server.log>] [--json out.json] [--csv out.csv] [--from ISO] [--to ISO] [--slack-ms 300]
  *
  * 시간 창: [started_at - slack, ended_at + slack]. 게이트웨이는 호출이 끝난 시각을 timestamp 로 적고,
  * 챗봇·리캡은 done 프레임 전에 호출이 끝나므로 창 안에 들어온다. 요청은 순서대로 하나씩 보냈다는 전제다.
@@ -28,6 +28,8 @@ function parseArgs(argv) {
     else if (a === '--server-log') opts.serverLog = argv[++i];
     else if (a === '--json') opts.json = argv[++i];
     else if (a === '--csv') opts.csv = argv[++i];
+    else if (a === '--from') opts.from = argv[++i];
+    else if (a === '--to') opts.to = argv[++i];
     else if (a === '--slack-ms') opts.slackMs = Number(argv[++i]);
     else if (a === '--help' || a === '-h') opts.help = true;
     else throw new Error(`알 수 없는 인자: ${a}`);
@@ -84,7 +86,7 @@ function attribute(rows, metrics, queryLogs, slackMs) {
       r.id + '|' + r.device_id,
       {
         row: r,
-        answer: { calls: 0, retryCalls: 0, input: 0, cacheWrite: 0, cacheRead: 0, output: 0, thinking: 0, usd: 0, failed: 0, stops: {} },
+        answer: { calls: 0, aborted: 0, completedOut: [], retryCalls: 0, input: 0, cacheWrite: 0, cacheRead: 0, output: 0, thinking: 0, usd: 0, failed: 0, stops: {} },
         embed: { calls: 0, billedTokens: 0, usd: 0 },
         otherTasks: {},
         embedNull: 0,
@@ -126,6 +128,8 @@ function attribute(rows, metrics, queryLogs, slackMs) {
     }
     const a = target.answer;
     a.calls++;
+    if (rec.aborted) a.aborted++;
+    else a.completedOut.push(rec.outputTokens ?? 0);
     if ((rec.attempt ?? 1) > 1) a.retryCalls++;
     if (rec.failed) a.failed++;
     a.input += rec.inputTokens ?? 0;
@@ -154,6 +158,8 @@ function attribute(rows, metrics, queryLogs, slackMs) {
       response_chars: r.response_chars,
       answer_calls: t.answer.calls,
       answer_retry_calls: t.answer.retryCalls,
+      aborted_calls: t.answer.aborted,
+      completed_output_tokens: t.answer.completedOut,
       input_tokens: t.answer.input,
       cache_write_tokens: t.answer.cacheWrite,
       cache_read_tokens: t.answer.cacheRead,
@@ -205,6 +211,10 @@ function summarize(items) {
     logical_model_calls: stats(withLog.map((i) => i.logical_model_calls)),
     logical_vs_metrics_mismatch: withLog.filter((i) => i.logical_model_calls !== i.answer_calls).length,
     answer_retry_calls: ok.reduce((a, i) => a + i.answer_retry_calls, 0),
+    aborted_calls: ok.reduce((a, i) => a + i.aborted_calls, 0),
+    aborted_requests: ok.filter((i) => i.aborted_calls > 0).length,
+    total_krw_est: stats(ok.map((i) => i.total_krw_est)),
+    sum_total_krw_est: ok.reduce((a, i) => a + i.total_krw_est, 0),
   };
 }
 
@@ -232,6 +242,12 @@ function toMarkdown(result) {
   };
   table('모드별', result.by_mode);
   table('모드·책·쪽별', result.by_group);
+  lines.push('\n### 끊긴 호출 보정 (하한 = 실측 입력 + 출력 0 / 추정 = 같은 묶음 완료 호출 출력 토큰 중앙값을 출력으로 둠 — 추정)');
+  lines.push('| 묶음 | 건수 | 끊긴 호출(요청) | 하한 평균 원 | 하한 최대 | 추정 평균 원 | 추정 최대 | 하한 합계 | 추정 합계 |');
+  lines.push('|' + ' --- |'.repeat(9));
+  for (const [k, s] of Object.entries(result.by_group)) {
+    lines.push(`| ${k} | ${s.requests} | ${s.aborted_calls}(${s.aborted_requests}) | ${f2(s.total_krw.mean)} | ${f2(s.total_krw.max)} | ${f2(s.total_krw_est.mean)} | ${f2(s.total_krw_est.max)} | ${s.sum_total_krw.toFixed(1)} | ${s.sum_total_krw_est.toFixed(1)} |`);
+  }
   if (Object.keys(result.by_category).length) table('모드·범주별(누설 시험)', result.by_category);
   lines.push(
     `\n귀속 점검: 어떤 창에도 안 속한 metrics 줄 ${result.unattributed}건, 창이 겹친 줄 ${result.ambiguous}건, 서버 로그 모델호출수와 metrics 호출수가 다른 요청 ${result.overall.logical_vs_metrics_mismatch}건, 재시도 호출 ${result.overall.answer_retry_calls}건.`
@@ -241,16 +257,26 @@ function toMarkdown(result) {
 }
 
 function toCsv(items) {
-  const cols = ['id', 'mode', 'book', 'cutoff', 'category', 'error', 'response_chars', 'answer_calls', 'answer_retry_calls', 'input_tokens', 'cache_write_tokens', 'cache_read_tokens', 'output_tokens', 'thinking_tokens', 'embed_calls', 'embed_billed_tokens', 'answer_krw', 'embed_krw', 'total_krw', 'logical_model_calls', 'harness_violations', 'harness_regenerated', 'harness_fixed_answer'];
+  const cols = ['id', 'mode', 'book', 'cutoff', 'category', 'error', 'response_chars', 'answer_calls', 'aborted_calls', 'answer_retry_calls', 'input_tokens', 'cache_write_tokens', 'cache_read_tokens', 'output_tokens', 'thinking_tokens', 'embed_calls', 'embed_billed_tokens', 'answer_krw', 'answer_krw_est', 'embed_krw', 'total_krw', 'total_krw_est', 'logical_model_calls', 'harness_violations', 'harness_regenerated', 'harness_fixed_answer'];
   const esc = (v) => (v === null || v === undefined ? '' : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
   return [cols.join(','), ...items.map((i) => cols.map((c) => esc(i[c])).join(','))].join('\n');
 }
 
 function run(opts) {
   const rows = opts.jsonl.flatMap(readJsonl);
-  const metrics = readRecords([opts.metrics]);
+  const metrics = readRecords([opts.metrics], { from: opts.from, to: opts.to });
   const queryLogs = readQueryLogs(opts.serverLog);
   const { items, unattributed, ambiguous, unattributedSamples } = attribute(rows, metrics, queryLogs, opts.slackMs);
+  // 끊긴 호출 보정 — (a) 하한: 실측 입력 + 출력 0(= answer_krw 그대로), (b) 추정: 같은 묶음 완료 호출 출력 토큰 중앙값을 출력으로 둔다
+  const outByGroup = {};
+  for (const i of items) (outByGroup[groupKey(i, 'group')] ??= []).push(...i.completed_output_tokens);
+  const priceOut = PRICES['claude-haiku-5-5'].normal.output;
+  for (const i of items) {
+    const med = stats(outByGroup[groupKey(i, 'group')] ?? []).median ?? 0;
+    i.est_output_tokens_per_aborted = med;
+    i.answer_krw_est = i.answer_krw + (i.aborted_calls * med * priceOut * KRW) / 1e6;
+    i.total_krw_est = i.total_krw + (i.answer_krw_est - i.answer_krw);
+  }
   const group = (by) => {
     const m = {};
     for (const i of items) (m[groupKey(i, by)] ??= []).push(i);
@@ -280,7 +306,7 @@ if (require.main === module) {
     process.exit(2);
   }
   if (opts.help || opts.jsonl.length === 0 || !opts.metrics) {
-    console.error('사용: node scripts/measure/attribute-feature-cost.js --jsonl <a.jsonl> [--jsonl ...] --metrics <metrics.log> [--server-log <server.log>] [--json out.json] [--csv out.csv] [--slack-ms 300]');
+    console.error('사용: node scripts/measure/attribute-feature-cost.js --jsonl <a.jsonl> [--jsonl ...] --metrics <metrics.log> [--server-log <server.log>] [--json out.json] [--csv out.csv] [--from ISO] [--to ISO] [--slack-ms 300]');
     process.exit(opts.help ? 0 : 2);
   }
   const result = run(opts);
