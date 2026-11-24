@@ -51,8 +51,8 @@ export interface ReviewNoteRow {
   kind: NoteKind | null;
   body: string;
   created_at: string;
-  /** 본문을 마지막으로 고친 시각 (마이그레이션 029). 종류·풀림 표시를 바꿔도 움직이지 않는다 */
-  body_updated_at: string;
+  /** 내용(본문·쪽·종류)을 마지막으로 고친 시각 (마이그레이션 029). 풀림 표시를 바꿔도 움직이지 않는다 */
+  content_updated_at: string;
 }
 
 export interface ReviewNotesReader {

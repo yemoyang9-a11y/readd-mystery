@@ -6,9 +6,24 @@ import BookEndPage from './BookEndPage';
 import CommentThread from './CommentThread';
 import type { CommunityPost, ReviewCard } from '../../types';
 
-vi.mock('../../hooks/useCatalog', () => ({
-  useCatalog: () => ({ books: [], status: 'ready', reload: () => undefined }),
+const catalog = vi.hoisted(() => ({
+  books: [] as {
+    book_id: string;
+    title: string;
+    author: string;
+    cover_url: string;
+    ssabi_ready: boolean;
+  }[],
 }));
+vi.mock('../../hooks/useCatalog', () => ({
+  useCatalog: () => ({ books: catalog.books, status: 'ready', reload: () => undefined }),
+}));
+
+beforeEach(() => {
+  catalog.books = [
+    { book_id: 'bk1', title: '가상범인', author: '김내성', cover_url: '', ssabi_ready: true },
+  ];
+});
 
 const card: ReviewCard = {
   version: 1,
@@ -104,6 +119,26 @@ describe('책 끝 화면의 내 추리 채점 버튼', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: '내 추리 채점하기' }));
     expect(order).toEqual(['flush', 'review']);
+  });
+
+  test('싸비 데이터가 준비되지 않은 책에는 버튼이 없다 (대표 결정 12번)', () => {
+    catalog.books = [
+      { book_id: 'bk1', title: '가상범인', author: '김내성', cover_url: '', ssabi_ready: false },
+    ];
+    render(
+      <MemoryRouter>
+        <BookEndPage
+          bookId="bk1"
+          bookTitle="가상범인"
+          totalPages={100}
+          returnFocusRef={createRef()}
+          onBack={() => undefined}
+          onCommunity={() => undefined}
+          onReview={() => undefined}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.queryByRole('button', { name: '내 추리 채점하기' })).toBeNull();
   });
 
   test('onReview 를 주지 않으면 버튼이 없다', () => {

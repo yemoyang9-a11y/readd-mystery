@@ -107,18 +107,48 @@ const D = '11111111-1111-4111-8111-111111111111';
       body: '범인은 집사',
     });
     await pool.query(
-      `UPDATE reading_notes SET body_updated_at = '2026-01-01T00:00:00Z' WHERE note_id = $1`,
+      `UPDATE reading_notes SET content_updated_at = '2026-01-01T00:00:00Z' WHERE note_id = $1`,
       [note.note_id]
     );
     await notes.update(D, BOOK, note.note_id, { resolved: true, kind: 'hypothesis' });
     await notes.update(D, BOOK, note.note_id, { body: '범인은 집사' }); // 같은 글자
     let [row] = await notes.listForReview(D, BOOK, 100);
-    expect(row.body_updated_at).toBe('2026-01-01T00:00:00.000Z');
+    expect(row.content_updated_at).toBe('2026-01-01T00:00:00.000Z');
 
     await notes.update(D, BOOK, note.note_id, { body: '범인은 정원사' });
     [row] = await notes.listForReview(D, BOOK, 100);
-    expect(row.body_updated_at).not.toBe('2026-01-01T00:00:00.000Z');
+    expect(row.content_updated_at).not.toBe('2026-01-01T00:00:00.000Z');
     expect(row.body).toBe('범인은 정원사');
+  });
+
+  test('내용 수정 시각은 쪽을 옮기거나 종류를 바꿔도 움직인다 — 결말 뒤 쪽을 앞당겨 결과지를 부풀리지 못하게 (교차 검토 지적 2)', async () => {
+    const notes = createPgNotesRepository(db());
+    const reset = (id: string) =>
+      pool.query(
+        `UPDATE reading_notes SET content_updated_at = '2026-01-01T00:00:00Z' WHERE note_id = $1`,
+        [id]
+      );
+    const note = await notes.create(D, BOOK, {
+      page_no: 90,
+      kind: null,
+      resolved: false,
+      body: '집사',
+    });
+    await reset(note.note_id);
+    await notes.update(D, BOOK, note.note_id, { page_no: 1 });
+    expect((await notes.listForReview(D, BOOK, 100))[0].content_updated_at).not.toBe(
+      '2026-01-01T00:00:00.000Z'
+    );
+    await reset(note.note_id);
+    await notes.update(D, BOOK, note.note_id, { kind: 'hypothesis' });
+    expect((await notes.listForReview(D, BOOK, 100))[0].content_updated_at).not.toBe(
+      '2026-01-01T00:00:00.000Z'
+    );
+    await reset(note.note_id);
+    await notes.update(D, BOOK, note.note_id, { page_no: 1, kind: 'hypothesis' }); // 그대로인 값
+    expect((await notes.listForReview(D, BOOK, 100))[0].content_updated_at).toBe(
+      '2026-01-01T00:00:00.000Z'
+    );
   });
 
   test('FR-SPL-002: 채점용 노트 조회는 상한 쪽까지만 — 상한 밖 노트 0건, 상한을 올리면 보인다 (positive 쌍)', async () => {
@@ -152,13 +182,19 @@ const D = '11111111-1111-4111-8111-111111111111';
   };
   const result = { version: 1, truth_summary: 's' } as any;
 
-  test('채점 맡기: 처음은 claimed, 진행 중이면 busy, 성공 뒤에는 done 이고 결과를 덮지 않는다', async () => {
+  async function claimToken(repo: ReturnType<typeof createPgNoteReviewRepository>) {
+    const claim = await repo.claim(D, BOOK, meta);
+    if (typeof claim !== 'object') throw new Error(`claim → ${claim}`);
+    return claim.token;
+  }
+
+  test('채점 맡기: 처음은 표를 받고, 진행 중이면 busy, 성공 뒤에는 done 이고 결과를 덮지 않는다', async () => {
     const repo = createPgNoteReviewRepository(db());
-    expect(await repo.claim(D, BOOK, meta)).toBe('claimed');
+    const token = await claimToken(repo);
     expect(await repo.claim(D, BOOK, meta)).toBe('busy');
-    await repo.complete(D, BOOK, result);
+    expect(await repo.complete(D, BOOK, token, result)).toBe(true);
     expect(await repo.claim(D, BOOK, meta)).toBe('done');
-    await repo.fail(D, BOOK, 'late failure');
+    await repo.fail(D, BOOK, token, 'late failure');
     expect(await repo.find(D, BOOK)).toMatchObject({ status: 'done', result, attempts: 1 });
     // 로그 레코드 — 채점 호출의 모델·범위·대상 수·완료 시각이 행에 남는다
     const { rows } = await pool.query(
@@ -169,19 +205,32 @@ const D = '11111111-1111-4111-8111-111111111111';
     expect(rows[0].completed_at).not.toBeNull();
   });
 
-  test('실패는 다시 맡을 수 있고 시도 횟수가 오른다 — 멈춘 pending 도 다시 맡는다', async () => {
+  test('실패는 다시 맡을 수 있고 시도 횟수가 오른다 — 멈춘 pending(20분 넘음)도 다시 맡는다', async () => {
     const repo = createPgNoteReviewRepository(db());
-    await repo.claim(D, BOOK, meta);
-    await repo.fail(D, BOOK, 'timeout');
+    await repo.fail(D, BOOK, await claimToken(repo), 'timeout');
     expect(await repo.find(D, BOOK)).toMatchObject({
       status: 'failed',
       result: null,
       last_error: 'timeout',
     });
-    expect(await repo.claim(D, BOOK, meta)).toBe('claimed');
+    await claimToken(repo);
     await pool.query(`UPDATE note_reviews SET started_at = now() - interval '10 minutes'`);
-    expect(await repo.claim(D, BOOK, meta)).toBe('claimed');
+    expect(await repo.claim(D, BOOK, meta)).toBe('busy');
+    await pool.query(`UPDATE note_reviews SET started_at = now() - interval '30 minutes'`);
+    await claimToken(repo);
     expect((await repo.find(D, BOOK))?.attempts).toBe(3);
+  });
+
+  test('멈춘 것으로 보고 다시 맡은 뒤에는 옛 요청의 성공·실패가 기록을 바꾸지 못한다 (교차 검토 지적 1)', async () => {
+    const repo = createPgNoteReviewRepository(db());
+    const old = await claimToken(repo);
+    await pool.query(`UPDATE note_reviews SET started_at = now() - interval '30 minutes'`);
+    const fresh = await claimToken(repo);
+    await repo.fail(D, BOOK, old, 'old failed');
+    expect((await repo.find(D, BOOK))?.status).toBe('pending');
+    expect(await repo.complete(D, BOOK, old, { title: 'old' } as any)).toBe(false);
+    expect(await repo.complete(D, BOOK, fresh, result)).toBe(true);
+    expect((await repo.find(D, BOOK))?.result).toEqual(result);
   });
 
   test('FR-SPL-002: 채점 근거 조회는 상한 쪽까지만 — 상한 밖 사건·장 요약 0건, 올리면 보인다 (positive 쌍)', async () => {

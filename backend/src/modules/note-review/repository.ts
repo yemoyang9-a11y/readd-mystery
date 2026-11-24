@@ -19,8 +19,15 @@ export interface ReviewClaimMeta {
   model: string;
 }
 
-/** 다른 요청이 채점 중인 기록을 이만큼 지나면 멈춘 것으로 보고 다시 맡는다 */
-export const STALE_PENDING_SECONDS = 300;
+/**
+ * 다른 요청이 채점 중인 기록을 이만큼 지나면 멈춘 것으로 보고 다시 맡는다.
+ * 게이트웨이 한 번이 재시도 포함 최대 120초 × 4, 재생성까지 2번이라 그보다 길게 잡는다.
+ * 늦게 끝난 옛 요청은 claim_id 가 달라 기록을 덮지 못한다.
+ */
+export const STALE_PENDING_SECONDS = 1200;
+
+/** 채점을 맡은 요청의 표 — complete·fail 은 이 표가 지금 기록과 같을 때만 반영된다 */
+export type ClaimToken = string;
 
 export interface NoteReviewRepository {
   find(readerId: string, bookId: string): Promise<StoredReview | null>;
@@ -32,9 +39,17 @@ export interface NoteReviewRepository {
     readerId: string,
     bookId: string,
     meta: ReviewClaimMeta
-  ): Promise<'claimed' | 'busy' | 'done'>;
-  /** 성공한 결과를 고정한다. 이 뒤로는 다시 채점하지 않는다 (대표 결정 7번) */
-  complete(readerId: string, bookId: string, result: ReviewResult): Promise<void>;
-  /** 실패는 1회로 치지 않는다 — 결과 없이 failed 로 남겨 다시 누를 수 있게 한다 (대표 결정 12번) */
-  fail(readerId: string, bookId: string, error: string): Promise<void>;
+  ): Promise<{ token: ClaimToken } | 'busy' | 'done'>;
+  /**
+   * 성공한 결과를 고정한다. 이 뒤로는 다시 채점하지 않는다 (대표 결정 7번).
+   * 표가 다르면(멈춘 것으로 보고 다른 요청이 맡았으면) 반영하지 않고 false.
+   */
+  complete(
+    readerId: string,
+    bookId: string,
+    token: ClaimToken,
+    result: ReviewResult
+  ): Promise<boolean>;
+  /** 실패는 1회로 치지 않는다 — 결과 없이 failed 로 남겨 다시 누를 수 있게 한다 (대표 결정 12번). 표가 다르면 그대로 */
+  fail(readerId: string, bookId: string, token: ClaimToken, error: string): Promise<void>;
 }

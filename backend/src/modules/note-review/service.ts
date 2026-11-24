@@ -133,7 +133,7 @@ export function selectBeforeEnding(
   if (reachedEndAt === null) return { eligible: [...rows], excluded: 0, timingVerified: false };
   const end = Date.parse(reachedEndAt);
   const eligible = rows.filter(
-    (row) => Date.parse(row.created_at) < end && Date.parse(row.body_updated_at) < end
+    (row) => Date.parse(row.created_at) < end && Date.parse(row.content_updated_at) < end
   );
   return { eligible, excluded: rows.length - eligible.length, timingVerified: true };
 }
@@ -255,10 +255,11 @@ export function createNoteReviewService(deps: NoteReviewServiceDeps) {
         const again = await deps.reviews.find(readerId, bookId);
         if (again?.result) return { ok: true, result: again.result };
       }
-      if (claim !== 'claimed') {
+      if (typeof claim !== 'object') {
         log({ book_id: bookId, outcome: 'busy', model: deps.model });
         return { ok: false, reason: 'busy' };
       }
+      const { token } = claim;
 
       const sent = graded.slice(0, MAX_GRADED_NOTES);
       const targets: GradingTarget[] = sent.map((item, i) => ({
@@ -275,7 +276,7 @@ export function createNoteReviewService(deps: NoteReviewServiceDeps) {
         ({ parsed, calls } = await callAndParse(targets, evidence, scope.bound));
       } catch (error) {
         const message = String((error as Error)?.message ?? error).slice(0, 500);
-        await deps.reviews.fail(readerId, bookId, message);
+        await deps.reviews.fail(readerId, bookId, token, message);
         log({
           book_id: bookId,
           outcome: 'failed',
@@ -287,7 +288,7 @@ export function createNoteReviewService(deps: NoteReviewServiceDeps) {
         return { ok: false, reason: 'failed' };
       }
       if (parsed === 'invalid') {
-        await deps.reviews.fail(readerId, bookId, 'invalid_response');
+        await deps.reviews.fail(readerId, bookId, token, 'invalid_response');
         log({
           book_id: bookId,
           outcome: 'invalid',
@@ -326,7 +327,13 @@ export function createNoteReviewService(deps: NoteReviewServiceDeps) {
         excluded_count: selection.excluded,
         graded_at: now().toISOString(),
       };
-      await deps.reviews.complete(readerId, bookId, result);
+      if (!(await deps.reviews.complete(readerId, bookId, token, result))) {
+        // 멈춘 것으로 보고 다른 요청이 맡았다. 저장된 것만 '그 1회'이므로 저장된 결과를 준다 (대표 결정 7번)
+        const stored = await deps.reviews.find(readerId, bookId);
+        log({ book_id: bookId, outcome: 'busy', model: deps.model, llm_calls: calls });
+        if (stored?.status === 'done' && stored.result) return { ok: true, result: stored.result };
+        return { ok: false, reason: 'busy' };
+      }
       log({
         book_id: bookId,
         outcome: 'done',

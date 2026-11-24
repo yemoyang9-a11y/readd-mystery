@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import type { ReviewEvidence } from './grading';
 import {
   STALE_PENDING_SECONDS,
@@ -29,16 +30,17 @@ export function createPgNoteReviewRepository(db: QueryClient): NoteReviewReposit
     },
 
     async claim(readerId, bookId, meta: ReviewClaimMeta) {
+      const token = randomUUID();
       // 한 문장으로 맡는다 — 두 요청이 함께 AI를 부르지 않는다. done 은 절대 덮지 않는다 (대표 결정 7번)
       const { rows } = await db.query(
         `INSERT INTO note_reviews (reader_id, book_id, status, model, bound_page, reached_end_at,
-                                   eligible_count, excluded_count, attempts, started_at)
-         VALUES ($1, $2, 'pending', $3, $4, $5, $6, $7, 1, now())
+                                   eligible_count, excluded_count, attempts, started_at, claim_id)
+         VALUES ($1, $2, 'pending', $3, $4, $5, $6, $7, 1, now(), $9)
          ON CONFLICT (reader_id, book_id) DO UPDATE SET
            status = 'pending', model = EXCLUDED.model, bound_page = EXCLUDED.bound_page,
            reached_end_at = EXCLUDED.reached_end_at, eligible_count = EXCLUDED.eligible_count,
            excluded_count = EXCLUDED.excluded_count, attempts = note_reviews.attempts + 1,
-           started_at = now(), last_error = NULL
+           started_at = now(), last_error = NULL, claim_id = EXCLUDED.claim_id
          WHERE note_reviews.status = 'failed'
             OR (note_reviews.status = 'pending'
                 AND note_reviews.started_at < now() - make_interval(secs => $8))
@@ -52,9 +54,10 @@ export function createPgNoteReviewRepository(db: QueryClient): NoteReviewReposit
           meta.eligible_count,
           meta.excluded_count,
           STALE_PENDING_SECONDS,
+          token,
         ]
       );
-      if (rows.length > 0) return 'claimed';
+      if (rows.length > 0) return { token };
       const current = await db.query(
         `SELECT status FROM note_reviews WHERE reader_id = $1 AND book_id = $2`,
         [readerId, bookId]
@@ -62,19 +65,21 @@ export function createPgNoteReviewRepository(db: QueryClient): NoteReviewReposit
       return current.rows[0]?.status === 'done' ? 'done' : 'busy';
     },
 
-    async complete(readerId, bookId, result) {
-      await db.query(
-        `UPDATE note_reviews SET status = 'done', result = $3::jsonb, completed_at = now(), last_error = NULL
-          WHERE reader_id = $1 AND book_id = $2 AND status = 'pending'`,
-        [readerId, bookId, JSON.stringify(result)]
+    async complete(readerId, bookId, token, result) {
+      const { rows } = await db.query(
+        `UPDATE note_reviews SET status = 'done', result = $4::jsonb, completed_at = now(), last_error = NULL
+          WHERE reader_id = $1 AND book_id = $2 AND status = 'pending' AND claim_id = $3
+          RETURNING status`,
+        [readerId, bookId, token, JSON.stringify(result)]
       );
+      return rows.length > 0;
     },
 
-    async fail(readerId, bookId, error) {
+    async fail(readerId, bookId, token, error) {
       await db.query(
-        `UPDATE note_reviews SET status = 'failed', result = NULL, last_error = $3, completed_at = now()
-          WHERE reader_id = $1 AND book_id = $2 AND status = 'pending'`,
-        [readerId, bookId, error.slice(0, 500)]
+        `UPDATE note_reviews SET status = 'failed', result = NULL, last_error = $4, completed_at = now()
+          WHERE reader_id = $1 AND book_id = $2 AND status = 'pending' AND claim_id = $3`,
+        [readerId, bookId, token, error.slice(0, 500)]
       );
     },
   };

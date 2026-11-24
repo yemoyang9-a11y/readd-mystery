@@ -67,7 +67,10 @@ export function CommunityScreen({
   const keyboardInset = viewport.keyboardOpen
     ? Math.max(0, Math.round(window.innerHeight - viewport.height - viewport.offsetTop))
     : 0;
-  const title = books.find((book) => book.book_id === bookId)?.title ?? '';
+  const book = books.find((item) => item.book_id === bookId);
+  const title = book?.title ?? '';
+  // 대표 결정 2026-11-24, 12번 — 싸비 데이터가 준비된 책만 채점으로 가는 버튼
+  const canReview = book?.ssabi_ready === true;
   const [status, setStatus] = useState<Status>('loading');
   const [sort, setSort] = useState<CommunitySort>('new');
   const [posts, setPosts] = useState<CommunityPost[]>([]);
@@ -278,7 +281,7 @@ export function CommunityScreen({
             </div>
           </div>
           <div className="mx-4 h-px bg-[linear-gradient(90deg,#c4475f,#35292c_40%,#35292c)]" />
-          {ready ? (
+          {ready && canReview ? (
             <div className="px-4 pt-3">
               {/* 대표 결정 2026-11-24 — 내 추리 채점·결과지 공유로. 관문은 채점 화면이 서버에 다시 묻는다 */}
               <button
@@ -288,7 +291,9 @@ export function CommunityScreen({
                 className="flex min-h-11 w-full items-center justify-between rounded-[12px] border border-[#35292c] bg-[#1e1618] px-4 text-[15px] font-bold text-[#ece6e0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b]"
               >
                 <span>내 추리 채점하고 결과지 공유하기</span>
-                <span aria-hidden="true" className="text-[17px] text-[#e58a9b]">›</span>
+                <span aria-hidden="true" className="text-[17px] text-[#e58a9b]">
+                  ›
+                </span>
               </button>
             </div>
           ) : null}

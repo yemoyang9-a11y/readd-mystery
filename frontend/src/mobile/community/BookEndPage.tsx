@@ -61,6 +61,8 @@ export default function BookEndPage({
   const title = book?.title || bookTitle;
   const author = book?.author ?? '';
   // R12 🚦 — 공개(싸비 완비) 도서만 권한다. 지금 책은 뺀다
+  // 대표 결정 2026-11-24, 12번 — 싸비 데이터가 준비된 책만 채점 버튼을 둔다. 열림은 서버가 다시 정한다
+  const canReview = onReview !== undefined && book?.ssabi_ready === true;
   const others = books.filter((item) => item.book_id !== bookId && item.ssabi_ready === true).slice(0, OTHER_BOOKS);
 
   const [draft, setDraft] = useState('');
@@ -77,7 +79,7 @@ export default function BookEndPage({
 
   // 채점 관문도 서버가 저장된 가장 먼 쪽으로 정한다 — 마지막 쪽 진도가 저장되기를 기다린다
   async function goReview() {
-    if (leaving || !onReview) return;
+    if (leaving || !canReview || !onReview) return;
     setLeaving(true);
     await flush();
     onReview();
@@ -266,7 +268,7 @@ export default function BookEndPage({
             ) : null}
           </section>
 
-          {onReview ? (
+          {canReview ? (
             <button
               type="button"
               data-track="end-page-review"

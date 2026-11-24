@@ -24,3 +24,9 @@ ts	phase	decision	why	evidence	result
 2026-11-24T16:29:49Z	S4	대역 모드 휴대폰(iPhone 13) 화면으로 채점 전→채점→공유→커뮤니티 카드까지 직접 눌러 봄	시험 대역이 아닌 실제 화면 확인	docs/validation/2026-11-24-note-review/*.png	페이지 오류 0, 가로 넘침 0
 2026-11-24T16:29:49Z	S4	화면 시험·타입검사·린트·빌드	단위 완료 확인	vitest 164 files 1323 통과, eslint 0 error(기존 경고 2), vite build 성공	tests green
 2026-11-24T16:30:51Z	S5	CLAUDE.md R9·reached_end·용어를 대표 결정대로 고치고, 결정 사본·작업 문서·설계 문서를 씀	대표가 R9 변경과 reached_end 예외를 직접 정함(질문 1·6). 규칙 문서와 코드가 어긋나지 않게	CLAUDE.md, docs/context/decisions.md, docs/context/tasks.md T20, docs/superpowers/specs/2026-11-24-note-review-design.md	done
+2026-11-24T16:38:35Z	review	독립 검토 에이전트(코드만 받음)에 스포일러·정확성 검토를 맡김	자기 검토로는 못 보는 것을 찾으려고. 다른 회사 모델이 이 환경에 없어 같은 Claude 계열로 함	이 세션 Agent 호출, 설계 문서 5장	누출 0, 지적 5건
+2026-11-24T16:38:35Z	review	지적 1: 채점 표(claim_id)를 두고 멈춤 판정을 5분→20분, 표가 다르면 반영 안 하고 저장 결과를 줌	멈춘 요청이 늦게 끝나 다른 요청의 기록을 덮거나 독자가 저장과 다른 결과를 보던 문제	backend/src/modules/note-review/pg-repository.ts complete·fail, service.ts	pg 시험 1건·서비스 시험 1건 추가, 통과
+2026-11-24T16:38:35Z	review	지적 2: 본문 수정 시각을 내용 수정 시각(content_updated_at)으로 바꾸고 쪽·종류 변경도 포함	결말 뒤 쪽을 앞당겨 'N쪽 전에 맞혔어요'를 부풀리는 길을 막음. 풀림 표시는 계속 제외	backend/src/modules/notes/pg-repository.ts update, migrations/029	pg 시험 1건 추가, 통과
+2026-11-24T16:38:35Z	review	지적 3: 채점 프롬프트의 노트를 JSON 배열로만 보냄	노트 본문이 가짜 구분자로 다른 노트 판정을 바꾸게 하던 틈	backend/src/modules/note-review/grading.ts buildGradingPrompt	grading 시험 교체(같은 목적, 더 강한 확인), 통과
+2026-11-24T16:38:35Z	review	지적 5: 싸비 미완비 책에서 채점 버튼 숨김. 지적 4(숨겨진 결과지 글)는 고치지 않고 대표 확인 항목으로 남김	4는 기존 신고 정책과 얽혀 혼자 정하지 않음	frontend BookEndPage.tsx·MobileCommunity.tsx, tasks.md T20 ③	화면 시험 1324 통과
+2026-11-24T16:38:35Z	review	서버·화면 전체 시험, 타입, 린트, 빌드 다시 돌림	고친 뒤 확인	jest 2323 통과 12 skip, vitest 1324 통과, build 성공	tests green

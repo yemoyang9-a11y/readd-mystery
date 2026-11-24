@@ -64,7 +64,7 @@ function setup(opts: { open?: boolean; stored?: StoredReview | null; recent?: nu
         ? { status: 'done', result, attempts: 1, last_error: null }
         : opts.stored,
     claim: async () => 'busy',
-    complete: async () => undefined,
+    complete: async () => false,
     fail: async () => undefined,
   };
   const scope: ReviewScope =

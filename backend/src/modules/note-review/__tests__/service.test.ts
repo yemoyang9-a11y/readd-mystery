@@ -19,30 +19,40 @@ function note(
   at = BEFORE,
   edited = at
 ): ReviewNoteRow {
-  return { note_id: id, page_no: page, kind, body, created_at: at, body_updated_at: edited };
+  return { note_id: id, page_no: page, kind, body, created_at: at, content_updated_at: edited };
 }
 
 class FakeReviews implements NoteReviewRepository {
-  row: (StoredReview & { meta?: ReviewClaimMeta }) | null = null;
+  row: (StoredReview & { meta?: ReviewClaimMeta; token?: string }) | null = null;
+  /** 시험용 — complete 직전에 다른 요청이 맡은 것처럼 표를 바꾼다 */
+  stealBeforeComplete: ReviewResult | null = null;
   async find() {
     return this.row ? { ...this.row } : null;
   }
   async claim(_r: string, _b: string, meta: ReviewClaimMeta) {
     if (this.row?.status === 'done') return 'done' as const;
     if (this.row?.status === 'pending') return 'busy' as const;
+    const token = `t${(this.row?.attempts ?? 0) + 1}`;
     this.row = {
       status: 'pending',
       result: null,
       attempts: (this.row?.attempts ?? 0) + 1,
       last_error: null,
       meta,
+      token,
     };
-    return 'claimed' as const;
+    return { token };
   }
-  async complete(_r: string, _b: string, result: ReviewResult) {
+  async complete(_r: string, _b: string, token: string, result: ReviewResult) {
+    if (this.stealBeforeComplete) {
+      this.row = { ...this.row!, status: 'done', result: this.stealBeforeComplete, token: 'other' };
+    }
+    if (this.row?.status !== 'pending' || this.row.token !== token) return false;
     this.row = { ...this.row!, status: 'done', result };
+    return true;
   }
-  async fail(_r: string, _b: string, error: string) {
+  async fail(_r: string, _b: string, token: string, error: string) {
+    if (this.row?.status !== 'pending' || this.row.token !== token) return;
     this.row = { ...this.row!, status: 'failed', result: null, last_error: error };
   }
 }
@@ -354,5 +364,21 @@ describe('추리 채점 — 실패 처리 (R11, 대표 결정 12번)', () => {
       llm_calls: 1,
       graded: 1,
     });
+  });
+});
+
+describe('추리 채점 — 멈춘 요청이 늦게 끝날 때 (교차 검토 지적 1)', () => {
+  test('다른 요청이 먼저 저장했으면 내 결과는 버리고 저장된 결과를 준다', async () => {
+    const t = setup({
+      rows: [note('h1', 10, 'hypothesis', '집사')],
+      replies: [
+        reply([{ ref: 'n1', verdict: 'miss', explanation: '아니었어요.', evidence_page: 95 }]),
+      ],
+    });
+    const stored = { title: '저장된 결과' } as unknown as ReviewResult;
+    t.reviews.stealBeforeComplete = stored;
+    const out = await t.service.grade(R, B, []);
+    expect(out).toEqual({ ok: true, result: stored });
+    expect(t.reviews.row?.result).toBe(stored);
   });
 });

@@ -5,13 +5,14 @@
 --    (나중 시각으로 채우면 결말을 본 뒤 쓴 노트가 결말 전 노트로 섞인다).
 ALTER TABLE reading_position ADD COLUMN IF NOT EXISTS reached_end_at TIMESTAMPTZ;
 
--- ② reading_notes.body_updated_at — 노트 본문(글자)을 마지막으로 고친 시각.
---    updated_at 은 종류·풀림 표시를 바꿔도 움직이므로, "결말을 본 뒤 고친 노트"는 본문 기준으로 가른다.
+-- ② reading_notes.content_updated_at — 노트 내용(본문 글자·쪽·종류)을 마지막으로 고친 시각.
+--    updated_at 은 풀림 표시만 바꿔도 움직이므로, "결말을 본 뒤 고친 노트"는 내용 기준으로 가른다.
+--    쪽·종류도 넣는 이유: 결말 뒤 쪽을 앞으로 옮기거나 종류를 가설로 바꿔 결과지를 부풀리지 못하게.
 --    기존 노트는 지금까지의 updated_at 을 그대로 옮긴다(더 이른 시각을 알 수 없다).
-ALTER TABLE reading_notes ADD COLUMN IF NOT EXISTS body_updated_at TIMESTAMPTZ;
-UPDATE reading_notes SET body_updated_at = updated_at WHERE body_updated_at IS NULL;
-ALTER TABLE reading_notes ALTER COLUMN body_updated_at SET DEFAULT now();
-ALTER TABLE reading_notes ALTER COLUMN body_updated_at SET NOT NULL;
+ALTER TABLE reading_notes ADD COLUMN IF NOT EXISTS content_updated_at TIMESTAMPTZ;
+UPDATE reading_notes SET content_updated_at = updated_at WHERE content_updated_at IS NULL;
+ALTER TABLE reading_notes ALTER COLUMN content_updated_at SET DEFAULT now();
+ALTER TABLE reading_notes ALTER COLUMN content_updated_at SET NOT NULL;
 
 -- ③ note_reviews — 독자·책당 채점 1건. 성공한 결과(status='done')만 '그 1회'로 고정한다.
 --    pending 은 진행 중 잠금, failed 는 다시 누를 수 있는 실패 기록이다(AI 호출 실패는 1회로 치지 않는다).
@@ -27,6 +28,8 @@ CREATE TABLE IF NOT EXISTS note_reviews (
     eligible_count    INTEGER     NOT NULL DEFAULT 0,
     excluded_count    INTEGER     NOT NULL DEFAULT 0,
     attempts          INTEGER     NOT NULL DEFAULT 0,
+    -- 지금 채점을 맡은 요청의 표. 멈춘 요청이 늦게 끝나도 다른 요청의 기록을 덮지 못하게 한다
+    claim_id          UUID,
     last_error        TEXT,
     started_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     completed_at      TIMESTAMPTZ,

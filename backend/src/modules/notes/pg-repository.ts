@@ -63,8 +63,13 @@ export function createPgNotesRepository(
         `UPDATE reading_notes
             SET page_no = COALESCE($4, page_no),
                 kind = CASE WHEN $5::boolean THEN $6 ELSE kind END,
-                -- 마이그레이션 029 — 본문 글자가 실제로 바뀔 때만 본문 수정 시각을 옮긴다 (추리 채점의 결말 전 판정)
-                body_updated_at = CASE WHEN $7::text IS NOT NULL AND $7::text <> body THEN now() ELSE body_updated_at END,
+                -- 마이그레이션 029 — 내용(본문 글자·쪽·종류)이 실제로 바뀔 때만 내용 수정 시각을 옮긴다.
+                -- 풀림 표시는 넣지 않는다. 추리 채점의 결말 전 판정에 쓴다 (대표 결정 2026-11-24, 8번)
+                content_updated_at = CASE
+                  WHEN ($7::text IS NOT NULL AND $7::text <> body)
+                    OR ($4::int IS NOT NULL AND $4::int <> page_no)
+                    OR ($5::boolean AND $6::text IS DISTINCT FROM kind)
+                  THEN now() ELSE content_updated_at END,
                 body = COALESCE($7, body),
                 resolved = COALESCE($8::boolean, resolved),
                 updated_at = now()
@@ -98,7 +103,7 @@ export function createPgNotesRepository(
     async listForReview(readerId, bookId, bound) {
       if (!Number.isInteger(bound) || bound < 1) return [];
       const { rows } = await db.query(
-        `SELECT note_id, page_no, kind, body, created_at, body_updated_at FROM reading_notes
+        `SELECT note_id, page_no, kind, body, created_at, content_updated_at FROM reading_notes
           WHERE reader_id = $1 AND book_id = $2 AND page_no >= 1 AND page_no <= $3
           ORDER BY page_no, created_at`,
         [readerId, bookId, bound]
@@ -109,7 +114,7 @@ export function createPgNotesRepository(
         kind: row.kind ?? null,
         body: row.body,
         created_at: new Date(row.created_at).toISOString(),
-        body_updated_at: new Date(row.body_updated_at ?? row.updated_at).toISOString(),
+        content_updated_at: new Date(row.content_updated_at ?? row.updated_at).toISOString(),
       }));
     },
 

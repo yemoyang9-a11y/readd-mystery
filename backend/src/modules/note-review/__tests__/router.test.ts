@@ -28,12 +28,13 @@ class MemoryReviews implements NoteReviewRepository {
       attempts: (this.row?.attempts ?? 0) + 1,
       last_error: null,
     };
-    return 'claimed' as const;
+    return { token: 't' };
   }
-  async complete(_r: string, _b: string, result: any) {
+  async complete(_r: string, _b: string, _t: string, result: any) {
     this.row = { ...this.row!, status: 'done', result };
+    return true;
   }
-  async fail(_r: string, _b: string, error: string) {
+  async fail(_r: string, _b: string, _t: string, error: string) {
     this.row = { ...this.row!, status: 'failed', result: null, last_error: error };
   }
 }
@@ -134,7 +135,7 @@ describe('추리 채점 API', () => {
     kind: 'hypothesis',
     body: '집사',
     created_at: '2000-01-01T00:00:00.000Z',
-    body_updated_at: '2000-01-01T00:00:00.000Z',
+    content_updated_at: '2000-01-01T00:00:00.000Z',
   });
   const ok = JSON.stringify({
     truth_summary: '진상',
