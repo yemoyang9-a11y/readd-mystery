@@ -18,10 +18,7 @@ import express from 'express';
 import { Pool } from 'pg';
 import { createCommunityRouter } from '../router';
 import { createAdminRouter } from '../../ingest/admin-router';
-import {
-  createPgCommunityAdminRepository,
-  createPgCommunityRepository,
-} from '../pg-repository';
+import { createPgCommunityAdminRepository, createPgCommunityRepository } from '../pg-repository';
 import {
   AUTO_HIDE_REPORT_THRESHOLD,
   type CommentRow,
@@ -101,7 +98,9 @@ function memoryRepos(): Repos {
     reply_to_name: null,
   });
   const find = (type: ReportTarget, id: string) =>
-    type === 'post' ? posts.find((p) => p.post_id === id) : comments.find((c) => c.comment_id === id);
+    type === 'post'
+      ? posts.find((p) => p.post_id === id)
+      : comments.find((c) => c.comment_id === id);
   const key = (type: ReportTarget, id: string) => `${type}:${id}`;
 
   const community: CommunityRepository = {
@@ -165,7 +164,8 @@ function memoryRepos(): Repos {
     },
     async deletePost(bookId, postId, readerId) {
       const p = posts.find(
-        (x) => x.post_id === postId && x.book_id === bookId && x.reader_id === readerId && !x.deleted
+        (x) =>
+          x.post_id === postId && x.book_id === bookId && x.reader_id === readerId && !x.deleted
       );
       if (!p) return false;
       p.deleted = true;
@@ -174,7 +174,10 @@ function memoryRepos(): Repos {
     async deleteComment(bookId, commentId, readerId) {
       const c = comments.find(
         (x) =>
-          x.comment_id === commentId && x.book_id === bookId && x.reader_id === readerId && !x.deleted
+          x.comment_id === commentId &&
+          x.book_id === bookId &&
+          x.reader_id === readerId &&
+          !x.deleted
       );
       if (!c) return false;
       c.deleted = true;
@@ -262,9 +265,7 @@ function memoryRepos(): Repos {
           _last: sorted[0].at,
         });
       }
-      return items
-        .sort((a, b) => b._last - a._last)
-        .map(({ _last: _drop, ...item }) => item);
+      return items.sort((a, b) => b._last - a._last).map(({ _last: _drop, ...item }) => item);
     },
     async restore(targetType, targetId) {
       const target = find(targetType, targetId);
@@ -293,7 +294,9 @@ async function pgRepos(): Promise<{ repos: Repos; close: () => Promise<void> }> 
   await setup.end();
   const pool = new Pool({ connectionString: PG_URL, options: `-c search_path=${schema}` });
   await pool.query(`CREATE TABLE books (book_id TEXT PRIMARY KEY, title TEXT NOT NULL)`);
-  await pool.query(`INSERT INTO books (book_id, title) VALUES ($1, '모더레이션 시험 도서')`, [BOOK]);
+  await pool.query(`INSERT INTO books (book_id, title) VALUES ($1, '모더레이션 시험 도서')`, [
+    BOOK,
+  ]);
   await pool.query(fs.readFileSync(path.join(MIGRATIONS, '016_community.sql'), 'utf8'));
   const m022 = fs.readFileSync(path.join(MIGRATIONS, '022_community_moderation.sql'), 'utf8');
   await pool.query(m022);
@@ -301,9 +304,12 @@ async function pgRepos(): Promise<{ repos: Repos; close: () => Promise<void> }> 
   // 2026-11-18 공감 — 글 조회가 공감 수를 함께 읽는다
   await pool.query(fs.readFileSync(path.join(MIGRATIONS, '024_community_likes.sql'), 'utf8'));
   // T19 — 이름(users.display_name)·답글 대상·답글 좋아요
-  await pool.query(`CREATE TABLE users (user_id UUID PRIMARY KEY, reader_id UUID NOT NULL UNIQUE, display_name TEXT)`);
+  await pool.query(
+    `CREATE TABLE users (user_id UUID PRIMARY KEY, reader_id UUID NOT NULL UNIQUE, display_name TEXT)`
+  );
   await pool.query(fs.readFileSync(path.join(MIGRATIONS, '027_community_replies.sql'), 'utf8'));
   await pool.query(fs.readFileSync(path.join(MIGRATIONS, '028_drop_community_kind.sql'), 'utf8'));
+  await pool.query(fs.readFileSync(path.join(MIGRATIONS, '030_community_review_card.sql'), 'utf8'));
   const db = { query: (sql: string, params?: unknown[]) => pool.query(sql, params) };
   return {
     repos: {

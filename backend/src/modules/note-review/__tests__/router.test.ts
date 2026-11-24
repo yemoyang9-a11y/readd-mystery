@@ -46,6 +46,7 @@ describe('추리 채점 API', () => {
   let notes: ReviewNoteRow[];
   let reviews: MemoryReviews;
   let go: (page: number, from?: number | null) => Promise<void>;
+  let shared: { body: string; card: any }[];
 
   beforeEach(async () => {
     const { positions, books } = makeSeededFakes();
@@ -61,6 +62,7 @@ describe('추리 채점 API', () => {
     replies = [];
     notes = [];
     reviews = new MemoryReviews();
+    shared = [];
     const service = createNoteReviewService({
       scope: createCutoffService({ positions, books }),
       notes: { listForReview: async (_r, _b, bound) => notes.filter((n) => n.page_no <= bound) },
@@ -81,6 +83,23 @@ describe('추리 채점 API', () => {
       },
       model: 'm',
       log: () => undefined,
+      community: {
+        countRecentPosts: async () => 0,
+        findMyReviewPost: async () => (shared.length > 0 ? 'p1' : null),
+        createReviewPost: async (_b, _r, body, card) => {
+          shared.push({ body, card });
+          return {
+            seq: 1,
+            post_id: 'p1',
+            reader_id: A,
+            body,
+            author_name: null,
+            created_at: '',
+            deleted: false,
+            comment_count: 0,
+          };
+        },
+      },
     });
     const app = express();
     app.use(
@@ -101,8 +120,8 @@ describe('추리 채점 API', () => {
     await new Promise((resolve) => server.close(resolve));
   });
 
-  function call(method: string, book: string, reader: string | null, body?: unknown) {
-    return fetch(`${baseUrl}/books/${book}/review`, {
+  function call(method: string, book: string, reader: string | null, body?: unknown, sub = '') {
+    return fetch(`${baseUrl}/books/${book}/review${sub}`, {
       method,
       headers: { 'content-type': 'application/json', ...(reader ? { 'x-device-id': reader } : {}) },
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -193,5 +212,26 @@ describe('추리 채점 API', () => {
     await go(100, 1);
     reviews.row = { status: 'pending', result: null, attempts: 1, last_error: null };
     expect((await call('POST', OPEN, A, {})).status).toBe(409);
+  });
+
+  test('결과지 공유: 잠김 403, 채점 전 409, 성공 201, 두 번째 409(글 ID), 잘못된 입력 400', async () => {
+    notes = [hypothesis()];
+    replies = [ok];
+    await go(1);
+    expect((await call('POST', OPEN, A, { note_ids: [H] }, '/share')).status).toBe(403);
+    await go(100, 1);
+    expect((await call('POST', OPEN, A, { note_ids: [H] }, '/share')).status).toBe(409);
+    await call('POST', OPEN, A, {});
+    expect((await call('POST', OPEN, A, { note_ids: 'x' }, '/share')).status).toBe(400);
+    expect(
+      (await call('POST', OPEN, A, { note_ids: [], message: 'x'.repeat(2001) }, '/share')).status
+    ).toBe(400);
+    const res = await call('POST', OPEN, A, { note_ids: [H], message: '맞혔다' }, '/share');
+    expect(res.status).toBe(201);
+    expect(shared[0].card.notes).toHaveLength(1);
+    const again = await call('POST', OPEN, A, { note_ids: [H] }, '/share');
+    expect(again.status).toBe(409);
+    expect(await again.json()).toEqual({ error: 'ALREADY_SHARED', post_id: 'p1' });
+    expect(llmCalls).toBe(1);
   });
 });

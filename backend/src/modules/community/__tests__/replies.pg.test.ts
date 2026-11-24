@@ -33,7 +33,13 @@ const C = '33333333-3333-4333-8333-333333333333';
     await pool.query(`CREATE TABLE users (
       user_id UUID PRIMARY KEY, reader_id UUID NOT NULL UNIQUE, display_name TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
-    for (const file of ['016_community.sql', '022_community_moderation.sql', '024_community_likes.sql', '027_community_replies.sql']) {
+    for (const file of [
+      '016_community.sql',
+      '022_community_moderation.sql',
+      '024_community_likes.sql',
+      '027_community_replies.sql',
+      '030_community_review_card.sql',
+    ]) {
       await apply(file);
     }
     repo = createPgCommunityRepository({ query: (sql, params) => pool.query(sql, params) });
@@ -61,12 +67,21 @@ const C = '33333333-3333-4333-8333-333333333333';
   });
 
   test('답글: 댓글에 바로 단 답글은 reply_to_* 가 null, 답글에 단 답글은 대상 id·작성자·이름이 채워진다', async () => {
-    await pool.query(`INSERT INTO users (user_id, reader_id, display_name) VALUES ($1, $2, '책벌레')`, [randomUUID(), B]);
+    await pool.query(
+      `INSERT INTO users (user_id, reader_id, display_name) VALUES ($1, $2, '책벌레')`,
+      [randomUUID(), B]
+    );
     const post = await repo.createPost(BOOK, A, '댓글');
     const first = await repo.createComment(BOOK, post.post_id, B, '첫 답글', null);
     expect(first).not.toBeNull();
     expect(first!.reply_to_comment_id).toBeNull();
-    const second = await repo.createComment(BOOK, post.post_id, C, '답글의 답글', first!.comment_id);
+    const second = await repo.createComment(
+      BOOK,
+      post.post_id,
+      C,
+      '답글의 답글',
+      first!.comment_id
+    );
     expect(second!.reply_to_comment_id).toBe(first!.comment_id);
     const list = await repo.listComments(BOOK, post.post_id);
     expect(list.map((c) => c.body)).toEqual(['첫 답글', '답글의 답글']);
@@ -75,20 +90,36 @@ const C = '33333333-3333-4333-8333-333333333333';
       reply_to_reader_id: B,
       reply_to_name: '책벌레',
     });
-    expect(list[0]).toMatchObject({ reply_to_comment_id: null, reply_to_reader_id: null, reply_to_name: null });
+    expect(list[0]).toMatchObject({
+      reply_to_comment_id: null,
+      reply_to_reader_id: null,
+      reply_to_name: null,
+    });
   });
 
   test('답글 대상이 나중에 숨김·삭제되면 대상 id 는 남고 작성자·이름은 null', async () => {
-    await pool.query(`INSERT INTO users (user_id, reader_id, display_name) VALUES ($1, $2, '책벌레')`, [randomUUID(), B]);
+    await pool.query(
+      `INSERT INTO users (user_id, reader_id, display_name) VALUES ($1, $2, '책벌레')`,
+      [randomUUID(), B]
+    );
     const post = await repo.createPost(BOOK, A, '댓글');
     const hidden = await repo.createComment(BOOK, post.post_id, B, '숨길 답글', null);
     const removed = await repo.createComment(BOOK, post.post_id, B, '지울 답글', null);
     await repo.createComment(BOOK, post.post_id, C, '숨김 대상에 답', hidden!.comment_id);
     await repo.createComment(BOOK, post.post_id, C, '삭제 대상에 답', removed!.comment_id);
-    await pool.query(`UPDATE community_comments SET hidden_at = now() WHERE comment_id = $1`, [hidden!.comment_id]);
+    await pool.query(`UPDATE community_comments SET hidden_at = now() WHERE comment_id = $1`, [
+      hidden!.comment_id,
+    ]);
     await repo.deleteComment(BOOK, removed!.comment_id, B);
     const list = await repo.listComments(BOOK, post.post_id);
-    expect(list.map((c) => [c.body, c.reply_to_comment_id !== null, c.reply_to_reader_id, c.reply_to_name])).toEqual([
+    expect(
+      list.map((c) => [
+        c.body,
+        c.reply_to_comment_id !== null,
+        c.reply_to_reader_id,
+        c.reply_to_name,
+      ])
+    ).toEqual([
       ['숨김 대상에 답', true, null, null],
       ['삭제 대상에 답', true, null, null],
     ]);
@@ -100,13 +131,23 @@ const C = '33333333-3333-4333-8333-333333333333';
     const hidden = await repo.createComment(BOOK, post.post_id, B, '숨길 답글', null);
     const deleted = await repo.createComment(BOOK, post.post_id, B, '지울 답글', null);
     const foreign = await repo.createComment(BOOK, other.post_id, B, '다른 묶음 답글', null);
-    await pool.query(`UPDATE community_comments SET hidden_at = now() WHERE comment_id = $1`, [hidden!.comment_id]);
+    await pool.query(`UPDATE community_comments SET hidden_at = now() WHERE comment_id = $1`, [
+      hidden!.comment_id,
+    ]);
     await repo.deleteComment(BOOK, deleted!.comment_id, B);
-    const before = (await pool.query(`SELECT count(*)::int AS n FROM community_comments`)).rows[0].n;
-    for (const target of [hidden!.comment_id, deleted!.comment_id, foreign!.comment_id, randomUUID()]) {
+    const before = (await pool.query(`SELECT count(*)::int AS n FROM community_comments`)).rows[0]
+      .n;
+    for (const target of [
+      hidden!.comment_id,
+      deleted!.comment_id,
+      foreign!.comment_id,
+      randomUUID(),
+    ]) {
       expect(await repo.createComment(BOOK, post.post_id, C, '답', target)).toBeNull();
     }
-    expect((await pool.query(`SELECT count(*)::int AS n FROM community_comments`)).rows[0].n).toBe(before);
+    expect((await pool.query(`SELECT count(*)::int AS n FROM community_comments`)).rows[0].n).toBe(
+      before
+    );
   });
 
   test('Review Focus 2: users.display_name 이 있으면 author_name, 없거나 users 행이 없으면 null', async () => {
@@ -132,16 +173,30 @@ const C = '33333333-3333-4333-8333-333333333333';
     const reply = await repo.createComment(BOOK, post.post_id, B, '답글', null);
     expect(await repo.likeComment(BOOK, reply!.comment_id, C)).toBe(true);
     expect(await repo.likeComment(BOOK, reply!.comment_id, C)).toBe(true);
-    expect(await repo.commentLikeState(BOOK, reply!.comment_id, C)).toEqual({ like_count: 1, liked_by_me: true });
-    expect((await repo.listComments(BOOK, post.post_id, C))[0]).toMatchObject({ like_count: 1, liked_by_me: true });
-    expect((await repo.listComments(BOOK, post.post_id, A))[0]).toMatchObject({ like_count: 1, liked_by_me: false });
+    expect(await repo.commentLikeState(BOOK, reply!.comment_id, C)).toEqual({
+      like_count: 1,
+      liked_by_me: true,
+    });
+    expect((await repo.listComments(BOOK, post.post_id, C))[0]).toMatchObject({
+      like_count: 1,
+      liked_by_me: true,
+    });
+    expect((await repo.listComments(BOOK, post.post_id, A))[0]).toMatchObject({
+      like_count: 1,
+      liked_by_me: false,
+    });
     expect(await repo.unlikeComment(BOOK, reply!.comment_id, C)).toBe(true);
-    expect(await repo.commentLikeState(BOOK, reply!.comment_id, C)).toEqual({ like_count: 0, liked_by_me: false });
+    expect(await repo.commentLikeState(BOOK, reply!.comment_id, C)).toEqual({
+      like_count: 0,
+      liked_by_me: false,
+    });
     expect(await repo.likeComment(OTHER, reply!.comment_id, C)).toBe(false);
     await repo.deleteComment(BOOK, reply!.comment_id, B);
     expect(await repo.likeComment(BOOK, reply!.comment_id, C)).toBe(false);
     const hidden = await repo.createComment(BOOK, post.post_id, B, '숨길 답글', null);
-    await pool.query(`UPDATE community_comments SET hidden_at = now() WHERE comment_id = $1`, [hidden!.comment_id]);
+    await pool.query(`UPDATE community_comments SET hidden_at = now() WHERE comment_id = $1`, [
+      hidden!.comment_id,
+    ]);
     expect(await repo.likeComment(BOOK, hidden!.comment_id, C)).toBe(false);
   });
 

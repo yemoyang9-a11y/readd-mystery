@@ -14,3 +14,7 @@ ts	phase	decision	why	evidence	result
 2026-11-24T16:14:18Z	S2	실패 재시도 횟수에 상한을 두지 않음	대표 결정 12번(실패는 1회로 치지 않음). 비용 폭주 위험은 열린 항목으로 남김	backend/src/modules/note-review/repository.ts claim	open
 2026-11-24T16:14:18Z	S2	실제 AI 응답으로는 시험하지 못함	이 환경에 API 키가 없음. 응답 형식 검사·재생성은 가짜 응답으로만 확인	—	NOT VERIFIED: 실제 모델 응답
 2026-11-24T16:14:18Z	S2	서버 전체 시험·린트·타입검사	단위 완료 확인	jest 175 suites 2310 통과 12 skip, eslint 0 error	tests green
+2026-11-24T16:18:03Z	S3	결과지 공유 칸(review_card)을 029에서 떼어 030 마이그레이션으로 분리	커뮤니티 pg 시험들이 커뮤니티 마이그레이션만 적용해 029(진도·노트 표 필요)를 쓸 수 없었음. 029는 아직 어느 DB에도 적용 전이라 고쳐도 됨	backend/migrations/030_community_review_card.sql	커뮤니티 pg 시험 스키마 목록에 030 추가(027 때와 같은 방식)
+2026-11-24T16:18:03Z	S3	공유 API는 채점 라우터에 POST /books/:id/review/share로 둠. 카드는 서버가 저장된 채점 결과에서 만들고 클라이언트는 노트 ID·한마디만 보냄	판정·칭호를 클라이언트가 위조하지 못하게. 진상 요약은 카드에 넣지 않음(결정 9)	backend/src/modules/note-review/service.ts share, buildReviewCard	share 시험 8건, router 시험
+2026-11-24T16:18:03Z	S3	한마디 없이 공유하면 글 본문은 '내 추리 결과지를 공유했어요', 카드 message는 null	community_posts.body가 1자 이상 제약이라 비울 수 없음. 화면은 카드의 message를 보고 그림	DEFAULT_SHARE_BODY	open: 문구 대표 확인
+2026-11-24T16:18:03Z	S3	서버 전체 시험·린트·타입검사	단위 완료 확인	jest 176 suites 2320 통과 12 skip	tests green

@@ -22,6 +22,11 @@ import {
   type ParsedGrading,
   type ReviewEvidence,
 } from './grading';
+import type {
+  CommunityRepository,
+  CommunityReviewShareRepository,
+  ReviewCard,
+} from '../community/repository';
 import type { NoteReviewRepository } from './repository';
 import {
   countVerdicts,
@@ -65,7 +70,24 @@ export interface NoteReviewServiceDeps {
   model: string;
   now?: () => Date;
   log?: (record: NoteReviewLogRecord) => void;
+  /** 결과지 공유 — 없으면 공유 경로를 열지 않는다 */
+  community?: Pick<CommunityRepository, 'countRecentPosts'> & CommunityReviewShareRepository;
 }
+
+/** 커뮤니티 글 쓰기와 같은 한도 (community/router.ts POSTS_PER_HOUR) */
+const POSTS_PER_HOUR = 10;
+export const MAX_SHARE_MESSAGE = 2000;
+/** 한마디 글 없이 공유하면 글 본문 칸에 넣는 말 — 화면은 카드의 message 를 본다 */
+export const DEFAULT_SHARE_BODY = '내 추리 결과지를 공유했어요';
+
+export type ShareOutcome =
+  | { ok: true; post_id: string }
+  | {
+      ok: false;
+      reason:
+        'locked' | 'not_graded' | 'invalid_choice' | 'duplicate' | 'rate_limited' | 'unavailable';
+      post_id?: string;
+    };
 
 /** 일반 메모 가운데 "가설이었던 메모"로 고를 수 있는 것 — 결말 전에 쓴 것만 */
 export interface ReviewCandidate {
@@ -76,7 +98,7 @@ export interface ReviewCandidate {
 
 export type ReviewStatusView =
   | { state: 'locked' }
-  | { state: 'done'; result: ReviewResult }
+  | { state: 'done'; result: ReviewResult; shared_post_id: string | null }
   | {
       state: 'ready';
       busy: boolean;
@@ -155,8 +177,12 @@ export function createNoteReviewService(deps: NoteReviewServiceDeps) {
       const scope = await deps.scope.getReviewScope(readerId, bookId);
       if (!scope.open) return { state: 'locked' };
       const stored = await deps.reviews.find(readerId, bookId);
-      if (stored?.status === 'done' && stored.result)
-        return { state: 'done', result: stored.result };
+      if (stored?.status === 'done' && stored.result) {
+        const shared = deps.community
+          ? await deps.community.findMyReviewPost(bookId, readerId)
+          : null;
+        return { state: 'done', result: stored.result, shared_post_id: shared };
+      }
 
       const rows = await deps.notes.listForReview(readerId, bookId, scope.bound);
       const selection = selectBeforeEnding(rows, scope.reached_end_at);
@@ -315,6 +341,78 @@ export function createNoteReviewService(deps: NoteReviewServiceDeps) {
       });
       return { ok: true, result };
     },
+
+    async share(
+      readerId: string,
+      bookId: string,
+      noteIds: readonly string[],
+      rawMessage: string | null
+    ): Promise<ShareOutcome> {
+      const community = deps.community;
+      if (!community) return { ok: false, reason: 'unavailable' };
+      // FR-QNA-004 🚦 — 커뮤니티와 같은 관문. 막히면 저장소를 부르지 않는다
+      const scope = await deps.scope.getReviewScope(readerId, bookId);
+      if (!scope.open) return { ok: false, reason: 'locked' };
+      const stored = await deps.reviews.find(readerId, bookId);
+      if (stored?.status !== 'done' || !stored.result) return { ok: false, reason: 'not_graded' };
+      const result = stored.result;
+
+      // 고를 수 있는 것은 판정을 받은 노트뿐이다 (판정 보류 제외)
+      const judged = new Set(
+        result.notes.filter((n) => n.verdict !== 'pending').map((n) => n.note_id)
+      );
+      const chosen = new Set(noteIds);
+      if ([...chosen].some((id) => !judged.has(id))) return { ok: false, reason: 'invalid_choice' };
+
+      const existing = await community.findMyReviewPost(bookId, readerId);
+      if (existing) return { ok: false, reason: 'duplicate', post_id: existing };
+      if ((await community.countRecentPosts(readerId)) >= POSTS_PER_HOUR) {
+        return { ok: false, reason: 'rate_limited' };
+      }
+      const message = rawMessage?.trim() ? rawMessage.trim() : null;
+      const card = buildReviewCard(result, chosen, message);
+      const row = await community.createReviewPost(
+        bookId,
+        readerId,
+        message ?? DEFAULT_SHARE_BODY,
+        card
+      );
+      if (row === 'duplicate') {
+        const again = await community.findMyReviewPost(bookId, readerId);
+        return { ok: false, reason: 'duplicate', ...(again ? { post_id: again } : {}) };
+      }
+      return { ok: true, post_id: row.post_id };
+    },
+  };
+}
+
+/**
+ * 결과지 카드 — 요약(칭호·개수·결말 N쪽 전)과 독자가 고른 노트의 판정·해설. 진상 요약은 넣지 않는다
+ * (대표 결정 9번). 공유한 시점의 복사본이라 나중에 노트를 고치거나 지워도 카드는 그대로다 (11번).
+ */
+export function buildReviewCard(
+  result: ReviewResult,
+  noteIds: ReadonlySet<string>,
+  message: string | null
+): ReviewCard {
+  const { hypothesis, clue } = result.counts;
+  return {
+    version: 1,
+    title: result.title,
+    counts: { hypothesis: { ...hypothesis }, clue: { ...clue } },
+    early_pages: result.early_pages,
+    timing_verified: result.timing_verified,
+    message,
+    notes: result.notes
+      .filter((n) => noteIds.has(n.note_id))
+      .map((n) => ({
+        kind: n.kind,
+        page_no: n.page_no,
+        body: n.body,
+        verdict: n.verdict,
+        explanation: n.explanation,
+        evidence_page: n.evidence_page,
+      })),
   };
 }
 

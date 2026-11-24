@@ -108,7 +108,9 @@ class FakeCommunity implements CommunityRepository {
     if (!p) return null;
     if (
       replyToCommentId !== null &&
-      !this.comments.some((x) => x.comment_id === replyToCommentId && x.post_id === postId && !x.deleted)
+      !this.comments.some(
+        (x) => x.comment_id === replyToCommentId && x.post_id === postId && !x.deleted
+      )
     ) {
       return null;
     }
@@ -370,8 +372,15 @@ describe('community router', () => {
     const post = await seedPost(READER_A);
     const url = `${base}/posts/${post.post_id}/comments`;
     const first = (await (await call('POST', url, READER_B, { body: '저도요' })).json()) as any;
-    expect(first).toMatchObject({ nickname: '책벌레', reply_to_nickname: '달빛서재', is_post_author: false });
-    const second = await call('POST', url, READER_A, { body: '맞아요', reply_to_comment_id: first.comment_id });
+    expect(first).toMatchObject({
+      nickname: '책벌레',
+      reply_to_nickname: '달빛서재',
+      is_post_author: false,
+    });
+    const second = await call('POST', url, READER_A, {
+      body: '맞아요',
+      reply_to_comment_id: first.comment_id,
+    });
     expect(second.status).toBe(201);
     expect(await second.json()).toMatchObject({
       nickname: '달빛서재',
@@ -380,7 +389,9 @@ describe('community router', () => {
       like_count: 0,
       liked_by_me: false,
     });
-    const detail = (await (await call('GET', `${base}/posts/${post.post_id}`, READER_B)).json()) as any;
+    const detail = (await (
+      await call('GET', `${base}/posts/${post.post_id}`, READER_B)
+    ).json()) as any;
     expect(detail.comments.map((c: any) => [c.reply_to_nickname, c.is_post_author])).toEqual([
       ['달빛서재', false],
       ['책벌레', true],
@@ -409,10 +420,15 @@ describe('community router', () => {
     const post = await seedPost(READER_A);
     const url = `${base}/posts/${post.post_id}/comments`;
     const target = (await (await call('POST', url, READER_B, { body: '지울 답글' })).json()) as any;
-    await call('POST', url, READER_A, { body: '그 답글에 답', reply_to_comment_id: target.comment_id });
+    await call('POST', url, READER_A, {
+      body: '그 답글에 답',
+      reply_to_comment_id: target.comment_id,
+    });
     await call('DELETE', `${base}/comments/${target.comment_id}`, READER_B);
     const text = await (await call('GET', `${base}/posts/${post.post_id}`, READER_A)).text();
-    expect(JSON.parse(text).comments).toEqual([expect.objectContaining({ reply_to_nickname: null })]);
+    expect(JSON.parse(text).comments).toEqual([
+      expect.objectContaining({ reply_to_nickname: null }),
+    ]);
     expect(text).not.toContain('책벌레');
   });
 
@@ -426,9 +442,13 @@ describe('community router', () => {
       await call('POST', `${base}/posts/${other.post_id}/comments`, READER_B, { body: '저쪽 답글' })
     ).json()) as any;
     const before = repo.comments.length;
-    expect((await call('POST', url, READER_B, { body: '답', reply_to_comment_id: 'nope' })).status).toBe(400);
+    expect(
+      (await call('POST', url, READER_B, { body: '답', reply_to_comment_id: 'nope' })).status
+    ).toBe(400);
     for (const target of [gone.comment_id, foreign.comment_id, randomUUID()]) {
-      expect((await call('POST', url, READER_B, { body: '답', reply_to_comment_id: target })).status).toBe(404);
+      expect(
+        (await call('POST', url, READER_B, { body: '답', reply_to_comment_id: target })).status
+      ).toBe(404);
     }
     expect(repo.comments.length).toBe(before);
   });
@@ -437,11 +457,14 @@ describe('community router', () => {
     const post = await seedPost(READER_A);
     await call('POST', `${base}/posts/${post.post_id}/comments`, READER_B, { body: '답글' });
     await call('DELETE', `${base}/posts/${post.post_id}`, READER_A);
-    const detail = (await (await call('GET', `${base}/posts/${post.post_id}`, READER_B)).json()) as any;
+    const detail = (await (
+      await call('GET', `${base}/posts/${post.post_id}`, READER_B)
+    ).json()) as any;
     expect(detail.post).toMatchObject({ deleted: true, body: '삭제된 댓글입니다', nickname: null });
     expect(detail.comments).toHaveLength(1);
     expect(
-      (await call('POST', `${base}/posts/${post.post_id}/comments`, READER_B, { body: '또' })).status
+      (await call('POST', `${base}/posts/${post.post_id}/comments`, READER_B, { body: '또' }))
+        .status
     ).toBe(404);
   });
 
@@ -450,7 +473,10 @@ describe('community router', () => {
     const reply = await seedPost(READER_A, { body: '대상' });
     const url = `${base}/posts/${post.post_id}/comments`;
     const readsBefore = repo.reads;
-    const locked = await call('POST', url, READER_C, { body: '답', reply_to_comment_id: reply.post_id });
+    const locked = await call('POST', url, READER_C, {
+      body: '답',
+      reply_to_comment_id: reply.post_id,
+    });
     expect(locked.status).toBe(403);
     expect(repo.reads).toBe(readsBefore);
     expect(repo.comments).toHaveLength(0);
@@ -490,7 +516,9 @@ describe('community router', () => {
     expect((await call('POST', url, READER_B, { body: 'a'.repeat(1001) })).status).toBe(400);
     expect((await call('POST', url, READER_B, { body: '첫 댓글' })).status).toBe(201);
     expect((await call('POST', url, READER_A, { body: '둘째 댓글' })).status).toBe(201);
-    const detail = (await (await call('GET', `${base}/posts/${post.post_id}`, READER_B)).json()) as any;
+    const detail = (await (
+      await call('GET', `${base}/posts/${post.post_id}`, READER_B)
+    ).json()) as any;
     expect(detail.post.comment_count).toBe(2);
     expect(detail.comments.map((c: any) => c.body)).toEqual(['첫 댓글', '둘째 댓글']);
     expect(detail.comments.map((c: any) => c.is_mine)).toEqual([true, false]);
@@ -523,7 +551,8 @@ describe('community router', () => {
     expect(text).not.toContain('비밀 추리');
     expect((await call('GET', `${base}/posts/${alone.post_id}`, READER_B)).status).toBe(404);
     expect(
-      (await call('POST', `${base}/posts/${alone.post_id}/comments`, READER_B, { body: 'x' })).status
+      (await call('POST', `${base}/posts/${alone.post_id}/comments`, READER_B, { body: 'x' }))
+        .status
     ).toBe(404);
   });
 

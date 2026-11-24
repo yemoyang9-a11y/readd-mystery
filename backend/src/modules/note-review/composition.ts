@@ -1,4 +1,5 @@
 import type { Pool } from 'pg';
+import { createPgCommunityRepository } from '../community/pg-repository';
 import { createPgContentRepository } from '../content/pg-repository';
 import { call } from '../llm-gateway/gateway';
 import { getModelForTask } from '../llm-gateway/model-config';
@@ -21,6 +22,7 @@ export function createNoteReviewRoutes(pool: Pool) {
     // 절대 규칙 4번 — 게이트웨이로만
     llm: (prompt, options) => call(NOTE_REVIEW_TASK, prompt, options),
     model: getModelForTask(NOTE_REVIEW_TASK),
+    community: createPgCommunityRepository(db),
   });
   return createNoteReviewRouter({ service, content: createPgContentRepository(db) });
 }

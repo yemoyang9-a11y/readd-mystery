@@ -5,6 +5,7 @@ import { Pool } from 'pg';
 import { createPgReadingPositionRepository } from '../../reading-state/pg-repository';
 import { createPgNotesRepository } from '../../notes/pg-repository';
 import { createPgNoteReviewRepository, createPgReviewEvidenceReader } from '../pg-repository';
+import { createPgCommunityRepository } from '../../community/pg-repository';
 
 // 실제 Postgres — 마이그레이션 029 (추리 채점·결과지 공유, 대표 결정 2026-11-24).
 // COMMUNITY_TEST_DATABASE_URL 이 있을 때만 돈다 (다른 pg 시험과 같은 변수).
@@ -44,6 +45,7 @@ const D = '11111111-1111-4111-8111-111111111111';
       '027_community_replies.sql',
       '028_drop_community_kind.sql',
       '029_note_review.sql',
+      '030_community_review_card.sql',
     ]) {
       await apply(file);
     }
@@ -227,5 +229,42 @@ const D = '11111111-1111-4111-8111-111111111111';
     expect(full.events).toHaveLength(2);
     expect(full.character_notes).toHaveLength(2);
     expect(full.author).toBe('김내성');
+  });
+
+  test('결과지 글: 목록·상세에 카드가 실리고, 독자·책당 하나, 지우면 카드는 사라지고 다시 올릴 수 있다', async () => {
+    await apply('024_community_likes.sql');
+    const community = createPgCommunityRepository(db());
+    const card = {
+      version: 1,
+      title: '조수',
+      counts: {},
+      early_pages: null,
+      timing_verified: false,
+      message: null,
+      notes: [],
+    } as any;
+    const row = await community.createReviewPost(BOOK, D, '내 추리 결과지를 공유했어요', card);
+    if (row === 'duplicate') throw new Error('duplicate');
+    expect(row.review_card).toEqual(card);
+    expect(await community.createReviewPost(BOOK, D, '또', card)).toBe('duplicate');
+    expect(await community.findMyReviewPost(BOOK, D)).toBe(row.post_id);
+    const [listed] = await community.listPosts(BOOK, { limit: 10 });
+    expect(listed.review_card).toEqual(card);
+    const plain = await community.createPost(BOOK, D, '그냥 글');
+    expect(plain.review_card).toBeNull();
+
+    await community.createComment(
+      BOOK,
+      row.post_id,
+      D,
+      '답글이 있어 지운 글도 목록에 남는다',
+      null
+    );
+    await community.deletePost(BOOK, row.post_id, D);
+    const after = await community.getPost(BOOK, row.post_id);
+    expect(after?.deleted).toBe(true);
+    expect(after?.review_card).toBeNull();
+    expect(await community.findMyReviewPost(BOOK, D)).toBeNull();
+    expect(await community.createReviewPost(BOOK, D, '다시', card)).not.toBe('duplicate');
   });
 });

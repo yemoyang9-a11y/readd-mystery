@@ -1,7 +1,7 @@
 import express, { Request, Response, Router } from 'express';
 import type { ContentRepository } from '../content/repository';
 import { attachReaderIdentity, resolveReaderId, UUID_PATTERN } from '../auth/reader-id.middleware';
-import type { NoteReviewService } from './service';
+import { MAX_SHARE_MESSAGE, type NoteReviewService } from './service';
 
 const MAX_CHOSEN = 100;
 
@@ -18,7 +18,7 @@ export function createNoteReviewRouter({
   service,
   content,
 }: {
-  service: Pick<NoteReviewService, 'status' | 'grade'>;
+  service: Pick<NoteReviewService, 'status' | 'grade' | 'share'>;
   content: Pick<ContentRepository, 'findReadiness'>;
 }): Router {
   const router = express.Router();
@@ -82,6 +82,45 @@ export function createNoteReviewRouter({
       };
       const [code, error] = status[outcome.reason];
       res.status(code).json({ error });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * 결과지 공유 — POST /books/:bookId/review/share { note_ids: noteId[], message?: string }
+   * 채점 결과를 바탕으로 서버가 카드를 만든다. 클라이언트는 판정·칭호·개수를 보내지 않는다.
+   */
+  router.post('/books/:bookId/review/share', async (req, res, next) => {
+    try {
+      const readerId = await authorize(req, res);
+      if (!readerId) return;
+      const ids = req.body?.note_ids ?? [];
+      const message = req.body?.message ?? null;
+      if (
+        !Array.isArray(ids) ||
+        ids.length > MAX_CHOSEN ||
+        ids.some((id: unknown) => typeof id !== 'string' || !UUID_PATTERN.test(id)) ||
+        (message !== null && (typeof message !== 'string' || message.length > MAX_SHARE_MESSAGE))
+      ) {
+        res.status(400).json({ error: 'BAD_REQUEST', message: 'note_ids or message is invalid' });
+        return;
+      }
+      const outcome = await service.share(readerId, req.params.bookId, ids as string[], message);
+      if (outcome.ok) {
+        res.status(201).json({ post_id: outcome.post_id });
+        return;
+      }
+      const status: Record<typeof outcome.reason, [number, string]> = {
+        locked: [403, 'REVIEW_LOCKED'],
+        not_graded: [409, 'NOT_GRADED'],
+        invalid_choice: [400, 'INVALID_CHOICE'],
+        duplicate: [409, 'ALREADY_SHARED'],
+        rate_limited: [429, 'RATE_LIMITED'],
+        unavailable: [404, 'NOT_FOUND'],
+      };
+      const [code, error] = status[outcome.reason];
+      res.status(code).json({ error, ...(outcome.post_id ? { post_id: outcome.post_id } : {}) });
     } catch (error) {
       next(error);
     }

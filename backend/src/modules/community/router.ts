@@ -109,6 +109,8 @@ export function createCommunityRouter({
       liked_by_me: !row.deleted && row.liked_by_me === true,
       is_mine: !row.deleted && row.reader_id === readerId,
       deleted: row.deleted,
+      // 대표 결정 2026-11-24 — 공유한 추리 결과지(공유 시점 복사본). 지운 글은 null
+      review_card: row.deleted ? null : (row.review_card ?? null),
     };
   }
 

@@ -6,6 +6,7 @@ import {
   type CommunityEngagementRepository,
   type CommunityModerationRepository,
   type CommunityRepository,
+  type CommunityReviewShareRepository,
   type ModerationItem,
   type PostRow,
   type ReportSummary,
@@ -40,7 +41,8 @@ function postSelect(viewerParam: string | null): string {
          (SELECT count(*)::int FROM community_comments c
            WHERE c.post_id = p.post_id AND ${COMMENT_VISIBLE}) AS comment_count,
          ${LIKE_COUNT} AS like_count,
-         ${liked} AS liked_by_me
+         ${liked} AS liked_by_me,
+         (CASE WHEN p.deleted_at IS NULL THEN p.review_card END) AS review_card
     FROM community_posts p
     LEFT JOIN users u ON u.reader_id = p.reader_id`;
 }
@@ -97,6 +99,7 @@ function toPost(row: any): PostRow {
     comment_count: row.comment_count,
     like_count: row.like_count ?? 0,
     liked_by_me: row.liked_by_me === true,
+    review_card: row.review_card ?? null,
   };
 }
 
@@ -118,8 +121,34 @@ function toComment(row: any): CommentRow {
 
 export function createPgCommunityRepository(
   db: QueryClient
-): CommunityRepository & CommunityEngagementRepository {
+): CommunityRepository & CommunityEngagementRepository & CommunityReviewShareRepository {
   return {
+    async createReviewPost(bookId, readerId, body, card) {
+      const postId = randomUUID();
+      try {
+        await db.query(
+          `INSERT INTO community_posts (post_id, book_id, reader_id, body, review_card)
+           VALUES ($1, $2, $3, $4, $5::jsonb)`,
+          [postId, bookId, readerId, body, JSON.stringify(card)]
+        );
+      } catch (error) {
+        // 마이그레이션 029 ux_community_posts_review_card — 독자·책당 보이는 결과지 하나
+        if ((error as { code?: string })?.code === '23505') return 'duplicate';
+        throw error;
+      }
+      const { rows } = await db.query(`${POST_SELECT} WHERE p.post_id = $1`, [postId]);
+      return toPost(rows[0]);
+    },
+
+    async findMyReviewPost(bookId, readerId) {
+      const { rows } = await db.query(
+        `SELECT post_id FROM community_posts
+          WHERE book_id = $1 AND reader_id = $2 AND review_card IS NOT NULL AND deleted_at IS NULL`,
+        [bookId, readerId]
+      );
+      return rows[0]?.post_id ?? null;
+    },
+
     async listPosts(bookId, { before, offset, sort, viewerId, limit }) {
       if (sort === 'popular') {
         // 인기순 — 공감 많은 순, 같으면 최신순. 공감을 못 받는 삭제 글(댓글이 남은 것)은 뒤로 간다

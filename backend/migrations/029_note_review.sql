@@ -36,9 +36,4 @@ CREATE TABLE IF NOT EXISTS note_reviews (
 
 ALTER TABLE note_reviews ENABLE ROW LEVEL SECURITY;
 
--- ④ community_posts.review_card — 공유한 결과지의 복사본(공유한 시점 그대로).
---    노트 원본은 비공개라 원본을 비추지 않고 복사해 둔다. 독자·책당 보이는(지우지 않은) 결과지 글은 하나.
-ALTER TABLE community_posts ADD COLUMN IF NOT EXISTS review_card JSONB;
-CREATE UNIQUE INDEX IF NOT EXISTS ux_community_posts_review_card
-    ON community_posts (book_id, reader_id)
-    WHERE review_card IS NOT NULL AND deleted_at IS NULL;
+-- ④ 결과지 공유 칸은 030_community_review_card.sql (커뮤니티 표만 바꾸는 마이그레이션을 따로 둔다)

@@ -165,9 +165,16 @@ describe('완독자 커뮤니티 — 끝까지 간 독자만 (대표 결정 2026
         },
       })
     );
-    app.use((_err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
-    });
+    app.use(
+      (
+        _err: unknown,
+        _req: express.Request,
+        res: express.Response,
+        _next: express.NextFunction
+      ) => {
+        res.status(500).json({ error: 'INTERNAL_ERROR' });
+      }
+    );
     ({ server, baseUrl } = await listen(app));
   });
 
@@ -335,13 +342,21 @@ describe('완독자 커뮤니티 — 끝까지 간 독자만 (대표 결정 2026
       page: LAST_PAGE,
     };
     const query = `reached_end=true&is_complete=true&max_page=${LAST_PAGE}&page=${LAST_PAGE}`;
-    const headers = { 'x-device-id': READER, 'x-reached-end': 'true', 'x-max-page': String(LAST_PAGE) };
+    const headers = {
+      'x-device-id': READER,
+      'x-reached-end': 'true',
+      'x-max-page': String(LAST_PAGE),
+    };
     const base = `/books/${BOOK}/community`;
     const attempts: Array<[string, string, unknown?]> = [
       ['GET', `${base}/posts?${query}`],
       ['GET', `${base}/posts/${community.post.post_id}?${query}`],
       ['POST', `${base}/posts?${query}`, { body: '재미있었어요', ...claims }],
-      ['POST', `${base}/posts/${community.post.post_id}/comments?${query}`, { body: '저도요', ...claims }],
+      [
+        'POST',
+        `${base}/posts/${community.post.post_id}/comments?${query}`,
+        { body: '저도요', ...claims },
+      ],
     ];
     for (const [method, path, body] of attempts) {
       const res = await call(method, path, body, headers);
@@ -407,7 +422,14 @@ describe('완독자 커뮤니티 — 끝까지 간 독자만 (대표 결정 2026
     await go(LAST_PAGE, 40); // 목차로 건너뛰어도 된다
     const open = (await (await call('GET', '/community/books')).json()) as any;
     expect(open.books).toEqual([
-      { book_id: BOOK, title: '가상범인', author: '김내성', cover_url: null, access: 'open', post_count: 7 },
+      {
+        book_id: BOOK,
+        title: '가상범인',
+        author: '김내성',
+        cover_url: null,
+        access: 'open',
+        post_count: 7,
+      },
     ]);
     expect(hubTouched).toEqual([`countVisiblePosts:${BOOK}`]);
   });

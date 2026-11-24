@@ -7,6 +7,31 @@ export const AUTO_HIDE_REPORT_THRESHOLD = 3;
 
 export type ReportTarget = 'post' | 'comment';
 
+/**
+ * 공유한 추리 결과지 — 공유한 시점의 복사본 (대표 결정 2026-11-24, 마이그레이션 029).
+ * 노트 원본은 비공개라 원본을 비추지 않는다. 진상 요약은 넣지 않는다 (대표 결정 9번).
+ */
+export interface ReviewCard {
+  version: 1;
+  title: string;
+  counts: {
+    hypothesis: { hit: number; partial: number; miss: number; total: number };
+    clue: { key: number; related: number; unrelated: number; total: number };
+  };
+  early_pages: number | null;
+  timing_verified: boolean;
+  /** 한마디 글. 쓰지 않았으면 null */
+  message: string | null;
+  notes: {
+    kind: 'hypothesis' | 'clue';
+    page_no: number;
+    body: string;
+    verdict: string;
+    explanation: string | null;
+    evidence_page: number | null;
+  }[];
+}
+
 export interface PostRow {
   seq: number;
   post_id: string;
@@ -21,6 +46,8 @@ export interface PostRow {
   like_count?: number;
   /** 요청한 독자가 공감했는지 — ListPostsQuery.viewerId 로 계산한다 */
   liked_by_me?: boolean;
+  /** 결과지 글이면 카드. 지운 글은 null */
+  review_card?: ReviewCard | null;
 }
 
 export interface CommentRow {
@@ -158,4 +185,21 @@ export interface CommunityEngagementRepository {
     commentId: string,
     readerId: string
   ): Promise<{ like_count: number; liked_by_me: boolean }>;
+}
+
+/**
+ * 결과지 공유 (대표 결정 2026-11-24). CommunityRepository 와 따로 둔 이유: 기존 커뮤니티 시험의
+ * 저장소 대역을 건드리지 않으려고. pg 저장소는 항상 구현한다.
+ * 라우터가 관문(reached_end)과 채점 완료를 확인한 뒤에만 부른다.
+ */
+export interface CommunityReviewShareRepository {
+  /** 보이는 결과지 글이 이미 있으면 'duplicate' (독자·책당 하나) */
+  createReviewPost(
+    bookId: string,
+    readerId: string,
+    body: string,
+    card: ReviewCard
+  ): Promise<PostRow | 'duplicate'>;
+  /** 내가 공유한 보이는(지우지 않은) 결과지 글 ID. 없으면 null */
+  findMyReviewPost(bookId: string, readerId: string): Promise<string | null>;
 }

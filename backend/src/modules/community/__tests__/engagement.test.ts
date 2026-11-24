@@ -36,7 +36,15 @@ const DRAFT = 'bk-draft';
 const SECRET = '범인은 집사였다';
 
 type Stored = PostRow & { book_id: string; hidden: boolean };
-type StoredReply = { comment_id: string; post_id: string; book_id: string; reader_id: string; body: string; deleted: boolean; hidden: boolean };
+type StoredReply = {
+  comment_id: string;
+  post_id: string;
+  book_id: string;
+  reader_id: string;
+  body: string;
+  deleted: boolean;
+  hidden: boolean;
+};
 
 class FakeStore implements CommunityRepository, CommunityEngagementRepository {
   posts: Stored[] = [];
@@ -91,7 +99,9 @@ class FakeStore implements CommunityRepository, CommunityEngagementRepository {
         .sort((a, b) => this.likeCount(b.post_id) - this.likeCount(a.post_id) || b.seq - a.seq)
         .slice(q.offset ?? 0);
     } else {
-      rows = rows.filter((p) => q.before === undefined || p.seq < q.before).sort((a, b) => b.seq - a.seq);
+      rows = rows
+        .filter((p) => q.before === undefined || p.seq < q.before)
+        .sort((a, b) => b.seq - a.seq);
     }
     return rows.slice(0, q.limit).map((p) => this.view(p, q.viewerId));
   }
@@ -183,7 +193,10 @@ class FakeStore implements CommunityRepository, CommunityEngagementRepository {
   }
   async likeState(_bookId: string, postId: string, readerId: string) {
     this.touched.push('likeState');
-    return { like_count: this.likeCount(postId), liked_by_me: this.likes.has(`${postId}:${readerId}`) };
+    return {
+      like_count: this.likeCount(postId),
+      liked_by_me: this.likes.has(`${postId}:${readerId}`),
+    };
   }
   async countVisiblePosts(bookId: string) {
     this.touched.push(`countVisiblePosts:${bookId}`);
@@ -192,9 +205,36 @@ class FakeStore implements CommunityRepository, CommunityEngagementRepository {
 }
 
 const CATALOG: BookCatalogRow[] = [
-  { book_id: BOOK, title: '가상범인', author: '김내성', cover_url: null, intro_summary: null, ssabi_ready: true, genre: null, registered_at: '2026-11-01T00:00:00.000Z' },
-  { book_id: OTHER, title: '타원형의 거울', author: '김내성', cover_url: null, intro_summary: null, ssabi_ready: true, genre: null, registered_at: '2026-11-01T00:00:00.000Z' },
-  { book_id: DRAFT, title: '마인', author: '김내성', cover_url: null, intro_summary: null, ssabi_ready: false, genre: null, registered_at: '2026-11-01T00:00:00.000Z' },
+  {
+    book_id: BOOK,
+    title: '가상범인',
+    author: '김내성',
+    cover_url: null,
+    intro_summary: null,
+    ssabi_ready: true,
+    genre: null,
+    registered_at: '2026-11-01T00:00:00.000Z',
+  },
+  {
+    book_id: OTHER,
+    title: '타원형의 거울',
+    author: '김내성',
+    cover_url: null,
+    intro_summary: null,
+    ssabi_ready: true,
+    genre: null,
+    registered_at: '2026-11-01T00:00:00.000Z',
+  },
+  {
+    book_id: DRAFT,
+    title: '마인',
+    author: '김내성',
+    cover_url: null,
+    intro_summary: null,
+    ssabi_ready: false,
+    genre: null,
+    registered_at: '2026-11-01T00:00:00.000Z',
+  },
 ];
 
 describe('커뮤니티 공감·인기순·허브', () => {
@@ -269,7 +309,9 @@ describe('커뮤니티 공감·인기순·허브', () => {
     expect(liked.status).toBe(200);
     expect(await liked.json()).toEqual({ like_count: 1, liked_by_me: true });
     // 같은 독자가 다시 눌러도 1 — 한 독자 한 공감 (PK(post_id, reader_id))
-    expect(await (await call('POST', `${base}/posts/${post.post_id}/like`, FINISHER)).json()).toEqual({
+    expect(
+      await (await call('POST', `${base}/posts/${post.post_id}/like`, FINISHER)).json()
+    ).toEqual({
       like_count: 1,
       liked_by_me: true,
     });
@@ -290,7 +332,9 @@ describe('커뮤니티 공감·인기순·허브', () => {
     store.seed(BOOK, '숨김', { hidden: true });
     store.seed(BOOK, '삭제', { deleted: true });
     for (const sort of ['new', 'popular']) {
-      const page = (await (await call('GET', `${base}/posts?sort=${sort}`, FINISHER)).json()) as any;
+      const page = (await (
+        await call('GET', `${base}/posts?sort=${sort}`, FINISHER)
+      ).json()) as any;
       expect(page.posts).toHaveLength(20);
       expect(page.total_count).toBe(23);
     }
@@ -314,8 +358,14 @@ describe('커뮤니티 공감·인기순·허브', () => {
     const post = store.seed(BOOK, SECRET);
     const reply = store.seedReply(post.post_id);
     const url = `${base}/comments/${reply.comment_id}/like`;
-    expect(await (await call('POST', url, FINISHER)).json()).toEqual({ like_count: 1, liked_by_me: true });
-    expect(await (await call('POST', url, FINISHER)).json()).toEqual({ like_count: 1, liked_by_me: true });
+    expect(await (await call('POST', url, FINISHER)).json()).toEqual({
+      like_count: 1,
+      liked_by_me: true,
+    });
+    expect(await (await call('POST', url, FINISHER)).json()).toEqual({
+      like_count: 1,
+      liked_by_me: true,
+    });
     const off = await call('DELETE', url, FINISHER);
     expect(off.status).toBe(200);
     expect(await off.json()).toEqual({ like_count: 0, liked_by_me: false });
@@ -337,9 +387,13 @@ describe('커뮤니티 공감·인기순·허브', () => {
   test('글 상세도 목록과 같은 공감 상태 — 누른 독자는 true, 안 누른 독자는 false (2026-11-18 E2E #72)', async () => {
     const post = store.seed(BOOK, SECRET);
     await call('POST', `${base}/posts/${post.post_id}/like`, FINISHER);
-    const mine = (await (await call('GET', `${base}/posts/${post.post_id}`, FINISHER)).json()) as any;
+    const mine = (await (
+      await call('GET', `${base}/posts/${post.post_id}`, FINISHER)
+    ).json()) as any;
     expect(mine.post).toMatchObject({ like_count: 1, liked_by_me: true });
-    const other = (await (await call('GET', `${base}/posts/${post.post_id}`, FINISHER_2)).json()) as any;
+    const other = (await (
+      await call('GET', `${base}/posts/${post.post_id}`, FINISHER_2)
+    ).json()) as any;
     expect(other.post).toMatchObject({ like_count: 1, liked_by_me: false });
   });
 
@@ -347,7 +401,13 @@ describe('커뮤니티 공감·인기순·허브', () => {
     const hidden = store.seed(BOOK, '숨김', { hidden: true });
     const deleted = store.seed(BOOK, '삭제', { deleted: true });
     const elsewhere = store.seed(OTHER, '다른 책');
-    for (const id of [hidden.post_id, deleted.post_id, elsewhere.post_id, randomUUID(), 'not-a-uuid']) {
+    for (const id of [
+      hidden.post_id,
+      deleted.post_id,
+      elsewhere.post_id,
+      randomUUID(),
+      'not-a-uuid',
+    ]) {
       expect((await call('POST', `${base}/posts/${id}/like`, FINISHER)).status).toBe(404);
       expect((await call('DELETE', `${base}/posts/${id}/like`, FINISHER)).status).toBe(404);
     }
@@ -360,7 +420,9 @@ describe('커뮤니티 공감·인기순·허브', () => {
   test('R12: 미공개 도서의 공감은 404', async () => {
     completed.add(`${FINISHER}:${DRAFT}`);
     const post = store.seed(DRAFT, '초안');
-    expect((await call('POST', `/books/${DRAFT}/community/posts/${post.post_id}/like`, FINISHER)).status).toBe(404);
+    expect(
+      (await call('POST', `/books/${DRAFT}/community/posts/${post.post_id}/like`, FINISHER)).status
+    ).toBe(404);
   });
 
   // ── 인기순 ──────────────────────────────────────────────────────────────
@@ -387,8 +449,13 @@ describe('커뮤니티 공감·인기순·허브', () => {
     expect((await call('GET', `${base}/posts?sort=hot`, FINISHER)).status).toBe(400);
     for (let i = 0; i < 21; i += 1) store.seed(BOOK, `글 ${i}`);
     const latest = (await (await call('GET', `${base}/posts`, FINISHER)).json()) as any;
-    expect((await call('GET', `${base}/posts?sort=popular&cursor=${latest.next_cursor}`, FINISHER)).status).toBe(400);
-    expect((await call('GET', `${base}/posts?sort=new&cursor=${latest.next_cursor}`, FINISHER)).status).toBe(200);
+    expect(
+      (await call('GET', `${base}/posts?sort=popular&cursor=${latest.next_cursor}`, FINISHER))
+        .status
+    ).toBe(400);
+    expect(
+      (await call('GET', `${base}/posts?sort=new&cursor=${latest.next_cursor}`, FINISHER)).status
+    ).toBe(200);
   });
 
   test('FR-QNA-004: 끝까지 가지 않은 독자는 인기순 목록도 403, 저장소 접근 0건', async () => {
@@ -409,7 +476,13 @@ describe('커뮤니티 공감·인기순·허브', () => {
     const text = await res.text();
     const body = JSON.parse(text);
     const other = body.books.find((b: any) => b.book_id === OTHER);
-    expect(other).toEqual({ book_id: OTHER, title: '타원형의 거울', author: '김내성', cover_url: null, access: 'locked' });
+    expect(other).toEqual({
+      book_id: OTHER,
+      title: '타원형의 거울',
+      author: '김내성',
+      cover_url: null,
+      access: 'locked',
+    });
     expect(store.touched).not.toContain(`countVisiblePosts:${OTHER}`);
     expect(text).not.toContain(SECRET);
     expect(text).not.toContain('다른 책의 결말');
@@ -421,7 +494,10 @@ describe('커뮤니티 공감·인기순·허브', () => {
     store.seed(BOOK, '숨김', { hidden: true });
     store.seed(BOOK, '삭제', { deleted: true });
     const body = (await (await call('GET', '/community/books', FINISHER)).json()) as any;
-    expect(body.books.find((b: any) => b.book_id === BOOK)).toMatchObject({ access: 'open', post_count: 2 });
+    expect(body.books.find((b: any) => b.book_id === BOOK)).toMatchObject({
+      access: 'open',
+      post_count: 2,
+    });
   });
 
   test('FR-QNA-004: 허브 — 아무 책도 끝까지 가지 않은 독자에게는 모든 도서가 잠김, 글 수 0개 필드', async () => {
@@ -443,7 +519,9 @@ describe('커뮤니티 공감·인기순·허브', () => {
     completed.add(`${FINISHER}:${OTHER}`);
     snapshotFails.add(OTHER);
     const body = (await (await call('GET', '/community/books', FINISHER)).json()) as any;
-    expect(body.books.find((b: any) => b.book_id === OTHER)).toEqual(expect.objectContaining({ access: 'locked' }));
+    expect(body.books.find((b: any) => b.book_id === OTHER)).toEqual(
+      expect.objectContaining({ access: 'locked' })
+    );
     expect(body.books.find((b: any) => b.book_id === OTHER).post_count).toBeUndefined();
     expect(store.touched).not.toContain(`countVisiblePosts:${OTHER}`);
     // positive 쌍 — 실패하지 않은 끝까지 간 도서는 그대로 열린다
@@ -473,9 +551,21 @@ const MIGRATIONS = path.join(__dirname, '../../../../migrations');
     await setup.end();
     pool = new Pool({ connectionString: PG_URL, options: `-c search_path=${schema}` });
     await pool.query(`CREATE TABLE books (book_id TEXT PRIMARY KEY, title TEXT NOT NULL)`);
-    await pool.query(`INSERT INTO books VALUES ($1, '가상범인'), ($2, '타원형의 거울')`, [BOOK, OTHER]);
-    await pool.query(`CREATE TABLE users (user_id UUID PRIMARY KEY, reader_id UUID NOT NULL UNIQUE, display_name TEXT)`);
-    for (const file of ['016_community.sql', '022_community_moderation.sql', '024_community_likes.sql', '027_community_replies.sql', '028_drop_community_kind.sql']) {
+    await pool.query(`INSERT INTO books VALUES ($1, '가상범인'), ($2, '타원형의 거울')`, [
+      BOOK,
+      OTHER,
+    ]);
+    await pool.query(
+      `CREATE TABLE users (user_id UUID PRIMARY KEY, reader_id UUID NOT NULL UNIQUE, display_name TEXT)`
+    );
+    for (const file of [
+      '016_community.sql',
+      '022_community_moderation.sql',
+      '024_community_likes.sql',
+      '027_community_replies.sql',
+      '028_drop_community_kind.sql',
+      '030_community_review_card.sql',
+    ]) {
       await pool.query(fs.readFileSync(path.join(MIGRATIONS, file), 'utf8'));
     }
     // IF NOT EXISTS — 두 번 적용해도 그대로
@@ -509,13 +599,19 @@ const MIGRATIONS = path.join(__dirname, '../../../../migrations');
     expect(await repo.likePost(BOOK, post.post_id, FINISHER)).toBe(true);
     expect(await repo.likePost(BOOK, post.post_id, FINISHER)).toBe(true);
     expect(await repo.likePost(BOOK, post.post_id, FINISHER_2)).toBe(true);
-    expect(await repo.likeState(BOOK, post.post_id, FINISHER)).toEqual({ like_count: 2, liked_by_me: true });
+    expect(await repo.likeState(BOOK, post.post_id, FINISHER)).toEqual({
+      like_count: 2,
+      liked_by_me: true,
+    });
     const [asA] = await repo.listPosts(BOOK, { limit: 5, viewerId: FINISHER });
     expect(asA).toMatchObject({ like_count: 2, liked_by_me: true });
     const [anon] = await repo.listPosts(BOOK, { limit: 5 });
     expect(anon.liked_by_me).toBe(false);
     expect(await repo.unlikePost(BOOK, post.post_id, FINISHER)).toBe(true);
-    expect(await repo.likeState(BOOK, post.post_id, FINISHER)).toEqual({ like_count: 1, liked_by_me: false });
+    expect(await repo.likeState(BOOK, post.post_id, FINISHER)).toEqual({
+      like_count: 1,
+      liked_by_me: false,
+    });
     // 다른 도서 ID 로는 공감할 수 없다
     expect(await repo.likePost(OTHER, post.post_id, FINISHER)).toBe(false);
   });
@@ -525,8 +621,16 @@ const MIGRATIONS = path.join(__dirname, '../../../../migrations');
     const removed = await repo.createPost(BOOK, FINISHER, '삭제');
     const live = await repo.createPost(BOOK, FINISHER, '보임');
     await repo.likePost(BOOK, removed.post_id, FINISHER_2);
-    await repo.createComment(BOOK, removed.post_id, FINISHER_2, '댓글이 남아 삭제 글이 보인다', null);
-    await pool.query(`UPDATE community_posts SET hidden_at = now() WHERE post_id = $1`, [hidden.post_id]);
+    await repo.createComment(
+      BOOK,
+      removed.post_id,
+      FINISHER_2,
+      '댓글이 남아 삭제 글이 보인다',
+      null
+    );
+    await pool.query(`UPDATE community_posts SET hidden_at = now() WHERE post_id = $1`, [
+      hidden.post_id,
+    ]);
     await repo.deletePost(BOOK, removed.post_id, FINISHER);
     expect(await repo.likePost(BOOK, hidden.post_id, FINISHER)).toBe(false);
     expect(await repo.likePost(BOOK, removed.post_id, FINISHER)).toBe(false);
