@@ -15,6 +15,7 @@ import routes from './api/routes';
 import { pool } from './config/database';
 import { createNotesRoutes } from './modules/notes/composition';
 import { createCommunityRoutes } from './modules/community/composition';
+import { createNoteReviewRoutes } from './modules/note-review/composition';
 import { adminRouter, resumeIngestJobs } from './modules/ingest/composition';
 import { adminLoginRouter } from './modules/ingest/admin-auth';
 import { createAnalyticsIngestRouter } from './modules/analytics/ingest-router';
@@ -89,6 +90,7 @@ app.use('/', createAnalyticsIngestRouter({ store: createPgEventStore(pool) }));
 // 라우트
 app.use('/', createNotesRoutes(pool));
 app.use('/', createCommunityRoutes(pool));
+app.use('/', createNoteReviewRoutes(pool));
 app.use('/', routes);
 
 // 404 핸들러

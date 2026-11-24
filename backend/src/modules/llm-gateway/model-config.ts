@@ -65,6 +65,8 @@ const METRIC_TASK_ALIASES: Record<string, keyof typeof MODEL_CONFIG> = {
   generate_summary_grounding: 'generate_summary',
   // 결정 31 — 타임라인 장 핵심 한 줄 (batch/pipeline/chapter-key-point.ts)
   generate_chapter_key_point: 'generate_summary',
+  // 대표 결정 2026-11-24 — 추리 채점(완독 뒤 내 추리 돌아보기). 런타임 세 번째 호출, 모델은 챗봇과 같다
+  grade_notes: 'chatbot',
 };
 
 export function getModelForTask(task: string): string {
