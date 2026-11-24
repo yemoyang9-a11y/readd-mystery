@@ -117,7 +117,7 @@ describe('내 추리 채점 화면 (대표 결정 2026-11-24)', () => {
     mocked.fetchReview.mockResolvedValue(ready({ excluded_count: 2 }));
     mocked.startReview.mockResolvedValue(result);
     renderScreen();
-    expect(await screen.findByText(/가설 2개와 단서 1개를 AI가 채점해요/)).toBeInTheDocument();
+    expect(await screen.findByText(/가설 2개와 단서 1개를 아모가 채점해요/)).toBeInTheDocument();
     expect(screen.getByText(/채점은 한 번만 할 수 있어요/)).toBeInTheDocument();
     expect(
       screen.getByText('결말을 본 뒤 쓰거나 고친 노트 2개는 빼고 채점해요.')
@@ -125,7 +125,10 @@ describe('내 추리 채점 화면 (대표 결정 2026-11-24)', () => {
     await userEvent.click(screen.getByRole('button', { name: '내 추리 채점하기' }));
     expect(mocked.startReview).toHaveBeenCalledWith('bk1', []);
     expect(await screen.findByTestId('review-title')).toHaveTextContent('명탐정');
-    expect(screen.getByText('가설 2개 중 1개 적중 · 단서 1개 중 1개 핵심')).toBeInTheDocument();
+    expect(screen.getByText('적중한 가설').nextElementSibling).toHaveTextContent('1 / 2');
+    expect(screen.getByText('짚은 핵심 단서').nextElementSibling).toHaveTextContent('1 / 1');
+    expect(screen.getByText(/채점을 마쳤어요/)).toBeInTheDocument();
+    expect(screen.queryByText(/AI/)).toBeNull();
     expect(screen.getByText('진상이 밝혀지기 85쪽 전에 맞혔어요')).toBeInTheDocument();
     expect(screen.getByText('범인은 집사였어요.')).toBeInTheDocument();
     const notes = within(screen.getByTestId('review-notes'));

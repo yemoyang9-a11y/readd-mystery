@@ -1,6 +1,7 @@
 import { useId, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import { Link } from 'react-router';
+import AmoSherlock from '../../components/common/AmoSherlock';
 import BookCover from '../../components/common/BookCover';
 import { useCatalog } from '../../hooks/useCatalog';
 import { useModalLayer } from '../../hooks/useModalLayer';
@@ -274,8 +275,9 @@ export default function BookEndPage({
               data-track="end-page-review"
               disabled={leaving}
               onClick={() => void goReview()}
-              className="mt-5 h-[52px] w-full rounded-full border border-[#c4475f] text-[16px] font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d0a0b]"
+              className="mt-5 flex h-[56px] w-full items-center justify-center gap-2 rounded-full border border-[#c4475f] text-[16px] font-bold text-white transition-[transform,background-color] duration-200 hover:bg-[#1e1618] active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d0a0b]"
             >
+              <AmoSherlock className="-mb-1 h-9 w-auto" />
               내 추리 채점하기
             </button>
           ) : null}

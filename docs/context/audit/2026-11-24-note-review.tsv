@@ -30,3 +30,6 @@ ts	phase	decision	why	evidence	result
 2026-11-24T16:38:35Z	review	지적 3: 채점 프롬프트의 노트를 JSON 배열로만 보냄	노트 본문이 가짜 구분자로 다른 노트 판정을 바꾸게 하던 틈	backend/src/modules/note-review/grading.ts buildGradingPrompt	grading 시험 교체(같은 목적, 더 강한 확인), 통과
 2026-11-24T16:38:35Z	review	지적 5: 싸비 미완비 책에서 채점 버튼 숨김. 지적 4(숨겨진 결과지 글)는 고치지 않고 대표 확인 항목으로 남김	4는 기존 신고 정책과 얽혀 혼자 정하지 않음	frontend BookEndPage.tsx·MobileCommunity.tsx, tasks.md T20 ③	화면 시험 1324 통과
 2026-11-24T16:38:35Z	review	서버·화면 전체 시험, 타입, 린트, 빌드 다시 돌림	고친 뒤 확인	jest 2323 통과 12 skip, vitest 1324 통과, build 성공	tests green
+2026-11-24T23:38:59Z	S6	대표 지시로 화면의 'AI'를 모두 '아모'로 바꾸고 아모 그림(AmoSherlock)을 채점 전·채점 중·잠김·결과·결과지 카드·입구 버튼에 넣음	대표 지시 2026-11-24(아모라고 부르고 아모 이미지 사용)	frontend/src/mobile/pages/MobileNoteReview.tsx, review/ReviewCardView.tsx, BookEndPage.tsx, MobileCommunity.tsx	화면 시험 1324 통과
+2026-11-24T23:38:59Z	S6	taste(redesign-existing-projects)·UX 스킬로 고침: 뼈대 불러오기, 아모 말풍선, 칭호 아래 고정폭 숫자 두 칸, 노트 줄은 테두리 대신 판정색 왼쪽 막대, 누름 반응(움직임 줄이기 설정이면 끔), 체크 줄 포커스 링, 줄바꿈 균형	기존 밤 화면 토큰은 그대로 두고 지적 항목만 고침	docs/validation/2026-11-24-note-review/05~08	375·390px 가로 넘침 0, 콘솔 오류 0, 키보드 순서 확인
+2026-11-24T23:38:59Z	S6	화면 시험 2곳의 문구를 바꿈(AI→아모, 개수 한 줄→숫자 두 칸)	대표가 지시한 문구·모양 변경이라 시험이 기대하는 화면이 바뀜. 판정 기준은 느슨하게 하지 않음	frontend/src/mobile/pages/MobileNoteReview.test.tsx	통과

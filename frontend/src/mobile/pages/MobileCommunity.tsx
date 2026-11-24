@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import AmoSherlock from '../../components/common/AmoSherlock';
 import { useAuth } from '../../hooks/useAuth';
 import { useBackToBook } from '../../hooks/useBackToBook';
 import { useCatalog } from '../../hooks/useCatalog';
@@ -288,9 +289,10 @@ export function CommunityScreen({
                 type="button"
                 data-track="community-review"
                 onClick={() => navigate(BOOK_ROUTES.review.replace(':bookId', bookId))}
-                className="flex min-h-11 w-full items-center justify-between rounded-[12px] border border-[#35292c] bg-[#1e1618] px-4 text-[15px] font-bold text-[#ece6e0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b]"
+                className="flex min-h-14 w-full items-center gap-3 rounded-[14px] border border-[#35292c] bg-[#1e1618] py-2 pl-3 pr-4 text-left text-[15px] font-bold text-[#ece6e0] transition-[transform,border-color] duration-200 hover:border-[#5a4c4f] active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e58a9b]"
               >
-                <span>내 추리 채점하고 결과지 공유하기</span>
+                <AmoSherlock className="-mb-2 h-11 w-auto shrink-0 self-end" />
+                <span className="min-w-0 flex-1">아모에게 내 추리 채점받기</span>
                 <span aria-hidden="true" className="text-[17px] text-[#e58a9b]">
                   ›
                 </span>

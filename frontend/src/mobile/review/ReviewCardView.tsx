@@ -1,3 +1,4 @@
+import AmoSherlock from '../../components/common/AmoSherlock';
 import type { ReviewCard } from '../../types';
 import { countsLine, earlyLine, KIND_LABEL, VERDICT_LABEL, VERDICT_TONE } from './verdict';
 
@@ -15,12 +16,15 @@ export default function ReviewCardView({ card }: { card: ReviewCard }) {
       className="mt-2 rounded-[14px] border border-[#35292c] bg-[#160f11] px-3.5 py-3"
     >
       <div className="flex items-center gap-2">
-        <span className="text-[12px] font-bold text-[#e58a9b]">추리 결과지</span>
-        <span className="rounded-full border border-[#c4475f] px-2 text-[13px] font-extrabold leading-[1.7] text-[#ece6e0]">
-          {card.title}
-        </span>
+        <AmoSherlock className="h-7 w-auto shrink-0" />
+        <span className="text-[12px] font-bold text-[#e58a9b]">아모가 채점한 추리 결과지</span>
       </div>
-      <p className="m-0 mt-1.5 text-[14px] font-bold text-[#ece6e0]">{countsLine(card.counts)}</p>
+      <p className="m-0 mt-1.5 font-dashSerif text-[20px] font-black leading-tight text-white">
+        {card.title}
+      </p>
+      <p className="m-0 mt-1 text-[14px] font-bold tabular-nums text-[#ece6e0]">
+        {countsLine(card.counts)}
+      </p>
       {early ? <p className="m-0 mt-0.5 text-[13px] text-[#b5aaa6]">{early}</p> : null}
       {card.notes.length > 0 ? (
         <ul className="m-0 mt-2.5 grid list-none gap-2 p-0">
@@ -28,7 +32,7 @@ export default function ReviewCardView({ card }: { card: ReviewCard }) {
             <li key={i} className="rounded-[10px] bg-[#1e1618] px-3 py-2">
               <div className="flex items-center gap-2 text-[12px] text-[#b5aaa6]">
                 <span
-                  className={`rounded-full border px-1.5 font-extrabold leading-[1.6] ${VERDICT_TONE[note.verdict]}`}
+                  className={`rounded-[6px] border px-1.5 font-extrabold leading-[1.6] ${VERDICT_TONE[note.verdict]}`}
                 >
                   {VERDICT_LABEL[note.verdict]}
                 </span>
