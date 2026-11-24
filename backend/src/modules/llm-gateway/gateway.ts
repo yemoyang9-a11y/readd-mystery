@@ -351,12 +351,40 @@ export async function* stream(
       options.signal ? { signal: options.signal } : undefined
     );
 
-    for await (const event of messageStream) {
-      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        yield event.delta.text;
+    // NFR-OBS-004 (측정, 2026-11-24): 호출부가 스트림을 중간에 끊으면(출력 검사 차단 → gen.return(), 시한 초과 →
+    // abort) 아래 완료 기록이 건너뛰어진다. 그래도 입력은 이미 청구되므로, 끊긴 호출은 message_start 의 입력 토큰과
+    // 그때까지 받은 글자 수를 aborted 로 따로 남긴다. 출력 토큰은 message_delta 가 오기 전이면 알 수 없어 null 로 둔다.
+    const partial: { usage?: Anthropic.Usage; outputTokens?: number; streamedChars: number } = {
+      streamedChars: 0,
+    };
+    let completed = false;
+    try {
+      for await (const event of messageStream) {
+        if (event.type === 'message_start') partial.usage = event.message.usage;
+        else if (event.type === 'message_delta') partial.outputTokens = event.usage.output_tokens;
+        if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+          partial.streamedChars += event.delta.text.length;
+          yield event.delta.text;
+        }
+      }
+      completed = true;
+    } finally {
+      if (!completed) {
+        logMetrics({
+          task,
+          attempt: options.attempt ?? 1,
+          modelId,
+          inputTokens: partial.usage?.input_tokens,
+          outputTokens: partial.outputTokens,
+          cacheWriteTokens: partial.usage?.cache_creation_input_tokens ?? undefined,
+          cacheReadTokens: partial.usage?.cache_read_input_tokens ?? undefined,
+          aborted: true,
+          streamedChars: partial.streamedChars,
+          durationMs: Date.now() - startTime,
+          streaming: true,
+        });
       }
     }
-
     // 사용량은 완성된 메시지에서 읽는다 — message_start/message_delta 이벤트를 직접
     // 주워 담던 Bedrock 방식 대신 SDK 헬퍼를 쓴다(부분 집계 누락이 없다).
     const finalMessage = await messageStream.finalMessage();
@@ -414,6 +442,10 @@ interface LLMMetrics extends Partial<OpenAIUsage> {
   thinkingTokens?: number;
   stopReason?: string | null;
   cliDurationMs?: number;
+  /** 호출부가 스트림을 끝까지 받지 않고 끊었다(출력 토큰은 모를 수 있다) */
+  aborted?: boolean;
+  /** 끊기 전까지 호출부에 넘긴 글자 수 */
+  streamedChars?: number;
 }
 
 /**

@@ -10,6 +10,7 @@
  *  - Cohere 임베딩: billedInputTokens × 임베딩 단가.
  *  - Claude CLI(provider=claude-cli): 구독 실행이라 금액을 내지 않는다. 토큰과 CLI 정가 환산값(list_cost_usd)만 모은다.
  *  - 1회 통과 = attempt가 1인 호출만, 전체 = 모든 호출. 실패 호출(failed)은 토큰이 없어 0으로 센다.
+ *  - 끊긴 스트림(aborted, 출력 검사 차단 등)은 입력 토큰만 실측이고 출력 토큰은 없으면 0 — 그 금액은 하한이다.
  * 단가·환율은 아래 PRICES에서 한 곳만 바꾼다. 이 스크립트는 API를 부르지 않는다.
  */
 const fs = require('fs');
@@ -75,7 +76,7 @@ function stepKey(rec) {
 }
 
 function emptyRow() {
-  return { calls: 0, retryCalls: 0, failed: 0, input: 0, cacheWrite: 0, cacheRead: 0, output: 0, thinking: 0,
+  return { calls: 0, retryCalls: 0, failed: 0, aborted: 0, input: 0, cacheWrite: 0, cacheRead: 0, output: 0, thinking: 0,
     usd: 0, usdFirstPass: 0, longPromptCalls: 0, maxTokensStops: 0, durationMs: 0, cliListUsd: 0, uncostable: 0,
     models: new Set(), providers: new Set() };
 }
@@ -89,6 +90,8 @@ function aggregate(records) {
     const attempt = rec.attempt ?? 1;
     if (attempt > 1) r.retryCalls++;
     if (rec.failed) r.failed++;
+    // 호출부가 스트림을 끊은 호출 — 입력은 실측, 출력 토큰은 모를 수 있어 0으로 센다(금액은 하한)
+    if (rec.aborted) r.aborted++;
     r.models.add(rec.kind === 'embed' ? rec.model : rec.modelId);
     r.providers.add(rec.kind === 'embed' ? 'cohere' : rec.provider);
     if (rec.kind === 'embed') r.input += rec.billedInputTokens ?? 0;
@@ -126,12 +129,12 @@ function aggregate(records) {
 }
 
 function toMarkdown(result) {
-  const head = '| 단계(task) | 제공자 | 모델 | 호출 | 재시도 호출 | 입력 | 캐시 쓰기 | 캐시 읽기 | 출력(thinking) | 금액(원, 전체) | 금액(원, 1회 통과) |';
+  const head = '| 단계(task) | 제공자 | 모델 | 호출(끊김) | 재시도 호출 | 입력 | 캐시 쓰기 | 캐시 읽기 | 출력(thinking) | 금액(원, 전체) | 금액(원, 1회 통과) |';
   const rows = Object.entries(result.steps).map(([k, r]) =>
-    `| ${k} | ${r.providers} | ${r.models} | ${r.calls} | ${r.retryCalls} | ${r.input} | ${r.cacheWrite} | ${r.cacheRead} | ${r.output} (${r.thinking}) | ${r.providers.includes('claude-cli') ? '구독(금액 없음)' : r.krw.toFixed(2)} | ${r.providers.includes('claude-cli') ? '—' : r.krwFirstPass.toFixed(2)} |`);
+    `| ${k} | ${r.providers} | ${r.models} | ${r.calls} (${r.aborted}) | ${r.retryCalls} | ${r.input} | ${r.cacheWrite} | ${r.cacheRead} | ${r.output} (${r.thinking}) | ${r.providers.includes('claude-cli') ? '구독(금액 없음)' : r.krw.toFixed(2)} | ${r.providers.includes('claude-cli') ? '—' : r.krwFirstPass.toFixed(2)} |`);
   const t = result.total;
   return [head, '|' + ' --- |'.repeat(11), ...rows,
-    `| **합계(API)** | | | ${t.calls} | ${t.retryCalls} | ${t.input} | ${t.cacheWrite} | ${t.cacheRead} | ${t.output} (${t.thinking}) | ${t.krw.toFixed(2)} | ${t.krwFirstPass.toFixed(2)} |`].join('\n');
+    `| **합계(API)** | | | ${t.calls} (${t.aborted}) | ${t.retryCalls} | ${t.input} | ${t.cacheWrite} | ${t.cacheRead} | ${t.output} (${t.thinking}) | ${t.krw.toFixed(2)} | ${t.krwFirstPass.toFixed(2)} |`].join('\n');
 }
 
 if (require.main === module) {
