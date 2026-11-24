@@ -33,8 +33,15 @@ import type { RecapCallLog } from '../../../src/shared/types';
 export class FakeReadingPositionRepository implements ReadingPositionRepository {
   private readonly rows = new Map<
     string,
-    StoredPosition & { max_page: number; read_pages: number[]; confirm_dismissed_max: number }
+    StoredPosition & {
+      max_page: number;
+      read_pages: number[];
+      confirm_dismissed_max: number;
+      reached_end_at: string | null;
+    }
   >();
+  /** 마지막 쪽을 알 때만 끝에 처음 닿은 시각을 남긴다 (pg 저장소는 books 표를 본다) */
+  totalPagesOf: (bookId: string) => number | null = () => null;
   private readonly lastWriters = new Map<string, string | null>();
 
   /**
@@ -57,6 +64,7 @@ export class FakeReadingPositionRepository implements ReadingPositionRepository 
       read_pages:
         position.read_pages ?? Array.from({ length: position.current_page }, (_, i) => i + 1),
       confirm_dismissed_max: position.confirm_dismissed_max ?? 0,
+      reached_end_at: null,
     });
   }
 
@@ -78,16 +86,24 @@ export class FakeReadingPositionRepository implements ReadingPositionRepository 
     const storedWriter = this.lastWriters.get(key) ?? null;
     const fromOtherDevice =
       storedWriter !== null && writerDeviceId !== null && storedWriter !== writerDeviceId;
+    const last = this.totalPagesOf(bookId);
+    const maxPage = Math.max(stored?.max_page ?? 0, position.current_page);
+    const reachedEndAt =
+      stored?.reached_end_at ??
+      (last !== null && (stored === undefined || stored.max_page < last) && maxPage >= last
+        ? new Date().toISOString()
+        : null);
     if (stored && !fromOtherDevice && position.event_seq <= stored.event_seq) {
-      this.rows.set(key, { ...stored, max_page: Math.max(stored.max_page, position.current_page) });
+      this.rows.set(key, { ...stored, max_page: maxPage, reached_end_at: reachedEndAt });
       return;
     }
 
     this.rows.set(key, {
       ...position,
-      max_page: Math.max(stored?.max_page ?? 0, position.current_page),
+      max_page: maxPage,
       read_pages: stored?.read_pages ?? [],
       confirm_dismissed_max: stored?.confirm_dismissed_max ?? 0,
+      reached_end_at: reachedEndAt,
     });
     this.lastWriters.set(key, writerDeviceId);
   }
@@ -165,6 +181,11 @@ export class FakeBookMetaReader implements BookMetaReader, RecapContentReader {
       pages,
       names: book.names ?? [],
     });
+  }
+
+  /** 위치 페이크가 끝에 처음 닿은 시각을 남길 때 쓴다 — 동기 조회 */
+  peekTotalPages(bookId: string): number | null {
+    return this.books.get(bookId)?.total_pages ?? null;
   }
 
   /** findIntroducedNames가 받은 cutoff 기록 — 사전 조회에 K가 실렸는지 검증용 */
@@ -435,6 +456,7 @@ export function makeSeededFakes(): {
 } {
   const positions = new FakeReadingPositionRepository();
   const books = new FakeBookMetaReader();
+  positions.totalPagesOf = (bookId) => books.peekTotalPages(bookId);
   books.set(SEED_BOOK_ID, {
     total_pages: SEED_BOOK.total_pages,
     chapters: SEED_BOOK.chapters,

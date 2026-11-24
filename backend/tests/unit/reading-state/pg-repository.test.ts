@@ -55,6 +55,8 @@ describe('진도 — createPgReadingPositionRepository', () => {
       max_page: 80,
       read_pages: [1, 2, 3],
       confirm_dismissed_max: 0,
+      // 마이그레이션 029 — 끝에 처음 닿은 시각. 행에 없으면 null
+      reached_end_at: null,
       event_seq: 99,
       updated_at: '2026-11-09T12:34:56.000Z',
     });

@@ -48,7 +48,7 @@ export function createPgReadingPositionRepository(db: QueryClient): ReadingPosit
   return {
     async findPosition(deviceId: string, bookId: string): Promise<StoredPositionRecord | null> {
       const { rows } = await db.query(
-        `SELECT current_page, max_page, read_pages, confirm_dismissed_max, event_seq, updated_at FROM reading_position WHERE device_id = $1 AND book_id = $2`,
+        `SELECT current_page, max_page, read_pages, confirm_dismissed_max, reached_end_at, event_seq, updated_at FROM reading_position WHERE device_id = $1 AND book_id = $2`,
         [deviceId, bookId]
       );
       if (rows.length === 0) return null;
@@ -57,6 +57,7 @@ export function createPgReadingPositionRepository(db: QueryClient): ReadingPosit
         max_page: rows[0].max_page,
         read_pages: (rows[0].read_pages ?? []).map(Number),
         confirm_dismissed_max: Number(rows[0].confirm_dismissed_max ?? 0),
+        reached_end_at: rows[0].reached_end_at ? rows[0].reached_end_at.toISOString() : null,
         event_seq: Number(rows[0].event_seq),
         updated_at: rows[0].updated_at.toISOString(),
       };
@@ -77,17 +78,34 @@ export function createPgReadingPositionRepository(db: QueryClient): ReadingPosit
       // FR-PRG-003 🚦
       const accepted = `(reading_position.event_seq < EXCLUDED.event_seq
         OR reading_position.last_writer_device_id <> EXCLUDED.last_writer_device_id)`;
-      await db.query(
+      // 대표 결정 2026-11-24 — 끝에 처음 닿은 시각. 저장된 가장 먼 쪽이 마지막 쪽 미만이었다가 이 저장으로
+      // 마지막 쪽에 닿을 때만 남긴다(한 번 남으면 그대로). 029 전에 이미 끝까지 간 독자는 계속 NULL 이다 —
+      // 나중 시각으로 채우면 결말을 본 뒤 쓴 노트가 결말 전 노트로 섞인다. 이 값은 저장 사실이며
+      // 기준점·완독·reached_end 파생은 여전히 기준점 결정기 몫이다 (FR-BRF-005 🚦).
+      const lastPage = `(SELECT b.total_pages FROM books b WHERE b.book_id = $2)`;
+      const { rows } = await db.query(
         `INSERT INTO reading_position (device_id, book_id, current_page, max_page, event_seq, last_writer_device_id, updated_at)
          VALUES ($1, $2, $3, $3, $4, $5, now())
          ON CONFLICT (device_id, book_id) DO UPDATE SET
+           reached_end_at = COALESCE(reading_position.reached_end_at,
+             CASE WHEN reading_position.max_page < ${lastPage} AND EXCLUDED.max_page >= ${lastPage} THEN now() END),
            max_page = GREATEST(reading_position.max_page, EXCLUDED.max_page),
            current_page = CASE WHEN ${accepted} THEN EXCLUDED.current_page ELSE reading_position.current_page END,
            event_seq = CASE WHEN ${accepted} THEN EXCLUDED.event_seq ELSE reading_position.event_seq END,
            last_writer_device_id = CASE WHEN ${accepted} THEN EXCLUDED.last_writer_device_id ELSE reading_position.last_writer_device_id END,
-           updated_at = CASE WHEN ${accepted} THEN now() ELSE reading_position.updated_at END`,
+           updated_at = CASE WHEN ${accepted} THEN now() ELSE reading_position.updated_at END
+         RETURNING (xmax = 0) AS inserted`,
         [deviceId, bookId, position.current_page, position.event_seq, writerDeviceId]
       );
+      // 첫 저장이 곧바로 마지막 쪽이면(목차로 끝부터 연 경우) 새 행에 시각을 남긴다
+      if (rows?.[0]?.inserted === true) {
+        await db.query(
+          `UPDATE reading_position SET reached_end_at = now()
+            WHERE device_id = $1 AND book_id = $2 AND reached_end_at IS NULL
+              AND max_page >= ${lastPage}`,
+          [deviceId, bookId]
+        );
+      }
     },
 
     async addReadPages(deviceId: string, bookId: string, pages: number[]): Promise<void> {

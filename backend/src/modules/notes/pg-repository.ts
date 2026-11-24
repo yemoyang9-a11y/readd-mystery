@@ -1,5 +1,11 @@
 import { randomUUID } from 'crypto';
-import type { Note, NoteInput, NotesReader, NotesRepository } from './repository';
+import type {
+  Note,
+  NoteInput,
+  NotesReader,
+  NotesRepository,
+  ReviewNotesReader,
+} from './repository';
 
 export interface QueryClient {
   query(sql: string, params?: unknown[]): Promise<{ rows: any[] }>;
@@ -19,8 +25,10 @@ function toNote(row: any): Note {
   };
 }
 
-export function createPgNotesRepository(db: QueryClient): NotesRepository & NotesReader {
-  const repository: NotesRepository & NotesReader = {
+export function createPgNotesRepository(
+  db: QueryClient
+): NotesRepository & NotesReader & ReviewNotesReader {
+  const repository: NotesRepository & NotesReader & ReviewNotesReader = {
     async list(readerId, bookId) {
       const { rows } = await db.query(
         `SELECT ${COLUMNS} FROM reading_notes
@@ -55,6 +63,8 @@ export function createPgNotesRepository(db: QueryClient): NotesRepository & Note
         `UPDATE reading_notes
             SET page_no = COALESCE($4, page_no),
                 kind = CASE WHEN $5::boolean THEN $6 ELSE kind END,
+                -- 마이그레이션 029 — 본문 글자가 실제로 바뀔 때만 본문 수정 시각을 옮긴다 (추리 채점의 결말 전 판정)
+                body_updated_at = CASE WHEN $7::text IS NOT NULL AND $7::text <> body THEN now() ELSE body_updated_at END,
                 body = COALESCE($7, body),
                 resolved = COALESCE($8::boolean, resolved),
                 updated_at = now()
@@ -82,6 +92,25 @@ export function createPgNotesRepository(db: QueryClient): NotesRepository & Note
         [noteId, readerId, bookId]
       );
       return rows.length > 0;
+    },
+
+    // FR-SPL-002 🚦 — 추리 채점용 조회. 상한(bound)은 쿼리 조건이다 (대표 결정 2026-11-24)
+    async listForReview(readerId, bookId, bound) {
+      if (!Number.isInteger(bound) || bound < 1) return [];
+      const { rows } = await db.query(
+        `SELECT note_id, page_no, kind, body, created_at, body_updated_at FROM reading_notes
+          WHERE reader_id = $1 AND book_id = $2 AND page_no >= 1 AND page_no <= $3
+          ORDER BY page_no, created_at`,
+        [readerId, bookId, bound]
+      );
+      return rows.map((row) => ({
+        note_id: row.note_id,
+        page_no: row.page_no,
+        kind: row.kind ?? null,
+        body: row.body,
+        created_at: new Date(row.created_at).toISOString(),
+        body_updated_at: new Date(row.body_updated_at ?? row.updated_at).toISOString(),
+      }));
     },
 
     // FR-SPL-002 🚦 R4 — 챗봇용 조회. 상한은 쿼리 조건이며, cutoff 초과 노트는 읽어 오지 않는다

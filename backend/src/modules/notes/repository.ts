@@ -43,3 +43,22 @@ export interface NotesReader {
     cutoff: number
   ): Promise<{ page_no: number; kind: NoteKind | null; body: string; created_at: string }[]>;
 }
+
+/** 추리 채점이 읽는 노트 한 줄 (대표 결정 2026-11-24) */
+export interface ReviewNoteRow {
+  note_id: string;
+  page_no: number;
+  kind: NoteKind | null;
+  body: string;
+  created_at: string;
+  /** 본문을 마지막으로 고친 시각 (마이그레이션 029). 종류·풀림 표시를 바꿔도 움직이지 않는다 */
+  body_updated_at: string;
+}
+
+export interface ReviewNotesReader {
+  /**
+   * FR-SPL-002 🚦 — 상한(bound)은 쿼리 조건이다. 채점 경로에서 bound 는 기준점 결정기의
+   * getReviewScope().bound(책 끝 쪽)이며, 관문(reached_end)을 지난 요청만 부른다.
+   */
+  listForReview(readerId: string, bookId: string, bound: number): Promise<ReviewNoteRow[]>;
+}

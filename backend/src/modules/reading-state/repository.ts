@@ -31,6 +31,12 @@ export interface StoredPositionRecord extends StoredPosition {
   read_pages: number[];
   /** 독자가 확인 카드에서 "그대로"를 고른 시점의 가장 먼 쪽. 그 쪽까지는 다시 묻지 않는다 */
   confirm_dismissed_max: number;
+  /**
+   * 가장 멀리 펼친 쪽이 마지막 쪽에 처음 닿은 시각 (마이그레이션 029, 대표 결정 2026-11-24).
+   * 한 번 기록되면 바뀌지 않는다. 029 전에 이미 끝까지 간 독자는 null — 추리 채점에서
+   * "결말 전 기록 여부 확인 안 됨"으로 보인다. 페이크가 다루지 않으면 생략될 수 있다.
+   */
+  reached_end_at?: string | null;
   updated_at: string;
 }
 
@@ -66,6 +72,7 @@ export interface ReadingPositionRepository {
    * 진도 이벤트를 조건부로 저장한다. 저장된 기기가 없거나 같은 기기면 더 새로운 seq만
    * 수용하고, 다른 기기면 수용한다. 이 판단은 저장 단계에서 원자적으로 끝난다
    * (FR-PRG-002, FR-PRG-003). `max_page`는 seq 판정과 무관하게 항상 올라가기만 한다.
+   * `max_page`가 마지막 쪽 미만에서 마지막 쪽 이상으로 바뀌는 그 저장에서만 `reached_end_at`을 남긴다.
    *
    * cutoff 인자 없음의 근거 — findPosition과 동일하게 cutoff의 원천이다.
    */

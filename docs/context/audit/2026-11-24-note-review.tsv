@@ -1,0 +1,8 @@
+ts	phase	decision	why	evidence	result
+2026-11-24T16:02:08Z	frame	두 기능(추리 채점·결과지 공유)을 대표가 자는 동안 끝까지 개발	대표 지시 2026-11-24 밤, 질문 12개로 결정 정리 완료	이 대화 질문 1~12	open
+2026-11-24T16:02:08Z	frame	작업 단위를 S1 저장 기반 → S2 채점 API → S3 공유 API → S4 화면 → S5 문서 순으로 나눔	저장 구조가 먼저 맞아야 뒤 단계가 단순해지고, 단위마다 시험으로 확인 가능	TaskCreate #1~#5	open
+2026-11-24T16:07:30Z	S1	끝에 처음 닿은 시각(reached_end_at)을 저장소 SQL 안에서 남김, 029 전 독자는 NULL 유지	나중 시각으로 채우면 결말 뒤 쓴 노트가 결말 전 노트로 섞인다. 기준점 결정기가 아니라 저장 사실(max_page와 같은 성격)로 둠	backend/src/modules/reading-state/pg-repository.ts savePosition	pg 시험 3건 통과
+2026-11-24T16:07:30Z	S1	pg 저장소 모양 시험 2건 중 findPosition 반환 모양 1건만 고침, INSERT 모양 시험은 구현을 바꿔 원래대로 통과	테스트를 고치지 말라는 규칙 때문에 INSERT 문은 그대로 두고 첫 저장만 RETURNING (xmax=0) 뒤 따로 UPDATE. 반환 모양은 새 칸이 생긴 정상 확장	backend/tests/unit/reading-state/pg-repository.test.ts	reading-state 255 통과
+2026-11-24T16:07:30Z	S1	노트에 본문 수정 시각(body_updated_at)을 새로 둠	updated_at은 풀림·종류 표시만 바꿔도 움직여 결말 뒤 '풀림'을 누른 노트가 채점에서 빠지는 문제. 대표 결정 8번의 취지(결말 뒤 고친 노트 제외)를 본문 기준으로 해석 — 대표 확인 필요	migrations/029_note_review.sql ②	open: 대표 확인
+2026-11-24T16:07:30Z	S1	채점 범위를 기준점 결정기의 getReviewScope로 냄(관문 = reached_end와 같은 식 한 곳)	절대 규칙 2번 — 범위 숫자(책 끝 쪽)를 결정기 밖에서 만들지 않기. 저장소 조회는 bound 인자를 받아 규칙 1번 형태 유지	backend/src/modules/reading-state/cutoff.service.ts getReviewScope	review-scope 시험 6건, static 시험 통과
+2026-11-24T16:07:30Z	S1	서버 전체 시험·타입검사·린트	단위 완료 확인	jest 172 suites 2275 통과 12 skip(로컬 Postgres 켜고)	tests green

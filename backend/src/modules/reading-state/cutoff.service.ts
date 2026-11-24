@@ -63,6 +63,29 @@ export interface CutoffService {
   getCutoffSnapshot(deviceId: string, bookId: string): Promise<CutoffSnapshot>;
 }
 
+/**
+ * 추리 채점 화면의 범위 (대표 결정 2026-11-24).
+ * open 이면 책 끝 쪽(bound)까지를 채점 근거로 쓴다. 닫혀 있으면 숫자를 주지 않는다.
+ */
+export type ReviewScope =
+  | { open: false }
+  | {
+      open: true;
+      /** 채점 근거 조회의 상한 — 책의 마지막 쪽 */
+      bound: number;
+      /** 끝에 처음 닿은 시각. 029 전에 끝까지 간 독자는 null */
+      reached_end_at: string | null;
+    };
+
+export interface ReviewScopeService {
+  /**
+   * 채점 화면은 커뮤니티와 같은 관문(reached_end)으로 연다. 2026-11-19 결정("reached_end 는 스포일러
+   * 상한에 쓰지 않는다")의 예외이며 이 경로 하나에만 쓴다 — 싸비·아모의 상한은 getCutoffSnapshot().cutoff
+   * 그대로다 (FR-QNA-004 🚦, R4). 실패 = 미노출: 쪽수를 모르면 던진다 (FR-SPL-005 🚦).
+   */
+  getReviewScope(deviceId: string, bookId: string): Promise<ReviewScope>;
+}
+
 export interface ReadChaptersService {
   // FR-SPL-002 🚦
   getReadChapters(deviceId: string, bookId: string): Promise<PositionResponse>;
@@ -80,10 +103,12 @@ export const FIRST_ENTRY_PAGE = 1;
 /** 진도 % 표시 자리수. API_CONTRACT.md 예시(80 / 340 → 23.5)와 같은 규칙 */
 const PERCENT_DECIMALS = 1;
 
-export function createCutoffService(deps: CutoffServiceDeps): CutoffService & ReadChaptersService {
+export function createCutoffService(
+  deps: CutoffServiceDeps
+): CutoffService & ReadChaptersService & ReviewScopeService {
   const { positions, books } = deps;
 
-  const service: CutoffService & ReadChaptersService = {
+  const service: CutoffService & ReadChaptersService & ReviewScopeService = {
     async getCutoffSnapshot(deviceId: string, bookId: string): Promise<CutoffSnapshot> {
       const stored = await positions.findPosition(deviceId, bookId);
 
@@ -132,7 +157,7 @@ export function createCutoffService(deps: CutoffServiceDeps): CutoffService & Re
       const cutoffAtEnd = stored !== null && cutoff >= totalPages;
       // 대표 결정 2026-11-19 정정 — 커뮤니티는 끝까지 간 독자만. 가장 멀리 펼친 쪽(저장값)이
       // 마지막 쪽이면 된다. 차례 읽기는 따지지 않는다. cutoff·is_complete 에는 관여하지 않는다
-      const reachedEnd = stored !== null && stored.max_page >= totalPages;
+      const reachedEnd = reachedEndOf(stored, totalPages);
       // FR-PRG-003 🚦 — 확인 카드. 숫자는 전부 저장값이다
       const frontierConfirm =
         stored !== null && furthestPage > frontier && furthestPage > stored.confirm_dismissed_max
@@ -164,6 +189,19 @@ export function createCutoffService(deps: CutoffServiceDeps): CutoffService & Re
       };
     },
 
+    async getReviewScope(deviceId: string, bookId: string): Promise<ReviewScope> {
+      const stored = await positions.findPosition(deviceId, bookId);
+      const totalPages = await books.findTotalPages(bookId);
+      if (totalPages === null || totalPages <= 0) {
+        throw new Error(
+          `[cutoff] 도서의 total_pages를 확인할 수 없어 채점 범위를 만들지 않는다: bookId=${bookId}`
+        );
+      }
+      // FR-QNA-004 🚦 — 커뮤니티 관문과 같은 식 하나를 쓴다 (R2)
+      if (!reachedEndOf(stored, totalPages)) return { open: false };
+      return { open: true, bound: totalPages, reached_end_at: stored?.reached_end_at ?? null };
+    },
+
     async getReadChapters(deviceId: string, bookId: string): Promise<PositionResponse> {
       const snapshot = await service.getCutoffSnapshot(deviceId, bookId);
       return {
@@ -177,6 +215,14 @@ export function createCutoffService(deps: CutoffServiceDeps): CutoffService & Re
   };
 
   return service;
+}
+
+/**
+ * 끝까지 감 — 진도 레코드가 있고 가장 멀리 펼친 쪽(저장값)이 마지막 쪽 이상.
+ * 커뮤니티 입장과 추리 채점 화면의 관문. 스포일러 상한(cutoff)에는 쓰지 않는다 (2026-11-19, 2026-11-24).
+ */
+function reachedEndOf(stored: { max_page: number } | null, totalPages: number): boolean {
+  return stored !== null && stored.max_page >= totalPages;
 }
 
 /**
